@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MetaTronix — Portal Interno</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+
+  <!-- LOADING BAR -->
+  <div class="loading-bar" id="loadingBar"></div>
+
+  <!-- ══════════════ LOGIN ══════════════ -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-logo">METATRONIX</div>
+    <div class="login-subtitle">Portal Interno de Documentos</div>
+
+    <div class="login-card">
+      <label class="login-label" for="passwordInput">Contraseña de Acceso</label>
+      <input
+        class="login-input"
+        id="passwordInput"
+        type="password"
+        placeholder="••••••••••••••"
+        autocomplete="current-password"
+        autofocus
+      />
+      <button class="login-btn" id="loginBtn">INGRESAR</button>
+      <div class="login-error" id="loginError">Contraseña incorrecta. Intenta de nuevo.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PORTAL ══════════════ -->
+  <div class="portal" id="portal">
+
+    <header class="portal-header">
+      <div class="header-brand">METATRONIX</div>
+      <div class="header-meta">
+        <span class="header-tag">Portal Interno · MetaTronix / IBANOR SA de CV</span>
+        <button class="logout-btn" id="logoutBtn">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <main class="portal-main">
+      <div class="section-title">Documentos</div>
+      <div class="section-count" id="docCount">Cargando...</div>
+
+      <div class="docs-grid" id="docsGrid"></div>
+
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">📂</div>
+        <div class="empty-title">Sin documentos aún</div>
+        <div class="empty-msg">Los documentos aparecerán aquí</div>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    // ── CONSTANTES ──────────────────────────────────────────────────────────
+    const PASS_HASH = 'c24b7a3f65e835b2ee4ad6b770aa305bc8dc339cc86db96f8cf8cd440fa3dcb0';
+    const SESSION_KEY = 'mtx_auth';
+
+    // ── UTILIDADES ──────────────────────────────────────────────────────────
+    async function sha256(str) {
+      const buf = new TextEncoder().encode(str);
+      const hash = await crypto.subtle.digest('SHA-256', buf);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    function setLoading(pct) {
+      const bar = document.getElementById('loadingBar');
+      bar.style.width = pct + '%';
+      if (pct >= 100) setTimeout(() => { bar.style.opacity = '0'; }, 400);
+      else bar.style.opacity = '1';
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    // ── SESIÓN ──────────────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return sessionStorage.getItem(SESSION_KEY) === '1';
+    }
+
+    function setAuthenticated(val) {
+      if (val) sessionStorage.setItem(SESSION_KEY, '1');
+      else sessionStorage.removeItem(SESSION_KEY);
+    }
+
+    // ── LOGIN ────────────────────────────────────────────────────────────────
+    async function handleLogin() {
+      const input = document.getElementById('passwordInput');
+      const error = document.getElementById('loginError');
+      const btn   = document.getElementById('loginBtn');
+
+      const val = input.value.trim();
+      if (!val) { showError('Ingresa tu contraseña.'); return; }
+
+      btn.textContent = 'VERIFICANDO...';
+      btn.disabled = true;
+
+      try {
+        const hash = await sha256(val);
+        if (hash === PASS_HASH) {
+          error.classList.remove('visible');
+          setAuthenticated(true);
+          showPortal();
+        } else {
+          showError('Contraseña incorrecta. Intenta de nuevo.');
+          input.value = '';
+          input.focus();
+        }
+      } finally {
+        btn.textContent = 'INGRESAR';
+        btn.disabled = false;
+      }
+    }
+
+    function showError(msg) {
+      const error = document.getElementById('loginError');
+      error.textContent = msg;
+      error.classList.add('visible');
+    }
+
+    // ── PORTAL ───────────────────────────────────────────────────────────────
+    function showPortal() {
+      document.getElementById('loginScreen').style.display = 'none';
+      const portal = document.getElementById('portal');
+      portal.classList.add('active');
+      loadDocuments();
+    }
+
+    function showLogin() {
+      document.getElementById('portal').classList.remove('active');
+      document.getElementById('loginScreen').style.display = '';
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('loginError').classList.remove('visible');
+    }
+
+    async function loadDocuments() {
+      setLoading(30);
+      const grid  = document.getElementById('docsGrid');
+      const empty = document.getElementById('emptyState');
+      const count = document.getElementById('docCount');
+
+      try {
+        setLoading(60);
+        const res = await fetch('docs/index.json?_=' + Date.now());
+        const data = await res.json();
+        setLoading(90);
+
+        const docs = data.documentos || [];
+        count.textContent = docs.length
+          ? docs.length + ' documento' + (docs.length !== 1 ? 's' : '') + ' disponible' + (docs.length !== 1 ? 's' : '')
+          : '0 documentos';
+
+        if (docs.length === 0) {
+          grid.innerHTML = '';
+          empty.classList.add('visible');
+        } else {
+          empty.classList.remove('visible');
+          grid.innerHTML = docs.map(doc => renderCard(doc)).join('');
+        }
+      } catch (e) {
+        count.textContent = 'Error al cargar documentos';
+        empty.classList.add('visible');
+        console.error('Error loading docs:', e);
+      }
+
+      setLoading(100);
+    }
+
+    function renderCard(doc) {
+      const nombre    = escHtml(doc.nombre    || 'Sin título');
+      const categoria = escHtml(doc.categoria || 'General');
+      const fecha     = formatDate(doc.fecha);
+      const url       = escHtml(doc.url       || '#');
+
+      return `
+        <div class="doc-card">
+          <div class="card-header">
+            <div class="card-title">${nombre}</div>
+            <span class="card-badge">${categoria}</span>
+          </div>
+          <div class="card-date">${fecha}</div>
+          <a class="card-open-btn" href="${url}" target="_blank" rel="noopener">Abrir →</a>
+        </div>`;
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // ── EVENTOS ──────────────────────────────────────────────────────────────
+    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+    document.getElementById('passwordInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      setAuthenticated(false);
+      showLogin();
+    });
+
+    // ── ARRANQUE ─────────────────────────────────────────────────────────────
+    if (isAuthenticated()) {
+      showPortal();
+    }
+  </script>
+</body>
+</html>
