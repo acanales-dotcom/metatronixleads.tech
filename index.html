@@ -1,219 +1,150 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MetaTronix — Portal Interno</title>
-  <meta name="robots" content="noindex, nofollow" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix Portal — Acceso</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    .login-error {
+      background: var(--danger-dim); border: 1px solid var(--danger);
+      color: var(--danger); border-radius: var(--radius);
+      padding: 10px 14px; font-size: 13px; display: none;
+    }
+    .login-error.show { display: block; }
+    .feature-list { display: flex; flex-direction: column; gap: 24px; margin-top: 48px; }
+    .feature-item { display: flex; gap: 14px; align-items: flex-start; }
+    .feature-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+    .feature-item h4 { font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
+    .feature-item p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  </style>
 </head>
 <body>
 
-  <!-- LOADING BAR -->
-  <div class="loading-bar" id="loadingBar"></div>
+<div class="login-wrap">
 
-  <!-- ══════════════ LOGIN ══════════════ -->
-  <div class="login-screen" id="loginScreen">
-    <div class="login-logo">METATRONIX</div>
-    <div class="login-subtitle">Portal Interno de Documentos</div>
+  <!-- Left panel — branding + features -->
+  <div class="login-left">
+    <div style="max-width: 480px; width: 100%;">
+      <div class="login-brand">
+        <div class="login-logo">METATRONIX</div>
+        <div class="login-tagline">PORTAL INTERNO DE DOCUMENTOS · IBANOR SA DE CV</div>
+        <div style="margin-top: 16px; height: 2px; background: linear-gradient(90deg, var(--accent), transparent);"></div>
+      </div>
 
-    <div class="login-card">
-      <label class="login-label" for="passwordInput">Contraseña de Acceso</label>
-      <input
-        class="login-input"
-        id="passwordInput"
-        type="password"
-        placeholder="••••••••••••••"
-        autocomplete="current-password"
-        autofocus
-      />
-      <button class="login-btn" id="loginBtn">INGRESAR</button>
-      <div class="login-error" id="loginError">Contraseña incorrecta. Intenta de nuevo.</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">⚡</div>
+          <div>
+            <h4>Generación con IA</h4>
+            <p>Crea contratos, propuestas, informes y más usando Claude — el modelo de Anthropic más avanzado.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📁</div>
+          <div>
+            <h4>Biblioteca de documentos</h4>
+            <p>Todos tus documentos organizados, disponibles en la plataforma y listos para descarga.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔍</div>
+          <div>
+            <h4>Revisión administrativa</h4>
+            <p>Los documentos pasan por un flujo de aprobación con alertas en tiempo real al equipo admin.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">👥</div>
+          <div>
+            <h4>Multi-usuario</h4>
+            <p>Acceso por colaborador, historial de actividad individual y control total desde el panel admin.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 48px; font-size: 11px; color: var(--text-faint); font-family: var(--font-mono);">
+        v2.0.0 · metatronixleads.tech · powered by Claude
+      </div>
     </div>
   </div>
 
-  <!-- ══════════════ PORTAL ══════════════ -->
-  <div class="portal" id="portal">
+  <!-- Right panel — login form -->
+  <div class="login-right">
+    <div class="login-form">
+      <h2>Bienvenido</h2>
+      <p>Ingresa tus credenciales para acceder al portal.</p>
 
-    <header class="portal-header">
-      <div class="header-brand">METATRONIX</div>
-      <div class="header-meta">
-        <span class="header-tag">Portal Interno · MetaTronix / IBANOR SA de CV</span>
-        <button class="logout-btn" id="logoutBtn">Cerrar sesión</button>
+      <div id="login-error" class="login-error"></div>
+
+      <form id="login-form" style="display:flex; flex-direction:column; gap:16px;">
+        <div class="form-group">
+          <label class="form-label">Correo electrónico</label>
+          <input type="email" id="email" class="form-input" placeholder="tu@ibanormexico.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg" id="login-btn">
+          Ingresar
+        </button>
+      </form>
+
+      <div style="margin-top: 24px; text-align: center;">
+        <span style="font-size: 11px; color: var(--text-faint);">
+          ¿Sin acceso? Contacta al administrador del sistema.
+        </span>
       </div>
-    </header>
-
-    <main class="portal-main">
-      <div class="section-title">Documentos</div>
-      <div class="section-count" id="docCount">Cargando...</div>
-
-      <div class="docs-grid" id="docsGrid"></div>
-
-      <div class="empty-state" id="emptyState">
-        <div class="empty-icon">📂</div>
-        <div class="empty-title">Sin documentos aún</div>
-        <div class="empty-msg">Los documentos aparecerán aquí</div>
-      </div>
-    </main>
-
+    </div>
   </div>
 
-  <script>
-    // ── CONSTANTES ──────────────────────────────────────────────────────────
-    const PASS_HASH = 'c24b7a3f65e835b2ee4ad6b770aa305bc8dc339cc86db96f8cf8cd440fa3dcb0';
-    const SESSION_KEY = 'mtx_auth';
+</div>
 
-    // ── UTILIDADES ──────────────────────────────────────────────────────────
-    async function sha256(str) {
-      const buf = new TextEncoder().encode(str);
-      const hash = await crypto.subtle.digest('SHA-256', buf);
-      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+(async () => {
+  // Si ya tiene sesión, redirigir
+  const db = getDB();
+  if (!db) return;
+  const session = await getSession();
+  if (session) {
+    const user = await getCurrentUser();
+    window.location.href = user?.profile?.role === 'admin' ? '/admin.html' : '/dashboard.html';
+    return;
+  }
+
+  const form = document.getElementById('login-form');
+  const btn  = document.getElementById('login-btn');
+  const err  = document.getElementById('login-error');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Ingresando...';
+    err.classList.remove('show');
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      err.textContent = error.message.includes('Invalid') ? 'Credenciales incorrectas. Verifica tu correo y contraseña.' : error.message;
+      err.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Ingresar';
+      return;
     }
 
-    function setLoading(pct) {
-      const bar = document.getElementById('loadingBar');
-      bar.style.width = pct + '%';
-      if (pct >= 100) setTimeout(() => { bar.style.opacity = '0'; }, 400);
-      else bar.style.opacity = '1';
-    }
-
-    function formatDate(iso) {
-      if (!iso) return '—';
-      const d = new Date(iso);
-      return d.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' });
-    }
-
-    // ── SESIÓN ──────────────────────────────────────────────────────────────
-    function isAuthenticated() {
-      return sessionStorage.getItem(SESSION_KEY) === '1';
-    }
-
-    function setAuthenticated(val) {
-      if (val) sessionStorage.setItem(SESSION_KEY, '1');
-      else sessionStorage.removeItem(SESSION_KEY);
-    }
-
-    // ── LOGIN ────────────────────────────────────────────────────────────────
-    async function handleLogin() {
-      const input = document.getElementById('passwordInput');
-      const error = document.getElementById('loginError');
-      const btn   = document.getElementById('loginBtn');
-
-      const val = input.value.trim();
-      if (!val) { showError('Ingresa tu contraseña.'); return; }
-
-      btn.textContent = 'VERIFICANDO...';
-      btn.disabled = true;
-
-      try {
-        const hash = await sha256(val);
-        if (hash === PASS_HASH) {
-          error.classList.remove('visible');
-          setAuthenticated(true);
-          showPortal();
-        } else {
-          showError('Contraseña incorrecta. Intenta de nuevo.');
-          input.value = '';
-          input.focus();
-        }
-      } finally {
-        btn.textContent = 'INGRESAR';
-        btn.disabled = false;
-      }
-    }
-
-    function showError(msg) {
-      const error = document.getElementById('loginError');
-      error.textContent = msg;
-      error.classList.add('visible');
-    }
-
-    // ── PORTAL ───────────────────────────────────────────────────────────────
-    function showPortal() {
-      document.getElementById('loginScreen').style.display = 'none';
-      const portal = document.getElementById('portal');
-      portal.classList.add('active');
-      loadDocuments();
-    }
-
-    function showLogin() {
-      document.getElementById('portal').classList.remove('active');
-      document.getElementById('loginScreen').style.display = '';
-      document.getElementById('passwordInput').value = '';
-      document.getElementById('loginError').classList.remove('visible');
-    }
-
-    async function loadDocuments() {
-      setLoading(30);
-      const grid  = document.getElementById('docsGrid');
-      const empty = document.getElementById('emptyState');
-      const count = document.getElementById('docCount');
-
-      try {
-        setLoading(60);
-        const res = await fetch('docs/index.json?_=' + Date.now());
-        const data = await res.json();
-        setLoading(90);
-
-        const docs = data.documentos || [];
-        count.textContent = docs.length
-          ? docs.length + ' documento' + (docs.length !== 1 ? 's' : '') + ' disponible' + (docs.length !== 1 ? 's' : '')
-          : '0 documentos';
-
-        if (docs.length === 0) {
-          grid.innerHTML = '';
-          empty.classList.add('visible');
-        } else {
-          empty.classList.remove('visible');
-          grid.innerHTML = docs.map(doc => renderCard(doc)).join('');
-        }
-      } catch (e) {
-        count.textContent = 'Error al cargar documentos';
-        empty.classList.add('visible');
-        console.error('Error loading docs:', e);
-      }
-
-      setLoading(100);
-    }
-
-    function renderCard(doc) {
-      const nombre    = escHtml(doc.nombre    || 'Sin título');
-      const categoria = escHtml(doc.categoria || 'General');
-      const fecha     = formatDate(doc.fecha);
-      const url       = escHtml(doc.url       || '#');
-
-      return `
-        <div class="doc-card">
-          <div class="card-header">
-            <div class="card-title">${nombre}</div>
-            <span class="card-badge">${categoria}</span>
-          </div>
-          <div class="card-date">${fecha}</div>
-          <a class="card-open-btn" href="${url}" target="_blank" rel="noopener">Abrir →</a>
-        </div>`;
-    }
-
-    function escHtml(str) {
-      return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-
-    // ── EVENTOS ──────────────────────────────────────────────────────────────
-    document.getElementById('loginBtn').addEventListener('click', handleLogin);
-    document.getElementById('passwordInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') handleLogin();
-    });
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      setAuthenticated(false);
-      showLogin();
-    });
-
-    // ── ARRANQUE ─────────────────────────────────────────────────────────────
-    if (isAuthenticated()) {
-      showPortal();
-    }
-  </script>
+    // Obtener perfil para saber el rol
+    const { data: profile } = await db.from('profiles').select('role').eq('id', data.user.id).single();
+    await logActivity('login', 'user', data.user.id);
+    window.location.href = profile?.role === 'admin' ? '/admin.html' : '/dashboard.html';
+  });
+})();
+</script>
 </body>
 </html>
