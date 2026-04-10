@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Administración</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    .lead-status-nuevo            { color: var(--info);    background: var(--info-dim); padding:2px 7px; border-radius:3px; font-size:11px; font-weight:600; }
+    .lead-status-contactado       { color: var(--warning); background: var(--warning-dim); padding:2px 7px; border-radius:3px; font-size:11px; font-weight:600; }
+    .lead-status-en_negociacion   { color: #b388ff;        background: rgba(179,136,255,.1); padding:2px 7px; border-radius:3px; font-size:11px; font-weight:600; }
+    .lead-status-propuesta_enviada{ color: var(--accent);  background: var(--accent-dim); padding:2px 7px; border-radius:3px; font-size:11px; font-weight:600; }
+    .lead-status-cerrado_ganado   { color: #000;           background: var(--accent); padding:2px 7px; border-radius:3px; font-size:11px; font-weight:700; }
+    .lead-status-cerrado_perdido  { color: var(--danger);  background: var(--danger-dim); padding:2px 7px; border-radius:3px; font-size:11px; font-weight:600; }
+    .alert-badge { position: relative; }
+    .alert-count { position: absolute; top: -6px; right: -8px; background: var(--danger); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .user-row td:first-child { font-weight: 500; }
+    .activity-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .activity-item:last-child { border: none; }
+    .activity-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+    .activity-text { flex: 1; font-size: 13px; }
+    .activity-time { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-title { font-family: var(--font-head); font-size: 1.4rem; color: var(--text); }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease-in-out infinite; display: inline-block; margin-right: 5px; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.7)} }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page">
+
+  <!-- Page header -->
+  <div class="page-header mt-24">
+    <div class="page-header-text">
+      <h1>Panel de Administración</h1>
+      <p class="muted">Control total de usuarios, documentos y actividad del portal.</p>
+    </div>
+    <button class="btn btn-secondary" onclick="refreshAll()">↻ Actualizar</button>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid-4 mb-32">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-users">—</div>
+      <div class="stat-label">Colaboradores</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-docs">—</div>
+      <div class="stat-label">Documentos Total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-pending" style="color:var(--warning)">—</div>
+      <div class="stat-label">Pendientes Revisión</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-alerts" style="color:var(--danger)">—</div>
+      <div class="stat-label">Alertas Sin Leer</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('alerts')">
+      <span class="live-dot"></span>Alertas
+      <span id="alert-count-badge" style="display:none" class="badge badge-danger ml-2">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('leads')">🎯 Leads</button>
+    <button class="tab-btn" onclick="switchTab('documents')">Documentos</button>
+    <button class="tab-btn" onclick="switchTab('users')">Usuarios</button>
+    <button class="tab-btn" onclick="switchTab('activity')">Actividad</button>
+  </div>
+
+  <!-- TAB: ALERTS -->
+  <div id="tab-alerts" class="tab-panel active">
+    <div class="section-header">
+      <span class="section-title">Alertas de Revisión</span>
+      <span style="font-size:12px;color:var(--text-muted)"><span class="live-dot"></span>Tiempo real</span>
+    </div>
+    <div id="alerts-list">
+      <div class="empty-state"><div class="empty-icon">🔔</div><h3>Sin alertas pendientes</h3></div>
+    </div>
+  </div>
+
+  <!-- TAB: LEADS -->
+  <div id="tab-leads" class="tab-panel">
+    <div class="section-header">
+      <span class="section-title">Leads de todos los colaboradores</span>
+      <div class="flex gap-8">
+        <select id="leads-filter-user" class="form-select" style="width:200px" onchange="applyLeadFilters()">
+          <option value="">Todos los colaboradores</option>
+        </select>
+        <select id="leads-filter-status" class="form-select" style="width:180px" onchange="applyLeadFilters()">
+          <option value="">Todos los estados</option>
+          <option value="nuevo">Nuevo</option>
+          <option value="contactado">Contactado</option>
+          <option value="en_negociacion">En Negociación</option>
+          <option value="propuesta_enviada">Propuesta Enviada</option>
+          <option value="cerrado_ganado">Cerrado Ganado</option>
+          <option value="cerrado_perdido">Cerrado Perdido</option>
+        </select>
+        <input type="text" id="leads-search" class="form-input" style="width:180px" placeholder="Buscar empresa..." oninput="applyLeadFilters()">
+      </div>
+    </div>
+
+    <!-- Resumen por colaborador -->
+    <div id="leads-user-summary" class="grid-4 mb-24"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Contacto</th>
+            <th>Colaborador</th>
+            <th>Estado</th>
+            <th>Fuente</th>
+            <th>Valor Est.</th>
+            <th>Seguimiento</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="admin-leads-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: DOCUMENTS -->
+  <div id="tab-documents" class="tab-panel">
+    <div class="section-header">
+      <span class="section-title">Todos los Documentos</span>
+      <div class="flex gap-8">
+        <select id="doc-filter-status" class="form-select" style="width:160px" onchange="loadDocuments()">
+          <option value="">Todos los estados</option>
+          <option value="draft">Borrador</option>
+          <option value="pending_review">En Revisión</option>
+          <option value="approved">Aprobados</option>
+          <option value="rejected">Rechazados</option>
+        </select>
+        <input type="text" id="doc-search" class="form-input" style="width:200px" placeholder="Buscar..." oninput="filterDocs()">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Título</th>
+            <th>Tipo</th>
+            <th>Usuario</th>
+            <th>Estado</th>
+            <th>Palabras</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="docs-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: USERS -->
+  <div id="tab-users" class="tab-panel">
+    <div class="section-header">
+      <span class="section-title">Colaboradores</span>
+      <button class="btn btn-secondary btn-sm" onclick="inviteUser()">+ Invitar Usuario</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Documentos</th>
+            <th>Último acceso</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: ACTIVITY -->
+  <div id="tab-activity" class="tab-panel">
+    <div class="section-header">
+      <span class="section-title">Registro de Actividad</span>
+      <select id="activity-user-filter" class="form-select" style="width:200px" onchange="loadActivity()">
+        <option value="">Todos los usuarios</option>
+      </select>
+    </div>
+    <div id="activity-list" style="max-height:600px;overflow-y:auto">
+      <div style="color:var(--text-muted);text-align:center;padding:32px">Cargando...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Document viewer modal -->
+<div id="doc-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:820px;width:95%">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">—</div>
+        <div id="modal-meta" style="display:flex;gap:8px;margin-top:6px"></div>
+      </div>
+      <button class="modal-close" onclick="closeDocModal()">✕</button>
+    </div>
+    <div id="modal-content" class="doc-content" style="max-height:55vh;overflow-y:auto;padding:8px 0;margin:16px 0"></div>
+    <div class="form-group">
+      <label class="form-label">Nota del administrador</label>
+      <textarea id="admin-note" class="form-textarea" style="min-height:80px" placeholder="Comentario para el autor..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDocModal()">Cerrar</button>
+      <button class="btn btn-secondary" onclick="downloadCurrentDoc()">⬇ Descargar</button>
+      <button class="btn btn-danger btn-sm" onclick="resolveDoc('rejected')">✕ Rechazar</button>
+      <button class="btn btn-primary" onclick="resolveDoc('approved')">✓ Aprobar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invite modal -->
+<div id="invite-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-title">Invitar Colaborador</span>
+      <button class="modal-close" onclick="document.getElementById('invite-modal').style.display='none'">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group">
+        <label class="form-label">Nombre completo</label>
+        <input type="text" id="invite-name" class="form-input" placeholder="Nombre Apellido">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input type="email" id="invite-email" class="form-input" placeholder="correo@ejemplo.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña temporal</label>
+        <input type="password" id="invite-password" class="form-input" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rol</label>
+        <select id="invite-role" class="form-select">
+          <option value="user">Colaborador</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('invite-modal').style.display='none'">Cancelar</button>
+      <button class="btn btn-primary" id="invite-btn" onclick="createUser()">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+let currentUser = null;
+let allDocsData = [];
+let allUsersData = [];
+let currentDocModal = null;
+let currentAlertId = null;
+
+async function init() {
+  currentUser = await requireAuth(true); // admin only
+  if (!currentUser) return;
+  document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'admin');
+  await refreshAll();
+  subscribeToRealtime();
+}
+
+async function refreshAll() {
+  await Promise.all([loadStats(), loadAlerts(), loadDocuments(), loadUsers(), loadActivity()]);
+}
+
+async function loadStats() {
+  const db = getDB();
+  const [users, docs, pending, alerts] = await Promise.all([
+    db.from('profiles').select('id', { count: 'exact', head: true }),
+    db.from('documents').select('id', { count: 'exact', head: true }),
+    db.from('documents').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
+    db.from('alerts').select('id', { count: 'exact', head: true }).eq('is_read', false),
+  ]);
+  document.getElementById('stat-users').textContent = users.count ?? '—';
+  document.getElementById('stat-docs').textContent = docs.count ?? '—';
+  document.getElementById('stat-pending').textContent = pending.count ?? '—';
+  document.getElementById('stat-alerts').textContent = alerts.count ?? '—';
+
+  const unread = alerts.count || 0;
+  const badge = document.getElementById('alert-count-badge');
+  if (unread > 0) { badge.textContent = unread; badge.style.display = 'inline-flex'; }
+  else badge.style.display = 'none';
+}
+
+async function loadAlerts() {
+  const db = getDB();
+  const { data } = await db.from('alerts')
+    .select('*, documents(title, doc_type, content), profiles!sender_id(full_name, email)')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const list = document.getElementById('alerts-list');
+  if (!data?.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🔔</div><h3>Sin alertas pendientes</h3></div>';
+    return;
+  }
+  list.innerHTML = data.map(a => {
+    const sender = a.profiles?.full_name || a.profiles?.email || 'Desconocido';
+    const docTitle = a.documents?.title || 'Documento sin título';
+    const docType  = a.documents ? typeName(a.documents.doc_type) : '';
+    const typeStyle = a.type === 'urgent' ? 'urgent' : a.is_read ? '' : 'unread';
+    return `
+    <div class="alert-item ${typeStyle}" id="alert-${a.id}">
+      <div class="alert-dot" style="${a.is_read ? 'background:var(--border2)' : ''}"></div>
+      <div class="alert-meta">
+        <div class="alert-message">
+          <strong>${escHtml(sender)}</strong> envió
+          <strong>"${escHtml(docTitle)}"</strong> para revisión
+        </div>
+        <div class="alert-sub">${docType} · ${formatDate(a.created_at)}</div>
+        ${a.message ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px;font-style:italic">"${escHtml(a.message)}"</div>` : ''}
+        <div class="alert-actions">
+          <button class="btn btn-primary btn-sm" onclick="openDocModal('${a.document_id}', '${a.id}')">📋 Revisar Documento</button>
+          ${!a.is_read ? `<button class="btn btn-ghost btn-sm" onclick="markRead('${a.id}')">Marcar leído</button>` : ''}
+        </div>
+      </div>
+      <span class="badge badge-${a.type === 'urgent' ? 'danger' : a.is_read ? 'neutral' : 'warning'}">${a.type}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadDocuments() {
+  const db = getDB();
+  const statusFilter = document.getElementById('doc-filter-status')?.value;
+  let query = db.from('documents')
+    .select('*, profiles!user_id(full_name, email)')
+    .order('updated_at', { ascending: false })
+    .limit(100);
+  if (statusFilter) query = query.eq('status', statusFilter);
+  const { data } = await query;
+  allDocsData = data || [];
+  filterDocs();
+}
+
+function filterDocs() {
+  const q = (document.getElementById('doc-search')?.value || '').toLowerCase();
+  const docs = q ? allDocsData.filter(d =>
+    d.title.toLowerCase().includes(q) ||
+    (d.profiles?.full_name || '').toLowerCase().includes(q) ||
+    (d.profiles?.email || '').toLowerCase().includes(q)
+  ) : allDocsData;
+
+  const tbody = document.getElementById('docs-tbody');
+  if (!docs.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Sin documentos</td></tr>';
+    return;
+  }
+  tbody.innerHTML = docs.map(d => {
+    const user = d.profiles?.full_name || d.profiles?.email || '—';
+    return `
+    <tr>
+      <td><strong>${escHtml(d.title)}</strong></td>
+      <td><span style="font-size:12px">${typeName(d.doc_type)}</span></td>
+      <td><span class="td-mono">${escHtml(user)}</span></td>
+      <td>${statusBadge(d.status)}</td>
+      <td><span class="td-mono">${d.word_count || '—'}</span></td>
+      <td><span class="td-mono" style="font-size:11px">${formatDate(d.updated_at)}</span></td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="openDocModal('${d.id}', null)">Ver</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadDocById('${d.id}')">⬇</button>
+          ${d.status === 'pending_review' ? `<button class="btn btn-primary btn-sm" onclick="openDocModal('${d.id}', null)">Revisar</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadUsers() {
+  const db = getDB();
+  const { data } = await db.from('profiles').select('*').order('created_at', { ascending: false });
+  allUsersData = data || [];
+
+  // Populate activity filter
+  const sel = document.getElementById('activity-user-filter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todos los usuarios</option>' +
+    allUsersData.map(u => `<option value="${u.id}">${escHtml(u.full_name || u.email)}</option>`).join('');
+  if (cur) sel.value = cur;
+
+  // Get doc counts
+  const { data: docCounts } = await db.from('documents').select('user_id');
+  const countMap = {};
+  (docCounts || []).forEach(d => { countMap[d.user_id] = (countMap[d.user_id] || 0) + 1; });
+
+  const tbody = document.getElementById('users-tbody');
+  if (!allUsersData.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Sin usuarios</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allUsersData.map(u => `
+    <tr class="user-row">
+      <td>${escHtml(u.full_name || u.email.split('@')[0])}</td>
+      <td><span class="td-mono">${escHtml(u.email)}</span></td>
+      <td>${u.role === 'admin' ? '<span class="badge badge-accent">Admin</span>' : '<span class="badge badge-neutral">Colaborador</span>'}</td>
+      <td><span class="td-mono">${countMap[u.id] || 0}</span></td>
+      <td><span class="td-mono" style="font-size:11px">${u.last_seen ? formatDate(u.last_seen) : 'Nunca'}</span></td>
+      <td><span class="${u.is_active ? 'dot-online' : 'dot-offline'}"></span>${u.is_active ? 'Activo' : 'Inactivo'}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          ${u.role !== 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${u.id}', true)">→ Admin</button>` :
+                                  `<button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${u.id}', false)">→ User</button>`}
+          <button class="btn btn-ghost btn-sm" onclick="toggleActive('${u.id}', ${!u.is_active})">${u.is_active ? 'Desactivar' : 'Activar'}</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function loadActivity() {
+  const db = getDB();
+  const userFilter = document.getElementById('activity-user-filter')?.value;
+  let query = db.from('activity_logs')
+    .select('*, profiles!user_id(full_name, email)')
+    .order('created_at', { ascending: false })
+    .limit(80);
+  if (userFilter) query = query.eq('user_id', userFilter);
+  const { data } = await query;
+
+  const iconMap = {
+    login: '🔑', logout: '🚪', create_document: '📝', generate_document: '⚡',
+    download_document: '⬇', send_for_review: '📤', view_document: '👁',
+  };
+
+  const list = document.getElementById('activity-list');
+  if (!data?.length) {
+    list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:32px">Sin actividad registrada</div>';
+    return;
+  }
+  list.innerHTML = data.map(a => {
+    const user = a.profiles?.full_name || a.profiles?.email || 'Sistema';
+    const icon = iconMap[a.action] || '•';
+    const meta = a.metadata?.title ? `"${a.metadata.title}"` : '';
+    return `
+    <div class="activity-item">
+      <div class="activity-icon">${icon}</div>
+      <div class="activity-text">
+        <strong>${escHtml(user)}</strong> — ${a.action.replace(/_/g,' ')} ${meta ? `<span style="color:var(--accent)">${escHtml(meta)}</span>` : ''}
+        <div class="activity-time">${formatDate(a.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openDocModal(docId, alertId) {
+  const db = getDB();
+  const { data: doc } = await db.from('documents')
+    .select('*, profiles!user_id(full_name, email)')
+    .eq('id', docId).single();
+  if (!doc) return;
+  currentDocModal = doc;
+  currentAlertId = alertId;
+
+  document.getElementById('modal-title').textContent = doc.title;
+  document.getElementById('modal-meta').innerHTML = `
+    ${statusBadge(doc.status)}
+    <span class="badge badge-neutral">${typeName(doc.doc_type)}</span>
+    <span style="font-size:11px;color:var(--text-muted)">por ${escHtml(doc.profiles?.full_name || doc.profiles?.email)}</span>
+    <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">${formatDate(doc.updated_at)}</span>
+  `;
+  document.getElementById('modal-content').innerHTML = doc.content || '<p style="color:var(--text-muted)">Sin contenido</p>';
+  document.getElementById('admin-note').value = '';
+  document.getElementById('doc-modal').style.display = 'flex';
+
+  // Mark alert as read
+  if (alertId) await markRead(alertId);
+  await logActivity('view_document', 'document', docId, { title: doc.title });
+}
+
+function closeDocModal() { document.getElementById('doc-modal').style.display = 'none'; currentDocModal = null; }
+
+async function resolveDoc(newStatus) {
+  if (!currentDocModal) return;
+  const db = getDB();
+  const note = document.getElementById('admin-note').value.trim();
+  await db.from('documents').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', currentDocModal.id);
+  if (currentAlertId) {
+    await db.from('alerts').update({
+      is_read: true,
+      resolved_by: currentUser.id,
+      resolved_at: new Date().toISOString(),
+      admin_note: note || null,
+    }).eq('id', currentAlertId);
+  }
+  await logActivity(`document_${newStatus}`, 'document', currentDocModal.id, { title: currentDocModal.title });
+  closeDocModal();
+  showToast(newStatus === 'approved' ? 'Documento aprobado ✓' : 'Documento rechazado', newStatus === 'approved' ? 'success' : 'warning');
+  await refreshAll();
+}
+
+async function markRead(alertId) {
+  await getDB().from('alerts').update({ is_read: true }).eq('id', alertId);
+  const el = document.getElementById(`alert-${alertId}`);
+  if (el) { el.classList.remove('unread'); el.querySelector('.alert-dot').style.background = 'var(--border2)'; }
+  await loadStats();
+}
+
+async function downloadDocById(docId) {
+  const doc = allDocsData.find(d => d.id === docId);
+  if (!doc) return;
+  downloadDocument(doc.title, doc.content);
+}
+
+function downloadCurrentDoc() {
+  if (!currentDocModal) return;
+  downloadDocument(currentDocModal.title, currentDocModal.content);
+}
+
+async function toggleAdmin(userId, makeAdmin) {
+  await getDB().from('profiles').update({ role: makeAdmin ? 'admin' : 'user' }).eq('id', userId);
+  showToast('Rol actualizado', 'success');
+  await loadUsers();
+}
+
+async function toggleActive(userId, makeActive) {
+  await getDB().from('profiles').update({ is_active: makeActive }).eq('id', userId);
+  showToast(makeActive ? 'Usuario activado' : 'Usuario desactivado', 'info');
+  await loadUsers();
+}
+
+function inviteUser() { document.getElementById('invite-modal').style.display = 'flex'; }
+
+async function createUser() {
+  const btn = document.getElementById('invite-btn');
+  btn.disabled = true; btn.textContent = 'Creando...';
+  const email    = document.getElementById('invite-email').value.trim();
+  const password = document.getElementById('invite-password').value;
+  const name     = document.getElementById('invite-name').value.trim();
+  const role     = document.getElementById('invite-role').value;
+
+  if (!email || !password || !name) {
+    showToast('Completa todos los campos', 'warning');
+    btn.disabled = false; btn.textContent = 'Crear Usuario'; return;
+  }
+
+  try {
+    const db = getDB();
+    // Crear usuario en Supabase Auth (requiere service_role key — hazlo desde el dashboard de Supabase)
+    // O usar signUp desde admin session
+    const { data, error } = await db.auth.signUp({
+      email, password,
+      options: { data: { full_name: name, role } }
+    });
+    if (error) throw error;
+    // Update profile role manually
+    if (data.user) {
+      await db.from('profiles').upsert({ id: data.user.id, email, full_name: name, role });
+    }
+    document.getElementById('invite-modal').style.display = 'none';
+    showToast(`Usuario ${name} creado ✓`, 'success');
+    await loadUsers();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = 'Crear Usuario';
+}
+
+// ── LEADS ADMIN ──────────────────────────────────────────────
+let allLeadsAdmin = [];
+const LEAD_STATUS_LABELS = {
+  nuevo:'Nuevo', contactado:'Contactado', en_negociacion:'En Negociación',
+  propuesta_enviada:'Propuesta Enviada', cerrado_ganado:'Cerrado Ganado', cerrado_perdido:'Cerrado Perdido'
+};
+
+async function loadLeadsAdmin() {
+  const db = getDB();
+  const { data } = await db.from('leads')
+    .select('*, profiles!user_id(full_name, email)')
+    .order('updated_at', { ascending: false });
+  allLeadsAdmin = data || [];
+
+  // Poblar filtro de usuario
+  const sel = document.getElementById('leads-filter-user');
+  const cur = sel.value;
+  const users = [...new Map(allLeadsAdmin.map(l => [l.user_id, l.profiles])).entries()];
+  sel.innerHTML = '<option value="">Todos los colaboradores</option>' +
+    users.map(([uid, p]) => `<option value="${uid}">${escHtml(p?.full_name || p?.email || uid)}</option>`).join('');
+  if (cur) sel.value = cur;
+
+  renderLeadsSummary();
+  applyLeadFilters();
+}
+
+function renderLeadsSummary() {
+  const byUser = {};
+  allLeadsAdmin.forEach(l => {
+    const uid = l.user_id;
+    if (!byUser[uid]) byUser[uid] = { name: l.profiles?.full_name || l.profiles?.email || '—', total: 0, ganados: 0, pipeline: 0 };
+    byUser[uid].total++;
+    if (l.status === 'cerrado_ganado') byUser[uid].ganados++;
+    if (!['cerrado_perdido'].includes(l.status)) byUser[uid].pipeline += parseFloat(l.valor_estimado) || 0;
+  });
+  const container = document.getElementById('leads-user-summary');
+  container.innerHTML = Object.values(byUser).map(u => `
+    <div class="stat-card card-accent">
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:8px">${escHtml(u.name)}</div>
+      <div style="display:flex;gap:16px">
+        <div><div class="stat-value" style="font-size:1.4rem">${u.total}</div><div class="stat-label">Leads</div></div>
+        <div><div class="stat-value" style="font-size:1.4rem">${u.ganados}</div><div class="stat-label">Ganados</div></div>
+        <div><div class="stat-value" style="font-size:1rem;color:var(--accent)">${u.pipeline > 0 ? '$' + u.pipeline.toLocaleString('es-MX',{minimumFractionDigits:0}) : '—'}</div><div class="stat-label">Pipeline</div></div>
+      </div>
+    </div>`).join('');
+}
+
+function applyLeadFilters() {
+  const uid = document.getElementById('leads-filter-user').value;
+  const st  = document.getElementById('leads-filter-status').value;
+  const q   = document.getElementById('leads-search').value.toLowerCase();
+  let leads = allLeadsAdmin;
+  if (uid) leads = leads.filter(l => l.user_id === uid);
+  if (st)  leads = leads.filter(l => l.status === st);
+  if (q)   leads = leads.filter(l => (l.empresa||'').toLowerCase().includes(q) || (l.contacto_nombre||'').toLowerCase().includes(q));
+
+  const tbody = document.getElementById('admin-leads-tbody');
+  if (!leads.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Sin leads</td></tr>';
+    return;
+  }
+  tbody.innerHTML = leads.map(l => {
+    const user  = l.profiles?.full_name || l.profiles?.email || '—';
+    const valor = l.valor_estimado ? '$' + parseFloat(l.valor_estimado).toLocaleString('es-MX',{minimumFractionDigits:0}) + ' ' + (l.moneda||'MXN') : '—';
+    const segColor = l.seguimiento && new Date(l.seguimiento) < new Date() ? 'var(--danger)' : 'var(--text-muted)';
+    return `<tr>
+      <td><strong>${escHtml(l.empresa)}</strong></td>
+      <td>
+        <div>${escHtml(l.contacto_nombre||'—')}</div>
+        ${l.cargo ? `<div style="font-size:11px;color:var(--text-muted)">${escHtml(l.cargo)}</div>` : ''}
+        ${l.contacto_email ? `<div style="font-size:11px;color:var(--info);font-family:var(--font-mono)">${escHtml(l.contacto_email)}</div>` : ''}
+      </td>
+      <td><span style="font-size:12px;font-weight:500">${escHtml(user)}</span></td>
+      <td><span class="badge lead-status-${l.status}">${LEAD_STATUS_LABELS[l.status]||l.status}</span></td>
+      <td><span class="badge badge-neutral" style="font-size:10px">${l.fuente||'—'}</span></td>
+      <td><span style="color:var(--accent);font-family:var(--font-mono);font-size:12px">${valor}</span></td>
+      <td><span style="font-size:11px;color:${segColor};font-family:var(--font-mono)">${l.seguimiento||'—'}</span></td>
+      <td><span class="td-mono" style="font-size:11px">${formatDate(l.created_at).split(',')[0]}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    const tabs = ['alerts', 'leads', 'documents', 'users', 'activity'];
+    b.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`tab-${name}`)?.classList.add('active');
+  if (name === 'leads') loadLeadsAdmin();
+}
+
+function subscribeToRealtime() {
+  const db = getDB();
+  db.channel('admin-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'alerts' }, async () => {
+      showToast('⚡ Nueva alerta de revisión', 'warning');
+      await loadStats();
+      await loadAlerts();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, async () => {
+      await loadStats();
+      await loadDocuments();
+    })
+    .subscribe();
+}
+
+init();
+</script>
+</body>
+</html>
