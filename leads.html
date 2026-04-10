@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Mis Leads</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    .lead-status-nuevo            { color: var(--info);    background: var(--info-dim); }
+    .lead-status-contactado       { color: var(--warning); background: var(--warning-dim); }
+    .lead-status-en_negociacion   { color: #b388ff;        background: rgba(179,136,255,.1); }
+    .lead-status-propuesta_enviada{ color: var(--accent);  background: var(--accent-dim); }
+    .lead-status-cerrado_ganado   { color: var(--accent);  background: rgba(0,255,136,.2); font-weight:700; }
+    .lead-status-cerrado_perdido  { color: var(--danger);  background: var(--danger-dim); }
+
+    .kanban { display: grid; grid-template-columns: repeat(6, 220px); gap: 12px; overflow-x: auto; padding-bottom: 16px; }
+    .kanban-col { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px; min-height: 200px; }
+    .kanban-header { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+    .kanban-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; cursor: pointer; transition: border-color .15s, transform .1s; }
+    .kanban-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .kanban-card .company { font-weight: 600; font-size: 13px; color: #fff; margin-bottom: 3px; }
+    .kanban-card .contact { font-size: 11px; color: var(--text-muted); }
+    .kanban-card .value   { font-size: 11px; color: var(--accent); font-family: var(--font-mono); margin-top: 5px; }
+
+    .view-toggle { display: flex; gap: 4px; }
+    .view-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: var(--radius); cursor: pointer; font-size: 12px; transition: all .15s; }
+    .view-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+    .pipeline-bar { height: 8px; border-radius: 4px; background: var(--surface3); overflow: hidden; margin-top: 4px; }
+    .pipeline-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #00ccaa); border-radius: 4px; transition: width .5s ease; }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page">
+
+  <!-- Page header -->
+  <div class="page-header mt-24">
+    <div class="page-header-text">
+      <h1>Mis Leads</h1>
+      <p class="muted">Registra y da seguimiento a tus prospectos.</p>
+    </div>
+    <div class="flex gap-8">
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-table" onclick="setView('table')">≡ Lista</button>
+        <button class="view-btn" id="btn-kanban" onclick="setView('kanban')">▣ Kanban</button>
+      </div>
+      <button class="btn btn-primary" onclick="openForm()">+ Nuevo Lead</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4 mb-24">
+    <div class="stat-card">
+      <div class="stat-value" id="st-total">—</div>
+      <div class="stat-label">Total Leads</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="st-activos" style="color:var(--info)">—</div>
+      <div class="stat-label">Activos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="st-ganados">—</div>
+      <div class="stat-label">Cerrados Ganados</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="st-pipeline" style="font-size:1.4rem">—</div>
+      <div class="stat-label">Pipeline Estimado</div>
+      <div class="pipeline-bar mt-8"><div class="pipeline-fill" id="pipeline-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex-between mb-16">
+    <div class="flex gap-8 flex-wrap">
+      <select id="filter-status" class="form-select" style="width:180px" onchange="applyFilters()">
+        <option value="">Todos los estados</option>
+        <option value="nuevo">Nuevo</option>
+        <option value="contactado">Contactado</option>
+        <option value="en_negociacion">En Negociación</option>
+        <option value="propuesta_enviada">Propuesta Enviada</option>
+        <option value="cerrado_ganado">Cerrado Ganado</option>
+        <option value="cerrado_perdido">Cerrado Perdido</option>
+      </select>
+      <select id="filter-fuente" class="form-select" style="width:150px" onchange="applyFilters()">
+        <option value="">Todas las fuentes</option>
+        <option value="referido">Referido</option>
+        <option value="web">Web</option>
+        <option value="evento">Evento</option>
+        <option value="llamada">Llamada</option>
+        <option value="linkedin">LinkedIn</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <input type="text" id="filter-search" class="form-input" style="max-width:220px" placeholder="Buscar empresa o contacto..." oninput="applyFilters()">
+  </div>
+
+  <!-- TABLE VIEW -->
+  <div id="view-table">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Contacto</th>
+            <th>Estado</th>
+            <th>Fuente</th>
+            <th>Valor Est.</th>
+            <th>Seguimiento</th>
+            <th>Registrado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- KANBAN VIEW -->
+  <div id="view-kanban" style="display:none">
+    <div class="kanban" id="kanban-board"></div>
+  </div>
+
+</div>
+
+<!-- Lead Form Modal -->
+<div id="lead-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-title" id="form-modal-title">Nuevo Lead</span>
+      <button class="modal-close" onclick="closeForm()">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" id="lead-form-grid">
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Empresa / Organización *</label>
+        <input type="text" id="f-empresa" class="form-input" placeholder="Nombre de la empresa">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombre del Contacto</label>
+        <input type="text" id="f-contacto" class="form-input" placeholder="Nombre Apellido">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cargo</label>
+        <input type="text" id="f-cargo" class="form-input" placeholder="Director, Gerente...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="f-email" class="form-input" placeholder="correo@empresa.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input type="text" id="f-telefono" class="form-input" placeholder="+52 (55) 0000-0000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select id="f-status" class="form-select">
+          <option value="nuevo">Nuevo</option>
+          <option value="contactado">Contactado</option>
+          <option value="en_negociacion">En Negociación</option>
+          <option value="propuesta_enviada">Propuesta Enviada</option>
+          <option value="cerrado_ganado">Cerrado Ganado</option>
+          <option value="cerrado_perdido">Cerrado Perdido</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fuente</label>
+        <select id="f-fuente" class="form-select">
+          <option value="referido">Referido</option>
+          <option value="web">Web</option>
+          <option value="evento">Evento</option>
+          <option value="llamada">Llamada</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valor Estimado (MXN)</label>
+        <input type="number" id="f-valor" class="form-input" placeholder="0.00" min="0" step="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha de Seguimiento</label>
+        <input type="date" id="f-seguimiento" class="form-input">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Notas</label>
+        <textarea id="f-notas" class="form-textarea" style="min-height:90px" placeholder="Contexto, historial de conversaciones, próximos pasos..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeForm()">Cancelar</button>
+      <button class="btn btn-danger btn-sm" id="btn-delete" style="display:none;margin-right:auto" onclick="deleteLead()">Eliminar</button>
+      <button class="btn btn-primary" id="btn-save-lead" onclick="saveLead()">Guardar Lead</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+let currentUser = null;
+let allLeads = [];
+let editingId = null;
+let currentView = 'table';
+
+const STATUS_LABELS = {
+  nuevo:             'Nuevo',
+  contactado:        'Contactado',
+  en_negociacion:    'En Negociación',
+  propuesta_enviada: 'Propuesta Enviada',
+  cerrado_ganado:    'Cerrado Ganado',
+  cerrado_perdido:   'Cerrado Perdido',
+};
+const FUENTE_LABELS = { referido:'Referido', web:'Web', evento:'Evento', llamada:'Llamada', linkedin:'LinkedIn', otro:'Otro' };
+
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'leads');
+  await loadLeads();
+}
+
+async function loadLeads() {
+  const db = getDB();
+  const { data, error } = await db.from('leads')
+    .select('*')
+    .order('updated_at', { ascending: false });
+  if (error) { showToast('Error al cargar leads', 'error'); return; }
+  allLeads = data || [];
+  updateStats();
+  applyFilters();
+}
+
+function updateStats() {
+  const activos = allLeads.filter(l => !['cerrado_ganado','cerrado_perdido'].includes(l.status));
+  const ganados = allLeads.filter(l => l.status === 'cerrado_ganado');
+  const pipeline = allLeads
+    .filter(l => !['cerrado_perdido'].includes(l.status))
+    .reduce((s, l) => s + (parseFloat(l.valor_estimado) || 0), 0);
+  const maxPipeline = allLeads.reduce((s, l) => s + (parseFloat(l.valor_estimado) || 0), 0);
+
+  document.getElementById('st-total').textContent   = allLeads.length;
+  document.getElementById('st-activos').textContent  = activos.length;
+  document.getElementById('st-ganados').textContent  = ganados.length;
+  document.getElementById('st-pipeline').textContent = pipeline > 0
+    ? '$' + pipeline.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    : '—';
+  const pct = maxPipeline > 0 ? Math.min((pipeline / maxPipeline) * 100, 100) : 0;
+  document.getElementById('pipeline-fill').style.width = pct + '%';
+}
+
+function applyFilters() {
+  const st = document.getElementById('filter-status').value;
+  const fu = document.getElementById('filter-fuente').value;
+  const q  = document.getElementById('filter-search').value.toLowerCase();
+  let leads = allLeads;
+  if (st) leads = leads.filter(l => l.status === st);
+  if (fu) leads = leads.filter(l => l.fuente === fu);
+  if (q)  leads = leads.filter(l =>
+    (l.empresa || '').toLowerCase().includes(q) ||
+    (l.contacto_nombre || '').toLowerCase().includes(q) ||
+    (l.notas || '').toLowerCase().includes(q)
+  );
+  if (currentView === 'table') renderTable(leads);
+  else renderKanban(leads);
+}
+
+function leadStatusBadge(status) {
+  return `<span class="badge lead-status-${status}">${STATUS_LABELS[status] || status}</span>`;
+}
+
+function renderTable(leads) {
+  const tbody = document.getElementById('leads-tbody');
+  if (!leads.length) {
+    tbody.innerHTML = `<tr><td colspan="8">
+      <div class="empty-state"><div class="empty-icon">🎯</div>
+      <h3>Sin leads registrados</h3>
+      <div style="margin-top:12px"><button class="btn btn-primary" onclick="openForm()">+ Agregar primer lead</button></div>
+      </div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = leads.map(l => {
+    const valor = l.valor_estimado
+      ? '$' + parseFloat(l.valor_estimado).toLocaleString('es-MX', { minimumFractionDigits: 0 }) + ' ' + (l.moneda || 'MXN')
+      : '—';
+    const seg = l.seguimiento
+      ? `<span style="color:${new Date(l.seguimiento) < new Date() ? 'var(--danger)' : 'var(--text-muted)'};font-size:11px;font-family:var(--font-mono)">${l.seguimiento}</span>`
+      : '<span style="color:var(--text-faint)">—</span>';
+    return `<tr style="cursor:pointer" onclick="openForm('${l.id}')">
+      <td><strong>${escHtml(l.empresa)}</strong></td>
+      <td>
+        <div style="font-size:13px">${escHtml(l.contacto_nombre || '—')}</div>
+        ${l.cargo ? `<div style="font-size:11px;color:var(--text-muted)">${escHtml(l.cargo)}</div>` : ''}
+      </td>
+      <td>${leadStatusBadge(l.status)}</td>
+      <td><span class="badge badge-neutral">${FUENTE_LABELS[l.fuente] || l.fuente}</span></td>
+      <td><span class="td-mono" style="color:var(--accent)">${valor}</span></td>
+      <td>${seg}</td>
+      <td><span class="td-mono" style="font-size:11px">${formatDate(l.created_at).split(',')[0]}</span></td>
+      <td onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="openForm('${l.id}')">Editar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderKanban(leads) {
+  const cols = Object.keys(STATUS_LABELS);
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = cols.map(st => {
+    const cards = leads.filter(l => l.status === st);
+    const total = cards.reduce((s, l) => s + (parseFloat(l.valor_estimado) || 0), 0);
+    return `
+    <div class="kanban-col">
+      <div class="kanban-header">
+        <span class="lead-status-${st}" style="padding:2px 6px;border-radius:3px;font-size:10px">${STATUS_LABELS[st]}</span>
+        <span style="color:var(--text-faint)">${cards.length}</span>
+      </div>
+      ${total > 0 ? `<div style="font-size:10px;color:var(--accent);margin-bottom:8px;font-family:var(--font-mono)">$${total.toLocaleString('es-MX',{minimumFractionDigits:0})}</div>` : ''}
+      ${cards.map(l => `
+        <div class="kanban-card" onclick="openForm('${l.id}')">
+          <div class="company">${escHtml(l.empresa)}</div>
+          <div class="contact">${escHtml(l.contacto_nombre || '—')}${l.cargo ? ` · ${escHtml(l.cargo)}` : ''}</div>
+          ${l.valor_estimado ? `<div class="value">$${parseFloat(l.valor_estimado).toLocaleString('es-MX',{minimumFractionDigits:0})} MXN</div>` : ''}
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('view-table').style.display  = v === 'table'  ? 'block' : 'none';
+  document.getElementById('view-kanban').style.display = v === 'kanban' ? 'block' : 'none';
+  document.getElementById('btn-table').classList.toggle('active', v === 'table');
+  document.getElementById('btn-kanban').classList.toggle('active', v === 'kanban');
+  applyFilters();
+}
+
+// ── Form ─────────────────────────────────────────────────────
+function openForm(leadId = null) {
+  editingId = leadId;
+  document.getElementById('form-modal-title').textContent = leadId ? 'Editar Lead' : 'Nuevo Lead';
+  document.getElementById('btn-delete').style.display = leadId ? 'inline-flex' : 'none';
+
+  if (leadId) {
+    const l = allLeads.find(x => x.id === leadId);
+    if (!l) return;
+    document.getElementById('f-empresa').value    = l.empresa || '';
+    document.getElementById('f-contacto').value   = l.contacto_nombre || '';
+    document.getElementById('f-cargo').value      = l.cargo || '';
+    document.getElementById('f-email').value      = l.contacto_email || '';
+    document.getElementById('f-telefono').value   = l.contacto_telefono || '';
+    document.getElementById('f-status').value     = l.status || 'nuevo';
+    document.getElementById('f-fuente').value     = l.fuente || 'otro';
+    document.getElementById('f-valor').value      = l.valor_estimado || '';
+    document.getElementById('f-seguimiento').value= l.seguimiento || '';
+    document.getElementById('f-notas').value      = l.notas || '';
+  } else {
+    document.getElementById('f-empresa').value    = '';
+    document.getElementById('f-contacto').value   = '';
+    document.getElementById('f-cargo').value      = '';
+    document.getElementById('f-email').value      = '';
+    document.getElementById('f-telefono').value   = '';
+    document.getElementById('f-status').value     = 'nuevo';
+    document.getElementById('f-fuente').value     = 'otro';
+    document.getElementById('f-valor').value      = '';
+    document.getElementById('f-seguimiento').value= '';
+    document.getElementById('f-notas').value      = '';
+  }
+  document.getElementById('lead-modal').style.display = 'flex';
+}
+
+function closeForm() { document.getElementById('lead-modal').style.display = 'none'; }
+
+async function saveLead() {
+  const empresa = document.getElementById('f-empresa').value.trim();
+  if (!empresa) { showToast('El nombre de la empresa es obligatorio', 'warning'); return; }
+
+  const btn = document.getElementById('btn-save-lead');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  const payload = {
+    user_id:           currentUser.id,
+    empresa,
+    contacto_nombre:   document.getElementById('f-contacto').value.trim()    || null,
+    cargo:             document.getElementById('f-cargo').value.trim()        || null,
+    contacto_email:    document.getElementById('f-email').value.trim()        || null,
+    contacto_telefono: document.getElementById('f-telefono').value.trim()     || null,
+    status:            document.getElementById('f-status').value,
+    fuente:            document.getElementById('f-fuente').value,
+    valor_estimado:    parseFloat(document.getElementById('f-valor').value)   || null,
+    seguimiento:       document.getElementById('f-seguimiento').value         || null,
+    notas:             document.getElementById('f-notas').value.trim()        || null,
+    updated_at:        new Date().toISOString(),
+  };
+
+  const db = getDB();
+  let error;
+  if (editingId) {
+    ({ error } = await db.from('leads').update(payload).eq('id', editingId));
+  } else {
+    ({ error } = await db.from('leads').insert(payload));
+  }
+
+  if (error) { showToast('Error al guardar: ' + error.message, 'error'); btn.disabled = false; btn.textContent = 'Guardar Lead'; return; }
+
+  showToast(editingId ? 'Lead actualizado ✓' : 'Lead registrado ✓', 'success');
+  closeForm();
+  await loadLeads();
+  btn.disabled = false; btn.textContent = 'Guardar Lead';
+  await logActivity(editingId ? 'update_lead' : 'create_lead', 'lead', editingId, { empresa });
+}
+
+async function deleteLead() {
+  if (!editingId) return;
+  if (!confirm('¿Eliminar este lead? Esta acción no se puede deshacer.')) return;
+  const { error } = await getDB().from('leads').delete().eq('id', editingId);
+  if (error) { showToast('Error al eliminar', 'error'); return; }
+  showToast('Lead eliminado', 'info');
+  closeForm();
+  await loadLeads();
+}
+
+init();
+</script>
+</body>
+</html>
