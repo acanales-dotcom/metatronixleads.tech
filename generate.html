@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Generar Documento</title>
   <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/agent.css">
   <style>
     body { overflow: hidden; }
     .gen-wrap { height: calc(100vh - var(--header-h)); padding: 20px 24px; display: flex; flex-direction: column; }
@@ -103,7 +104,7 @@
       <div class="divider"></div>
 
       <!-- Save / download actions -->
-      <div id="doc-actions" style="display:none; flex-direction:column; gap:8px">
+      <div style="display:flex; flex-direction:column; gap:8px" id="doc-actions" style="display:none">
         <button class="btn btn-secondary" onclick="saveDoc()" id="save-btn">💾 Guardar en Portal</button>
         <button class="btn btn-secondary" onclick="downloadNow()">⬇ Descargar HTML</button>
         <button class="btn btn-ghost btn-sm" onclick="sendReview()" id="review-btn" style="display:none">📤 Enviar a Revisión</button>
@@ -146,6 +147,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js"></script>
+<script src="/assets/agent.js"></script>
 <script>
 let currentUser = null;
 let generatedContent = '';
