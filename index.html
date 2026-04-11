@@ -3,110 +3,480 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaTronix Portal — Acceso</title>
+  <title>MetaTronix — Portal Interno de Documentos de Ventas</title>
   <link rel="stylesheet" href="/assets/style.css">
   <style>
+    /* ── Login page overrides ── */
+    body { overflow: hidden; }
+
+    .login-wrap {
+      display: grid;
+      grid-template-columns: 1fr 460px;
+      min-height: 100vh;
+      background: #fff;
+    }
+
+    /* ── LEFT — AI visual panel ── */
+    .login-left {
+      position: relative;
+      overflow: hidden;
+      background: #05091a;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0;
+    }
+
+    #neural-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .login-left-content {
+      position: relative;
+      z-index: 2;
+      padding: 48px 56px;
+      background: linear-gradient(to top, rgba(5,9,26,.95) 0%, rgba(5,9,26,.6) 60%, transparent 100%);
+    }
+
+    .brand-logo-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .brand-logo-left svg { width: 52px; height: 44px; }
+
+    .brand-name-left {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.4rem;
+      letter-spacing: .1em;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .login-tagline-main {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3.2rem;
+      letter-spacing: .06em;
+      color: #fff;
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+
+    .login-tagline-main span { color: #4d8aff; }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: rgba(255,255,255,.55);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .login-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .login-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .06em;
+      border: 1px solid rgba(77,138,255,.35);
+      color: rgba(255,255,255,.7);
+      background: rgba(77,138,255,.08);
+    }
+
+    .login-pill::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #4d8aff;
+    }
+
+    .version-tag {
+      position: absolute;
+      top: 28px;
+      left: 56px;
+      font-size: 10px;
+      color: rgba(255,255,255,.25);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: .12em;
+    }
+
+    /* ── RIGHT — login form ── */
+    .login-right {
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 52px;
+      border-left: 1px solid #e8edf3;
+      overflow-y: auto;
+    }
+
+    .login-right-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 48px;
+    }
+
+    .login-right-logo svg { width: 38px; height: 32px; }
+
+    .login-right-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.7rem;
+      letter-spacing: .08em;
+      color: #1a2233;
+      line-height: 1;
+    }
+
+    .portal-label {
+      font-size: 10px;
+      color: #a8b5c8;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 8px;
+    }
+
+    .login-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: #1a2233;
+      letter-spacing: .04em;
+      margin-bottom: 6px;
+    }
+
+    .login-desc {
+      font-size: 13px;
+      color: #5a6a85;
+      margin-bottom: 36px;
+      line-height: 1.5;
+    }
+
     .login-error {
-      background: var(--danger-dim); border: 1px solid var(--danger);
-      color: var(--danger); border-radius: var(--radius);
-      padding: 10px 14px; font-size: 13px; display: none;
+      background: rgba(224,48,48,.07);
+      border: 1px solid #e03030;
+      color: #e03030;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 13px;
+      display: none;
+      margin-bottom: 16px;
     }
     .login-error.show { display: block; }
-    .feature-list { display: flex; flex-direction: column; gap: 24px; margin-top: 48px; }
-    .feature-item { display: flex; gap: 14px; align-items: flex-start; }
-    .feature-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
-    .feature-item h4 { font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
-    .feature-item p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #5a6a85;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .form-input {
+      background: #f8f9fb;
+      border: 1px solid #dde3ec;
+      border-radius: 6px;
+      padding: 11px 14px;
+      font-size: 14px;
+      color: #1a2233;
+      width: 100%;
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .form-input:focus {
+      border-color: #0055ff;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(0,85,255,.08);
+    }
+    .form-input::placeholder { color: #c8d1de; }
+
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: #0055ff;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .15s, box-shadow .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-family: 'DM Sans', sans-serif;
+      letter-spacing: .02em;
+    }
+    .btn-login:hover {
+      background: #0044dd;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,85,255,.3);
+    }
+    .btn-login:disabled {
+      background: #c8d1de;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .login-footer-note {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 11px;
+      color: #c8d1de;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .powered-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 40px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: #f1f4f8;
+      font-size: 10px;
+      color: #a8b5c8;
+      letter-spacing: .08em;
+    }
+    .powered-badge::before {
+      content: '⬡';
+      color: #0055ff;
+      font-size: 12px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 860px) {
+      body { overflow: auto; }
+      .login-wrap { grid-template-columns: 1fr; }
+      .login-left { min-height: 280px; justify-content: flex-end; }
+      .login-right { padding: 40px 32px; }
+    }
   </style>
 </head>
 <body>
 
 <div class="login-wrap">
 
-  <!-- Left panel — branding + features -->
+  <!-- ── LEFT — Neural network AI visual ── -->
   <div class="login-left">
-    <div style="max-width: 480px; width: 100%;">
-      <div class="login-brand">
-        <div class="login-logo">METATRONIX</div>
-        <div class="login-tagline">PORTAL INTERNO DE DOCUMENTOS · IBANOR SA DE CV</div>
-        <div style="margin-top: 16px; height: 2px; background: linear-gradient(90deg, var(--accent), transparent);"></div>
+    <canvas id="neural-canvas"></canvas>
+    <span class="version-tag">METATRONIXLEADS.TECH · v2.0.0</span>
+
+    <div class="login-left-content">
+      <div class="brand-logo-left">
+        <!-- MetaTronix icon in white for dark background -->
+        <svg viewBox="0 0 56 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 44 L4 14 L28 30 L52 14 L52 44" stroke="#4d8aff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M4 14 L28 2 L52 14" stroke="#4d8aff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M4 44 L28 34 L52 44" stroke="rgba(77,138,255,0.4)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <span class="brand-name-left">METATRONIX</span>
       </div>
 
-      <div class="feature-list">
-        <div class="feature-item">
-          <div class="feature-icon">⚡</div>
-          <div>
-            <h4>Generación con IA</h4>
-            <p>Crea contratos, propuestas, informes y más usando Claude — el modelo de Anthropic más avanzado.</p>
-          </div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">📁</div>
-          <div>
-            <h4>Biblioteca de documentos</h4>
-            <p>Todos tus documentos organizados, disponibles en la plataforma y listos para descarga.</p>
-          </div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">🔍</div>
-          <div>
-            <h4>Revisión administrativa</h4>
-            <p>Los documentos pasan por un flujo de aprobación con alertas en tiempo real al equipo admin.</p>
-          </div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">👥</div>
-          <div>
-            <h4>Multi-usuario</h4>
-            <p>Acceso por colaborador, historial de actividad individual y control total desde el panel admin.</p>
-          </div>
-        </div>
+      <div class="login-tagline-main">
+        Illuminating<br><span>the Unknown</span>
       </div>
+      <div class="login-subtitle">Portal Interno de Documentos de Ventas</div>
 
-      <div style="margin-top: 48px; font-size: 11px; color: var(--text-faint); font-family: var(--font-mono);">
-        v2.0.0 · metatronixleads.tech · powered by Claude
+      <div class="login-pills">
+        <span class="login-pill">Inteligencia Artificial</span>
+        <span class="login-pill">Data Science</span>
+        <span class="login-pill">Automatización</span>
+        <span class="login-pill">Operaciones Digitales</span>
       </div>
     </div>
   </div>
 
-  <!-- Right panel — login form -->
+  <!-- ── RIGHT — login form ── -->
   <div class="login-right">
-    <div class="login-form">
-      <h2>Bienvenido</h2>
-      <p>Ingresa tus credenciales para acceder al portal.</p>
 
-      <div id="login-error" class="login-error"></div>
-
-      <form id="login-form" style="display:flex; flex-direction:column; gap:16px;">
-        <div class="form-group">
-          <label class="form-label">Correo electrónico</label>
-          <input type="email" id="email" class="form-input" placeholder="tu@ibanormexico.com" required autocomplete="email">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Contraseña</label>
-          <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
-        </div>
-        <button type="submit" class="btn btn-primary btn-lg" id="login-btn">
-          Ingresar
-        </button>
-      </form>
-
-      <div style="margin-top: 24px; text-align: center;">
-        <span style="font-size: 11px; color: var(--text-faint);">
-          ¿Sin acceso? Contacta al administrador del sistema.
-        </span>
-      </div>
+    <div class="login-right-logo">
+      <!-- MetaTronix icon in blue for white background -->
+      <svg viewBox="0 0 56 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 44 L4 14 L28 30 L52 14 L52 44" stroke="#0055ff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M4 14 L28 2 L52 14" stroke="#0055ff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M4 44 L28 34 L52 44" stroke="rgba(0,85,255,0.3)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+      <span class="login-right-name">METATRONIX</span>
     </div>
-  </div>
 
+    <div class="portal-label">Portal de Ventas</div>
+    <div class="login-heading">Bienvenido</div>
+    <p class="login-desc">Ingresa tus credenciales para acceder al<br>portal interno de documentos.</p>
+
+    <div id="login-error" class="login-error"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input type="email" id="email" class="form-input" placeholder="tu@ibanormexico.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-login" id="login-btn">
+        Ingresar al Portal
+      </button>
+    </form>
+
+    <p class="login-footer-note">¿Sin acceso? Contacta al administrador.</p>
+
+    <div>
+      <span class="powered-badge">POWERED BY CLAUDE AI · ANTHROPIC</span>
+    </div>
+
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js"></script>
+
+<!-- Neural network canvas animation -->
+<script>
+(function () {
+  const canvas = document.getElementById('neural-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, nodes = [], animId;
+
+  const ACCENT = 'rgba(77,138,255,';
+  const NODE_COUNT = 55;
+  const MAX_DIST = 180;
+
+  function resize() {
+    W = canvas.width = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+
+  function initNodes() {
+    nodes = [];
+    for (let i = 0; i < NODE_COUNT; i++) {
+      nodes.push({
+        x: rand(0, W),
+        y: rand(0, H),
+        vx: rand(-0.35, 0.35),
+        vy: rand(-0.35, 0.35),
+        r: rand(1.5, 3.5),
+        pulse: rand(0, Math.PI * 2)
+      });
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Subtle grid
+    ctx.strokeStyle = 'rgba(77,138,255,0.04)';
+    ctx.lineWidth = 1;
+    const gs = 60;
+    for (let x = 0; x < W; x += gs) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += gs) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    const t = Date.now() * 0.001;
+
+    // Connections
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < MAX_DIST) {
+          const alpha = (1 - dist / MAX_DIST) * 0.28;
+          ctx.strokeStyle = ACCENT + alpha + ')';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Nodes
+    nodes.forEach((n, i) => {
+      const pulse = Math.sin(t * 1.2 + n.pulse) * 0.5 + 0.5;
+      const glowR = n.r + pulse * 4;
+
+      // Glow
+      const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR * 3);
+      grd.addColorStop(0, ACCENT + (0.2 * pulse) + ')');
+      grd.addColorStop(1, ACCENT + '0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, glowR * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core
+      ctx.fillStyle = ACCENT + (0.5 + pulse * 0.5) + ')';
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Move
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < -20) n.x = W + 20;
+      if (n.x > W + 20) n.x = -20;
+      if (n.y < -20) n.y = H + 20;
+      if (n.y > H + 20) n.y = -20;
+    });
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  resize();
+  initNodes();
+  draw();
+
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(animId);
+    resize();
+    initNodes();
+    draw();
+  });
+})();
+</script>
+
+<!-- Auth logic -->
 <script>
 (async () => {
-  // Si ya tiene sesión, redirigir
   const db = getDB();
   if (!db) return;
   const session = await getSession();
@@ -123,7 +493,7 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Ingresando...';
+    btn.innerHTML = '<span class="spinner"></span> Verificando...';
     err.classList.remove('show');
 
     const email    = document.getElementById('email').value.trim();
@@ -132,19 +502,21 @@
     const { data, error } = await db.auth.signInWithPassword({ email, password });
 
     if (error) {
-      err.textContent = error.message.includes('Invalid') ? 'Credenciales incorrectas. Verifica tu correo y contraseña.' : error.message;
+      err.textContent = error.message.includes('Invalid')
+        ? 'Credenciales incorrectas. Verifica tu correo y contraseña.'
+        : error.message;
       err.classList.add('show');
       btn.disabled = false;
-      btn.textContent = 'Ingresar';
+      btn.textContent = 'Ingresar al Portal';
       return;
     }
 
-    // Obtener perfil para saber el rol
     const { data: profile } = await db.from('profiles').select('role').eq('id', data.user.id).single();
     await logActivity('login', 'user', data.user.id);
     window.location.href = profile?.role === 'admin' ? '/admin.html' : '/dashboard.html';
   });
 })();
 </script>
+
 </body>
 </html>
