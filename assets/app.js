@@ -182,6 +182,45 @@ ${htmlContent}
   URL.revokeObjectURL(a.href);
 }
 
+/* ── Alertas localStorage ──────────────────────────────────── */
+function getAlerts() {
+  try { return JSON.parse(localStorage.getItem('mtx_alerts') || '[]'); } catch { return []; }
+}
+
+function addAlert(alert) {
+  const alerts = getAlerts();
+  alerts.unshift({
+    id: 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    read: false,
+    created_at: new Date().toISOString(),
+    ...alert,
+  });
+  if (alerts.length > 100) alerts.splice(100);
+  localStorage.setItem('mtx_alerts', JSON.stringify(alerts));
+  // Refresh badge if header is rendered
+  refreshBellBadge();
+}
+
+function markAlertRead(alertId) {
+  const alerts = getAlerts();
+  const a = alerts.find(x => x.id === alertId);
+  if (a) { a.read = true; localStorage.setItem('mtx_alerts', JSON.stringify(alerts)); }
+  refreshBellBadge();
+}
+
+function refreshBellBadge() {
+  const badge = document.getElementById('bell-badge');
+  if (!badge) return;
+  const user = window._mtxCurrentUser;
+  if (!user) return;
+  const isAdmin = user?.profile?.role === 'admin';
+  const count = getAlerts().filter(a => !a.read && (
+    (a.for_admin && isAdmin) || (a.for_user_id && a.for_user_id === user.id)
+  )).length;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'flex' : 'none';
+}
+
 /* ── UI helpers ────────────────────────────────────────────── */
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -243,7 +282,63 @@ function showToast(msg, type = 'info') {
 function renderHeader(user, activePage) {
   const isAdmin = user?.profile?.role === 'admin';
   const name = user?.profile?.full_name || user?.email || '—';
+  // Store user globally for badge refresh
+  window._mtxCurrentUser = user;
+  // Calculate unread alerts
+  const alerts = getAlerts();
+  const unread = alerts.filter(a => !a.read && (
+    (a.for_admin && isAdmin) || (a.for_user_id && a.for_user_id === user.id)
+  )).length;
+  const myAlerts = alerts.filter(a =>
+    (a.for_admin && isAdmin) || (a.for_user_id && a.for_user_id === user.id)
+  ).slice(0, 20);
+  const alertIcons = { new_lead:'🎯', plan_submitted:'📋', plan_approved:'✅', plan_rejected:'❌' };
+
+  const alertItems = myAlerts.length
+    ? myAlerts.map(a => `
+      <div class="bell-alert-item ${a.read ? '' : 'bell-alert-unread'}"
+           onclick="handleAlertClick('${a.id}','${a.lead_id||''}')">
+        <span style="font-size:15px;flex-shrink:0">${alertIcons[a.type]||'🔔'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;color:${a.read?'var(--text-muted)':'#fff'};line-height:1.4">${escHtml(a.message||'')}</div>
+          <div style="font-size:10px;color:var(--text-faint);margin-top:2px;font-family:var(--font-mono)">${formatDate(a.created_at)}</div>
+        </div>
+        ${!a.read?'<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px"></span>':''}
+      </div>`).join('')
+    : '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Sin alertas</div>';
+
   return `
+  <style>
+    .bell-wrap { position:relative; cursor:pointer; display:flex; align-items:center; }
+    .bell-badge {
+      position:absolute; top:-6px; right:-8px;
+      min-width:16px; height:16px; border-radius:8px;
+      background:#e03030; border:2px solid var(--bg,#0a0e17);
+      font-size:9px; color:#fff; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      padding:0 3px; font-family:var(--font-mono);
+    }
+    .bell-dropdown {
+      display:none; position:absolute; top:calc(100% + 10px); right:-8px;
+      width:320px; background:var(--surface);
+      border:1px solid var(--border); border-radius:var(--radius-lg);
+      box-shadow:0 8px 32px rgba(0,0,0,.5); z-index:9999; overflow:hidden;
+    }
+    .bell-dropdown.open { display:block; }
+    .bell-dropdown-head {
+      padding:10px 16px; border-bottom:1px solid var(--border);
+      font-size:11px; font-weight:700; letter-spacing:.08em;
+      text-transform:uppercase; color:var(--text-muted);
+    }
+    .bell-alert-items { max-height:340px; overflow-y:auto; }
+    .bell-alert-item {
+      display:flex; gap:10px; align-items:flex-start;
+      padding:10px 16px; border-bottom:1px solid var(--border2);
+      cursor:pointer; transition:background .15s;
+    }
+    .bell-alert-item:hover { background:var(--surface2); }
+    .bell-alert-unread { background:rgba(0,255,136,.04); }
+  </style>
   <header class="app-header">
     <div class="header-brand">
       <span class="brand-title">METATRONIX</span>
@@ -256,9 +351,64 @@ function renderHeader(user, activePage) {
       ${isAdmin ? `<a href="/admin.html" class="${activePage==='admin'?'active':''}">Admin</a>` : ''}
     </nav>
     <div class="header-user">
+      <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)">
+        <span style="font-size:18px;line-height:1">🔔</span>
+        <span class="bell-badge" id="bell-badge" style="${unread>0?'':'display:none'}">${unread}</span>
+        <div class="bell-dropdown" id="bell-dropdown">
+          <div class="bell-dropdown-head">Alertas</div>
+          <div class="bell-alert-items">${alertItems}</div>
+        </div>
+      </div>
       <span class="user-name">${escHtml(name)}</span>
       ${isAdmin ? '<span class="badge badge-accent">Admin</span>' : ''}
       <button onclick="logout()" class="btn-ghost">Salir</button>
     </div>
   </header>`;
+}
+
+function toggleBellDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('bell-dropdown');
+  if (!dd) return;
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) {
+    setTimeout(() => document.addEventListener('click', closeBellDropdown, { once: true }), 0);
+  }
+}
+
+function closeBellDropdown() {
+  const dd = document.getElementById('bell-dropdown');
+  if (dd) dd.classList.remove('open');
+}
+
+function handleAlertClick(alertId, leadId) {
+  markAlertRead(alertId);
+  // Re-render dropdown content
+  const wrap = document.getElementById('bell-dropdown');
+  if (wrap) {
+    const user = window._mtxCurrentUser;
+    const isAdmin = user?.profile?.role === 'admin';
+    const alerts = getAlerts();
+    const myAlerts = alerts.filter(a =>
+      (a.for_admin && isAdmin) || (a.for_user_id && a.for_user_id === user?.id)
+    ).slice(0, 20);
+    const alertIcons = { new_lead:'🎯', plan_submitted:'📋', plan_approved:'✅', plan_rejected:'❌' };
+    const items = wrap.querySelector('.bell-alert-items');
+    if (items) {
+      items.innerHTML = myAlerts.length
+        ? myAlerts.map(a => `
+          <div class="bell-alert-item ${a.read?'':'bell-alert-unread'}"
+               onclick="handleAlertClick('${a.id}','${a.lead_id||''}')">
+            <span style="font-size:15px;flex-shrink:0">${alertIcons[a.type]||'🔔'}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;color:${a.read?'var(--text-muted)':'#fff'};line-height:1.4">${escHtml(a.message||'')}</div>
+              <div style="font-size:10px;color:var(--text-faint);margin-top:2px;font-family:var(--font-mono)">${formatDate(a.created_at)}</div>
+            </div>
+            ${!a.read?'<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px"></span>':''}
+          </div>`).join('')
+        : '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Sin alertas</div>';
+    }
+  }
+  closeBellDropdown();
+  if (leadId) window.location.href = '/leads.html';
 }

@@ -6,6 +6,10 @@
   <title>MetaTronix — Mis Documentos</title>
   <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
+  <style>
+    .view-btn { background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); padding:7px 14px; border-radius:var(--radius); cursor:pointer; font-size:12px; font-family:var(--font-sans); transition:all .15s; }
+    .view-btn.active { background:var(--accent-dim); color:var(--accent); border-color:var(--accent); }
+  </style>
 </head>
 <body>
 <div id="header-placeholder"></div>
@@ -41,22 +45,70 @@
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="flex-between mb-16">
-    <div class="flex gap-8">
-      <button class="btn btn-secondary filter-btn active" data-filter="all">Todos</button>
-      <button class="btn btn-secondary filter-btn" data-filter="draft">Borrador</button>
-      <button class="btn btn-secondary filter-btn" data-filter="pending_review">En Revisión</button>
-      <button class="btn btn-secondary filter-btn" data-filter="approved">Aprobados</button>
-    </div>
-    <input type="text" id="search" class="form-input" style="max-width:220px" placeholder="Buscar...">
+  <!-- Tab switcher -->
+  <div class="flex gap-8 mb-16">
+    <button class="view-btn active" id="tab-docs-gen" onclick="switchDashTab('generados')">📄 Documentos Generados</button>
+    <button class="view-btn" id="tab-docs-personal" onclick="switchDashTab('personal')">🗂 Mis Archivos Personales</button>
   </div>
 
-  <!-- Documents grid -->
-  <div id="doc-grid" class="doc-grid">
-    <div class="empty-state">
-      <div class="empty-icon">📄</div>
-      <h3>Cargando documentos...</h3>
+  <!-- DOCUMENTOS GENERADOS -->
+  <div id="panel-generados">
+    <div class="flex-between mb-16">
+      <div class="flex gap-8">
+        <button class="btn btn-secondary filter-btn active" data-filter="all">Todos</button>
+        <button class="btn btn-secondary filter-btn" data-filter="draft">Borrador</button>
+        <button class="btn btn-secondary filter-btn" data-filter="pending_review">En Revisión</button>
+        <button class="btn btn-secondary filter-btn" data-filter="approved">Aprobados</button>
+      </div>
+      <input type="text" id="search" class="form-input" style="max-width:220px" placeholder="Buscar...">
+    </div>
+    <div id="doc-grid" class="doc-grid">
+      <div class="empty-state">
+        <div class="empty-icon">📄</div>
+        <h3>Cargando documentos...</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIS ARCHIVOS PERSONALES -->
+  <div id="panel-personal" style="display:none">
+    <style>
+      .personal-section { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:20px; }
+      .personal-section h3 { font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin:0 0 14px; }
+      .file-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+      .file-item { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
+      .file-item-name { flex:1; font-size:13px; color:#fff; font-weight:500; }
+      .file-item-date { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
+      .file-upload-area { border:2px dashed var(--border); border-radius:var(--radius); padding:18px; text-align:center; cursor:pointer; transition:border-color .15s; }
+      .file-upload-area:hover { border-color:var(--accent); }
+      .file-upload-area input[type=file] { display:none; }
+    </style>
+
+    <div class="personal-section">
+      <h3>📁 Mis Documentos</h3>
+      <div class="file-list" id="pfiles-mine"></div>
+      <div class="file-upload-area" onclick="document.getElementById('upload-mine').click()">
+        <input type="file" id="upload-mine" multiple onchange="handleUpload('mine', this)">
+        <span style="font-size:13px;color:var(--text-muted)">+ Agregar archivo</span>
+      </div>
+    </div>
+
+    <div class="personal-section">
+      <h3>📑 Contratos MetaTronix ↔ Usuario</h3>
+      <div class="file-list" id="pfiles-contratos-usuario"></div>
+      <div class="file-upload-area" onclick="document.getElementById('upload-cu').click()">
+        <input type="file" id="upload-cu" multiple onchange="handleUpload('contratos_usuario', this)">
+        <span style="font-size:13px;color:var(--text-muted)">+ Agregar contrato</span>
+      </div>
+    </div>
+
+    <div class="personal-section">
+      <h3>📋 Contratos MetaTronix ↔ Cliente Final</h3>
+      <div class="file-list" id="pfiles-contratos-cliente"></div>
+      <div class="file-upload-area" onclick="document.getElementById('upload-cf').click()">
+        <input type="file" id="upload-cf" multiple onchange="handleUpload('contratos_cliente', this)">
+        <span style="font-size:13px;color:var(--text-muted)">+ Agregar contrato</span>
+      </div>
     </div>
   </div>
 
@@ -253,6 +305,100 @@ async function submitReview() {
     showToast('Error al enviar: ' + e.message, 'error');
   }
   btn.disabled = false; btn.textContent = 'Enviar';
+}
+
+// ── Tab Switcher ──────────────────────────────────────────────
+function switchDashTab(tab) {
+  document.getElementById('panel-generados').style.display = tab === 'generados' ? 'block' : 'none';
+  document.getElementById('panel-personal').style.display  = tab === 'personal'  ? 'block' : 'none';
+  document.getElementById('tab-docs-gen').classList.toggle('active', tab === 'generados');
+  document.getElementById('tab-docs-personal').classList.toggle('active', tab === 'personal');
+  if (tab === 'personal') renderPersonalDocs();
+}
+
+// ── Personal Documents (localStorage) ────────────────────────
+const PSECTIONS = {
+  mine:              { label: 'Mis Documentos',                   listId: 'pfiles-mine' },
+  contratos_usuario: { label: 'Contratos MetaTronix ↔ Usuario',   listId: 'pfiles-contratos-usuario' },
+  contratos_cliente: { label: 'Contratos MetaTronix ↔ Cliente Final', listId: 'pfiles-contratos-cliente' },
+};
+
+function getPersonalDocs(section) {
+  const key = `docs_usuario_${currentUser.id}_${section}`;
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+
+function savePersonalDocs(section, docs) {
+  const key = `docs_usuario_${currentUser.id}_${section}`;
+  localStorage.setItem(key, JSON.stringify(docs));
+}
+
+function renderPersonalDocs() {
+  for (const [section, cfg] of Object.entries(PSECTIONS)) {
+    const docs = getPersonalDocs(section);
+    const el = document.getElementById(cfg.listId);
+    if (!el) continue;
+    if (!docs.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px 0">Sin archivos aún.</div>';
+      continue;
+    }
+    el.innerHTML = docs.map((d, i) => `
+      <div class="file-item">
+        <span style="font-size:18px">${fileIcon(d.name)}</span>
+        <span class="file-item-name">${escHtml(d.name)}</span>
+        <span class="file-item-date">${formatDate(d.uploaded_at)}</span>
+        <button class="btn btn-ghost btn-sm" onclick="downloadPersonalFile('${section}',${i})">⬇ Ver</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deletePersonalFile('${section}',${i})">✕</button>
+      </div>`).join('');
+  }
+}
+
+function fileIcon(name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const icons = { pdf:'📕', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗', png:'🖼', jpg:'🖼', jpeg:'🖼', zip:'🗜', txt:'📄' };
+  return icons[ext] || '📎';
+}
+
+function handleUpload(section, input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  const docs = getPersonalDocs(section);
+  let pending = files.length;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      docs.unshift({ name: file.name, size: file.size, type: file.type, data: e.target.result, uploaded_at: new Date().toISOString() });
+      pending--;
+      if (pending === 0) {
+        savePersonalDocs(section, docs);
+        renderPersonalDocs();
+        showToast(`${files.length} archivo${files.length>1?'s':''} guardado${files.length>1?'s':''} ✓`, 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = ''; // reset input
+}
+
+function downloadPersonalFile(section, idx) {
+  const docs = getPersonalDocs(section);
+  const d = docs[idx];
+  if (!d) return;
+  const a = document.createElement('a');
+  a.href = d.data;
+  a.download = d.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function deletePersonalFile(section, idx) {
+  if (!confirm('¿Eliminar este archivo?')) return;
+  const docs = getPersonalDocs(section);
+  docs.splice(idx, 1);
+  savePersonalDocs(section, docs);
+  renderPersonalDocs();
+  showToast('Archivo eliminado', 'info');
 }
 
 init();

@@ -68,6 +68,7 @@
       <span id="alert-count-badge" style="display:none" class="badge badge-danger ml-2">0</span>
     </button>
     <button class="tab-btn" onclick="switchTab('leads')">🎯 Leads</button>
+    <button class="tab-btn" onclick="switchTab('plans')">📋 Planes <span id="plans-pending-badge" class="badge badge-warning" style="display:none;margin-left:4px">0</span></button>
     <button class="tab-btn" onclick="switchTab('documents')">Documentos</button>
     <button class="tab-btn" onclick="switchTab('users')">Usuarios</button>
     <button class="tab-btn" onclick="switchTab('activity')">Actividad</button>
@@ -126,6 +127,38 @@
           <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Cargando...</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- TAB: PLANS -->
+  <div id="tab-plans" class="tab-panel">
+    <div class="section-header">
+      <span class="section-title">Planes de Seguimiento</span>
+      <button class="btn btn-secondary btn-sm" onclick="loadPlansAdmin()">↻ Actualizar</button>
+    </div>
+    <div id="plans-list">
+      <div class="empty-state"><div class="empty-icon">📋</div><h3>Sin planes pendientes</h3></div>
+    </div>
+  </div>
+
+  <!-- Plan Review Modal -->
+  <div id="plan-review-modal" class="modal-overlay" style="display:none">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <span class="modal-title">Revisar Plan de Seguimiento</span>
+        <button class="modal-close" onclick="closePlanReview()">✕</button>
+      </div>
+      <div id="plan-review-detail" style="font-size:13px;color:var(--text-muted);margin-bottom:16px"></div>
+      <div class="form-group" id="plan-rejection-group" style="display:none">
+        <label class="form-label">Motivo de Rechazo *</label>
+        <textarea id="plan-rejection-reason" class="form-textarea" style="min-height:80px" placeholder="Explica por qué se rechaza este plan..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closePlanReview()">Cancelar</button>
+        <button class="btn btn-danger" onclick="showRejectionField()">✕ Rechazar</button>
+        <button class="btn btn-primary" id="plan-confirm-reject-btn" onclick="resolvePlan('rechazado')" style="display:none">Confirmar Rechazo</button>
+        <button class="btn btn-primary" onclick="resolvePlan('aprobado')">✓ Aprobar</button>
+      </div>
     </div>
   </div>
 
@@ -285,6 +318,7 @@ async function init() {
 
 async function refreshAll() {
   await Promise.all([loadStats(), loadAlerts(), loadDocuments(), loadUsers(), loadActivity()]);
+  loadPlansAdmin();
 }
 
 async function loadStats() {
@@ -663,12 +697,132 @@ function applyLeadFilters() {
 
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    const tabs = ['alerts', 'leads', 'documents', 'users', 'activity'];
+    const tabs = ['alerts', 'leads', 'plans', 'documents', 'users', 'activity'];
     b.classList.toggle('active', tabs[i] === name);
   });
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`tab-${name}`)?.classList.add('active');
   if (name === 'leads') loadLeadsAdmin();
+  if (name === 'plans') loadPlansAdmin();
+}
+
+// ── Plans Admin ───────────────────────────────────────────────
+let currentPlanIdx = null;
+
+function loadPlansAdmin() {
+  const plans = JSON.parse(localStorage.getItem('mtx_planes') || '[]');
+  const pending = plans.filter(p => p.status === 'pendiente_aprobacion');
+  // Update badge
+  const badge = document.getElementById('plans-pending-badge');
+  if (badge) {
+    badge.textContent = pending.length;
+    badge.style.display = pending.length > 0 ? 'inline-flex' : 'none';
+  }
+  const container = document.getElementById('plans-list');
+  if (!plans.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><h3>Sin planes registrados</h3></div>';
+    return;
+  }
+  const CANAL_LABELS = { llamada:'📞 Llamada', email:'📧 Email', visita:'🤝 Visita', whatsapp:'💬 WhatsApp' };
+  const FREC_LABELS  = { diario:'Diario', cada_2_dias:'Cada 2 días', semanal:'Semanal', quincenal:'Quincenal', mensual:'Mensual' };
+  const STATUS_MAP   = {
+    pendiente_aprobacion: ['Pendiente', 'badge-warning'],
+    aprobado:             ['Aprobado',  'badge-success'],
+    rechazado:            ['Rechazado', 'badge-danger'],
+  };
+  container.innerHTML = plans.map((p, i) => {
+    const [slabel, scls] = STATUS_MAP[p.status] || ['—', 'badge-neutral'];
+    return `
+    <div class="alert-item" style="margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px">
+            📋 Plan para <strong>${escHtml(p.empresa || p.lead_id)}</strong>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">
+            ${CANAL_LABELS[p.canal]||p.canal} · <strong>${escHtml(p.fecha)}</strong> · ${FREC_LABELS[p.frecuencia]||p.frecuencia}
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${escHtml(p.objetivo)}</div>
+          <div style="font-size:11px;color:var(--text-faint);font-family:var(--font-mono)">
+            Por ${escHtml(p.created_by_name||'—')} · ${formatDate(p.created_at)}
+            ${p.rejection_reason ? `<br><span style="color:var(--danger)">Motivo: ${escHtml(p.rejection_reason)}</span>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span class="badge ${scls}">${slabel}</span>
+          ${p.status === 'pendiente_aprobacion' ? `<button class="btn btn-primary btn-sm" onclick="openPlanReview(${i})">Revisar</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openPlanReview(idx) {
+  currentPlanIdx = idx;
+  const plans = JSON.parse(localStorage.getItem('mtx_planes') || '[]');
+  const p = plans[idx];
+  if (!p) return;
+  const CANAL_LABELS = { llamada:'📞 Llamada', email:'📧 Email', visita:'🤝 Visita', whatsapp:'💬 WhatsApp' };
+  const FREC_LABELS  = { diario:'Diario', cada_2_dias:'Cada 2 días', semanal:'Semanal', quincenal:'Quincenal', mensual:'Mensual' };
+  document.getElementById('plan-review-detail').innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:13px">
+      <div style="margin-bottom:8px"><strong>Lead:</strong> ${escHtml(p.empresa || p.lead_id)}</div>
+      <div style="margin-bottom:8px"><strong>Canal:</strong> ${CANAL_LABELS[p.canal]||p.canal}</div>
+      <div style="margin-bottom:8px"><strong>Fecha:</strong> ${escHtml(p.fecha)}</div>
+      <div style="margin-bottom:8px"><strong>Frecuencia:</strong> ${FREC_LABELS[p.frecuencia]||p.frecuencia}</div>
+      <div style="margin-bottom:8px"><strong>Objetivo:</strong> ${escHtml(p.objetivo)}</div>
+      <div style="color:var(--text-muted)"><strong>Enviado por:</strong> ${escHtml(p.created_by_name||'—')}</div>
+    </div>`;
+  document.getElementById('plan-rejection-group').style.display = 'none';
+  document.getElementById('plan-rejection-reason').value = '';
+  document.getElementById('plan-confirm-reject-btn').style.display = 'none';
+  document.getElementById('plan-review-modal').style.display = 'flex';
+}
+
+function showRejectionField() {
+  document.getElementById('plan-rejection-group').style.display = 'block';
+  document.getElementById('plan-confirm-reject-btn').style.display = 'inline-flex';
+}
+
+function closePlanReview() {
+  document.getElementById('plan-review-modal').style.display = 'none';
+  currentPlanIdx = null;
+}
+
+function resolvePlan(decision) {
+  if (currentPlanIdx === null) return;
+  const plans = JSON.parse(localStorage.getItem('mtx_planes') || '[]');
+  const p = plans[currentPlanIdx];
+  if (!p) return;
+
+  if (decision === 'rechazado') {
+    const reason = document.getElementById('plan-rejection-reason').value.trim();
+    if (!reason) { showToast('Escribe el motivo de rechazo', 'warning'); return; }
+    p.rejection_reason = reason;
+    // Alert to lead owner
+    addAlert({
+      type:         'plan_rejected',
+      lead_id:      p.lead_id,
+      message:      `Tu plan de seguimiento para "${p.empresa || p.lead_id}" fue rechazado. Motivo: ${reason}`,
+      for_user_id:  p.created_by,
+    });
+  } else {
+    // Alert to lead owner
+    addAlert({
+      type:         'plan_approved',
+      lead_id:      p.lead_id,
+      message:      `¡Tu plan de seguimiento para "${p.empresa || p.lead_id}" fue aprobado! Canal: ${p.canal}, Fecha: ${p.fecha}.`,
+      for_user_id:  p.created_by,
+    });
+  }
+
+  p.status = decision;
+  p.resolved_at = new Date().toISOString();
+  p.resolved_by = currentUser?.id;
+  localStorage.setItem('mtx_planes', JSON.stringify(plans));
+  closePlanReview();
+  showToast(decision === 'aprobado' ? 'Plan aprobado ✓' : 'Plan rechazado', decision === 'aprobado' ? 'success' : 'warning');
+  loadPlansAdmin();
 }
 
 function subscribeToRealtime() {
