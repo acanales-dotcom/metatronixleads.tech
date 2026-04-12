@@ -261,8 +261,8 @@ INSTRUCCIONES:
     } catch (e) {
       const isAuthErr = e.message && (e.message.includes('401') || e.message.includes('authentication') || e.message.includes('api-key'));
       const reply = isAuthErr
-        ? 'Aria está pendiente de activación. El administrador del sistema debe configurar la API key en el panel de Cloudflare Workers. Contacta a acanales@ibanormexico.com.'
-        : 'Ocurrió un error al conectar con Aria. Intenta de nuevo en un momento.';
+        ? 'Clippy está pendiente de activación. El administrador debe configurar la API key. Contacta a acanales@ibanormexico.com.'
+        : 'Ocurrió un error al conectar con Clippy. Intenta de nuevo en un momento.';
       messages.push({ role: 'assistant', content: reply });
       return reply;
     }
