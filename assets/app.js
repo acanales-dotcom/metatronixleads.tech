@@ -420,35 +420,14 @@ function renderHeader(user, activePage) {
     </div>
 
     <nav class="sidebar-nav">
-      <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}">
-        <span class="nav-emoji">🏠🐱</span>
-        <span class="nav-label">Home</span>
-      </a>
-      <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">
-        <span class="nav-emoji">🐱📂</span>
-        <span class="nav-label">Documentos</span>
-      </a>
-      <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">
-        <span class="nav-emoji">🐱🔭</span>
-        <span class="nav-label">Leads</span>
-      </a>
-      <a href="/generate.html" class="sidebar-nav-link ${activePage==='generate'?'active':''}">
-        <span class="nav-emoji">🐱⚒️</span>
-        <span class="nav-label">Generar</span>
-      </a>
-      <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
-        <span class="nav-emoji">🐱🔐</span>
-        <span class="nav-label">Docs MTX</span>
-      </a>
-      <a href="/oportunidades.html" class="sidebar-nav-link ${activePage==='oportunidades'?'active':''}">
-        <span class="nav-emoji">🐱🪙</span>
-        <span class="nav-label">Oportunidades</span>
-      </a>
+      <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}">Home</a>
+      <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">Documentos</a>
+      <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">Leads</a>
+      <a href="/generate.html" class="sidebar-nav-link ${activePage==='generate'?'active':''}">Generar</a>
+      <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">Docs MTX</a>
+      <a href="/oportunidades.html" class="sidebar-nav-link ${activePage==='oportunidades'?'active':''}">Oportunidades</a>
       ${hasAdminAccess ? `
-      <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">
-        <span class="nav-emoji">🐱🎩</span>
-        <span class="nav-label">Admin</span>
-      </a>` : ''}
+      <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">Admin</a>` : ''}
     </nav>
 
     <div class="sidebar-footer">
