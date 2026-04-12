@@ -152,6 +152,34 @@
     }
     .btn-doc-del:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-dim); }
 
+    /* ── Visibility radio options ─────────────────────────────── */
+    .vis-option {
+      display:block; cursor:pointer;
+      border:1.5px solid var(--border); border-radius:var(--radius-lg);
+      padding:12px 14px; transition:all .15s;
+    }
+    .vis-option:has(input:checked) {
+      border-color:var(--accent); background:var(--accent-dim);
+    }
+    .vis-option input[type=radio] { display:none; }
+    .vis-option-body {
+      display:flex; gap:12px; align-items:flex-start;
+    }
+    .vis-option-icon { font-size:22px; flex-shrink:0; line-height:1; margin-top:2px; }
+    .vis-option-title {
+      font-size:13px; font-weight:600; color:var(--text); margin-bottom:3px;
+    }
+    .vis-option-desc { font-size:11px; color:var(--text-muted); line-height:1.45; }
+
+    /* ── Visibility badge on cards ────────────────────────────── */
+    .vis-badge-all   { background:rgba(0,85,255,.08); color:var(--accent); border:1px solid rgba(0,85,255,.2); }
+    .vis-badge-admin { background:rgba(217,119,6,.08); color:var(--warning); border:1px solid rgba(217,119,6,.2); }
+    .vis-badge {
+      display:inline-flex; align-items:center; gap:3px;
+      padding:2px 7px; border-radius:10px;
+      font-size:10px; font-weight:700; letter-spacing:.04em;
+    }
+
     /* ── Progress bar for upload ──────────────────────────────── */
     .upload-progress {
       height: 4px; background: var(--surface3); border-radius: 2px;
@@ -264,6 +292,33 @@
           <option value="formatos">📐 Formatos</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Visibilidad</label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <label class="vis-option" id="vis-all-label">
+            <input type="radio" name="u-visibility" id="vis-all" value="all" checked
+                   onchange="updateVisLabel()">
+            <div class="vis-option-body">
+              <span class="vis-option-icon">👥</span>
+              <div>
+                <div class="vis-option-title">Vista para todos</div>
+                <div class="vis-option-desc">Todos los colaboradores de MetaTronix, Metaview, QuantumTron, Aria Digital, Aria New Gen y NeuroTron Lab podrán ver y descargar este documento.</div>
+              </div>
+            </div>
+          </label>
+          <label class="vis-option" id="vis-admin-label">
+            <input type="radio" name="u-visibility" id="vis-admin" value="admin"
+                   onchange="updateVisLabel()">
+            <div class="vis-option-body">
+              <span class="vis-option-icon">🔒</span>
+              <div>
+                <div class="vis-option-title">Vista solo admin</div>
+                <div class="vis-option-desc">Solo los administradores del portal podrán acceder a este documento. Los colaboradores no lo verán.</div>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeUploadModal()">Cancelar</button>
@@ -284,7 +339,8 @@ let currentUser = null;
 let allDocs = [];
 let currentCategory = 'all';
 let selectedFile = null;
-let canUpload = false;
+let canUpload = false;   // todos los usuarios autenticados pueden subir
+let canDelete = false;   // solo admin / super_admin pueden eliminar
 
 /* ── Init ─────────────────────────────────────────────────── */
 async function init() {
@@ -292,13 +348,16 @@ async function init() {
   if (!currentUser) return;
 
   const role = currentUser.profile?.role;
-  canUpload = (role === 'admin' || role === 'super_admin');
+  canUpload = true;  // todos los colaboradores pueden subir archivos externos
+  canDelete = (role === 'admin' || role === 'super_admin');
 
   document.getElementById('header-placeholder').innerHTML =
     renderHeader(currentUser, 'mtx-docs');
 
-  if (canUpload) {
-    document.getElementById('upload-btn-wrap').style.display = 'block';
+  // Botón de subir visible para todos
+  document.getElementById('upload-btn-wrap').style.display = 'block';
+  // Barra admin solo para admins
+  if (canDelete) {
     document.getElementById('admin-bar').style.display = 'flex';
   }
 
@@ -310,7 +369,7 @@ async function loadDocs() {
   const db = getDB();
   const { data, error } = await db
     .from('metatronix_docs')
-    .select('id, title, description, category, file_name, file_type, file_size, uploaded_by_name, created_at')
+    .select('id, title, description, category, file_name, file_type, file_size, uploaded_by, uploaded_by_name, visibility, created_at')
     .order('created_at', { ascending: false });
 
   if (error) { showToast('Error al cargar documentos', 'error'); return; }
@@ -343,9 +402,7 @@ function renderDocs() {
       <div class="empty-state">
         <div class="empty-state-icon">📭</div>
         <h3>Sin documentos</h3>
-        <p>${allDocs.length ? 'No hay resultados para esta búsqueda.' :
-            (canUpload ? 'Sube el primer documento usando el botón "↑ Subir Documento".' :
-             'Aún no hay documentos publicados.')}</p>
+        <p>${allDocs.length ? 'No hay resultados para esta búsqueda.' : 'Sube el primer documento usando el botón "↑ Subir Documento".'}</p>
       </div>`;
     return;
   }
@@ -368,8 +425,11 @@ function docCard(d) {
         ${d.description ? `<div class="doc-desc">${escHtml(d.description)}</div>` : ''}
       </div>
     </div>
-    <div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <span class="cat-badge ${catCls}">${catLabel}</span>
+      ${d.visibility === 'admin'
+        ? '<span class="vis-badge vis-badge-admin">🔒 Solo admin</span>'
+        : '<span class="vis-badge vis-badge-all">👥 Todos</span>'}
     </div>
     <div class="doc-footer">
       <div class="doc-footer-left">
@@ -379,7 +439,7 @@ function docCard(d) {
       </div>
       <div class="doc-actions">
         <button class="btn-doc-dl" onclick="downloadDoc('${d.id}','${escHtml(d.file_name)}')">⬇ Descargar</button>
-        ${canUpload ? `<button class="btn-doc-del" onclick="deleteDoc('${d.id}', event)" title="Eliminar">🗑</button>` : ''}
+        ${(canDelete || d.uploaded_by === currentUser?.id) ? `<button class="btn-doc-del" onclick="deleteDoc('${d.id}', event)" title="Eliminar">🗑</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -473,7 +533,8 @@ async function downloadDoc(id, fileName) {
 /* ── Delete ───────────────────────────────────────────────── */
 async function deleteDoc(id, e) {
   e?.stopPropagation();
-  if (!canUpload) return;
+  const doc = allDocs.find(d => d.id === id);
+  if (!canDelete && doc?.uploaded_by !== currentUser?.id) return;
   if (!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
 
   const { error } = await getDB().from('metatronix_docs').delete().eq('id', id);
@@ -485,14 +546,16 @@ async function deleteDoc(id, e) {
 
 /* ── Upload modal ─────────────────────────────────────────── */
 function openUploadModal() {
-  if (!canUpload) return;
   selectedFile = null;
   document.getElementById('u-title').value = '';
   document.getElementById('u-desc').value = '';
   document.getElementById('u-cat').value = 'general';
+  document.getElementById('vis-all').checked = true;
   resetUploadZone();
   document.getElementById('upload-modal').style.display = 'flex';
 }
+
+function updateVisLabel() { /* visual feedback via CSS :has() already handles it */ }
 
 function closeUploadModal(e) {
   if (e && e.target !== document.getElementById('upload-modal')) return;
@@ -543,7 +606,6 @@ function handleDrop(e) {
 
 /* ── Save document ────────────────────────────────────────── */
 async function saveDocument() {
-  if (!canUpload) return;
   const title = document.getElementById('u-title').value.trim();
   const desc  = document.getElementById('u-desc').value.trim();
   const cat   = document.getElementById('u-cat').value;
@@ -554,34 +616,43 @@ async function saveDocument() {
   const btn = document.getElementById('save-doc-btn');
   btn.disabled = true; btn.textContent = 'Subiendo…';
 
-  // Show progress bar animation
   const prog = document.getElementById('upload-progress');
   const fill = document.getElementById('upload-progress-fill');
   prog.style.display = 'block';
-  fill.style.width = '30%';
+  fill.style.width = '20%';
 
   try {
     // Read file as base64
     const base64 = await readFileAsBase64(selectedFile);
-    fill.style.width = '60%';
+    fill.style.width = '50%';
+
+    // Try to extract readable text content (for Clippy knowledge base)
+    const textContent = await extractTextContent(selectedFile, base64);
+    fill.style.width = '70%';
 
     const db = getDB();
     const { data: { user } } = await db.auth.getUser();
     const profile = currentUser?.profile;
-    const uploaderName = profile?.full_name || user?.email || 'Admin';
+    const uploaderName = profile?.full_name || user?.email || 'Colaborador';
+    const uploaderRole = profile?.role || 'user';
 
-    fill.style.width = '80%';
+    fill.style.width = '85%';
+
+    const visibility = document.querySelector('input[name="u-visibility"]:checked')?.value || 'all';
 
     const payload = {
       title,
       description: desc || null,
       category: cat,
+      visibility,
       file_name: selectedFile.name,
       file_type: selectedFile.type || 'application/octet-stream',
       file_size: selectedFile.size,
       file_data: base64,
+      text_content: textContent || null,
       uploaded_by: user.id,
       uploaded_by_name: uploaderName,
+      uploaded_by_role: uploaderRole,
     };
 
     const { data: inserted, error } = await db
@@ -616,6 +687,51 @@ function readFileAsBase64(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+/* ── Extract readable text for Clippy knowledge base ─────── */
+async function extractTextContent(file, base64) {
+  try {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const textTypes = ['text/plain','text/csv','text/html','text/xml',
+                       'application/json','text/markdown','application/xml'];
+    const textExts  = ['txt','csv','md','json','xml','html','htm','log',
+                       'yaml','yml','toml','ini','conf','sh','py','js'];
+
+    // For text-based files → read as text directly
+    if (textTypes.includes(file.type) || textExts.includes(ext)) {
+      return await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = e => resolve(e.target.result?.slice(0, 8000) || null);
+        r.onerror = () => resolve(null);
+        r.readAsText(file, 'UTF-8');
+      });
+    }
+
+    // For PDF → try to extract text from raw bytes (works on text-heavy PDFs)
+    if (ext === 'pdf' || file.type === 'application/pdf') {
+      return await new Promise((resolve) => {
+        const r = new FileReader();
+        r.onload = e => {
+          try {
+            const text = e.target.result || '';
+            // Extract readable strings between PDF stream markers
+            const matches = text.match(/BT[\s\S]*?ET/g) || [];
+            const readable = matches
+              .join(' ')
+              .replace(/[^\x20-\x7E\xA0-\xFF\n]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            resolve(readable.length > 50 ? readable.slice(0, 8000) : null);
+          } catch { resolve(null); }
+        };
+        r.onerror = () => resolve(null);
+        r.readAsBinaryString(file);
+      });
+    }
+
+    return null; // Binary files (images, docx, xlsx) → no text extraction
+  } catch { return null; }
 }
 
 /* ── Boot ─────────────────────────────────────────────────── */

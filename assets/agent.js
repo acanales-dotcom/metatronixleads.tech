@@ -13,8 +13,10 @@
   const HISTORY_LIMIT = 20; // mensajes máx en contexto
 
   let db, currentUser, sessionId, messages = [], isOpen = false, isTyping = false;
-  let knowledgeBase = [];
-  let approvedDocs  = [];
+  let knowledgeBase   = [];   // agent_knowledge (legacy)
+  let websiteSources  = [];   // knowledge_sources (scraped websites)
+  let sharedDocs      = [];   // metatronix_docs con text_content
+  let approvedDocs    = [];   // documents aprobados del portal
 
   /* ── Clippy SVG ─────────────────────────────────────────────── */
   function clippySVG (id) {
@@ -92,75 +94,140 @@
   async function loadKnowledge () {
     if (!db) return;
     try {
+      // 1. Sitios web scrapeados de MetaTronix y subsidiarias
+      const { data: sites } = await db
+        .from('knowledge_sources')
+        .select('title, source_url, content, source_type')
+        .order('created_at', { ascending: true });
+      if (sites) websiteSources = sites;
+
+      // 2. Documentos externos subidos por colaboradores (solo los que tienen texto extraído)
+      const { data: mtxDocs } = await db
+        .from('metatronix_docs')
+        .select('id, title, description, category, file_name, uploaded_by_name, text_content, created_at')
+        .eq('visibility', 'all')
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (mtxDocs) sharedDocs = mtxDocs;
+
+      // 3. Documentos aprobados del portal (generados con IA)
+      const { data: docs } = await db
+        .from('documents')
+        .select('id, title, doc_type, content, created_at')
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(15);
+      if (docs) approvedDocs = docs;
+
+      // 4. knowledge_base legacy (agent_knowledge table si existe)
       const { data: kb } = await db
         .from('agent_knowledge')
         .select('title, content, category')
         .eq('is_active', true)
         .order('category');
       if (kb) knowledgeBase = kb;
-
-      // Documentos aprobados (los últimos 20 que tienen contenido)
-      const { data: docs } = await db
-        .from('documents')
-        .select('id, title, doc_type, content, created_at')
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (docs) approvedDocs = docs;
     } catch (_) {}
   }
 
   /* ── System prompt dinámico ─────────────────────────────── */
   function buildSystemPrompt () {
-    const page    = detectPage();
+    const page     = detectPage();
     const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador';
     const userRole = currentUser?.profile?.role || 'user';
+    const isAdmin  = ['admin','super_admin','admin_restringido'].includes(userRole);
 
+    // ── Sección 1: Sitios web de MetaTronix y subsidiarias ──
+    let sitesText = '';
+    if (websiteSources.length) {
+      sitesText = '\n\n════════════════════════════════════════\n';
+      sitesText += 'INFORMACIÓN OFICIAL DE METATRONIX Y SUBSIDIARIAS\n';
+      sitesText += '════════════════════════════════════════\n';
+      websiteSources.forEach(s => {
+        sitesText += `\n▸ ${s.title} (${s.source_url})\n${s.content}\n`;
+      });
+    }
+
+    // ── Sección 2: Documentos externos subidos por colaboradores ──
+    const docsWithText = sharedDocs.filter(d => d.text_content && d.text_content.trim().length > 20);
+    const docsMetaOnly = sharedDocs.filter(d => !d.text_content || d.text_content.trim().length <= 20);
+
+    let sharedDocsText = '';
+    if (sharedDocs.length) {
+      sharedDocsText = '\n\n════════════════════════════════════════\n';
+      sharedDocsText += 'DOCUMENTOS EXTERNOS SUBIDOS POR COLABORADORES\n';
+      sharedDocsText += '════════════════════════════════════════\n';
+      if (docsWithText.length) {
+        sharedDocsText += '\nDocumentos con contenido extraído:\n';
+        docsWithText.forEach(d => {
+          sharedDocsText += `\n▸ "${d.title}" [${d.category}] — subido por ${d.uploaded_by_name || 'colaborador'}\n`;
+          sharedDocsText += `  Archivo: ${d.file_name}\n`;
+          if (d.description) sharedDocsText += `  Descripción: ${d.description}\n`;
+          sharedDocsText += `  Contenido:\n${d.text_content.slice(0, 3000)}\n`;
+        });
+      }
+      if (docsMetaOnly.length) {
+        sharedDocsText += '\nDocumentos disponibles (binarios — sin texto extraído):\n';
+        docsMetaOnly.forEach(d => {
+          sharedDocsText += `  • "${d.title}" [${d.category}] — ${d.file_name}`;
+          if (d.description) sharedDocsText += ` — ${d.description}`;
+          sharedDocsText += '\n';
+        });
+      }
+    }
+
+    // ── Sección 3: Documentos generados con IA (aprobados) ──
+    let approvedText = '';
+    if (approvedDocs.length) {
+      approvedText = '\n\n════════════════════════════════════════\n';
+      approvedText += 'DOCUMENTOS GENERADOS EN EL PORTAL (APROBADOS)\n';
+      approvedText += '════════════════════════════════════════\n';
+      approvedDocs.forEach(d => {
+        const snippet = d.content
+          ? d.content.replace(/<[^>]*>/g, ' ').trim().slice(0, 400) + '…'
+          : 'Sin contenido disponible.';
+        approvedText += `\n▸ "${d.title}" (${d.doc_type})\n  ${snippet}\n`;
+      });
+    }
+
+    // ── Sección 4: KB legacy ──
     let kbText = '';
     if (knowledgeBase.length) {
-      kbText = '\n\n=== BASE DE CONOCIMIENTO METATRONIX ===\n';
+      kbText = '\n\n════════════════════════════════════════\n';
+      kbText += 'BASE DE CONOCIMIENTO ADICIONAL\n';
+      kbText += '════════════════════════════════════════\n';
       knowledgeBase.forEach(k => {
-        kbText += `\n[${k.category.toUpperCase()}] ${k.title}:\n${k.content}\n`;
+        kbText += `\n[${(k.category||'').toUpperCase()}] ${k.title}:\n${k.content}\n`;
       });
     }
 
-    let docsText = '';
-    if (approvedDocs.length) {
-      docsText = '\n\n=== DOCUMENTOS APROBADOS DISPONIBLES ===\n';
-      approvedDocs.forEach(d => {
-        const snippet = d.content ? d.content.substring(0, 300) + (d.content.length > 300 ? '…' : '') : 'Sin contenido previo.';
-        docsText += `\n- "${d.title}" (${d.doc_type}) — ${snippet}\n`;
-      });
-    }
+    const hasAnyKnowledge = websiteSources.length || sharedDocs.length || approvedDocs.length;
 
-    return `Eres Clippy, el Agente de Seguimiento de MetaTronix. Tu rol es ayudar a los colaboradores de IBANOR SA de CV dentro del Portal Interno de Documentos de Ventas.
+    return `Eres Clippy, el Agente Inteligente de MetaTronix. Asistes a los colaboradores de IBANOR SA de CV en el Portal Interno.
 
-PERSONALIDAD: Entusiasta, servicial y con un toque de humor clásico de oficina. Respondes en español. Cuando no sabes algo, lo dices con honestidad. Te especializas en dar seguimiento a documentos, prospectos y actividades del portal. Ocasionalmente puedes hacer referencias sutiles y divertidas a tu historia como asistente de oficina clásico.
+IDENTIDAD: Eres un experto en MetaTronix y todas sus subsidiarias. Respondes siempre en español. Tienes una personalidad servicial, directa y con un leve toque de humor de oficina. Ocasionalmente puedes hacer referencias sutiles y cálidas a tu historia como asistente de oficina clásico.
 
-CONTEXTO ACTUAL:
-- Usuario: ${userName} (rol: ${userRole})
-- Página actual: ${page.name}
-- Descripción de la página: ${page.desc}
+USUARIO ACTUAL:
+- Nombre: ${userName}
+- Rol: ${userRole}
+- Página: ${page.name} — ${page.desc}
 
-SOBRE METATRONIX:
-MetaTronix es una empresa global de inteligencia que integra ciencia de datos, inteligencia artificial, automatización y operaciones digitales. Tagline: "Illuminating the Unknown". Más de una década implementando IA en América Latina para gobiernos y grandes organizaciones privadas. Entidad legal en México: IBANOR SA de CV.
-
-SUBSIDIARIAS: Metaview Systems, QuantumTron Analytics, Aria Digital Strategy, Aria New Gen, NeuroTron Lab, CyberTron Defense.
-
-SOBRE EL PORTAL:
-- Módulos: Dashboard (métricas), Generar (crear documentos con IA), Leads (gestión de prospectos), Admin (solo admins: usuarios, alertas, configuración)
-- Generación: usar Claude AI para crear propuestas comerciales, contratos, cotizaciones, reportes, etc.
-- Documentos pasan por flujo: borrador → revisión → aprobado
+SOBRE EL PORTAL METATRONIX:
+- Módulos: Dashboard (métricas y documentos), Generar (crear docs con IA), Leads (prospectos y seguimiento), Docs MTX (biblioteca compartida), Admin (solo admins)
+- Flujo de documentos: borrador → revisión → aprobado
 - Contacto admin: acanales@ibanormexico.com
-${kbText}${docsText}
+${sitesText}${sharedDocsText}${approvedText}${kbText}
 
-INSTRUCCIONES:
-1. Ayuda con navegación, funciones del portal, dudas sobre documentos y MetaTronix.
-2. Si el usuario menciona un documento aprobado, puedes resumir o explicar su contenido.
-3. Sugiere acciones concretas (ej: "Ve a Generar → selecciona Propuesta Comercial").
-4. Respuestas cortas y directas. Usa listas cuando ayuda a la claridad.
-5. Si el usuario tiene rol 'user', no menciones funciones de admin.
-6. Nunca compartas datos de otros usuarios.`;
+════════════════════════════════════════
+REGLAS DE COMPORTAMIENTO — MUY IMPORTANTE
+════════════════════════════════════════
+1. FUENTE EXCLUSIVA: Tu conocimiento sobre MetaTronix, sus productos, servicios y subsidiarias proviene ÚNICAMENTE de la información proporcionada arriba (sitios web oficiales y documentos subidos). NO uses conocimiento externo ni suposiciones sobre la empresa.
+2. Si el usuario pregunta algo sobre MetaTronix que NO está en las fuentes anteriores, di honestamente: "No tengo información sobre eso en mis fuentes actuales. Puedes subir un documento con esa información en Docs MTX para que pueda aprenderlo."
+3. Si el usuario sube un nuevo documento, Clippy aprenderá de él en la próxima sesión automáticamente.
+4. Para preguntas sobre el portal (navegación, funciones, flujos), responde con conocimiento propio del sistema.
+5. ${isAdmin ? 'Como admin, puedes ver información completa de todos los usuarios y configuraciones.' : 'No menciones funciones de admin ni datos de otros usuarios.'}
+6. Respuestas concisas. Usa listas solo cuando clarifiquen. Sugiere acciones concretas cuando sea útil.
+7. Nunca compartas datos personales de otros colaboradores.
+${!hasAnyKnowledge ? '\nNOTA: Aún no hay documentos ni fuentes web cargadas. Responde solo sobre el portal y sus funciones.' : ''}`;
   }
 
   /* ── Detectar página actual ─────────────────────────────── */
@@ -171,6 +238,7 @@ INSTRUCCIONES:
       '/generate.html':  { name: 'Generación', desc: 'Módulo para crear documentos con IA: propuestas, contratos, cotizaciones.' },
       '/leads.html':     { name: 'Leads',      desc: 'Gestión de prospectos y clientes de ventas.' },
       '/admin.html':     { name: 'Admin',      desc: 'Panel de administración: usuarios, alertas, configuración del portal.' },
+      '/mtx-docs.html':  { name: 'Docs MTX',   desc: 'Biblioteca de documentos compartidos de MetaTronix. Todos los usuarios pueden subir y descargar archivos.' },
       '/':               { name: 'Login',      desc: 'Página de acceso al portal.' },
       '/index.html':     { name: 'Login',      desc: 'Página de acceso al portal.' },
     };
