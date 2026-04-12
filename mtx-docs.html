@@ -290,6 +290,7 @@
           <option value="politicas">📋 Políticas</option>
           <option value="capacitacion">🎓 Capacitación</option>
           <option value="formatos">📐 Formatos</option>
+          <option value="plantilla" id="cat-plantilla-opt" style="display:none">⚙️ Plantilla de Documento</option>
         </select>
       </div>
       <div class="form-group">
@@ -470,6 +471,7 @@ function catName(cat) {
     general: 'General', corporativo: 'Corporativo',
     contratos: 'Contratos', politicas: 'Políticas',
     capacitacion: 'Capacitación', formatos: 'Formatos',
+    plantilla: 'Plantilla',
   };
   return map[cat] || 'General';
 }
@@ -551,6 +553,12 @@ function openUploadModal() {
   document.getElementById('u-desc').value = '';
   document.getElementById('u-cat').value = 'general';
   document.getElementById('vis-all').checked = true;
+  // Mostrar opción de plantilla solo a admins
+  const plantillaOpt = document.getElementById('cat-plantilla-opt');
+  if (plantillaOpt) {
+    const role = currentUser?.profile?.role;
+    plantillaOpt.style.display = (role === 'admin' || role === 'super_admin') ? '' : 'none';
+  }
   resetUploadZone();
   document.getElementById('upload-modal').style.display = 'flex';
 }

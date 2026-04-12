@@ -8,22 +8,224 @@
   <link rel="stylesheet" href="/assets/agent.css">
   <style>
     body { overflow: hidden; }
-    .gen-wrap { height: calc(100vh - var(--header-h)); padding: 20px 24px; display: flex; flex-direction: column; }
-    .gen-layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; flex: 1; min-height: 0; }
-    .gen-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-    .gen-preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden; }
-    .gen-preview-header { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--surface2); flex-shrink: 0; }
-    .gen-preview-title { font-size: 11px; color: var(--text-muted); letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
-    .gen-preview-body { flex: 1; overflow-y: auto; padding: 32px 40px; }
-    .gen-preview-body.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-faint); gap: 8px; }
-    .gen-preview-body.empty .hint { font-size: 12px; text-align: center; max-width: 300px; line-height: 1.6; }
-    .prompt-wrap { position: relative; }
-    .prompt-counter { position: absolute; bottom: 8px; right: 10px; font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); }
-    .model-badge { display: inline-flex; align-items: center; gap: 5px; background: var(--accent-dim); color: var(--accent); border-radius: 3px; padding: 3px 8px; font-size: 11px; font-family: var(--font-mono); }
-    .panel-title { font-family: var(--font-head); font-size: 1.2rem; color: var(--accent); letter-spacing: .04em; }
-    .streaming-indicator { display: none; align-items: center; gap: 8px; font-size: 12px; color: var(--accent); }
-    .streaming-indicator.active { display: flex; }
-    .status-row { display: flex; align-items: center; justify-content: space-between; }
+
+    .gen-wrap {
+      height: 100vh;
+      padding: 20px 24px 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .gen-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 16px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ── Left panel ─────────────────────────────────────────── */
+    .gen-panel {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .gen-panel-head {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .gen-panel-title {
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      color: var(--accent);
+      letter-spacing: .04em;
+    }
+    .gen-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ── Template grid ──────────────────────────────────────── */
+    .tpl-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tpl-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .tpl-card:hover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .tpl-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      box-shadow: 0 0 0 3px var(--accent-mid);
+    }
+    .tpl-icon {
+      width: 38px; height: 38px;
+      background: var(--accent-dim);
+      border-radius: var(--radius);
+      border: 1px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .tpl-info { flex: 1; min-width: 0; }
+    .tpl-name {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .tpl-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .tpl-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── Form when template selected ────────────────────────── */
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 0;
+      margin-bottom: 4px;
+    }
+    .back-btn:hover { color: var(--accent); }
+
+    .selected-tpl-header {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .selected-tpl-name { font-weight: 700; font-size: 13px; color: var(--accent); }
+    .selected-tpl-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .scope-notice {
+      background: var(--warning-dim);
+      border: 1px solid var(--warning);
+      border-radius: var(--radius);
+      padding: 9px 12px;
+      font-size: 11px;
+      color: var(--warning);
+      line-height: 1.5;
+    }
+    .scope-notice strong { color: var(--warning); font-weight: 700; }
+
+    /* ── Right preview ──────────────────────────────────────── */
+    .gen-preview {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .gen-preview-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+      flex-shrink: 0;
+    }
+    .gen-preview-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .gen-preview-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 40px;
+    }
+    .gen-preview-body.empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-faint);
+      gap: 12px;
+      text-align: center;
+    }
+    .gen-preview-body.empty .hint {
+      font-size: 12px;
+      max-width: 320px;
+      line-height: 1.7;
+      color: var(--text-muted);
+    }
+
+    /* ── No templates state ─────────────────────────────────── */
+    .no-templates {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+    }
+    .no-templates .nt-icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+    .no-templates p { font-size: 12px; line-height: 1.6; }
+
+    /* streaming */
+    .stream-status {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--accent);
+      padding: 8px 0;
+    }
+    .stream-status.active { display: flex; }
+
     @media (max-width: 900px) {
       body { overflow: auto; }
       .gen-wrap { height: auto; overflow: visible; padding: 16px; }
@@ -38,88 +240,33 @@
 <div class="gen-wrap">
   <div class="gen-layout">
 
-    <!-- LEFT: Config panel -->
+    <!-- LEFT: Panel -->
     <div class="gen-panel">
-      <div class="status-row">
-        <span class="panel-title">Configurar</span>
-        <span class="model-badge">⚡ Claude</span>
+      <div class="gen-panel-head">
+        <span class="gen-panel-title" id="panel-title">Seleccionar Plantilla</span>
+        <span class="badge badge-accent" style="font-size:10px" id="tpl-count"></span>
       </div>
-
-      <div class="form-group">
-        <label class="form-label">Tipo de Documento</label>
-        <select id="doc-type" class="form-select">
-          <option value="propuesta">Propuesta Comercial</option>
-          <option value="contrato">Contrato de Servicios</option>
-          <option value="cotizacion">Cotización</option>
-          <option value="reporte">Reporte de Actividades</option>
-          <option value="informe">Informe Ejecutivo</option>
-          <option value="carta">Carta Formal</option>
-          <option value="acuerdo">Acuerdo de Confidencialidad</option>
-          <option value="tecnico">Documento Técnico</option>
-          <option value="manual">Manual de Procedimientos</option>
-          <option value="general">General / Otro</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Título del Documento</label>
-        <input type="text" id="doc-title" class="form-input" placeholder="Ej: Propuesta para Cliente XYZ">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Empresa / Cliente</label>
-        <input type="text" id="doc-company" class="form-input" placeholder="Nombre del cliente o empresa">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Instrucciones para Claude</label>
-        <div class="prompt-wrap">
-          <textarea id="doc-prompt" class="form-textarea" style="min-height:180px"
-            placeholder="Describe qué debe incluir el documento, contexto, términos, condiciones, datos específicos...&#10;&#10;Cuanto más detallado, mejor será el resultado."></textarea>
-          <span class="prompt-counter" id="prompt-counter">0</span>
+      <div class="gen-panel-body" id="panel-body">
+        <!-- Step 1: template grid (default) -->
+        <!-- Step 2: form (injected when template selected) -->
+        <div id="loading-tpl" style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">
+          <span class="spinner"></span><br><br>Cargando plantillas...
         </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Tono</label>
-        <select id="doc-tone" class="form-select">
-          <option value="formal">Formal y Profesional</option>
-          <option value="tecnico">Técnico / Especializado</option>
-          <option value="comercial">Comercial / Persuasivo</option>
-          <option value="ejecutivo">Ejecutivo / Conciso</option>
-        </select>
-      </div>
-
-      <div class="divider"></div>
-
-      <button id="gen-btn" class="btn btn-primary btn-lg" onclick="generate()" style="width:100%">
-        ⚡ Generar Documento
-      </button>
-
-      <div class="streaming-indicator" id="stream-indicator">
-        <span class="spinner"></span>
-        <span id="stream-words">Generando...</span>
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- Save / download actions -->
-      <div style="display:flex; flex-direction:column; gap:8px" id="doc-actions" style="display:none">
-        <button class="btn btn-secondary" onclick="saveDoc()" id="save-btn">💾 Guardar en Portal</button>
-        <button class="btn btn-secondary" onclick="downloadNow()">⬇ Descargar HTML</button>
-        <button class="btn btn-ghost btn-sm" onclick="sendReview()" id="review-btn" style="display:none">📤 Enviar a Revisión</button>
       </div>
     </div>
 
     <!-- RIGHT: Preview -->
     <div class="gen-preview">
       <div class="gen-preview-header">
-        <span class="gen-preview-title">Vista Previa del Documento</span>
+        <span class="gen-preview-title" id="preview-label">Vista Previa</span>
         <div id="preview-status" style="font-size:12px;color:var(--text-muted)"></div>
       </div>
       <div id="preview-body" class="gen-preview-body empty">
-        <div style="font-size:48px;opacity:.2">📄</div>
-        <div class="hint">Configura el tipo de documento, escribe las instrucciones y presiona <strong style="color:var(--accent)">Generar Documento</strong>.</div>
+        <div style="font-size:56px;opacity:.15">📄</div>
+        <div class="hint">
+          Selecciona una plantilla aprobada para comenzar.<br>
+          Las plantillas definen el tipo y alcance del documento que puedes generar.
+        </div>
       </div>
     </div>
 
@@ -149,59 +296,293 @@
 <script src="/assets/app.js"></script>
 <script src="/assets/agent.js"></script>
 <script>
-let currentUser = null;
-let generatedContent = '';
-let savedDocId = null;
-let wordCount = 0;
+let currentUser    = null;
+let templates      = [];
+let selectedTpl    = null;
+let generatedHTML  = '';
+let savedDocId     = null;
+
+// ── Category icons ──────────────────────────────────────────
+const CAT_ICONS = {
+  propuesta:'📋', contrato:'📑', cotizacion:'💰', reporte:'📊',
+  informe:'📈', carta:'✉️', acuerdo:'🤝', tecnico:'⚙️',
+  manual:'📚', general:'📄', plantilla:'⚙️',
+};
 
 async function init() {
   currentUser = await requireAuth();
   if (!currentUser) return;
   document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'generate');
+  await loadTemplates();
 
-  // Prompt counter
-  document.getElementById('doc-prompt').addEventListener('input', e => {
-    document.getElementById('prompt-counter').textContent = e.target.value.length;
-  });
-
-  // Edit mode
+  // Edit mode (URL param)
   const params = new URLSearchParams(location.search);
-  const editId = params.get('edit');
-  if (editId) await loadForEdit(editId);
+  if (params.get('edit')) await loadForEdit(params.get('edit'));
 }
 
-async function loadForEdit(docId) {
+// ── Load templates from Docs MTX (category = 'plantilla') ──
+async function loadTemplates() {
   const db = getDB();
-  const { data, error } = await db.from('documents').select('*').eq('id', docId).eq('user_id', currentUser.id).single();
-  if (error || !data) return;
-  savedDocId = docId;
-  document.getElementById('doc-type').value = data.doc_type;
-  document.getElementById('doc-title').value = data.title;
-  document.getElementById('doc-prompt').value = data.prompt || '';
-  document.getElementById('prompt-counter').textContent = (data.prompt || '').length;
-  generatedContent = data.content;
-  renderPreview(data.content, data.title);
-  showDocActions(true);
+  const { data, error } = await db
+    .from('metatronix_docs')
+    .select('id, title, description, category, text_content, file_data, file_name, file_type, created_at, uploaded_by_name')
+    .eq('category', 'plantilla')
+    .order('created_at', { ascending: false });
+
+  document.getElementById('loading-tpl').style.display = 'none';
+
+  if (error || !data || data.length === 0) {
+    renderNoTemplates();
+    return;
+  }
+  templates = data;
+  renderTemplateGrid();
 }
 
+function renderNoTemplates() {
+  const role = currentUser?.profile?.role;
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  document.getElementById('panel-body').innerHTML = `
+    <div class="no-templates">
+      <div class="nt-icon">📄</div>
+      <p><strong>No hay plantillas disponibles aún.</strong></p>
+      ${isAdmin
+        ? `<p style="margin-top:8px">Los administradores pueden subir plantillas HTML en <strong>Docs MTX</strong> seleccionando la categoría <strong>Plantilla de Documento</strong>.</p>
+           <a href="/mtx-docs.html" class="btn btn-primary btn-sm" style="display:inline-flex;margin-top:16px">Ir a Docs MTX →</a>`
+        : `<p style="margin-top:8px">Solicita a un administrador que suba plantillas de documentos en Docs MTX para poder generar documentos.</p>`
+      }
+    </div>`;
+}
+
+function renderTemplateGrid() {
+  document.getElementById('tpl-count').textContent = templates.length + ' disponibles';
+  const grid = document.createElement('div');
+  grid.className = 'tpl-grid';
+  grid.innerHTML = templates.map(t => `
+    <div class="tpl-card" data-id="${t.id}" onclick="selectTemplate('${t.id}')">
+      <div class="tpl-icon">${CAT_ICONS[t.category] || '📄'}</div>
+      <div class="tpl-info">
+        <div class="tpl-name">${escHtml(t.title)}</div>
+        ${t.description ? `<div class="tpl-desc">${escHtml(t.description)}</div>` : ''}
+        <div style="margin-top:4px">
+          <span class="tpl-badge">Plantilla aprobada</span>
+          ${t.uploaded_by_name ? `<span style="font-size:10px;color:var(--text-faint);margin-left:6px">por ${escHtml(t.uploaded_by_name)}</span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+  document.getElementById('panel-body').innerHTML = '';
+  document.getElementById('panel-body').appendChild(grid);
+}
+
+// ── Select a template ──────────────────────────────────────
+function selectTemplate(id) {
+  selectedTpl = templates.find(t => t.id === id);
+  if (!selectedTpl) return;
+
+  // Highlight card
+  document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`.tpl-card[data-id="${id}"]`)?.classList.add('selected');
+
+  // Show form
+  renderTemplateForm();
+  // Show template preview on right
+  renderTemplatePreview();
+}
+
+function renderTemplateForm() {
+  document.getElementById('panel-title').textContent = 'Configurar Documento';
+  document.getElementById('tpl-count').textContent = '';
+
+  // Extract HTML content
+  const htmlContent = getTemplateHTML(selectedTpl);
+  // Parse placeholders: {{CAMPO}} or {{CAMPO: descripción}}
+  const placeholders = extractPlaceholders(htmlContent);
+
+  const panelBody = document.getElementById('panel-body');
+  panelBody.innerHTML = `
+    <button class="back-btn" onclick="backToGrid()">← Cambiar plantilla</button>
+
+    <div class="selected-tpl-header">
+      <span style="font-size:22px">${CAT_ICONS[selectedTpl.category] || '📄'}</span>
+      <div>
+        <div class="selected-tpl-name">${escHtml(selectedTpl.title)}</div>
+        ${selectedTpl.description ? `<div class="selected-tpl-desc">${escHtml(selectedTpl.description)}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="scope-notice">
+      <strong>Alcance definido:</strong> Este documento se generará basándose
+      exclusivamente en la plantilla seleccionada. No se puede generar contenido
+      fuera del alcance aprobado por la administración.
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Título del Documento *</label>
+      <input type="text" id="doc-title" class="form-input"
+             value="${escHtml(selectedTpl.title)}" placeholder="Título del documento final">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Empresa / Cliente *</label>
+      <input type="text" id="doc-company" class="form-input" placeholder="Nombre de la empresa o cliente">
+    </div>
+
+    ${placeholders.length > 0 ? `
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;padding-top:4px">
+      Campos de la plantilla
+    </div>
+    ${placeholders.map(p => `
+    <div class="form-group">
+      <label class="form-label">${escHtml(p.label)}</label>
+      ${p.multiline
+        ? `<textarea id="field-${escHtml(p.key)}" class="form-textarea" style="min-height:70px"
+                    placeholder="${escHtml(p.hint || 'Escribe el contenido para este campo...')}"></textarea>`
+        : `<input type="text" id="field-${escHtml(p.key)}" class="form-input"
+                  placeholder="${escHtml(p.hint || p.label)}">`
+      }
+    </div>`).join('')}` : `
+    <div class="form-group">
+      <label class="form-label">Contexto y detalles específicos</label>
+      <textarea id="doc-context" class="form-textarea" style="min-height:120px"
+        placeholder="Describe el proyecto, servicios, condiciones, datos relevantes para este documento. Cuanto más detallado, mejor el resultado."></textarea>
+    </div>`}
+
+    <div class="divider"></div>
+
+    <button id="gen-btn" class="btn btn-primary btn-lg" onclick="generate()" style="width:100%">
+      ⚡ Generar Documento
+    </button>
+
+    <div class="stream-status" id="stream-status">
+      <span class="spinner"></span>
+      <span id="stream-words">Generando...</span>
+    </div>
+
+    <div id="doc-actions" style="display:none;flex-direction:column;gap:8px">
+      <button class="btn btn-secondary" onclick="saveDoc()" id="save-btn">💾 Guardar en Portal</button>
+      <button class="btn btn-secondary" onclick="downloadNow()">⬇ Descargar HTML</button>
+      <button class="btn btn-ghost btn-sm" id="review-btn" style="display:none" onclick="sendReview()">📤 Enviar a Revisión</button>
+    </div>
+  `;
+}
+
+function backToGrid() {
+  selectedTpl = null;
+  generatedHTML = '';
+  savedDocId = null;
+  document.getElementById('panel-title').textContent = 'Seleccionar Plantilla';
+  renderTemplateGrid();
+  document.getElementById('tpl-count').textContent = templates.length + ' disponibles';
+  // Reset preview
+  const pb = document.getElementById('preview-body');
+  pb.className = 'gen-preview-body empty';
+  pb.innerHTML = `<div style="font-size:56px;opacity:.15">📄</div>
+    <div class="hint">Selecciona una plantilla aprobada para comenzar.</div>`;
+  document.getElementById('preview-status').textContent = '';
+}
+
+// ── Show template preview on right ────────────────────────
+function renderTemplatePreview() {
+  const html = getTemplateHTML(selectedTpl);
+  const pb = document.getElementById('preview-body');
+  pb.className = 'gen-preview-body';
+
+  if (html && html.trim().length > 50) {
+    // Show the template as a sandboxed preview
+    const cleanHtml = sanitizeForPreview(html);
+    pb.innerHTML = `
+      <div style="margin-bottom:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Plantilla Base</div>
+        <div style="font-size:12px;color:var(--text-muted)">El documento generado seguirá la estructura y alcance de esta plantilla.</div>
+      </div>
+      <div class="doc-content" style="font-size:12px;opacity:.7;pointer-events:none">
+        ${cleanHtml}
+      </div>`;
+  } else {
+    pb.className = 'gen-preview-body empty';
+    pb.innerHTML = `<div style="font-size:48px;opacity:.2">📄</div>
+      <div class="hint">Vista previa no disponible.<br>Llena los campos y genera el documento.</div>`;
+  }
+  document.getElementById('preview-label').textContent = 'Plantilla — ' + escHtml(selectedTpl.title);
+}
+
+// ── Extract HTML from template record ─────────────────────
+function getTemplateHTML(tpl) {
+  // Prefer text_content (extracted by mtx-docs)
+  if (tpl.text_content && tpl.text_content.trim().length > 20) {
+    return tpl.text_content;
+  }
+  // Fallback: decode base64 file_data
+  if (tpl.file_data) {
+    try {
+      return atob(tpl.file_data);
+    } catch (_) {}
+  }
+  return '';
+}
+
+// ── Parse {{PLACEHOLDER}} or {{PLACEHOLDER: hint}} ────────
+function extractPlaceholders(html) {
+  if (!html) return [];
+  const regex = /\{\{([^}]+)\}\}/g;
+  const seen = new Set();
+  const result = [];
+  let m;
+  while ((m = regex.exec(html)) !== null) {
+    const raw = m[1].trim();
+    const [keyRaw, hintRaw] = raw.split(':').map(s => s.trim());
+    const key = keyRaw.toUpperCase().replace(/\s+/g, '_');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // Skip auto-fill fields
+    if (['FECHA', 'DATE', 'HOY'].includes(key)) continue;
+    const label = keyRaw
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+    const multiline = ['DESCRIPCION','SERVICIOS','CONTENIDO','DETALLES',
+      'ALCANCE','TERMINOS','CONDICIONES','OBJETIVO','ANTECEDENTES',
+      'PROPUESTA','ENTREGABLES'].some(k => key.includes(k));
+    result.push({ key, label, hint: hintRaw || '', multiline });
+  }
+  return result;
+}
+
+// ── Sanitize template HTML for read-only preview ──────────
+function sanitizeForPreview(html) {
+  // Strip scripts, styles, head, remove interactive elements
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<html[^>]*>/gi, '')
+    .replace(/<\/html>/gi, '')
+    .replace(/<body[^>]*>/gi, '')
+    .replace(/<\/body>/gi, '')
+    .replace(/<input[^>]*>/gi, '')
+    .replace(/<button[^>]*>[\s\S]*?<\/button>/gi, '')
+    .replace(/<textarea[^>]*>[\s\S]*?<\/textarea>/gi, '')
+    .replace(/<select[^>]*>[\s\S]*?<\/select>/gi, '')
+    .replace(/\{\{[^}]+\}\}/g, '<span style="background:#fff3cd;padding:0 3px;border-radius:2px;font-size:11px;color:#92400e">[campo]</span>')
+    .trim();
+}
+
+// ── Generate document ──────────────────────────────────────
 async function generate() {
-  const docType = document.getElementById('doc-type').value;
-  const title   = document.getElementById('doc-title').value.trim();
-  const company = document.getElementById('doc-company').value.trim();
-  const prompt  = document.getElementById('doc-prompt').value.trim();
-  const tone    = document.getElementById('doc-tone').value;
+  const title   = (document.getElementById('doc-title')?.value || '').trim();
+  const company = (document.getElementById('doc-company')?.value || '').trim();
 
-  if (!prompt) { showToast('Escribe las instrucciones para el documento', 'warning'); return; }
-  if (!title)  { showToast('Agrega un título al documento', 'warning'); return; }
+  if (!title)   { showToast('Agrega un título al documento', 'warning'); return; }
+  if (!company) { showToast('Escribe el nombre del cliente o empresa', 'warning'); return; }
+  if (!selectedTpl) { showToast('Selecciona una plantilla primero', 'warning'); return; }
 
-  // ── Verificar acceso Claude ──────────────────────────────
+  // ── Claude access check ──────────────────────────────────
   if (currentUser?.id && typeof checkClaudeAccess === 'function') {
     const access = await checkClaudeAccess(currentUser.id);
     if (!access.allowed) {
       const msgs = {
         disabled:     'El acceso a Claude está deshabilitado. Contacta al administrador.',
-        pending_auth: 'Alcanzaste tu límite mensual. Tu solicitud fue enviada al SuperAdmin para autorización.',
-        limit_reached:`Límite mensual alcanzado (${access.used}/${access.limit} generaciones). Solicitud enviada al administrador.`,
+        pending_auth: 'Alcanzaste tu límite mensual. Tu solicitud fue enviada al SuperAdmin.',
+        limit_reached:`Límite mensual alcanzado (${access.used}/${access.limit}). Solicitud enviada.`,
       };
       showToast(msgs[access.reason] || 'Sin acceso a Claude.', 'warning');
       return;
@@ -209,104 +590,120 @@ async function generate() {
   }
 
   const btn = document.getElementById('gen-btn');
-  btn.disabled = true; btn.textContent = 'Generando...';
-  document.getElementById('stream-indicator').classList.add('active');
+  btn.disabled = true;
+  btn.textContent = 'Generando...';
+  document.getElementById('stream-status').classList.add('active');
   document.getElementById('doc-actions').style.display = 'none';
-  document.getElementById('review-btn').style.display = 'none';
 
-  // Render empty preview
-  const preview = document.getElementById('preview-body');
-  preview.classList.remove('empty');
-  preview.innerHTML = '<div class="doc-content" id="doc-live"></div>';
+  // ── Collect field values ─────────────────────────────────
+  const htmlContent = getTemplateHTML(selectedTpl);
+  const placeholders = extractPlaceholders(htmlContent);
+  let fieldsInfo = '';
+  if (placeholders.length > 0) {
+    const vals = placeholders.map(p => {
+      const el = document.getElementById('field-' + p.key);
+      const val = el?.value?.trim() || '';
+      return val ? `- ${p.label}: ${val}` : '';
+    }).filter(Boolean).join('\n');
+    if (vals) fieldsInfo = '\nDATOS DE LOS CAMPOS:\n' + vals;
+  } else {
+    const ctx = document.getElementById('doc-context')?.value?.trim() || '';
+    if (ctx) fieldsInfo = '\nCONTEXTO DEL DOCUMENTO:\n' + ctx;
+  }
+
+  // ── System prompt ────────────────────────────────────────
+  const today = new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' });
+  const systemPrompt = `Eres un generador de documentos empresariales para MetaTronix / IBANOR SA de CV.
+
+PLANTILLA APROBADA POR ADMINISTRACIÓN:
+Título: ${selectedTpl.title}
+${selectedTpl.description ? `Descripción: ${selectedTpl.description}` : ''}
+
+CONTENIDO COMPLETO DE LA PLANTILLA:
+${htmlContent || '(sin contenido de plantilla disponible — usa el título y descripción como guía)'}
+
+════════════════════════════════
+REGLAS ABSOLUTAS — SIN EXCEPCIONES
+════════════════════════════════
+1. Genera ÚNICAMENTE el tipo de documento definido en la plantilla anterior.
+2. Usa SOLO las secciones, estructura y alcance que la plantilla define o implica.
+3. NO generes secciones, cláusulas o contenido que la plantilla NO contempla.
+4. Si la plantilla tiene marcadores {{CAMPO}}, reemplázalos con el contenido apropiado del usuario.
+5. Devuelve SOLO HTML semántico bien estructurado (h1, h2, h3, p, ul, ol, table, strong, em).
+6. NO incluyas <!DOCTYPE>, <html>, <head>, <body>, <style> ni etiquetas de estructura.
+7. El documento debe verse completo, profesional y firmado por IBANOR SA de CV / MetaTronix.
+8. Fecha del documento: ${today}`;
+
+  const userMsg = `Genera el documento con los siguientes datos:
+- Documento: ${title}
+- Cliente / Empresa: ${company}
+${fieldsInfo}
+
+El documento debe seguir estrictamente el alcance y estructura de la plantilla aprobada.`;
+
+  // ── Preview container ────────────────────────────────────
+  const pb = document.getElementById('preview-body');
+  pb.className = 'gen-preview-body';
+  pb.innerHTML = '<div class="doc-content" id="doc-live"></div>';
+  document.getElementById('preview-label').textContent = title;
   document.getElementById('preview-status').textContent = '';
 
-  generatedContent = '';
-  wordCount = 0;
-
-  const toneMap = {
-    formal: 'formal y profesional',
-    tecnico: 'técnico y especializado',
-    comercial: 'comercial y persuasivo',
-    ejecutivo: 'ejecutivo y conciso'
-  };
-
-  const systemPrompt = `Eres un redactor experto de documentos empresariales para IBANOR SA de CV / MetaTronix.
-Genera documentos en español, con tono ${toneMap[tone]}.
-IMPORTANTE:
-- Devuelve SOLO HTML semántico y bien estructurado (h1, h2, h3, p, ul, ol, table, strong, em).
-- NO incluyas <!DOCTYPE>, <html>, <head>, <body>, <style> ni etiquetas de estructura.
-- Usa h1 para el título principal, h2 para secciones, h3 para subsecciones.
-- El documento debe verse completo y profesional.
-- Incluye fecha actual cuando corresponda: ${new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' })}.
-- Si hay tablas de datos, inclúyelas con <table><thead><tr><th>...</th></tr></thead><tbody>...</tbody></table>.`;
-
-  const userMsg = `Genera un documento tipo: ${typeName(docType)}.
-Título: ${title}
-${company ? `Cliente/Empresa: ${company}` : ''}
-Instrucciones: ${prompt}`;
+  generatedHTML = '';
+  let wordCount = 0;
 
   await generateWithClaude(
     [{ role: 'user', content: userMsg }],
     (chunk, full) => {
-      generatedContent = full;
+      generatedHTML = full;
       const live = document.getElementById('doc-live');
       if (live) {
         live.innerHTML = full + '<span class="cursor-blink"></span>';
-        // auto-scroll
-        preview.scrollTop = preview.scrollHeight;
+        pb.scrollTop = pb.scrollHeight;
       }
-      wordCount = full.replace(/<[^>]*>/g,'').split(/\s+/).length;
+      wordCount = full.replace(/<[^>]*>/g,'').split(/\s+/).filter(Boolean).length;
       document.getElementById('stream-words').textContent = `${wordCount} palabras generadas...`;
     },
     (fullText) => {
-      generatedContent = fullText;
+      generatedHTML = fullText;
       const live = document.getElementById('doc-live');
       if (live) live.innerHTML = fullText;
-      document.getElementById('stream-indicator').classList.remove('active');
-      document.getElementById('preview-status').innerHTML = `<span style="color:var(--accent)">✓ ${wordCount} palabras</span>`;
-      btn.disabled = false; btn.textContent = '⚡ Regenerar';
-      showDocActions(false);
-      logActivity('generate_document', 'document', null, { title, type: docType });
+      document.getElementById('stream-status').classList.remove('active');
+      document.getElementById('preview-status').innerHTML =
+        `<span style="color:var(--accent)">✓ ${wordCount} palabras</span>`;
+      btn.disabled = false;
+      btn.textContent = '⚡ Regenerar';
+      document.getElementById('doc-actions').style.display = 'flex';
+      if (typeof incrementClaudeUsage === 'function') {
+        incrementClaudeUsage(currentUser.id).catch(()=>{});
+      }
+      logActivity('generate_document', 'document', null, { title, template: selectedTpl.title });
     },
     (errMsg) => {
-      preview.classList.add('empty');
-      preview.innerHTML = `<div style="color:var(--danger);text-align:center;padding:24px">
+      pb.className = 'gen-preview-body empty';
+      pb.innerHTML = `<div style="color:var(--danger);text-align:center;padding:24px">
         <div style="font-size:32px;margin-bottom:12px">⚠</div>
         <strong>Error al generar</strong><br>
-        <span style="font-size:12px;opacity:.7">${escHtml(errMsg)}</span><br>
-        <span style="font-size:11px;color:var(--text-faint);margin-top:8px;display:block">Verifica que CLAUDE_PROXY_URL esté configurado en config.js</span>
+        <span style="font-size:12px;opacity:.7">${escHtml(errMsg)}</span>
       </div>`;
-      document.getElementById('stream-indicator').classList.remove('active');
-      btn.disabled = false; btn.textContent = '⚡ Generar Documento';
+      document.getElementById('stream-status').classList.remove('active');
+      btn.disabled = false;
+      btn.textContent = '⚡ Generar Documento';
     }
   );
 }
 
-function renderPreview(content, title) {
-  const preview = document.getElementById('preview-body');
-  preview.classList.remove('empty');
-  preview.innerHTML = `<div class="doc-content">${content}</div>`;
-  document.getElementById('preview-status').innerHTML = `<span style="color:var(--accent)">✓ Cargado</span>`;
-}
-
-function showDocActions(alreadySaved) {
-  document.getElementById('doc-actions').style.display = 'flex';
-  const saveBtn = document.getElementById('save-btn');
-  saveBtn.textContent = alreadySaved ? '💾 Actualizar en Portal' : '💾 Guardar en Portal';
-  document.getElementById('review-btn').style.display = savedDocId ? 'inline-flex' : 'none';
-}
-
+// ── Save doc ───────────────────────────────────────────────
 async function saveDoc() {
-  if (!generatedContent) { showToast('Genera un documento primero', 'warning'); return; }
+  if (!generatedHTML) { showToast('Genera un documento primero', 'warning'); return; }
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     const doc = await saveDocument({
       id:       savedDocId || null,
-      title:    document.getElementById('doc-title').value.trim() || 'Sin título',
-      doc_type: document.getElementById('doc-type').value,
-      prompt:   document.getElementById('doc-prompt').value.trim(),
-      content:  generatedContent,
+      title:    document.getElementById('doc-title')?.value?.trim() || selectedTpl.title,
+      doc_type: 'plantilla',
+      prompt:   `Plantilla: ${selectedTpl.title} | Cliente: ${document.getElementById('doc-company')?.value?.trim() || ''}`,
+      content:  generatedHTML,
     });
     savedDocId = doc.id;
     showToast('Documento guardado ✓', 'success');
@@ -319,10 +716,9 @@ async function saveDoc() {
 }
 
 function downloadNow() {
-  if (!generatedContent) { showToast('Genera un documento primero', 'warning'); return; }
-  const title = document.getElementById('doc-title').value.trim() || 'documento';
-  downloadDocument(title, generatedContent);
-  if (savedDocId) logActivity('download_document', 'document', savedDocId, { title });
+  if (!generatedHTML) { showToast('Genera un documento primero', 'warning'); return; }
+  const title = document.getElementById('doc-title')?.value?.trim() || 'documento';
+  downloadDocument(title, generatedHTML);
 }
 
 function sendReview() {
@@ -343,6 +739,20 @@ async function submitForReview() {
     showToast('Error: ' + e.message, 'error');
   }
   btn.disabled = false; btn.textContent = 'Enviar';
+}
+
+// ── Edit mode ──────────────────────────────────────────────
+async function loadForEdit(docId) {
+  const db = getDB();
+  const { data } = await db.from('documents').select('*').eq('id', docId).eq('user_id', currentUser.id).single();
+  if (!data) return;
+  savedDocId = docId;
+  generatedHTML = data.content;
+  const pb = document.getElementById('preview-body');
+  pb.className = 'gen-preview-body';
+  pb.innerHTML = `<div class="doc-content">${data.content}</div>`;
+  document.getElementById('preview-label').textContent = data.title;
+  document.getElementById('preview-status').innerHTML = `<span style="color:var(--accent)">✓ Cargado</span>`;
 }
 
 init();
