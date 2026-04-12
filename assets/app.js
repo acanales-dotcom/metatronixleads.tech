@@ -364,74 +364,117 @@ function renderHeader(user, activePage) {
            onclick="handleAlertClick('${a.id}','${a.lead_id||''}')">
         <span style="font-size:15px;flex-shrink:0">${alertIcons[a.type]||'🔔'}</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;color:${a.read?'var(--text-muted)':'#fff'};line-height:1.4">${escHtml(a.message||'')}</div>
+          <div style="font-size:12px;color:${a.read?'var(--text-muted)':'var(--text)'};line-height:1.4">${escHtml(a.message||'')}</div>
           <div style="font-size:10px;color:var(--text-faint);margin-top:2px;font-family:var(--font-mono)">${formatDate(a.created_at)}</div>
         </div>
         ${!a.read?'<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px"></span>':''}
       </div>`).join('')
     : '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Sin alertas</div>';
 
+  const roleBadge = isSuperAdmin
+    ? '<span class="sidebar-role-badge" style="background:#7c3aed;color:#fff">SuperAdmin</span>'
+    : isAdmin
+      ? '<span class="sidebar-role-badge" style="background:var(--accent);color:#fff">Admin</span>'
+      : isRestrictedAdmin
+        ? '<span class="sidebar-role-badge" style="background:var(--warning);color:#000">Visor</span>'
+        : '';
+
   return `
   <style>
+    body { padding-left: var(--sidebar-w, 224px); }
     .bell-wrap { position:relative; cursor:pointer; display:flex; align-items:center; }
     .bell-badge {
-      position:absolute; top:-6px; right:-8px;
+      position:absolute; top:-5px; right:-7px;
       min-width:16px; height:16px; border-radius:8px;
-      background:#e03030; border:2px solid var(--bg,#0a0e17);
+      background:#e03030; border:2px solid #fff;
       font-size:9px; color:#fff; font-weight:700;
       display:flex; align-items:center; justify-content:center;
       padding:0 3px; font-family:var(--font-mono);
     }
     .bell-dropdown {
-      display:none; position:absolute; top:calc(100% + 10px); right:-8px;
-      width:320px; background:var(--surface);
+      display:none; position:fixed; bottom:80px; left:calc(var(--sidebar-w,224px) + 8px);
+      width:320px; background:#fff;
       border:1px solid var(--border); border-radius:var(--radius-lg);
-      box-shadow:0 8px 32px rgba(0,0,0,.5); z-index:9999; overflow:hidden;
+      box-shadow:0 8px 32px rgba(0,30,80,.15); z-index:9999; overflow:hidden;
     }
     .bell-dropdown.open { display:block; }
     .bell-dropdown-head {
       padding:10px 16px; border-bottom:1px solid var(--border);
       font-size:11px; font-weight:700; letter-spacing:.08em;
       text-transform:uppercase; color:var(--text-muted);
+      display:flex; justify-content:space-between; align-items:center;
     }
-    .bell-alert-items { max-height:340px; overflow-y:auto; }
+    .bell-alert-items { max-height:360px; overflow-y:auto; }
     .bell-alert-item {
       display:flex; gap:10px; align-items:flex-start;
       padding:10px 16px; border-bottom:1px solid var(--border2);
       cursor:pointer; transition:background .15s;
     }
     .bell-alert-item:hover { background:var(--surface2); }
-    .bell-alert-unread { background:rgba(0,255,136,.04); }
+    .bell-alert-unread { background:var(--accent-dim); }
   </style>
-  <header class="app-header">
-    <div class="header-brand">
-      <span class="brand-title">METATRONIX</span>
-      <span class="brand-sub">PORTAL</span>
+  <aside class="app-sidebar">
+    <div class="sidebar-brand">
+      <span class="sidebar-brand-title">METATRONIX</span>
+      <span class="sidebar-brand-sub">PORTAL</span>
     </div>
-    <nav class="header-nav">
-      <a href="/dashboard.html" class="${activePage==='dashboard'?'active':''}">Documentos</a>
-      <a href="/leads.html" class="${activePage==='leads'?'active':''}">🎯 Leads</a>
-      <a href="/generate.html" class="${activePage==='generate'?'active':''}">+ Generar</a>
-      <a href="/mtx-docs.html" class="${activePage==='mtx-docs'?'active':''}">📁 Docs MTX</a>
-      <a href="/oportunidades.html" class="${activePage==='oportunidades'?'active':''}" style="${activePage==='oportunidades'?'':''}">🔍 Oportunidades</a>
-      ${hasAdminAccess ? `<a href="/admin.html" class="${activePage==='admin'?'active':''}">Admin</a>` : ''}
+
+    <nav class="sidebar-nav">
+      <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}">
+        <span class="nav-emoji">🏠🐱</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">
+        <span class="nav-emoji">🐱📂</span>
+        <span class="nav-label">Documentos</span>
+      </a>
+      <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">
+        <span class="nav-emoji">🐱🔭</span>
+        <span class="nav-label">Leads</span>
+      </a>
+      <a href="/generate.html" class="sidebar-nav-link ${activePage==='generate'?'active':''}">
+        <span class="nav-emoji">🐱⚒️</span>
+        <span class="nav-label">Generar</span>
+      </a>
+      <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
+        <span class="nav-emoji">🐱🔐</span>
+        <span class="nav-label">Docs MTX</span>
+      </a>
+      <a href="/oportunidades.html" class="sidebar-nav-link ${activePage==='oportunidades'?'active':''}">
+        <span class="nav-emoji">🐱🪙</span>
+        <span class="nav-label">Oportunidades</span>
+      </a>
+      ${hasAdminAccess ? `
+      <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">
+        <span class="nav-emoji">🐱🎩</span>
+        <span class="nav-label">Admin</span>
+      </a>` : ''}
     </nav>
-    <div class="header-user">
-      <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)">
-        <span style="font-size:18px;line-height:1">🔔</span>
-        <span class="bell-badge" id="bell-badge" style="${unread>0?'':'display:none'}">${unread}</span>
-        <div class="bell-dropdown" id="bell-dropdown">
-          <div class="bell-dropdown-head">Alertas</div>
-          <div class="bell-alert-items">${alertItems}</div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user-card">
+        <div class="sidebar-user-avatar">${escHtml((name[0]||'U').toUpperCase())}</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">${escHtml(name)}</div>
+          ${roleBadge}
         </div>
       </div>
-      <span class="user-name">${escHtml(name)}</span>
-      ${isSuperAdmin ? '<span class="badge" style="background:#7c3aed;color:#fff;font-size:10px">SuperAdmin</span>' : ''}
-      ${isAdmin ? '<span class="badge badge-accent">Admin</span>' : ''}
-      ${isRestrictedAdmin ? '<span class="badge badge-warning" style="color:#000">Visor</span>' : ''}
-      <button onclick="logout()" class="btn-ghost">Salir</button>
+      <div class="sidebar-footer-actions">
+        <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)" title="Alertas">
+          <span style="font-size:16px;line-height:1">🔔</span>
+          <span class="bell-badge" id="bell-badge" style="${unread>0?'':'display:none'}">${unread}</span>
+          <div class="bell-dropdown" id="bell-dropdown">
+            <div class="bell-dropdown-head">
+              <span>Alertas</span>
+              ${unread>0?`<span style="font-size:10px;background:var(--accent-dim);color:var(--accent);padding:2px 6px;border-radius:3px">${unread} nuevas</span>`:''}
+            </div>
+            <div class="bell-alert-items">${alertItems}</div>
+          </div>
+        </div>
+        <button onclick="logout()" class="btn-ghost btn-sm sidebar-logout" title="Cerrar sesión">↩ Salir</button>
+      </div>
     </div>
-  </header>`;
+  </aside>`;
 }
 
 function toggleBellDropdown(e) {

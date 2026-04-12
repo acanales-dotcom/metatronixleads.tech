@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Home</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/agent.css">
+  <style>
+    /* ── HOME PAGE STYLES ──────────────────────────────────────── */
+    .home-greeting { margin-bottom: 28px; }
+    .home-greeting h1 { font-size: 2rem; margin-bottom: 4px; }
+    .home-greeting p { color: var(--text-muted); font-size: 14px; }
+
+    /* Live KPI bar */
+    .kpi-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .kpi-tile {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px 18px;
+      display: flex; flex-direction: column; gap: 4px;
+      transition: box-shadow .2s, border-color .2s;
+    }
+    .kpi-tile:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0,85,255,.08); }
+    .kpi-tile-value {
+      font-family: var(--font-head); font-size: 2rem;
+      color: var(--accent); line-height: 1;
+    }
+    .kpi-tile-label { font-size: 11px; color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; }
+    .kpi-tile-sub { font-size: 11px; color: var(--text-faint); font-family: var(--font-mono); }
+
+    /* Two-col layout */
+    .home-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* Urgency panel */
+    .urgency-panel {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .urgency-panel-head {
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface);
+    }
+    .urgency-panel-title {
+      font-family: var(--font-head); font-size: 1.1rem; letter-spacing: .04em;
+    }
+    .urgency-list { max-height: 480px; overflow-y: auto; }
+    .urgency-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .15s;
+    }
+    .urgency-item:last-child { border-bottom: none; }
+    .urgency-item:hover { background: var(--surface); }
+    .urgency-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .urgency-dot.critico  { background: #e03030; box-shadow: 0 0 6px rgba(224,48,48,.4); }
+    .urgency-dot.urgente  { background: #d97706; }
+    .urgency-dot.normal   { background: #22c55e; }
+    .urgency-dot.sin_fecha{ background: var(--text-faint); }
+    .urgency-company { font-weight: 600; font-size: 13px; color: var(--text); }
+    .urgency-contact { font-size: 11px; color: var(--text-muted); }
+    .urgency-meta { margin-left: auto; text-align: right; }
+    .urgency-status {
+      font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 3px;
+    }
+    .urgency-days { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 3px; }
+    .urgency-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 3px; flex-shrink: 0;
+    }
+    .urgency-label.critico { background: var(--danger-dim); color: var(--danger); }
+    .urgency-label.urgente { background: var(--warning-dim); color: var(--warning); }
+    .urgency-label.normal  { background: rgba(34,197,94,.1); color: #16a34a; }
+    .urgency-label.sin_fecha { background: var(--surface3); color: var(--text-faint); }
+
+    /* Right column */
+    .right-col { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Section cards */
+    .section-card {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .section-card-head {
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface);
+    }
+    .section-card-title { font-family: var(--font-head); font-size: 1rem; letter-spacing: .04em; }
+    .section-card-link {
+      font-size: 11px; color: var(--accent); font-weight: 500;
+      cursor: pointer; text-decoration: none;
+    }
+    .section-card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Mini stat row */
+    .mini-stat { display: flex; align-items: center; justify-content: space-between; }
+    .mini-stat-label { font-size: 12px; color: var(--text-muted); }
+    .mini-stat-value { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--text); }
+
+    /* Activity feed */
+    .activity-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .activity-text { color: var(--text); line-height: 1.4; }
+    .activity-time { font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); margin-top: 2px; }
+
+    /* Forecast bar */
+    .forecast-bar-wrap { background: var(--surface3); border-radius: 4px; height: 8px; overflow: hidden; margin-top: 4px; }
+    .forecast-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #00aaff); transition: width .6s ease; }
+
+    /* Quick links */
+    .quick-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .quick-link {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--surface);
+      font-size: 12px; font-weight: 500; color: var(--text-muted);
+      cursor: pointer; transition: all .15s; text-decoration: none;
+    }
+    .quick-link:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .quick-link-emoji { font-size: 16px; }
+
+    /* Empty */
+    .home-empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+    @media (max-width: 1100px) {
+      .kpi-bar { grid-template-columns: repeat(3, 1fr); }
+      .home-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .kpi-bar { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page">
+
+  <!-- Greeting -->
+  <div class="home-greeting mt-24">
+    <h1 id="home-greeting-text">Buen día 👋</h1>
+    <p id="home-greeting-sub">Cargando resumen del portal...</p>
+  </div>
+
+  <!-- KPI Bar -->
+  <div class="kpi-bar" id="kpi-bar">
+    <div class="kpi-tile">
+      <div class="kpi-tile-value" id="kpi-mis-leads">—</div>
+      <div class="kpi-tile-label">Mis Leads</div>
+      <div class="kpi-tile-sub" id="kpi-mis-activos">— activos</div>
+    </div>
+    <div class="kpi-tile">
+      <div class="kpi-tile-value" id="kpi-pipeline" style="font-size:1.4rem">—</div>
+      <div class="kpi-tile-label">Mi Pipeline</div>
+      <div class="kpi-tile-sub" id="kpi-forecast">Forecast: —</div>
+    </div>
+    <div class="kpi-tile">
+      <div class="kpi-tile-value" id="kpi-conversion">—</div>
+      <div class="kpi-tile-label">Tasa de Cierre</div>
+      <div class="kpi-tile-sub" id="kpi-ganados">— cerrados ganados</div>
+    </div>
+    <div class="kpi-tile">
+      <div class="kpi-tile-value" id="kpi-docs">—</div>
+      <div class="kpi-tile-label">Mis Documentos</div>
+      <div class="kpi-tile-sub" id="kpi-docs-sub">generados</div>
+    </div>
+    <div class="kpi-tile">
+      <div class="kpi-tile-value" id="kpi-urgentes" style="color:var(--danger)">—</div>
+      <div class="kpi-tile-label">Atención Urgente</div>
+      <div class="kpi-tile-sub" id="kpi-urgentes-sub">leads por atender</div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="home-grid">
+
+    <!-- Left: Urgency-ranked leads -->
+    <div class="urgency-panel">
+      <div class="urgency-panel-head">
+        <span class="urgency-panel-title">🎯 Mis Clientes — Por Urgencia</span>
+        <a href="/leads.html" class="section-card-link" style="font-size:12px">Ver todos →</a>
+      </div>
+      <div class="urgency-list" id="urgency-list">
+        <div class="home-empty">Cargando leads...</div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="right-col">
+
+      <!-- Forecast breakdown -->
+      <div class="section-card">
+        <div class="section-card-head">
+          <span class="section-card-title">📈 Forecast por Etapa</span>
+          <a href="/leads.html" class="section-card-link">→</a>
+        </div>
+        <div class="section-card-body" id="forecast-breakdown">
+          <div style="color:var(--text-muted);font-size:12px">Cargando...</div>
+        </div>
+      </div>
+
+      <!-- Documentos summary -->
+      <div class="section-card">
+        <div class="section-card-head">
+          <span class="section-card-title">📄 Documentos</span>
+          <a href="/dashboard.html" class="section-card-link">→</a>
+        </div>
+        <div class="section-card-body" id="docs-summary">
+          <div class="mini-stat">
+            <span class="mini-stat-label">Borradores</span>
+            <span class="mini-stat-value" id="docs-draft">—</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-stat-label">En revisión</span>
+            <span class="mini-stat-value" id="docs-review">—</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-stat-label">Aprobados</span>
+            <span class="mini-stat-value" id="docs-approved">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent alerts -->
+      <div class="section-card">
+        <div class="section-card-head">
+          <span class="section-card-title">🔔 Alertas Recientes</span>
+        </div>
+        <div class="section-card-body" id="recent-alerts" style="padding:0">
+          <div class="home-empty">Sin alertas</div>
+        </div>
+      </div>
+
+      <!-- Quick links -->
+      <div class="section-card">
+        <div class="section-card-head">
+          <span class="section-card-title">⚡ Acceso Rápido</span>
+        </div>
+        <div class="section-card-body">
+          <div class="quick-links">
+            <a href="/leads.html" class="quick-link"><span class="quick-link-emoji">🐱🔭</span> Nuevo Lead</a>
+            <a href="/generate.html" class="quick-link"><span class="quick-link-emoji">🐱⚒️</span> Generar Doc</a>
+            <a href="/oportunidades.html" class="quick-link"><span class="quick-link-emoji">🐱🪙</span> Oportunidades</a>
+            <a href="/mtx-docs.html" class="quick-link"><span class="quick-link-emoji">🐱🔐</span> Docs MTX</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/agent.js"></script>
+<script>
+let currentUser = null;
+let myLeads = [];
+
+// Stage → probability for weighted forecast
+const STAGE_PROB = {
+  nuevo: 0.10,
+  contactado: 0.25,
+  en_negociacion: 0.50,
+  propuesta_enviada: 0.75,
+  cerrado_ganado: 1.00,
+  cerrado_perdido: 0.00,
+};
+
+const STAGE_LABELS = {
+  nuevo: 'Nuevo',
+  contactado: 'Contactado',
+  en_negociacion: 'En Negociación',
+  propuesta_enviada: 'Propuesta Enviada',
+  cerrado_ganado: 'Cerrado Ganado',
+  cerrado_perdido: 'Cerrado Perdido',
+};
+
+const STATUS_COLORS = {
+  nuevo: '#0055ff',
+  contactado: '#d97706',
+  en_negociacion: '#7c3aed',
+  propuesta_enviada: '#0055ff',
+  cerrado_ganado: '#16a34a',
+  cerrado_perdido: '#e03030',
+};
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.round((now - d) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  d.setHours(0,0,0,0);
+  return Math.round((d - now) / (1000 * 60 * 60 * 24));
+}
+
+function getUrgencyLevel(lead) {
+  if (lead.status === 'cerrado_ganado' || lead.status === 'cerrado_perdido') return 'cerrado';
+  const days = daysUntil(lead.seguimiento);
+  if (days === null) return 'sin_fecha';
+  if (days < 0) return 'critico';   // overdue
+  if (days <= 3) return 'urgente';
+  return 'normal';
+}
+
+function urgencyOrder(level) {
+  return { critico: 0, urgente: 1, normal: 2, sin_fecha: 3, cerrado: 4 }[level] ?? 5;
+}
+
+function fmtMXN(n) {
+  if (!n || n === 0) return '—';
+  return '$' + parseFloat(n).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'home');
+
+  const name = currentUser.profile?.full_name || currentUser.email?.split('@')[0] || 'colaborador';
+  document.getElementById('home-greeting-text').textContent = `${greeting()}, ${name} 👋`;
+  document.getElementById('home-greeting-sub').textContent =
+    new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  await Promise.all([loadLeads(), loadDocs(), loadAlerts()]);
+}
+
+async function loadLeads() {
+  const db = getDB();
+  const { data, error } = await db.from('leads')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('seguimiento', { ascending: true, nullsFirst: false });
+
+  if (error) { console.error('leads error', error); return; }
+  myLeads = data || [];
+
+  renderKPIs();
+  renderUrgencyList();
+  renderForecastBreakdown();
+}
+
+function renderKPIs() {
+  const activos = myLeads.filter(l => !['cerrado_ganado','cerrado_perdido'].includes(l.status));
+  const ganados = myLeads.filter(l => l.status === 'cerrado_ganado');
+  const pipeline = myLeads
+    .filter(l => l.status !== 'cerrado_perdido')
+    .reduce((s, l) => s + (parseFloat(l.valor_estimado) || 0), 0);
+
+  // Weighted forecast
+  const forecast = myLeads.reduce((s, l) => {
+    const prob = STAGE_PROB[l.status] ?? 0;
+    return s + (parseFloat(l.valor_estimado) || 0) * prob;
+  }, 0);
+
+  const convRate = myLeads.length > 0
+    ? Math.round((ganados.length / myLeads.length) * 100)
+    : 0;
+
+  // Urgentes count
+  const urgentes = myLeads.filter(l => {
+    const u = getUrgencyLevel(l);
+    return u === 'critico' || u === 'urgente';
+  }).length;
+
+  document.getElementById('kpi-mis-leads').textContent = myLeads.length;
+  document.getElementById('kpi-mis-activos').textContent = activos.length + ' activos';
+  document.getElementById('kpi-pipeline').textContent = fmtMXN(pipeline);
+  document.getElementById('kpi-forecast').textContent = 'Forecast: ' + fmtMXN(forecast);
+  document.getElementById('kpi-conversion').textContent = convRate + '%';
+  document.getElementById('kpi-ganados').textContent = ganados.length + ' cerrados ganados';
+  document.getElementById('kpi-urgentes').textContent = urgentes;
+  document.getElementById('kpi-urgentes-sub').textContent = urgentes === 1 ? 'lead por atender' : 'leads por atender';
+}
+
+function renderUrgencyList() {
+  const el = document.getElementById('urgency-list');
+  const active = myLeads.filter(l => !['cerrado_ganado','cerrado_perdido'].includes(l.status));
+
+  if (active.length === 0) {
+    el.innerHTML = '<div class="home-empty">No tienes leads activos. <a href="/leads.html">Agrega uno →</a></div>';
+    return;
+  }
+
+  // Sort by urgency, then by seguimiento date
+  const sorted = [...active].sort((a, b) => {
+    const ua = urgencyOrder(getUrgencyLevel(a));
+    const ub = urgencyOrder(getUrgencyLevel(b));
+    if (ua !== ub) return ua - ub;
+    const da = a.seguimiento ? new Date(a.seguimiento) : new Date('9999');
+    const db2 = b.seguimiento ? new Date(b.seguimiento) : new Date('9999');
+    return da - db2;
+  });
+
+  el.innerHTML = sorted.map(lead => {
+    const uLevel = getUrgencyLevel(lead);
+    const days = daysUntil(lead.seguimiento);
+    let daysText = '';
+    if (days === null) daysText = 'Sin fecha de seguimiento';
+    else if (days < 0) daysText = `${Math.abs(days)} día${Math.abs(days)!==1?'s':''} vencido`;
+    else if (days === 0) daysText = '¡Hoy!';
+    else if (days === 1) daysText = 'Mañana';
+    else daysText = `En ${days} días`;
+
+    const labelMap = { critico:'🔴 CRÍTICO', urgente:'🟡 URGENTE', normal:'🟢 Normal', sin_fecha:'⚪ Sin fecha' };
+
+    return `
+    <div class="urgency-item" onclick="window.location.href='/leads.html'">
+      <div class="urgency-dot ${uLevel}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="urgency-company">${escHtml(lead.empresa || '—')}</div>
+        <div class="urgency-contact">${escHtml(lead.contacto || '')}${lead.cargo ? ' · ' + escHtml(lead.cargo) : ''}</div>
+        <div class="urgency-days">${daysText}</div>
+      </div>
+      <div class="urgency-meta">
+        <span class="urgency-status badge" style="background:${STATUS_COLORS[lead.status]+'22'};color:${STATUS_COLORS[lead.status]}">${STAGE_LABELS[lead.status]||lead.status}</span>
+        <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:3px">${fmtMXN(lead.valor_estimado)}</div>
+      </div>
+      <span class="urgency-label ${uLevel}">${labelMap[uLevel]||uLevel}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderForecastBreakdown() {
+  const el = document.getElementById('forecast-breakdown');
+  const stagesWithLeads = Object.keys(STAGE_PROB).filter(s =>
+    s !== 'cerrado_perdido' && myLeads.some(l => l.status === s)
+  );
+
+  if (stagesWithLeads.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:8px">Sin datos de pipeline</div>';
+    return;
+  }
+
+  const totalPipeline = myLeads
+    .filter(l => l.status !== 'cerrado_perdido')
+    .reduce((s, l) => s + (parseFloat(l.valor_estimado)||0), 0);
+
+  el.innerHTML = stagesWithLeads.map(s => {
+    const leadsInStage = myLeads.filter(l => l.status === s);
+    const stageValue = leadsInStage.reduce((sum, l) => sum + (parseFloat(l.valor_estimado)||0), 0);
+    const weighted = stageValue * STAGE_PROB[s];
+    const pct = totalPipeline > 0 ? Math.round((stageValue / totalPipeline) * 100) : 0;
+    return `
+    <div>
+      <div class="mini-stat">
+        <span class="mini-stat-label">${STAGE_LABELS[s]} (${Math.round(STAGE_PROB[s]*100)}%)</span>
+        <span class="mini-stat-value" style="color:var(--accent)">${fmtMXN(weighted)}</span>
+      </div>
+      <div style="font-size:10px;color:var(--text-faint);margin-bottom:2px">${leadsInStage.length} lead${leadsInStage.length!==1?'s':''} · ${fmtMXN(stageValue)} valor bruto</div>
+      <div class="forecast-bar-wrap"><div class="forecast-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+async function loadDocs() {
+  const db = getDB();
+  const { data, error } = await db.from('documents')
+    .select('status')
+    .eq('user_id', currentUser.id);
+  if (error || !data) return;
+
+  const draft = data.filter(d => d.status === 'draft').length;
+  const review = data.filter(d => d.status === 'pending_review').length;
+  const approved = data.filter(d => d.status === 'approved').length;
+
+  document.getElementById('kpi-docs').textContent = data.length;
+  document.getElementById('docs-draft').textContent = draft;
+  document.getElementById('docs-review').textContent = review;
+  document.getElementById('docs-approved').textContent = approved;
+}
+
+async function loadAlerts() {
+  const role = currentUser?.profile?.role;
+  const isAdmin = role === 'admin';
+  const isSA = role === 'super_admin';
+  const myAlerts = getAlerts().filter(a =>
+    (a.for_admin && (isAdmin || isSA)) ||
+    (a.for_super_admin && isSA) ||
+    (a.for_user_id && a.for_user_id === currentUser.id)
+  ).slice(0, 6);
+
+  const el = document.getElementById('recent-alerts');
+  const alertIcons = {
+    new_lead:'🎯', plan_submitted:'📋', plan_approved:'✅',
+    plan_rejected:'❌', claude_limit_reached:'⚠️', claude_authorized:'✅',
+    perplexity_access_request:'🔍', perplexity_authorized:'🔍'
+  };
+
+  if (myAlerts.length === 0) {
+    el.innerHTML = '<div class="home-empty">Sin alertas recientes</div>';
+    return;
+  }
+
+  el.innerHTML = myAlerts.map(a => `
+    <div class="activity-item" style="padding:10px 16px;cursor:pointer"
+         onclick="handleAlertClick('${a.id}','${a.lead_id||''}')">
+      <span class="activity-icon">${alertIcons[a.type]||'🔔'}</span>
+      <div>
+        <div class="activity-text" style="color:${a.read?'var(--text-muted)':'var(--text)'}">${escHtml(a.message||'')}</div>
+        <div class="activity-time">${formatDate(a.created_at)}</div>
+      </div>
+      ${!a.read?'<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0"></span>':''}
+    </div>`).join('');
+}
+
+init();
+</script>
+</body>
+</html>

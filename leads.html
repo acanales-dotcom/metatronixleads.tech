@@ -34,6 +34,47 @@
     .conf-acercamiento { color: #9098b0; background: rgba(144,152,176,.14); }
     .conf-confianza    { color: #4dd0ff; background: rgba(77,208,255,.12); }
     .conf-plena        { color: var(--accent); background: rgba(0,255,136,.16); font-weight:700; }
+
+    /* ── KPI personal & Forecast ─────────────────────────── */
+    .kpi-user-section {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px 24px;
+      margin-bottom: 24px; border-left: 3px solid var(--accent);
+    }
+    .kpi-user-title {
+      font-family: var(--font-head); font-size: 1rem; letter-spacing: .06em;
+      color: var(--text-muted); margin-bottom: 16px; text-transform: uppercase;
+    }
+    .kpi-user-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr) 1px 1fr;
+      gap: 0; align-items: start;
+    }
+    .kpi-user-col { padding: 0 16px; }
+    .kpi-user-col:first-child { padding-left: 0; }
+    .kpi-user-divider { background: var(--border); align-self: stretch; }
+    .kpi-user-forecast { padding: 0 0 0 20px; }
+    .kpi-u-value {
+      font-family: var(--font-head); font-size: 2rem;
+      color: var(--accent); line-height: 1;
+    }
+    .kpi-u-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; letter-spacing: .05em; }
+    .kpi-u-sub   { font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); margin-top: 2px; }
+    .forecast-stage { margin-bottom: 10px; }
+    .forecast-stage-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; margin-bottom: 3px;
+    }
+    .forecast-stage-label { color: var(--text-muted); }
+    .forecast-stage-value { font-family: var(--font-mono); color: var(--accent); font-weight: 600; }
+    .f-bar { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+    .f-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #00aaff); border-radius: 3px; transition: width .5s; }
+
+    @media (max-width: 1000px) {
+      .kpi-user-grid { grid-template-columns: repeat(3, 1fr); }
+      .kpi-user-divider { display: none; }
+      .kpi-user-forecast { padding: 16px 0 0; grid-column: 1/-1; }
+    }
   </style>
 </head>
 <body>
@@ -56,7 +97,44 @@
     </div>
   </div>
 
-  <!-- Stats -->
+  <!-- Mis KPIs personales -->
+  <div class="kpi-user-section" id="my-kpi-section" style="display:none">
+    <div class="kpi-user-title">📊 Mis Estadísticas Personales</div>
+    <div class="kpi-user-grid">
+      <div class="kpi-user-col">
+        <div class="kpi-u-value" id="my-total">—</div>
+        <div class="kpi-u-label">Mis Leads</div>
+        <div class="kpi-u-sub" id="my-activos-sub">— activos</div>
+      </div>
+      <div class="kpi-user-col">
+        <div class="kpi-u-value" id="my-ganados" style="color:#16a34a">—</div>
+        <div class="kpi-u-label">Ganados</div>
+        <div class="kpi-u-sub" id="my-conv">Tasa: —%</div>
+      </div>
+      <div class="kpi-user-col">
+        <div class="kpi-u-value" id="my-pipeline" style="font-size:1.4rem">—</div>
+        <div class="kpi-u-label">Pipeline Bruto</div>
+        <div class="kpi-u-sub">leads activos</div>
+      </div>
+      <div class="kpi-user-col">
+        <div class="kpi-u-value" id="my-forecast" style="font-size:1.3rem;color:#7c3aed">—</div>
+        <div class="kpi-u-label">Forecast Ponderado</div>
+        <div class="kpi-u-sub">por probabilidad de cierre</div>
+      </div>
+      <div class="kpi-user-col">
+        <div class="kpi-u-value" id="my-avg" style="font-size:1.3rem">—</div>
+        <div class="kpi-u-label">Ticket Promedio</div>
+        <div class="kpi-u-sub">por lead activo</div>
+      </div>
+      <div class="kpi-user-divider"></div>
+      <div class="kpi-user-forecast">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">Forecast por etapa</div>
+        <div id="my-forecast-stages">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats globales -->
   <div class="grid-4 mb-24">
     <div class="stat-card">
       <div class="stat-value" id="st-total">—</div>
@@ -276,6 +354,61 @@ const STATUS_LABELS = {
 };
 const FUENTE_LABELS = { referido:'Referido', web:'Web', evento:'Evento', llamada:'Llamada', linkedin:'LinkedIn', otro:'Otro' };
 
+// ── Stage probabilities for forecast ────────────────────────
+const STAGE_PROB = {
+  nuevo: 0.10, contactado: 0.25, en_negociacion: 0.50,
+  propuesta_enviada: 0.75, cerrado_ganado: 1.00, cerrado_perdido: 0.00,
+};
+
+function fmtMXN(n) {
+  if (!n || n === 0) return '—';
+  return '$' + parseFloat(n).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function updateMyKPIs() {
+  const myLeads = allLeads.filter(l => l.user_id === currentUser?.id);
+  if (myLeads.length === 0) return;
+
+  document.getElementById('my-kpi-section').style.display = 'block';
+
+  const activos = myLeads.filter(l => !['cerrado_ganado','cerrado_perdido'].includes(l.status));
+  const ganados = myLeads.filter(l => l.status === 'cerrado_ganado');
+  const pipeline = activos.reduce((s, l) => s + (parseFloat(l.valor_estimado)||0), 0);
+  const forecast = myLeads.reduce((s, l) => {
+    return s + (parseFloat(l.valor_estimado)||0) * (STAGE_PROB[l.status] ?? 0);
+  }, 0);
+  const avgTicket = activos.length > 0 ? pipeline / activos.length : 0;
+  const convRate  = myLeads.length > 0 ? Math.round((ganados.length / myLeads.length) * 100) : 0;
+
+  document.getElementById('my-total').textContent      = myLeads.length;
+  document.getElementById('my-activos-sub').textContent = activos.length + ' activos';
+  document.getElementById('my-ganados').textContent     = ganados.length;
+  document.getElementById('my-conv').textContent        = 'Tasa: ' + convRate + '%';
+  document.getElementById('my-pipeline').textContent    = fmtMXN(pipeline);
+  document.getElementById('my-forecast').textContent    = fmtMXN(forecast);
+  document.getElementById('my-avg').textContent         = fmtMXN(avgTicket);
+
+  // Forecast breakdown per stage
+  const stagesActive = ['nuevo','contactado','en_negociacion','propuesta_enviada'];
+  const totalPipeline = pipeline || 1;
+  const stagesHtml = stagesActive.map(s => {
+    const inStage = myLeads.filter(l => l.status === s);
+    if (inStage.length === 0) return '';
+    const bruto     = inStage.reduce((sum, l) => sum + (parseFloat(l.valor_estimado)||0), 0);
+    const weighted  = bruto * STAGE_PROB[s];
+    const pct       = Math.min(Math.round((bruto / totalPipeline) * 100), 100);
+    const stageLabel= STATUS_LABELS[s] || s;
+    return `<div class="forecast-stage">
+      <div class="forecast-stage-row">
+        <span class="forecast-stage-label">${stageLabel} · ${inStage.length} lead${inStage.length!==1?'s':''} · ${Math.round(STAGE_PROB[s]*100)}%</span>
+        <span class="forecast-stage-value">${fmtMXN(weighted)}</span>
+      </div>
+      <div class="f-bar"><div class="f-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('my-forecast-stages').innerHTML = stagesHtml || '<span style="color:var(--text-faint);font-size:12px">Sin datos</span>';
+}
+
 async function init() {
   currentUser = await requireAuth();
   if (!currentUser) return;
@@ -291,6 +424,7 @@ async function loadLeads() {
   if (error) { showToast('Error al cargar leads', 'error'); return; }
   allLeads = data || [];
   updateStats();
+  updateMyKPIs();
   applyFilters();
 }
 
