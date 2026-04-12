@@ -38,7 +38,8 @@ async function getCurrentUser() {
 async function requireAuth(adminOnly = false) {
   const user = await getCurrentUser();
   if (!user) { window.location.href = '/index.html'; return null; }
-  if (adminOnly && user.profile?.role !== 'admin') {
+  const role = user.profile?.role;
+  if (adminOnly && role !== 'admin' && role !== 'admin_restringido') {
     window.location.href = '/dashboard.html'; return null;
   }
   // Actualizar last_seen
@@ -280,7 +281,10 @@ function showToast(msg, type = 'info') {
 }
 
 function renderHeader(user, activePage) {
-  const isAdmin = user?.profile?.role === 'admin';
+  const role = user?.profile?.role;
+  const isAdmin = role === 'admin';
+  const isRestrictedAdmin = role === 'admin_restringido';
+  const hasAdminAccess = isAdmin || isRestrictedAdmin;
   const name = user?.profile?.full_name || user?.email || '—';
   // Store user globally for badge refresh
   window._mtxCurrentUser = user;
@@ -348,7 +352,7 @@ function renderHeader(user, activePage) {
       <a href="/dashboard.html" class="${activePage==='dashboard'?'active':''}">Documentos</a>
       <a href="/leads.html" class="${activePage==='leads'?'active':''}">🎯 Leads</a>
       <a href="/generate.html" class="${activePage==='generate'?'active':''}">+ Generar</a>
-      ${isAdmin ? `<a href="/admin.html" class="${activePage==='admin'?'active':''}">Admin</a>` : ''}
+      ${hasAdminAccess ? `<a href="/admin.html" class="${activePage==='admin'?'active':''}">Admin</a>` : ''}
     </nav>
     <div class="header-user">
       <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)">
@@ -361,6 +365,7 @@ function renderHeader(user, activePage) {
       </div>
       <span class="user-name">${escHtml(name)}</span>
       ${isAdmin ? '<span class="badge badge-accent">Admin</span>' : ''}
+      ${isRestrictedAdmin ? '<span class="badge badge-warning" style="color:#000">Visor</span>' : ''}
       <button onclick="logout()" class="btn-ghost">Salir</button>
     </div>
   </header>`;

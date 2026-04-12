@@ -256,8 +256,8 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeDocModal()">Cerrar</button>
       <button class="btn btn-secondary" onclick="downloadCurrentDoc()">⬇ Descargar</button>
-      <button class="btn btn-danger btn-sm" onclick="resolveDoc('rejected')">✕ Rechazar</button>
-      <button class="btn btn-primary" onclick="resolveDoc('approved')">✓ Aprobar</button>
+      <button class="btn btn-danger btn-sm" id="btn-reject-doc" onclick="resolveDoc('rejected')">✕ Rechazar</button>
+      <button class="btn btn-primary" id="btn-approve-doc" onclick="resolveDoc('approved')">✓ Aprobar</button>
     </div>
   </div>
 </div>
@@ -286,6 +286,7 @@
         <label class="form-label">Rol</label>
         <select id="invite-role" class="form-select">
           <option value="user">Colaborador</option>
+          <option value="admin_restringido">Admin Restringido (Visor)</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
@@ -307,11 +308,30 @@ let allDocsData = [];
 let allUsersData = [];
 let currentDocModal = null;
 let currentAlertId = null;
+let isRestrictedAdmin = false;
 
 async function init() {
-  currentUser = await requireAuth(true); // admin only
+  currentUser = await requireAuth(true); // admin or admin_restringido
   if (!currentUser) return;
+  isRestrictedAdmin = currentUser.profile?.role === 'admin_restringido';
   document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'admin');
+
+  // Para admin restringido: forzar filtro "aprobado" en documentos y ocultar acciones admin
+  if (isRestrictedAdmin) {
+    const docFilter = document.getElementById('doc-filter-status');
+    if (docFilter) { docFilter.value = 'approved'; docFilter.disabled = true; }
+    // Ocultar botón Invitar Usuario
+    document.querySelector('[onclick="inviteUser()"]')?.remove();
+    // Ocultar tab Planes y Alertas (no puede autorizar)
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      if (b.textContent.includes('Planes') || b.textContent.includes('Alertas')) {
+        b.style.display = 'none';
+      }
+    });
+    // Activar tab Leads por defecto
+    switchTab('leads');
+  }
+
   await refreshAll();
   subscribeToRealtime();
 }
@@ -379,7 +399,10 @@ async function loadAlerts() {
 
 async function loadDocuments() {
   const db = getDB();
-  const statusFilter = document.getElementById('doc-filter-status')?.value;
+  // Admin restringido solo ve documentos aprobados
+  const statusFilter = isRestrictedAdmin
+    ? 'approved'
+    : document.getElementById('doc-filter-status')?.value;
   let query = db.from('documents')
     .select('*, profiles!user_id(full_name, email)')
     .order('updated_at', { ascending: false })
@@ -455,11 +478,11 @@ async function loadUsers() {
       <td><span class="td-mono" style="font-size:11px">${u.last_seen ? formatDate(u.last_seen) : 'Nunca'}</span></td>
       <td><span class="${u.is_active ? 'dot-online' : 'dot-offline'}"></span>${u.is_active ? 'Activo' : 'Inactivo'}</td>
       <td>
-        <div style="display:flex;gap:4px">
+        ${!isRestrictedAdmin ? `<div style="display:flex;gap:4px">
           ${u.role !== 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${u.id}', true)">→ Admin</button>` :
                                   `<button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${u.id}', false)">→ User</button>`}
           <button class="btn btn-ghost btn-sm" onclick="toggleActive('${u.id}', ${!u.is_active})">${u.is_active ? 'Desactivar' : 'Activar'}</button>
-        </div>
+        </div>` : '<span style="font-size:11px;color:var(--text-faint)">Solo lectura</span>'}
       </td>
     </tr>
   `).join('');
@@ -518,6 +541,11 @@ async function openDocModal(docId, alertId) {
   `;
   document.getElementById('modal-content').innerHTML = doc.content || '<p style="color:var(--text-muted)">Sin contenido</p>';
   document.getElementById('admin-note').value = '';
+  // Ocultar botones de autorización para admin restringido
+  const btnReject  = document.getElementById('btn-reject-doc');
+  const btnApprove = document.getElementById('btn-approve-doc');
+  if (btnReject)  btnReject.style.display  = isRestrictedAdmin ? 'none' : 'inline-flex';
+  if (btnApprove) btnApprove.style.display = isRestrictedAdmin ? 'none' : 'inline-flex';
   document.getElementById('doc-modal').style.display = 'flex';
 
   // Mark alert as read
@@ -529,6 +557,7 @@ function closeDocModal() { document.getElementById('doc-modal').style.display = 
 
 async function resolveDoc(newStatus) {
   if (!currentDocModal) return;
+  if (isRestrictedAdmin) { showToast('Sin permiso para autorizar documentos', 'warning'); return; }
   const db = getDB();
   const note = document.getElementById('admin-note').value.trim();
   await db.from('documents').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', currentDocModal.id);
@@ -791,6 +820,7 @@ function closePlanReview() {
 
 function resolvePlan(decision) {
   if (currentPlanIdx === null) return;
+  if (isRestrictedAdmin) { showToast('Sin permiso para autorizar planes', 'warning'); return; }
   const plans = JSON.parse(localStorage.getItem('mtx_planes') || '[]');
   const p = plans[currentPlanIdx];
   if (!p) return;
