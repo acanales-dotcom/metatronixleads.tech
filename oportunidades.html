@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Generador de Oportunidades</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    /* ── Layout ───────────────────────────────────────────────── */
+    .opgen-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 0;
+      height: calc(100vh - var(--header-h) - 120px);
+      min-height: 520px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    /* ── Sidebar ──────────────────────────────────────────────── */
+    .opgen-sidebar {
+      background: var(--surface2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .opgen-sidebar-head {
+      padding: 16px 14px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+      border-bottom: 1px solid var(--border);
+    }
+    .seg-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 13px 14px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .seg-btn:hover { background: var(--surface3); }
+    .seg-btn.active {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+    }
+    .seg-icon {
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .seg-label { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .seg-desc  { font-size: 10px; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
+
+    .sidebar-products {
+      padding: 12px 14px;
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-products-title {
+      font-size: 9px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--text-faint);
+      font-family: var(--font-mono); margin-bottom: 8px;
+    }
+    .product-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 10px; margin: 2px 2px 2px 0;
+      background: var(--surface); border: 1px solid var(--border);
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+      cursor: default;
+    }
+
+    /* ── Main area ────────────────────────────────────────────── */
+    .opgen-main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Segment header ───────────────────────────────────────── */
+    .seg-header {
+      padding: 14px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .seg-header-left { display: flex; align-items: center; gap: 10px; }
+    .seg-header-icon { font-size: 22px; }
+    .seg-header-title { font-family: var(--font-head); font-size: 1.3rem; color: var(--text); }
+    .seg-header-desc  { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .seg-header-right { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* ── Quick prompts ────────────────────────────────────────── */
+    .quick-prompts {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+      background: var(--surface2);
+    }
+    .quick-prompts-label {
+      width: 100%;
+      font-size: 10px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .qp-btn {
+      padding: 5px 12px;
+      border-radius: 16px;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .qp-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* ── Results / chat area ──────────────────────────────────── */
+    .results-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Welcome state ────────────────────────────────────────── */
+    .welcome-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px;
+    }
+    .welcome-icon { font-size: 52px; margin-bottom: 16px; opacity: .6; }
+    .welcome-title { font-family: var(--font-head); font-size: 1.6rem; color: var(--text); margin-bottom: 8px; }
+    .welcome-text  { font-size: 13px; max-width: 380px; line-height: 1.6; }
+
+    /* ── Result cards ─────────────────────────────────────────── */
+    .result-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .result-block-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface3);
+    }
+    .result-block-query {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+      margin-right: 12px;
+    }
+    .result-block-meta {
+      font-size: 10px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+    .result-block-body {
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .result-block-body p { margin-bottom: 8px; }
+    .result-block-body p:last-child { margin-bottom: 0; }
+    .result-block-body strong { color: var(--accent); font-weight: 700; }
+    .result-block-body ul,
+    .result-block-body ol { padding-left: 20px; margin: 8px 0; }
+    .result-block-body li { margin-bottom: 4px; }
+    .result-block-body h3 { font-family: var(--font-head); font-size: 1.1rem; margin: 12px 0 6px; color: var(--text); }
+    .result-block-body h4 { font-weight: 700; font-size: 12px; margin: 10px 0 4px; color: var(--text); text-transform: uppercase; letter-spacing: .04em; }
+    .result-block-body code { background: var(--surface3); padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); font-size: 11px; }
+    .result-block-body a  { color: var(--accent); }
+
+    /* Citations */
+    .citations-bar {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      background: var(--surface3);
+    }
+    .citations-label { font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); font-weight: 600; width: 100%; margin-bottom: 2px; }
+    .citation-link {
+      font-size: 10px;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-mid);
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-family: var(--font-mono);
+      transition: background .15s;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+    }
+    .citation-link:hover { background: var(--accent-mid); }
+
+    /* Result actions */
+    .result-actions {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-result {
+      padding: 5px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-result:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* Streaming cursor */
+    .streaming-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 14px;
+      background: var(--accent);
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink .6s steps(1) infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Input row ────────────────────────────────────────────── */
+    .input-row {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+    .opgen-textarea {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+      font-size: 13px;
+      font-family: var(--font-body);
+      color: var(--text);
+      resize: none;
+      transition: border-color .15s;
+      line-height: 1.5;
+      min-height: 42px;
+      max-height: 120px;
+    }
+    .opgen-textarea:focus { outline: none; border-color: var(--accent); }
+    .opgen-textarea::placeholder { color: var(--text-faint); }
+    .send-btn {
+      width: 42px; height: 42px;
+      border-radius: var(--radius);
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: opacity .15s;
+    }
+    .send-btn:hover { opacity: .85; }
+    .send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Access denied state ──────────────────────────────────── */
+    .access-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 24px;
+      gap: 16px;
+    }
+    .access-screen-icon { font-size: 56px; }
+    .access-screen h2 { font-family: var(--font-head); font-size: 2rem; color: var(--text); }
+    .access-screen p { font-size: 14px; color: var(--text-muted); max-width: 400px; line-height: 1.6; }
+
+    /* ── Intelligence status bar ──────────────────────────────── */
+    .intel-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-faint);
+      padding: 0 16px;
+      letter-spacing: .04em;
+    }
+    .intel-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100%{opacity:1} 50%{opacity:.4}
+    }
+    .intel-status.searching .intel-dot { background: var(--accent); }
+    .intel-status.searching { color: var(--accent); }
+
+    /* ── Loading skeleton ─────────────────────────────────────── */
+    .searching-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+    .searching-query {
+      font-size: 12px; font-weight: 600; color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .skel {
+      height: 10px; border-radius: 4px;
+      background: linear-gradient(90deg, var(--surface3) 25%, var(--surface2) 50%, var(--surface3) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      margin-bottom: 8px;
+    }
+    .skel:last-child { width: 60%; margin-bottom: 0; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .opgen-layout { grid-template-columns: 1fr; height: auto; }
+      .opgen-sidebar { border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; overflow-x: auto; }
+      .seg-btn { min-width: 120px; border-bottom: none; border-right: 1px solid var(--border); }
+      .sidebar-products { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page" style="padding-bottom: 0">
+  <div class="page-header mt-24" style="margin-bottom:16px">
+    <div class="page-header-text">
+      <h1>Generador de Oportunidades</h1>
+      <p class="muted">Inteligencia de ventas en tiempo real para todos los productos y propuestas de MetaTronix.</p>
+    </div>
+    <div class="flex gap-8 align-center">
+      <div class="intel-status" id="intel-status">
+        <span class="intel-dot"></span>
+        IA DE VENTAS · EN LÍNEA
+      </div>
+      <button class="btn btn-ghost" onclick="clearResults()">↺ Limpiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Access denied screen (shown if not authorized) -->
+<div id="access-screen" class="page" style="display:none">
+  <div class="access-screen">
+    <div class="access-screen-icon">🔍</div>
+    <h2>Generador de Oportunidades</h2>
+    <p>Esta herramienta de inteligencia de ventas requiere autorización del SuperAdministrador. Solicita acceso y recibirás una notificación cuando esté habilitado.</p>
+    <button class="btn btn-primary" onclick="requestPerplexityAccess()" id="req-access-btn">
+      Solicitar acceso
+    </button>
+    <p id="req-access-msg" style="font-size:12px;color:var(--text-faint);display:none"></p>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div id="main-layout" class="page" style="padding-top:0; display:none">
+  <div class="opgen-layout">
+
+    <!-- Sidebar -->
+    <div class="opgen-sidebar">
+      <div class="opgen-sidebar-head">Segmentos</div>
+
+      <button class="seg-btn active" data-seg="leads" onclick="selectSegment(this)">
+        <span class="seg-icon">🎯</span>
+        <div>
+          <div class="seg-label">Búsqueda de Leads</div>
+          <div class="seg-desc">Prospectos para cada solución</div>
+        </div>
+      </button>
+
+      <button class="seg-btn" data-seg="mercado" onclick="selectSegment(this)">
+        <span class="seg-icon">📊</span>
+        <div>
+          <div class="seg-label">Estudio de Mercado</div>
+          <div class="seg-desc">Tamaño, tendencias y players</div>
+        </div>
+      </button>
+
+      <button class="seg-btn" data-seg="empresa" onclick="selectSegment(this)">
+        <span class="seg-icon">🏢</span>
+        <div>
+          <div class="seg-label">Intel de Empresa</div>
+          <div class="seg-desc">Investiga un prospecto</div>
+        </div>
+      </button>
+
+      <button class="seg-btn" data-seg="sectorial" onclick="selectSegment(this)">
+        <span class="seg-icon">🌍</span>
+        <div>
+          <div class="seg-label">Análisis Sectorial</div>
+          <div class="seg-desc">Sectores y verticales objetivo</div>
+        </div>
+      </button>
+
+      <button class="seg-btn" data-seg="propuesta" onclick="selectSegment(this)">
+        <span class="seg-icon">💡</span>
+        <div>
+          <div class="seg-label">Argumentos de Venta</div>
+          <div class="seg-desc">Propuestas personalizadas</div>
+        </div>
+      </button>
+
+      <button class="seg-btn" data-seg="tendencias" onclick="selectSegment(this)">
+        <span class="seg-icon">📈</span>
+        <div>
+          <div class="seg-label">Tendencias & Oportunidades</div>
+          <div class="seg-desc">Señales emergentes del mercado</div>
+        </div>
+      </button>
+
+      <div class="sidebar-products">
+        <div class="sidebar-products-title">Portafolio MTX</div>
+        <span class="product-chip">👁 Metaview</span>
+        <span class="product-chip">⚛ QuantumTron</span>
+        <span class="product-chip">📣 Aria Digital</span>
+        <span class="product-chip">🎓 Aria New Gen</span>
+        <span class="product-chip">🤖 NeuroTron</span>
+      </div>
+    </div>
+
+    <!-- Main panel -->
+    <div class="opgen-main">
+
+      <!-- Segment header -->
+      <div class="seg-header">
+        <div class="seg-header-left">
+          <span class="seg-header-icon" id="sh-icon">🎯</span>
+          <div>
+            <div class="seg-header-title" id="sh-title">Búsqueda de Leads</div>
+            <div class="seg-header-desc" id="sh-desc">Encuentra prospectos calificados para cada solución de MetaTronix</div>
+          </div>
+        </div>
+        <div class="seg-header-right" id="sh-actions"></div>
+      </div>
+
+      <!-- Quick prompts -->
+      <div class="quick-prompts" id="quick-prompts-bar">
+        <div class="quick-prompts-label">Consultas rápidas</div>
+      </div>
+
+      <!-- Results -->
+      <div class="results-area" id="results-area">
+        <div class="welcome-state" id="welcome-state">
+          <div class="welcome-icon">🔎</div>
+          <div class="welcome-title">Inteligencia de Ventas</div>
+          <div class="welcome-text">Selecciona un segmento y escribe tu consulta, o elige una consulta rápida para empezar. El análisis se muestra aquí en tiempo real.</div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="input-row">
+        <textarea
+          id="opgen-input"
+          class="opgen-textarea"
+          placeholder="Escribe tu consulta de inteligencia de ventas…"
+          rows="1"
+          maxlength="2000"
+          onkeydown="handleInputKey(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendQuery()" title="Buscar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+
+    </div><!-- /.opgen-main -->
+  </div><!-- /.opgen-layout -->
+</div><!-- /.page -->
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS                                                        -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════ */
+/* STATE                                                          */
+/* ══════════════════════════════════════════════════════════════ */
+let currentUser = null;
+let currentSegment = 'leads';
+let isSearching = false;
+let apiKey = null;
+
+/* ══════════════════════════════════════════════════════════════ */
+/* SEGMENT CONFIG                                                  */
+/* ══════════════════════════════════════════════════════════════ */
+const SEGMENTS = {
+  leads: {
+    icon: '🎯',
+    title: 'Búsqueda de Leads',
+    desc: 'Encuentra prospectos calificados para cada solución de MetaTronix',
+    placeholder: 'Ej: Empresas de logística en México con más de 500 empleados que puedan necesitar visión por computadora…',
+    quickPrompts: [
+      'Empresas de retail en México y LATAM con más de 100 tiendas que necesiten inteligencia de video en sus operaciones',
+      'Hospitales, clínicas y grupos de salud privados en México que puedan beneficiarse de monitoreo inteligente con IA',
+      'Empresas manufactureras en el Bajío mexicano con necesidad de control de calidad automatizado y seguridad perimetral',
+      'Cadenas hoteleras y centros comerciales en LATAM que busquen optimizar flujos de personas y seguridad',
+      'Startups y scaleups de FinTech en México y Colombia que necesiten automatización con IA y análisis de datos',
+      'Entidades gobierno de América Latina que estén digitalizando servicios ciudadanos o seguridad pública',
+    ],
+    systemContext: `Enfócate en encontrar leads y prospectos concretos para MetaTronix. Incluye: nombre de empresas o sectores específicos, tamaño estimado, pain points que nuestras soluciones resuelven, y por qué son un buen fit. Sé específico y accionable.`
+  },
+  mercado: {
+    icon: '📊',
+    title: 'Estudio de Mercado',
+    desc: 'Tamaño de mercado, tendencias, competidores y oportunidades por segmento',
+    placeholder: 'Ej: Tamaño del mercado de computer vision en México para retail y logística…',
+    quickPrompts: [
+      'Tamaño del mercado de inteligencia artificial y automatización en México y América Latina en 2024-2025',
+      'Mercado de plataformas de ciencia de datos y ML para empresas en LATAM: tamaño, crecimiento y principales actores',
+      'Mercado de soluciones de visión por computadora para industria, retail y salud en México',
+      'Tendencias en educación corporativa con IA en América Latina: oportunidad de mercado para Aria New Gen',
+      'Mercado de agentes autónomos de IA para automatización empresarial en LATAM 2024-2025',
+      'Principales competidores de marketing digital con IA en México y oportunidades diferenciadas',
+    ],
+    systemContext: `Proporciona análisis de mercado estructurado: tamaño (TAM/SAM/SOM cuando sea posible), tasa de crecimiento, principales players, tendencias clave, y cómo MetaTronix puede posicionarse. Cita fuentes cuando estén disponibles.`
+  },
+  empresa: {
+    icon: '🏢',
+    title: 'Intel de Empresa',
+    desc: 'Investigación profunda de un prospecto específico como cliente potencial',
+    placeholder: 'Ej: Analiza OXXO como prospecto para soluciones de visión por computadora y analítica de retail…',
+    quickPrompts: [
+      'Analiza Liverpool como prospecto para Metaview Systems: estructura, operaciones, tecnología actual y pain points',
+      'Investiga Femsa como prospecto para automatización con IA: subsidiarias, tamaño operacional y necesidades tecnológicas',
+      'Analiza el IMSS como prospecto de gobierno para sistemas de monitoreo inteligente y NeuroTron Lab',
+      'Investiga Grupo Bimbo para propuesta de QuantumTron: supply chain, manufactura y análisis de datos',
+      'Analiza Banorte como prospecto para IA en detección de fraude y automatización de procesos financieros',
+      'Investiga Walmart México para visión por computadora: operaciones, seguridad y optimización de tiendas',
+    ],
+    systemContext: `Proporciona análisis ejecutivo del prospecto: descripción del negocio, tamaño y operaciones, tecnología actual estimada, decisores clave (C-level/IT), pain points identificables, y cuáles soluciones de MetaTronix encajan mejor y por qué.`
+  },
+  sectorial: {
+    icon: '🌍',
+    title: 'Análisis Sectorial',
+    desc: 'Identifica qué sectores tienen mayor oportunidad para cada producto MetaTronix',
+    placeholder: 'Ej: ¿Qué sector de gobierno en México tiene más urgencia por soluciones de IA en 2025?',
+    quickPrompts: [
+      '¿Qué sectores industriales en México tienen mayor adopción de IA y son mejores prospectos para MetaTronix en 2025?',
+      'Top 10 tipos de empresas en LATAM con mayor necesidad de computer vision y monitoreo inteligente',
+      'Análisis del sector salud en México: oportunidades de IA para Metaview Systems y NeuroTron Lab',
+      'Sector educativo en América Latina: oportunidades para Aria New Gen en formación corporativa y universitaria',
+      '¿En qué verticales de gobierno hay mayor presupuesto para tecnología IA en México y LATAM 2025?',
+      'Análisis del sector logística y supply chain en México para soluciones de visión artificial y analítica',
+    ],
+    systemContext: `Analiza sectores desde la perspectiva de oportunidad comercial para MetaTronix. Incluye: madurez tecnológica del sector, presupuesto estimado para tecnología, principales pain points, mejores soluciones de MetaTronix para ese sector, y estrategia de entrada recomendada.`
+  },
+  propuesta: {
+    icon: '💡',
+    title: 'Argumentos de Venta',
+    desc: 'Construye argumentos de venta y puntos de propuesta personalizados por cliente',
+    placeholder: 'Ej: Argumentos para vender Metaview Systems a una cadena de farmacias mediana en México…',
+    quickPrompts: [
+      'Dame argumentos de venta para ofrecer Metaview Systems a una empresa de seguridad privada en México',
+      'Construye una propuesta de valor de QuantumTron para el equipo de data science de un banco regional',
+      'Argumentos para convencer al área de RRHH de una empresa Fortune 500 México de adoptar Aria New Gen',
+      'Propuesta de valor de NeuroTron Lab para un despacho legal grande que quiere automatizar procesos',
+      'Cómo posicionar el portafolio completo de MetaTronix ante un gobierno municipal en proceso de transformación digital',
+      'Argumentos para diferenciarse de SAP, Salesforce y Oracle al vender automatización con IA en México',
+    ],
+    systemContext: `Genera argumentos de venta concretos y persuasivos. Incluye: propuesta de valor específica para el cliente objetivo, ROI estimado o beneficios cuantificables, manejo de objeciones comunes, diferenciadores clave vs competencia, y estructura recomendada para la propuesta.`
+  },
+  tendencias: {
+    icon: '📈',
+    title: 'Tendencias & Oportunidades',
+    desc: 'Detecta señales emergentes del mercado que generan oportunidades para MetaTronix',
+    placeholder: 'Ej: ¿Qué regulaciones o cambios en el mercado abren oportunidades para IA en 2025?',
+    quickPrompts: [
+      'Tendencias de adopción de IA en empresas mexicanas en 2025 y cómo aprovecha MetaTronix cada una',
+      'Nuevas regulaciones en México y LATAM que obliguen a empresas a adoptar tecnología de monitoreo o datos',
+      '¿Qué tendencias en e-commerce y retail físico generan oportunidad para Metaview Systems en 2025?',
+      'Impacto de la IA generativa en el mercado de formación corporativa: oportunidad para Aria New Gen',
+      'Tendencias de nearshoring en México y cómo abre oportunidades para automatización con IA en manufactura',
+      'Señales de mercado en ciberseguridad en LATAM que abren puerta para soluciones de IA de MetaTronix',
+    ],
+    systemContext: `Analiza tendencias con enfoque en oportunidades comerciales concretas para MetaTronix. Para cada tendencia: describe la señal, el tamaño de la oportunidad, la urgencia, qué soluciones de MetaTronix son más relevantes, y qué tipo de empresas serán early adopters.`
+  },
+};
+
+/* ══════════════════════════════════════════════════════════════ */
+/* INIT                                                           */
+/* ══════════════════════════════════════════════════════════════ */
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+
+  document.getElementById('header-placeholder').innerHTML =
+    renderHeader(currentUser, 'oportunidades');
+
+  // Check authorization
+  const profile = currentUser.profile || {};
+  if (!profile.perplexity_enabled) {
+    document.getElementById('access-screen').style.display = 'block';
+    // If already pending, show message
+    if (profile.perplexity_pending_auth) {
+      document.getElementById('req-access-btn').disabled = true;
+      document.getElementById('req-access-btn').textContent = 'Solicitud enviada';
+      document.getElementById('req-access-msg').style.display = 'block';
+      document.getElementById('req-access-msg').textContent =
+        'Tu solicitud está pendiente de aprobación por el SuperAdmin.';
+    }
+    return;
+  }
+
+  // Authorized: fetch API key and show UI
+  await fetchApiKey();
+  document.getElementById('main-layout').style.display = 'block';
+  selectSegmentByKey('leads');
+}
+
+async function fetchApiKey() {
+  try {
+    const { data } = await getDB()
+      .from('portal_settings')
+      .select('value')
+      .eq('key', 'perplexity_api_key')
+      .single();
+    apiKey = data?.value || null;
+  } catch (_) { apiKey = null; }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* ACCESS REQUEST                                                  */
+/* ══════════════════════════════════════════════════════════════ */
+async function requestPerplexityAccess() {
+  const btn = document.getElementById('req-access-btn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  try {
+    const db = getDB();
+    await db.from('profiles')
+      .update({ perplexity_pending_auth: true })
+      .eq('id', currentUser.id);
+
+    const name = currentUser.profile?.full_name || currentUser.email;
+    addAlert({
+      type: 'perplexity_access_request',
+      message: `${name} solicitó acceso al Generador de Oportunidades (IA de Ventas).`,
+      for_super_admin: true,
+      target_user_id: currentUser.id,
+      target_user_name: name,
+    });
+
+    btn.textContent = 'Solicitud enviada';
+    document.getElementById('req-access-msg').style.display = 'block';
+    document.getElementById('req-access-msg').textContent =
+      'El SuperAdmin recibirá tu solicitud y te notificará cuando esté habilitado.';
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Solicitar acceso';
+    showToast('Error al enviar solicitud', 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* SEGMENT SELECTION                                              */
+/* ══════════════════════════════════════════════════════════════ */
+function selectSegment(btn) {
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectSegmentByKey(btn.dataset.seg);
+}
+
+function selectSegmentByKey(key) {
+  currentSegment = key;
+  const seg = SEGMENTS[key];
+  if (!seg) return;
+
+  document.getElementById('sh-icon').textContent   = seg.icon;
+  document.getElementById('sh-title').textContent  = seg.title;
+  document.getElementById('sh-desc').textContent   = seg.desc;
+  document.getElementById('opgen-input').placeholder = seg.placeholder;
+
+  // Quick prompts
+  const bar = document.getElementById('quick-prompts-bar');
+  bar.innerHTML = `<div class="quick-prompts-label">Consultas rápidas</div>` +
+    seg.quickPrompts.map(p =>
+      `<button class="qp-btn" onclick="useQuickPrompt(${JSON.stringify(p)})">${shortLabel(p)}</button>`
+    ).join('');
+}
+
+function shortLabel(prompt) {
+  // Take first ~50 chars up to a word boundary
+  if (prompt.length <= 55) return prompt;
+  return prompt.slice(0, 52).replace(/\s\S*$/, '') + '…';
+}
+
+function useQuickPrompt(text) {
+  const input = document.getElementById('opgen-input');
+  input.value = text;
+  autoResize(input);
+  input.focus();
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* INPUT HANDLING                                                 */
+/* ══════════════════════════════════════════════════════════════ */
+function handleInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendQuery();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* SEND QUERY                                                     */
+/* ══════════════════════════════════════════════════════════════ */
+async function sendQuery() {
+  const input = document.getElementById('opgen-input');
+  const query = input.value.trim();
+  if (!query || isSearching) return;
+  if (!apiKey) {
+    showToast('Motor de búsqueda no configurado. Contacta al administrador.', 'error');
+    return;
+  }
+
+  isSearching = true;
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('welcome-state')?.remove();
+
+  // Show status
+  setIntelStatus('searching');
+
+  // Add searching skeleton
+  const resultsArea = document.getElementById('results-area');
+  const skeletonId = 'sk-' + Date.now();
+  const skeleton = document.createElement('div');
+  skeleton.id = skeletonId;
+  skeleton.className = 'searching-block';
+  skeleton.innerHTML = `
+    <div class="searching-query">🔍 Analizando: ${escHtml(query)}</div>
+    <div class="skel"></div>
+    <div class="skel" style="width:85%"></div>
+    <div class="skel" style="width:70%"></div>
+    <div class="skel"></div>
+    <div class="skel"></div>
+  `;
+  resultsArea.appendChild(skeleton);
+  resultsArea.scrollTop = resultsArea.scrollHeight;
+
+  const seg = SEGMENTS[currentSegment];
+  const systemPrompt = buildSystemPrompt(seg);
+
+  try {
+    const result = await callIntelligence(query, systemPrompt, (chunk, full) => {
+      // Update skeleton with streaming content
+      const sk = document.getElementById(skeletonId);
+      if (sk) {
+        sk.innerHTML = `
+          <div class="searching-query">🔍 ${escHtml(query)}</div>
+          <div style="font-size:13px;line-height:1.7;color:var(--text)">
+            ${renderMarkdown(full)}<span class="streaming-cursor"></span>
+          </div>`;
+      }
+      resultsArea.scrollTop = resultsArea.scrollHeight;
+    });
+
+    // Replace skeleton with full result card
+    const sk = document.getElementById(skeletonId);
+    if (sk) sk.remove();
+
+    appendResultCard(query, result.text, result.citations);
+    await logActivity('opgen_search', 'oportunidades', null, {
+      segment: currentSegment, query: query.slice(0, 100)
+    });
+  } catch (err) {
+    const sk = document.getElementById(skeletonId);
+    if (sk) sk.remove();
+    appendErrorCard(query, err.message);
+  } finally {
+    isSearching = false;
+    document.getElementById('send-btn').disabled = false;
+    setIntelStatus('ready');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* SYSTEM PROMPT                                                  */
+/* ══════════════════════════════════════════════════════════════ */
+function buildSystemPrompt(seg) {
+  return `Eres el motor de inteligencia de ventas de MetaTronix, empresa global de inteligencia artificial con sede en México (entidad legal: IBANOR SA de CV). Tu misión es generar análisis de ventas concretos, basados en datos reales y fuentes actualizadas.
+
+PORTAFOLIO METATRONIX:
+- Metaview Systems: computer vision, monitoreo inteligente de video, detección de comportamientos, analítica de retail y logística
+- QuantumTron: plataforma de ciencia de datos y ML end-to-end, desde upload de datos hasta Decision Packs ejecutivos
+- Aria Digital Strategy: marketing digital con IA, automatización, analítica y estrategia digital para empresas
+- Aria New Gen: educación AI-first para empresas, gobierno y universidades; diplomados, programas ejecutivos, licenciaturas y maestrías
+- NeuroTron Lab: agentes autónomos de IA, copilotos empresariales, LLMs propietarios, automatización de procesos agéntica
+
+CONTEXTO DE ANÁLISIS: ${seg?.systemContext || ''}
+
+REGLAS:
+1. Responde siempre en español
+2. Sé específico, concreto y accionable — nada de respuestas genéricas
+3. Cuando menciones empresas, incluye contexto relevante (tamaño, sector, operaciones)
+4. Incluye métricas o datos de mercado cuando estén disponibles
+5. Sugiere próximos pasos comerciales concretos
+6. No menciones qué motor o API estás usando — eres la IA de ventas de MetaTronix
+7. Estructura bien la respuesta con secciones claras cuando sea apropiado`;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* API CALL                                                       */
+/* ══════════════════════════════════════════════════════════════ */
+async function callIntelligence(query, systemPrompt, onChunk) {
+  const res = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'sonar-pro',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: query }
+      ],
+      stream: true,
+      max_tokens: 2500,
+      temperature: 0.2,
+      return_citations: true,
+      search_recency_filter: 'month',
+    })
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody?.error?.message || `Error ${res.status}: ${res.statusText}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '', fullText = '';
+  const citations = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (raw === '[DONE]') continue;
+      try {
+        const json = JSON.parse(raw);
+        const text = json.choices?.[0]?.delta?.content || '';
+        if (text) {
+          fullText += text;
+          onChunk(text, fullText);
+        }
+        // Collect citations if present
+        const cits = json.citations || json.choices?.[0]?.delta?.citations;
+        if (cits && Array.isArray(cits)) {
+          cits.forEach(c => { if (!citations.includes(c)) citations.push(c); });
+        }
+      } catch (_) {}
+    }
+  }
+
+  return { text: fullText, citations };
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* RESULT CARD                                                    */
+/* ══════════════════════════════════════════════════════════════ */
+function appendResultCard(query, text, citations = []) {
+  const resultsArea = document.getElementById('results-area');
+  const seg = SEGMENTS[currentSegment];
+  const now = new Date().toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+
+  const citationsHTML = citations.length
+    ? `<div class="citations-bar">
+         <div class="citations-label">Fuentes consultadas</div>
+         ${citations.slice(0, 8).map(c => {
+           try {
+             const u = new URL(c);
+             return `<a class="citation-link" href="${escHtml(c)}" target="_blank" rel="noopener">${u.hostname}</a>`;
+           } catch { return ''; }
+         }).join('')}
+       </div>`
+    : '';
+
+  const card = document.createElement('div');
+  card.className = 'result-block';
+  card.innerHTML = `
+    <div class="result-block-head">
+      <div class="result-block-query">${seg.icon} ${escHtml(query)}</div>
+      <div class="result-block-meta">${escHtml(seg.title)} · ${now}</div>
+    </div>
+    <div class="result-block-body">${renderMarkdown(text)}</div>
+    ${citationsHTML}
+    <div class="result-actions">
+      <button class="btn-result" onclick="copyResult(this)">📋 Copiar</button>
+      <button class="btn-result" onclick="saveAsNote(this, ${JSON.stringify(query)})">💾 Guardar como nota</button>
+      <button class="btn-result" onclick="createLeadFromResult(this)">🎯 Crear lead</button>
+    </div>`;
+
+  resultsArea.appendChild(card);
+  resultsArea.scrollTop = resultsArea.scrollHeight;
+}
+
+function appendErrorCard(query, errorMsg) {
+  const resultsArea = document.getElementById('results-area');
+
+  // Check if it's a CORS error and give helpful message
+  const isCorsErr = errorMsg.toLowerCase().includes('cors') ||
+                    errorMsg.toLowerCase().includes('fetch') ||
+                    errorMsg.toLowerCase().includes('failed to fetch') ||
+                    errorMsg.toLowerCase().includes('network');
+  const displayMsg = isCorsErr
+    ? 'El motor de búsqueda requiere un proxy de servidor. Configura el endpoint en el panel de administración o contacta a acanales@ibanormexico.com.'
+    : errorMsg;
+
+  const card = document.createElement('div');
+  card.className = 'result-block';
+  card.innerHTML = `
+    <div class="result-block-head" style="background:var(--danger-dim)">
+      <div class="result-block-query" style="color:var(--danger)">❌ ${escHtml(query)}</div>
+    </div>
+    <div class="result-block-body" style="color:var(--danger)">
+      <strong>Error al procesar la consulta:</strong><br>${escHtml(displayMsg)}
+    </div>`;
+  resultsArea.appendChild(card);
+  resultsArea.scrollTop = resultsArea.scrollHeight;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* RESULT ACTIONS                                                 */
+/* ══════════════════════════════════════════════════════════════ */
+function copyResult(btn) {
+  const body = btn.closest('.result-block').querySelector('.result-block-body');
+  const text = body?.innerText || '';
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => { btn.textContent = '📋 Copiar'; }, 2000);
+  });
+}
+
+async function saveAsNote(btn, query) {
+  const body = btn.closest('.result-block').querySelector('.result-block-body');
+  const text = body?.innerText || '';
+  const note = `=== ${SEGMENTS[currentSegment]?.title || 'Inteligencia de Ventas'} ===\n\nConsulta: ${query}\n\n${text}\n\nGenerado: ${new Date().toLocaleString('es-MX')}`;
+
+  const blob = new Blob([note], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `intel-ventas-${Date.now()}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+  showToast('Nota guardada', 'success');
+}
+
+function createLeadFromResult(btn) {
+  window.location.href = '/leads.html';
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* UI HELPERS                                                     */
+/* ══════════════════════════════════════════════════════════════ */
+function clearResults() {
+  const area = document.getElementById('results-area');
+  area.innerHTML = `
+    <div class="welcome-state" id="welcome-state">
+      <div class="welcome-icon">🔎</div>
+      <div class="welcome-title">Inteligencia de Ventas</div>
+      <div class="welcome-text">Selecciona un segmento y escribe tu consulta, o elige una consulta rápida para empezar.</div>
+    </div>`;
+}
+
+function setIntelStatus(state) {
+  const el = document.getElementById('intel-status');
+  if (!el) return;
+  if (state === 'searching') {
+    el.className = 'intel-status searching';
+    el.innerHTML = '<span class="intel-dot"></span> BUSCANDO INTELIGENCIA…';
+  } else {
+    el.className = 'intel-status';
+    el.innerHTML = '<span class="intel-dot"></span> IA DE VENTAS · EN LÍNEA';
+  }
+}
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<h4>$1</h4>')
+    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^# (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+    .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/^(.)/,'<p>$1')
+    .replace(/(.)$/,'$1</p>')
+    .replace(/\n/g,'<br>');
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* BOOT                                                           */
+/* ══════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

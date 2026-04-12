@@ -356,7 +356,7 @@ function renderHeader(user, activePage) {
     (a.for_super_admin && isSuperAdmin) ||
     (a.for_user_id && a.for_user_id === user.id)
   ).slice(0, 20);
-  const alertIcons = { new_lead:'🎯', plan_submitted:'📋', plan_approved:'✅', plan_rejected:'❌' };
+  const alertIcons = { new_lead:'🎯', plan_submitted:'📋', plan_approved:'✅', plan_rejected:'❌', claude_limit_reached:'⚠️', claude_authorized:'✅', perplexity_access_request:'🔍', perplexity_authorized:'🔍' };
 
   const alertItems = myAlerts.length
     ? myAlerts.map(a => `
@@ -413,6 +413,7 @@ function renderHeader(user, activePage) {
       <a href="/leads.html" class="${activePage==='leads'?'active':''}">🎯 Leads</a>
       <a href="/generate.html" class="${activePage==='generate'?'active':''}">+ Generar</a>
       <a href="/mtx-docs.html" class="${activePage==='mtx-docs'?'active':''}">📁 Docs MTX</a>
+      <a href="/oportunidades.html" class="${activePage==='oportunidades'?'active':''}" style="${activePage==='oportunidades'?'':''}">🔍 Oportunidades</a>
       ${hasAdminAccess ? `<a href="/admin.html" class="${activePage==='admin'?'active':''}">Admin</a>` : ''}
     </nav>
     <div class="header-user">
@@ -459,7 +460,7 @@ function handleAlertClick(alertId, leadId) {
     const myAlerts = alerts.filter(a =>
       (a.for_admin && isAdmin) || (a.for_user_id && a.for_user_id === user?.id)
     ).slice(0, 20);
-    const alertIcons = { new_lead:'🎯', plan_submitted:'📋', plan_approved:'✅', plan_rejected:'❌' };
+    const alertIcons = { new_lead:'🎯', plan_submitted:'📋', plan_approved:'✅', plan_rejected:'❌', claude_limit_reached:'⚠️', claude_authorized:'✅', perplexity_access_request:'🔍', perplexity_authorized:'🔍' };
     const items = wrap.querySelector('.bell-alert-items');
     if (items) {
       items.innerHTML = myAlerts.length

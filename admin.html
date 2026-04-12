@@ -73,7 +73,7 @@
     <button class="tab-btn" onclick="switchTab('documents')">Documentos</button>
     <button class="tab-btn" onclick="switchTab('users')">Usuarios</button>
     <button class="tab-btn" onclick="switchTab('activity')">Actividad</button>
-    <button class="tab-btn" id="tab-claude-btn" style="display:none;background:rgba(124,58,237,.15);color:#a78bfa" onclick="switchTab('claude')">🤖 Claude API</button>
+    <button class="tab-btn" id="tab-claude-btn" style="display:none;background:rgba(124,58,237,.15);color:#a78bfa" onclick="switchTab('claude')">🤖 IA APIs</button>
   </div>
 
   <!-- TAB: POR COLABORADOR -->
@@ -87,10 +87,12 @@
     </div>
   </div>
 
-  <!-- TAB: CLAUDE API (superAdmin only) -->
+  <!-- TAB: IA APIs (superAdmin only) -->
   <div id="tab-claude" class="tab-panel">
+
+    <!-- ── Sección 1: Claude API ─────────────────────────────── -->
     <div class="section-header">
-      <span class="section-title">🤖 Control de API Claude por Usuario</span>
+      <span class="section-title">🤖 Control de Claude por Usuario</span>
       <div style="font-size:12px;color:var(--text-muted)">Mes actual: <strong id="claude-current-month">—</strong></div>
     </div>
     <div class="table-wrap">
@@ -114,6 +116,31 @@
     <div style="margin-top:16px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text-muted)">
       ℹ️ Al aprobar el uso extendido se resetea el contador mensual del usuario y se habilita Claude nuevamente.
       El límite se renueva automáticamente el 1° de cada mes.
+    </div>
+
+    <!-- ── Sección 2: IA de Ventas (Perplexity) ──────────────── -->
+    <div class="section-header" style="margin-top:40px;padding-top:24px;border-top:2px solid var(--border)">
+      <span class="section-title">🔍 Control de IA de Ventas por Usuario</span>
+      <div style="font-size:12px;color:var(--text-muted)">Generador de Oportunidades</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Acceso IA Ventas</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="perplexity-users-tbody">
+          <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text-muted)">
+      ℹ️ El Generador de Oportunidades permite búsqueda de inteligencia de ventas en tiempo real. Solo el SuperAdmin puede habilitar o revocar el acceso por usuario.
     </div>
   </div>
 
@@ -783,7 +810,7 @@ function switchTab(name) {
   if (name === 'leads')         loadLeadsAdmin();
   if (name === 'plans')         loadPlansAdmin();
   if (name === 'colaboradores') loadColaboradores();
-  if (name === 'claude')        loadClaudeAdmin();
+  if (name === 'claude')        { loadClaudeAdmin(); loadPerplexityAdmin(); }
 }
 
 // ── Por Colaborador ──────────────────────────────────────────
@@ -1132,6 +1159,95 @@ function subscribeToRealtime() {
 }
 
 init();
+
+// ── Perplexity / IA de Ventas Admin (superAdmin only) ─────────
+async function loadPerplexityAdmin() {
+  const db = getDB();
+  const tbody = document.getElementById('perplexity-users-tbody');
+  if (!tbody) return;
+
+  const { data: profiles, error } = await db
+    .from('profiles')
+    .select('id, full_name, email, role, perplexity_enabled, perplexity_pending_auth')
+    .order('full_name');
+
+  if (error || !profiles?.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">No hay usuarios.</td></tr>`;
+    return;
+  }
+
+  const roleLabel = r => ({
+    user:'Colaborador', admin:'Admin', admin_restringido:'Admin Visor', super_admin:'SuperAdmin'
+  }[r] || r);
+
+  tbody.innerHTML = profiles.map(p => {
+    const enabled = p.perplexity_enabled;
+    const pending = p.perplexity_pending_auth;
+    const name    = escHtml(p.full_name || p.email || p.id);
+    const email   = escHtml(p.email || '');
+
+    let statusBadge, actionBtn;
+    if (enabled) {
+      statusBadge = `<span class="badge badge-success">✓ Activo</span>`;
+      actionBtn   = `<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+                       onclick="revokePerplexityUser('${p.id}', '${name}')">Revocar</button>`;
+    } else if (pending) {
+      statusBadge = `<span class="badge badge-warning">⏳ Pendiente</span>`;
+      actionBtn   = `
+        <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;margin-right:4px"
+                onclick="authorizePerplexityUser('${p.id}', '${name}')">✓ Autorizar</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;color:var(--danger)"
+                onclick="revokePerplexityUser('${p.id}', '${name}')">Rechazar</button>`;
+    } else {
+      statusBadge = `<span class="badge badge-neutral">— Sin acceso</span>`;
+      actionBtn   = `<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px"
+                       onclick="authorizePerplexityUser('${p.id}', '${name}')">+ Habilitar</button>`;
+    }
+
+    const toggleChecked = enabled ? 'checked' : '';
+
+    return `<tr>
+      <td>
+        <div style="font-weight:600;font-size:13px">${name}</div>
+        <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">${email}</div>
+      </td>
+      <td><span class="badge badge-neutral" style="font-size:10px">${roleLabel(p.role)}</span></td>
+      <td>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" ${toggleChecked}
+            onchange="togglePerplexityEnabled('${p.id}', this.checked)"
+            style="width:16px;height:16px;cursor:pointer">
+          <span style="font-size:12px">${enabled ? 'Habilitado' : 'Deshabilitado'}</span>
+        </label>
+      </td>
+      <td>${statusBadge}</td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">${actionBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function togglePerplexityEnabled(userId, enabled) {
+  const { error } = await getDB().from('profiles').update({
+    perplexity_enabled: enabled,
+    perplexity_pending_auth: false,
+  }).eq('id', userId);
+  if (error) { showToast('Error al actualizar acceso', 'error'); return; }
+  if (enabled) {
+    addAlert({ type:'perplexity_authorized',
+      message:`Tu acceso al Generador de Oportunidades fue habilitado. ¡Ya puedes usarlo!`,
+      for_user_id: userId });
+  }
+  showToast(enabled ? 'Acceso habilitado ✓' : 'Acceso revocado', enabled ? 'success' : 'info');
+  await loadPerplexityAdmin();
+}
+
+async function authorizePerplexityUser(userId, name) {
+  await togglePerplexityEnabled(userId, true);
+}
+
+async function revokePerplexityUser(userId, name) {
+  await togglePerplexityEnabled(userId, false);
+}
 </script>
 </body>
 </html>
