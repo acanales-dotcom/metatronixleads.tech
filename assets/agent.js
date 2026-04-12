@@ -447,6 +447,21 @@ INSTRUCCIONES:
     const text  = overrideText || input?.value?.trim();
     if (!text || isTyping) return;
 
+    // ── Verificar acceso a Claude ──────────────────────────
+    if (currentUser?.id && typeof checkClaudeAccess === 'function') {
+      const access = await checkClaudeAccess(currentUser.id);
+      if (!access.allowed) {
+        if (input && !overrideText) { input.value = ''; input.style.height = 'auto'; }
+        const msgs = {
+          disabled:     '🚫 El acceso a Clippy (Claude) está deshabilitado por el administrador.',
+          pending_auth: '⏳ Alcanzaste tu límite mensual. Tu solicitud de autorización fue enviada al SuperAdmin.',
+          limit_reached:`⚠️ Límite mensual alcanzado (${access.used}/${access.limit} usos). Solicitud enviada al administrador.`,
+        };
+        appendMessage('agent', msgs[access.reason] || 'Sin acceso a Claude en este momento.');
+        return;
+      }
+    }
+
     if (input && !overrideText) {
       input.value = '';
       input.style.height = 'auto';
@@ -464,6 +479,11 @@ INSTRUCCIONES:
     hideTyping();
     setClippyTalking(false);
     appendMessage('agent', reply);
+
+    // Incrementar uso Claude si la llamada fue exitosa
+    if (currentUser?.id && typeof incrementClaudeUsage === 'function' && reply && !reply.startsWith('Ocurrió un error')) {
+      incrementClaudeUsage(currentUser.id).catch(() => {});
+    }
 
     document.getElementById('mtx-agent-send').disabled = false;
     isTyping = false;

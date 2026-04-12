@@ -194,6 +194,20 @@ async function generate() {
   if (!prompt) { showToast('Escribe las instrucciones para el documento', 'warning'); return; }
   if (!title)  { showToast('Agrega un título al documento', 'warning'); return; }
 
+  // ── Verificar acceso Claude ──────────────────────────────
+  if (currentUser?.id && typeof checkClaudeAccess === 'function') {
+    const access = await checkClaudeAccess(currentUser.id);
+    if (!access.allowed) {
+      const msgs = {
+        disabled:     'El acceso a Claude está deshabilitado. Contacta al administrador.',
+        pending_auth: 'Alcanzaste tu límite mensual. Tu solicitud fue enviada al SuperAdmin para autorización.',
+        limit_reached:`Límite mensual alcanzado (${access.used}/${access.limit} generaciones). Solicitud enviada al administrador.`,
+      };
+      showToast(msgs[access.reason] || 'Sin acceso a Claude.', 'warning');
+      return;
+    }
+  }
+
   const btn = document.getElementById('gen-btn');
   btn.disabled = true; btn.textContent = 'Generando...';
   document.getElementById('stream-indicator').classList.add('active');

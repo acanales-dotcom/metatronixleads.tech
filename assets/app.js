@@ -35,16 +35,67 @@ async function getCurrentUser() {
   return { ...user, profile: profile || {} };
 }
 
+const ADMIN_ROLES = ['admin', 'admin_restringido', 'super_admin'];
+
 async function requireAuth(adminOnly = false) {
   const user = await getCurrentUser();
   if (!user) { window.location.href = '/index.html'; return null; }
   const role = user.profile?.role;
-  if (adminOnly && role !== 'admin' && role !== 'admin_restringido') {
+  if (adminOnly && !ADMIN_ROLES.includes(role)) {
     window.location.href = '/dashboard.html'; return null;
   }
   // Actualizar last_seen
   getDB()?.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {});
   return user;
+}
+
+/* ── Control de uso Claude ─────────────────────────────────── */
+async function checkClaudeAccess(userId) {
+  const db = getDB();
+  const { data: p } = await db.from('profiles').select(
+    'claude_enabled, claude_monthly_limit, claude_usage_month, claude_reset_month, claude_pending_auth'
+  ).eq('id', userId).single();
+  if (!p) return { allowed: true }; // fallback si falla
+
+  // Resetear contador si cambió el mes
+  const thisMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  if (p.claude_reset_month !== thisMonth) {
+    await db.from('profiles').update({
+      claude_usage_month: 0,
+      claude_reset_month: thisMonth,
+      claude_pending_auth: false,
+    }).eq('id', userId);
+    p.claude_usage_month = 0;
+    p.claude_pending_auth = false;
+  }
+
+  if (!p.claude_enabled) return { allowed: false, reason: 'disabled' };
+  if (p.claude_pending_auth) return { allowed: false, reason: 'pending_auth' };
+  if (p.claude_usage_month >= p.claude_monthly_limit) {
+    // Marcar como pendiente de autorización y alertar al superAdmin
+    await db.from('profiles').update({ claude_pending_auth: true }).eq('id', userId);
+    const { data: { user } } = await db.auth.getUser();
+    const name = user?.user_metadata?.full_name || user?.email || userId;
+    addAlert({
+      type: 'claude_limit_reached',
+      message: `${name} alcanzó su límite mensual de Claude (${p.claude_monthly_limit} usos). Autorización requerida.`,
+      for_super_admin: true,
+      target_user_id: userId,
+      target_user_name: name,
+    });
+    return { allowed: false, reason: 'limit_reached', used: p.claude_usage_month, limit: p.claude_monthly_limit };
+  }
+  return { allowed: true, used: p.claude_usage_month, limit: p.claude_monthly_limit };
+}
+
+async function incrementClaudeUsage(userId) {
+  const db = getDB();
+  await db.rpc('increment_claude_usage', { user_id_input: userId }).catch(() => {
+    // Fallback si no existe la RPC: update manual
+    db.from('profiles').select('claude_usage_month').eq('id', userId).single().then(({ data }) => {
+      if (data) db.from('profiles').update({ claude_usage_month: (data.claude_usage_month || 0) + 1 }).eq('id', userId);
+    });
+  });
 }
 
 async function logout() {
@@ -283,18 +334,23 @@ function showToast(msg, type = 'info') {
 function renderHeader(user, activePage) {
   const role = user?.profile?.role;
   const isAdmin = role === 'admin';
+  const isSuperAdmin = role === 'super_admin';
   const isRestrictedAdmin = role === 'admin_restringido';
-  const hasAdminAccess = isAdmin || isRestrictedAdmin;
+  const hasAdminAccess = ADMIN_ROLES.includes(role);
   const name = user?.profile?.full_name || user?.email || '—';
   // Store user globally for badge refresh
   window._mtxCurrentUser = user;
   // Calculate unread alerts
   const alerts = getAlerts();
   const unread = alerts.filter(a => !a.read && (
-    (a.for_admin && isAdmin) || (a.for_user_id && a.for_user_id === user.id)
+    (a.for_admin && (isAdmin || isSuperAdmin)) ||
+    (a.for_super_admin && isSuperAdmin) ||
+    (a.for_user_id && a.for_user_id === user.id)
   )).length;
   const myAlerts = alerts.filter(a =>
-    (a.for_admin && isAdmin) || (a.for_user_id && a.for_user_id === user.id)
+    (a.for_admin && (isAdmin || isSuperAdmin)) ||
+    (a.for_super_admin && isSuperAdmin) ||
+    (a.for_user_id && a.for_user_id === user.id)
   ).slice(0, 20);
   const alertIcons = { new_lead:'🎯', plan_submitted:'📋', plan_approved:'✅', plan_rejected:'❌' };
 
@@ -364,6 +420,7 @@ function renderHeader(user, activePage) {
         </div>
       </div>
       <span class="user-name">${escHtml(name)}</span>
+      ${isSuperAdmin ? '<span class="badge" style="background:#7c3aed;color:#fff;font-size:10px">SuperAdmin</span>' : ''}
       ${isAdmin ? '<span class="badge badge-accent">Admin</span>' : ''}
       ${isRestrictedAdmin ? '<span class="badge badge-warning" style="color:#000">Visor</span>' : ''}
       <button onclick="logout()" class="btn-ghost">Salir</button>
