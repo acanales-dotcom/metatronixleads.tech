@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Documentos</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    /* ── Category filter tabs ─────────────────────────────────── */
+    .cat-tabs {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px;
+    }
+    .cat-tab {
+      padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text-muted);
+      font-size: 12px; font-weight: 600; letter-spacing: .04em;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .cat-tab:hover { border-color: var(--accent); color: var(--accent); }
+    .cat-tab.active {
+      background: var(--accent-dim); color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* ── Doc grid ─────────────────────────────────────────────── */
+    .docs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .doc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 10px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .doc-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(0,85,255,.07);
+    }
+    .doc-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: var(--accent-dim); border: 1px solid var(--accent-mid);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .doc-icon.pdf  { background: rgba(224,48,48,.08); border-color: rgba(224,48,48,.2); }
+    .doc-icon.word { background: rgba(0,85,255,.08);  border-color: rgba(0,85,255,.2); }
+    .doc-icon.xl   { background: rgba(0,160,80,.08);  border-color: rgba(0,160,80,.2); }
+    .doc-icon.img  { background: rgba(180,90,220,.08);border-color: rgba(180,90,220,.2);}
+    .doc-icon.gen  { background: var(--surface2);     border-color: var(--border); }
+
+    .doc-meta { display: flex; align-items: flex-start; gap: 12px; }
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-title {
+      font-size: 14px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .doc-desc {
+      font-size: 12px; color: var(--text-muted); line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .doc-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 10px; border-top: 1px solid var(--border);
+    }
+    .doc-footer-left { display: flex; flex-direction: column; gap: 2px; }
+    .doc-by {
+      font-size: 11px; color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .doc-size {
+      font-size: 10px; color: var(--text-faint);
+      font-family: var(--font-mono);
+    }
+
+    /* ── Upload zone ──────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed var(--border2); border-radius: var(--radius-lg);
+      padding: 40px; text-align: center; cursor: pointer;
+      transition: all .2s; margin-bottom: 8px;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent); background: var(--accent-dim);
+    }
+    .upload-zone-icon { font-size: 40px; margin-bottom: 10px; }
+    .upload-zone-text { font-size: 14px; color: var(--text-muted); }
+    .upload-zone-sub  { font-size: 12px; color: var(--text-faint); margin-top: 4px; }
+    #file-input { display: none; }
+
+    /* ── Empty state ──────────────────────────────────────────── */
+    .empty-state {
+      grid-column: 1 / -1; text-align: center;
+      padding: 60px 24px; color: var(--text-muted);
+    }
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
+    .empty-state h3 { font-size: 18px; margin-bottom: 6px; color: var(--text-muted); }
+    .empty-state p  { font-size: 13px; }
+
+    /* ── Search bar ───────────────────────────────────────────── */
+    .search-row {
+      display: flex; gap: 10px; align-items: center; margin-bottom: 16px;
+    }
+    .search-input {
+      flex: 1; padding: 9px 14px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--surface2);
+      font-size: 13px; color: var(--text);
+      transition: border-color .15s;
+    }
+    .search-input:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Admin upload badge ───────────────────────────────────── */
+    .admin-upload-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 12px 20px;
+      margin-bottom: 24px;
+    }
+    .admin-upload-bar-left { font-size: 13px; color: var(--text-muted); }
+    .admin-upload-bar-left strong { color: var(--text); }
+
+    /* ── Category badge ───────────────────────────────────────── */
+    .cat-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 12px;
+      font-size: 10px; font-weight: 700; letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .cat-general     { background: var(--surface3); color: var(--text-muted); }
+    .cat-corporativo { background: rgba(0,85,255,.1); color: var(--accent); }
+    .cat-contratos   { background: rgba(217,119,6,.1); color: var(--warning); }
+    .cat-politicas   { background: rgba(224,48,48,.09); color: var(--danger); }
+    .cat-capacitacion{ background: rgba(0,160,80,.1);  color: #00a050; }
+    .cat-formatos    { background: rgba(180,90,220,.1); color: #b45adc; }
+
+    /* ── Delete button (admin) ────────────────────────────────── */
+    .doc-actions { display: flex; gap: 6px; }
+    .btn-doc-dl {
+      padding: 6px 14px; border-radius: var(--radius); border: 1px solid var(--accent);
+      background: var(--accent-dim); color: var(--accent);
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s;
+    }
+    .btn-doc-dl:hover { background: var(--accent); color: #fff; }
+    .btn-doc-del {
+      padding: 6px 10px; border-radius: var(--radius); border: 1px solid var(--border);
+      background: transparent; color: var(--text-faint);
+      font-size: 12px; cursor: pointer; transition: all .15s;
+    }
+    .btn-doc-del:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-dim); }
+
+    /* ── Progress bar for upload ──────────────────────────────── */
+    .upload-progress {
+      height: 4px; background: var(--surface3); border-radius: 2px;
+      overflow: hidden; margin-top: 8px; display: none;
+    }
+    .upload-progress-fill {
+      height: 100%; background: var(--accent);
+      border-radius: 2px; transition: width .3s;
+    }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page">
+
+  <!-- Page header -->
+  <div class="page-header mt-24">
+    <div class="page-header-text">
+      <h1>Documentos MetaTronix</h1>
+      <p class="muted">Recursos y documentos oficiales de la organización.</p>
+    </div>
+    <div id="upload-btn-wrap" style="display:none">
+      <button class="btn btn-primary" onclick="openUploadModal()">↑ Subir Documento</button>
+    </div>
+  </div>
+
+  <!-- Admin upload bar -->
+  <div class="admin-upload-bar" id="admin-bar" style="display:none">
+    <div class="admin-upload-bar-left">
+      <strong>Modo Administrador</strong> — Solo tú puedes subir y eliminar documentos.
+    </div>
+    <span class="badge badge-accent">Admin</span>
+  </div>
+
+  <!-- Search + filter row -->
+  <div class="search-row">
+    <input type="text" class="search-input" id="search-input"
+           placeholder="Buscar por nombre o descripción…"
+           oninput="filterDocs()">
+  </div>
+
+  <!-- Category tabs -->
+  <div class="cat-tabs">
+    <button class="cat-tab active" data-cat="all" onclick="setCategory(this)">📁 Todos</button>
+    <button class="cat-tab" data-cat="general"      onclick="setCategory(this)">📄 General</button>
+    <button class="cat-tab" data-cat="corporativo"  onclick="setCategory(this)">🏢 Corporativo</button>
+    <button class="cat-tab" data-cat="contratos"    onclick="setCategory(this)">📑 Contratos</button>
+    <button class="cat-tab" data-cat="politicas"    onclick="setCategory(this)">📋 Políticas</button>
+    <button class="cat-tab" data-cat="capacitacion" onclick="setCategory(this)">🎓 Capacitación</button>
+    <button class="cat-tab" data-cat="formatos"     onclick="setCategory(this)">📐 Formatos</button>
+  </div>
+
+  <!-- Doc count -->
+  <p class="muted mb-16" id="doc-count" style="font-size:12px;font-family:var(--font-mono)">Cargando…</p>
+
+  <!-- Docs grid -->
+  <div class="docs-grid" id="docs-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
+      Cargando documentos…
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- UPLOAD MODAL                                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="upload-modal" class="modal-overlay" style="display:none" onclick="closeUploadModal(event)">
+  <div class="modal" style="max-width:520px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Subir Documento</h3>
+      <button class="modal-close" onclick="closeUploadModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Archivo *</label>
+        <div class="upload-zone" id="upload-zone"
+             onclick="document.getElementById('file-input').click()"
+             ondragover="handleDragOver(event)"
+             ondragleave="handleDragLeave(event)"
+             ondrop="handleDrop(event)">
+          <div class="upload-zone-icon" id="upload-icon">📂</div>
+          <div class="upload-zone-text" id="upload-text">Haz clic o arrastra un archivo aquí</div>
+          <div class="upload-zone-sub" id="upload-sub">PDF, Word, Excel, imagen — máx. 10 MB</div>
+        </div>
+        <div class="upload-progress" id="upload-progress">
+          <div class="upload-progress-fill" id="upload-progress-fill" style="width:0%"></div>
+        </div>
+        <input type="file" id="file-input" accept="*/*"
+               onchange="handleFileSelect(this.files[0])">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Título *</label>
+        <input type="text" class="form-input" id="u-title" placeholder="Nombre del documento…" maxlength="120">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción</label>
+        <textarea class="form-input" id="u-desc" rows="2"
+                  placeholder="Breve descripción del contenido…" maxlength="300"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <select class="form-input" id="u-cat">
+          <option value="general">📄 General</option>
+          <option value="corporativo">🏢 Corporativo</option>
+          <option value="contratos">📑 Contratos</option>
+          <option value="politicas">📋 Políticas</option>
+          <option value="capacitacion">🎓 Capacitación</option>
+          <option value="formatos">📐 Formatos</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUploadModal()">Cancelar</button>
+      <button class="btn btn-primary" id="save-doc-btn" onclick="saveDocument()">Subir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS                                                   -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+/* ── State ────────────────────────────────────────────────── */
+let currentUser = null;
+let allDocs = [];
+let currentCategory = 'all';
+let selectedFile = null;
+let canUpload = false;
+
+/* ── Init ─────────────────────────────────────────────────── */
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+
+  const role = currentUser.profile?.role;
+  canUpload = (role === 'admin' || role === 'super_admin');
+
+  document.getElementById('header-placeholder').innerHTML =
+    renderHeader(currentUser, 'mtx-docs');
+
+  if (canUpload) {
+    document.getElementById('upload-btn-wrap').style.display = 'block';
+    document.getElementById('admin-bar').style.display = 'flex';
+  }
+
+  await loadDocs();
+}
+
+/* ── Load documents ───────────────────────────────────────── */
+async function loadDocs() {
+  const db = getDB();
+  const { data, error } = await db
+    .from('metatronix_docs')
+    .select('id, title, description, category, file_name, file_type, file_size, uploaded_by_name, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) { showToast('Error al cargar documentos', 'error'); return; }
+  allDocs = data || [];
+  renderDocs();
+}
+
+/* ── Render ───────────────────────────────────────────────── */
+function renderDocs() {
+  const search = document.getElementById('search-input').value.trim().toLowerCase();
+  let filtered = allDocs;
+
+  if (currentCategory !== 'all') {
+    filtered = filtered.filter(d => d.category === currentCategory);
+  }
+  if (search) {
+    filtered = filtered.filter(d =>
+      d.title?.toLowerCase().includes(search) ||
+      d.description?.toLowerCase().includes(search) ||
+      d.file_name?.toLowerCase().includes(search)
+    );
+  }
+
+  const grid = document.getElementById('docs-grid');
+  const count = document.getElementById('doc-count');
+  count.textContent = `${filtered.length} documento${filtered.length !== 1 ? 's' : ''}`;
+
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <h3>Sin documentos</h3>
+        <p>${allDocs.length ? 'No hay resultados para esta búsqueda.' :
+            (canUpload ? 'Sube el primer documento usando el botón "↑ Subir Documento".' :
+             'Aún no hay documentos publicados.')}</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(d => docCard(d)).join('');
+}
+
+function docCard(d) {
+  const icon = fileIcon(d.file_type, d.file_name);
+  const catCls = `cat-${d.category || 'general'}`;
+  const catLabel = catName(d.category);
+  const size = formatSize(d.file_size);
+
+  return `
+  <div class="doc-card">
+    <div class="doc-meta">
+      <div class="doc-icon ${iconClass(d.file_type, d.file_name)}">${icon}</div>
+      <div class="doc-info">
+        <div class="doc-title" title="${escHtml(d.title)}">${escHtml(d.title)}</div>
+        ${d.description ? `<div class="doc-desc">${escHtml(d.description)}</div>` : ''}
+      </div>
+    </div>
+    <div>
+      <span class="cat-badge ${catCls}">${catLabel}</span>
+    </div>
+    <div class="doc-footer">
+      <div class="doc-footer-left">
+        <span class="doc-by">↑ ${escHtml(d.uploaded_by_name || 'Admin')}</span>
+        <span class="doc-size">${escHtml(d.file_name || '')} ${size ? '· ' + size : ''}</span>
+        <span class="doc-size">${formatDate(d.created_at)}</span>
+      </div>
+      <div class="doc-actions">
+        <button class="btn-doc-dl" onclick="downloadDoc('${d.id}','${escHtml(d.file_name)}')">⬇ Descargar</button>
+        ${canUpload ? `<button class="btn-doc-del" onclick="deleteDoc('${d.id}', event)" title="Eliminar">🗑</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function fileIcon(type, name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  if (type?.includes('pdf') || ext === 'pdf') return '📄';
+  if (type?.includes('word') || ['doc','docx'].includes(ext)) return '📝';
+  if (type?.includes('sheet') || ['xls','xlsx','csv'].includes(ext)) return '📊';
+  if (type?.includes('presentation') || ['ppt','pptx'].includes(ext)) return '📊';
+  if (type?.includes('image') || ['png','jpg','jpeg','gif','webp','svg'].includes(ext)) return '🖼';
+  if (['zip','rar','7z'].includes(ext)) return '🗜';
+  return '📁';
+}
+
+function iconClass(type, name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  if (type?.includes('pdf') || ext === 'pdf') return 'pdf';
+  if (type?.includes('word') || ['doc','docx'].includes(ext)) return 'word';
+  if (type?.includes('sheet') || ['xls','xlsx','csv'].includes(ext)) return 'xl';
+  if (type?.includes('image') || ['png','jpg','jpeg','gif','webp','svg'].includes(ext)) return 'img';
+  return 'gen';
+}
+
+function catName(cat) {
+  const map = {
+    general: 'General', corporativo: 'Corporativo',
+    contratos: 'Contratos', politicas: 'Políticas',
+    capacitacion: 'Capacitación', formatos: 'Formatos',
+  };
+  return map[cat] || 'General';
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+/* ── Filters ──────────────────────────────────────────────── */
+function setCategory(btn) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  currentCategory = btn.dataset.cat;
+  renderDocs();
+}
+
+function filterDocs() { renderDocs(); }
+
+/* ── Download ─────────────────────────────────────────────── */
+async function downloadDoc(id, fileName) {
+  const db = getDB();
+  const btn = event?.target;
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
+
+  try {
+    const { data, error } = await db
+      .from('metatronix_docs')
+      .select('file_data, file_type, file_name, title')
+      .eq('id', id)
+      .single();
+
+    if (error || !data?.file_data) {
+      showToast('No se pudo obtener el archivo', 'error');
+      return;
+    }
+
+    // Convert base64 to blob
+    const binary = atob(data.file_data.split(',').pop());
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: data.file_type || 'application/octet-stream' });
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = data.file_name || data.title || 'documento';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+
+    await logActivity('download_mtx_doc', 'metatronix_doc', id, { title: data.title });
+    showToast('Descarga iniciada', 'success');
+  } finally {
+    if (btn) { btn.textContent = '⬇ Descargar'; btn.disabled = false; }
+  }
+}
+
+/* ── Delete ───────────────────────────────────────────────── */
+async function deleteDoc(id, e) {
+  e?.stopPropagation();
+  if (!canUpload) return;
+  if (!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
+
+  const { error } = await getDB().from('metatronix_docs').delete().eq('id', id);
+  if (error) { showToast('Error al eliminar', 'error'); return; }
+  showToast('Documento eliminado', 'success');
+  allDocs = allDocs.filter(d => d.id !== id);
+  renderDocs();
+}
+
+/* ── Upload modal ─────────────────────────────────────────── */
+function openUploadModal() {
+  if (!canUpload) return;
+  selectedFile = null;
+  document.getElementById('u-title').value = '';
+  document.getElementById('u-desc').value = '';
+  document.getElementById('u-cat').value = 'general';
+  resetUploadZone();
+  document.getElementById('upload-modal').style.display = 'flex';
+}
+
+function closeUploadModal(e) {
+  if (e && e.target !== document.getElementById('upload-modal')) return;
+  document.getElementById('upload-modal').style.display = 'none';
+}
+
+function resetUploadZone() {
+  document.getElementById('upload-icon').textContent = '📂';
+  document.getElementById('upload-text').textContent = 'Haz clic o arrastra un archivo aquí';
+  document.getElementById('upload-sub').textContent = 'PDF, Word, Excel, imagen — máx. 10 MB';
+  document.getElementById('upload-zone').style.borderColor = '';
+  document.getElementById('upload-progress').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+/* ── File selection ───────────────────────────────────────── */
+function handleFileSelect(file) {
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('El archivo supera los 10 MB', 'error');
+    return;
+  }
+  selectedFile = file;
+  const ext = file.name.split('.').pop().toUpperCase();
+  document.getElementById('upload-icon').textContent = fileIcon(file.type, file.name);
+  document.getElementById('upload-text').textContent = file.name;
+  document.getElementById('upload-sub').textContent = `${ext} · ${formatSize(file.size)}`;
+  document.getElementById('upload-zone').style.borderColor = 'var(--accent)';
+  // Auto-fill title if empty
+  if (!document.getElementById('u-title').value) {
+    document.getElementById('u-title').value = file.name.replace(/\.[^.]+$/, '');
+  }
+}
+
+function handleDragOver(e) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById('upload-zone').classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  document.getElementById('upload-zone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) handleFileSelect(file);
+}
+
+/* ── Save document ────────────────────────────────────────── */
+async function saveDocument() {
+  if (!canUpload) return;
+  const title = document.getElementById('u-title').value.trim();
+  const desc  = document.getElementById('u-desc').value.trim();
+  const cat   = document.getElementById('u-cat').value;
+
+  if (!title) { showToast('El título es obligatorio', 'error'); return; }
+  if (!selectedFile) { showToast('Selecciona un archivo', 'error'); return; }
+
+  const btn = document.getElementById('save-doc-btn');
+  btn.disabled = true; btn.textContent = 'Subiendo…';
+
+  // Show progress bar animation
+  const prog = document.getElementById('upload-progress');
+  const fill = document.getElementById('upload-progress-fill');
+  prog.style.display = 'block';
+  fill.style.width = '30%';
+
+  try {
+    // Read file as base64
+    const base64 = await readFileAsBase64(selectedFile);
+    fill.style.width = '60%';
+
+    const db = getDB();
+    const { data: { user } } = await db.auth.getUser();
+    const profile = currentUser?.profile;
+    const uploaderName = profile?.full_name || user?.email || 'Admin';
+
+    fill.style.width = '80%';
+
+    const payload = {
+      title,
+      description: desc || null,
+      category: cat,
+      file_name: selectedFile.name,
+      file_type: selectedFile.type || 'application/octet-stream',
+      file_size: selectedFile.size,
+      file_data: base64,
+      uploaded_by: user.id,
+      uploaded_by_name: uploaderName,
+    };
+
+    const { data: inserted, error } = await db
+      .from('metatronix_docs')
+      .insert(payload)
+      .select('id, title, description, category, file_name, file_type, file_size, uploaded_by_name, created_at')
+      .single();
+
+    if (error) throw error;
+
+    fill.style.width = '100%';
+    await logActivity('upload_mtx_doc', 'metatronix_doc', inserted.id, { title, category: cat });
+
+    // Update local list
+    allDocs.unshift(inserted);
+    renderDocs();
+
+    document.getElementById('upload-modal').style.display = 'none';
+    showToast('Documento subido correctamente', 'success');
+  } catch (err) {
+    showToast('Error al subir: ' + (err.message || err), 'error');
+    fill.style.width = '0%';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Subir';
+  }
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ── Boot ─────────────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

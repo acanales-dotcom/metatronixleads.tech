@@ -265,9 +265,13 @@ function refreshBellBadge() {
   if (!badge) return;
   const user = window._mtxCurrentUser;
   if (!user) return;
-  const isAdmin = user?.profile?.role === 'admin';
+  const role = user?.profile?.role;
+  const isAdmin = role === 'admin';
+  const isSA = role === 'super_admin';
   const count = getAlerts().filter(a => !a.read && (
-    (a.for_admin && isAdmin) || (a.for_user_id && a.for_user_id === user.id)
+    (a.for_admin && (isAdmin || isSA)) ||
+    (a.for_super_admin && isSA) ||
+    (a.for_user_id && a.for_user_id === user.id)
   )).length;
   badge.textContent = count;
   badge.style.display = count > 0 ? 'flex' : 'none';
@@ -408,6 +412,7 @@ function renderHeader(user, activePage) {
       <a href="/dashboard.html" class="${activePage==='dashboard'?'active':''}">Documentos</a>
       <a href="/leads.html" class="${activePage==='leads'?'active':''}">🎯 Leads</a>
       <a href="/generate.html" class="${activePage==='generate'?'active':''}">+ Generar</a>
+      <a href="/mtx-docs.html" class="${activePage==='mtx-docs'?'active':''}">📁 Docs MTX</a>
       ${hasAdminAccess ? `<a href="/admin.html" class="${activePage==='admin'?'active':''}">Admin</a>` : ''}
     </nav>
     <div class="header-user">
