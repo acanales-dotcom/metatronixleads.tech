@@ -7,14 +7,70 @@
   'use strict';
 
   /* ── Config ─────────────────────────────────────────────── */
-  const AGENT_NAME   = 'Aria';
-  const AGENT_ROLE   = 'Asistente MetaTronix';
+  const AGENT_NAME   = 'Clippy';
+  const AGENT_ROLE   = 'Agente de Seguimiento';
   const SESSION_KEY  = 'mtx_agent_session_' + Date.now().toString(36);
   const HISTORY_LIMIT = 20; // mensajes máx en contexto
 
   let db, currentUser, sessionId, messages = [], isOpen = false, isTyping = false;
   let knowledgeBase = [];
   let approvedDocs  = [];
+
+  /* ── Clippy SVG ─────────────────────────────────────────────── */
+  function clippySVG (id) {
+    return `<svg id="${id}" class="clippy-svg" viewBox="0 0 64 82" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cg1-${id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d4dae8"/>
+      <stop offset="100%" stop-color="#8890a4"/>
+    </linearGradient>
+    <linearGradient id="cg2-${id}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c0c8d8"/>
+      <stop offset="100%" stop-color="#9098b0"/>
+    </linearGradient>
+    <filter id="cshadow-${id}">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="rgba(0,0,0,.25)"/>
+    </filter>
+  </defs>
+  <!-- Paperclip body -->
+  <g class="clippy-body" filter="url(#cshadow-${id})">
+    <!-- Outer loop left side down -->
+    <path d="M32 5 C16 5 9 16 9 28 L9 64 C9 73 15 79 24 79 C30 79 35 76 37 70"
+          fill="none" stroke="url(#cg1-${id})" stroke-width="5.5" stroke-linecap="round"/>
+    <!-- Outer loop top -->
+    <path d="M32 5 C48 5 55 16 55 28 L55 50 C55 58 49 63 41 63 L9 63"
+          fill="none" stroke="url(#cg2-${id})" stroke-width="5" stroke-linecap="round"/>
+    <!-- Inner loop -->
+    <path d="M32 16 C22 16 17 22 17 30 L17 52"
+          fill="none" stroke="url(#cg1-${id})" stroke-width="4" stroke-linecap="round"/>
+    <path d="M32 16 C42 16 47 22 47 30 L47 50"
+          fill="none" stroke="url(#cg2-${id})" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <!-- Eyes -->
+  <g class="clippy-eyes">
+    <!-- Left eye white -->
+    <ellipse cx="22" cy="33" rx="8" ry="9" fill="white" stroke="#70788a" stroke-width="1.3"/>
+    <!-- Right eye white -->
+    <ellipse cx="42" cy="33" rx="8" ry="9" fill="white" stroke="#70788a" stroke-width="1.3"/>
+    <!-- Left pupil -->
+    <circle class="clippy-pupil-l" cx="23" cy="34" r="4.8" fill="#141420"/>
+    <!-- Right pupil -->
+    <circle class="clippy-pupil-r" cx="43" cy="34" r="4.8" fill="#141420"/>
+    <!-- Left shine -->
+    <circle cx="25" cy="31" r="2" fill="white"/>
+    <!-- Right shine -->
+    <circle cx="45" cy="31" r="2" fill="white"/>
+  </g>
+</svg>`;
+  }
+
+  /* ── Set Clippy talking state ───────────────────────────────── */
+  function setClippyTalking (active) {
+    const avatar = document.getElementById('clippy-header-avatar');
+    if (!avatar) return;
+    if (active) avatar.classList.add('clippy-talking');
+    else avatar.classList.remove('clippy-talking');
+  }
 
   /* ── Init ───────────────────────────────────────────────── */
   async function init () {
@@ -77,9 +133,9 @@
       });
     }
 
-    return `Eres Aria, la asistente de inteligencia artificial interna de MetaTronix. Tu rol es ayudar a los colaboradores de IBANOR SA de CV dentro del Portal Interno de Documentos de Ventas.
+    return `Eres Clippy, el Agente de Seguimiento de MetaTronix. Tu rol es ayudar a los colaboradores de IBANOR SA de CV dentro del Portal Interno de Documentos de Ventas.
 
-PERSONALIDAD: Profesional, concisa, proactiva. Respondes en español. Cuando no sabes algo, lo dices con honestidad. Eres parte del ecosistema de inteligencia de MetaTronix.
+PERSONALIDAD: Entusiasta, servicial y con un toque de humor clásico de oficina. Respondes en español. Cuando no sabes algo, lo dices con honestidad. Te especializas en dar seguimiento a documentos, prospectos y actividades del portal. Ocasionalmente puedes hacer referencias sutiles y divertidas a tu historia como asistente de oficina clásico.
 
 CONTEXTO ACTUAL:
 - Usuario: ${userName} (rol: ${userRole})
@@ -203,8 +259,12 @@ INSTRUCCIONES:
       await saveConversation();
       return reply;
     } catch (e) {
-      messages.push({ role: 'assistant', content: 'Lo siento, ocurrió un error al procesar tu consulta. Intenta de nuevo.' });
-      return 'Lo siento, ocurrió un error. Intenta de nuevo en un momento.';
+      const isAuthErr = e.message && (e.message.includes('401') || e.message.includes('authentication') || e.message.includes('api-key'));
+      const reply = isAuthErr
+        ? 'Aria está pendiente de activación. El administrador del sistema debe configurar la API key en el panel de Cloudflare Workers. Contacta a acanales@ibanormexico.com.'
+        : 'Ocurrió un error al conectar con Aria. Intenta de nuevo en un momento.';
+      messages.push({ role: 'assistant', content: reply });
+      return reply;
     }
   }
 
@@ -230,14 +290,7 @@ INSTRUCCIONES:
     const btn = document.createElement('button');
     btn.id = 'mtx-agent-btn';
     btn.setAttribute('aria-label', 'Abrir asistente Aria');
-    btn.innerHTML = `
-      <svg class="icon-chat" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-      </svg>
-      <span id="mtx-agent-badge"></span>`;
+    btn.innerHTML = clippySVG('clippy-svg') + `<span id="mtx-agent-badge"></span>`;
 
     // Panel
     const panel = document.createElement('div');
@@ -251,12 +304,8 @@ INSTRUCCIONES:
     panel.innerHTML = `
       <!-- Header -->
       <div class="agent-header">
-        <div class="agent-avatar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <circle cx="12" cy="8" r="4"/>
-            <path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
-            <path d="M2 12h2M20 12h2M12 2v2M12 20v2"/>
-          </svg>
+        <div class="agent-avatar" id="clippy-header-avatar">
+          ${clippySVG('clippy-header')}
         </div>
         <div class="agent-header-info">
           <div class="agent-name">${AGENT_NAME} · ${AGENT_ROLE}</div>
@@ -278,10 +327,10 @@ INSTRUCCIONES:
       <!-- Messages -->
       <div class="agent-messages" id="agent-messages">
         <div class="agent-welcome">
-          <div class="agent-welcome-title">⬡ Hola, soy ${AGENT_NAME}</div>
+          <div class="agent-welcome-title">📎 ¡Hola! Parece que estás trabajando en MetaTronix.</div>
           <div class="agent-welcome-text">
-            Tu asistente de inteligencia interna de MetaTronix. Puedo ayudarte con el portal,
-            documentos, información de la empresa y cualquier duda sobre tus herramientas.
+            Soy Clippy, tu agente de seguimiento. Puedo ayudarte con documentos, prospectos,
+            el portal y cualquier duda sobre MetaTronix. ¿Necesitas ayuda?
           </div>
         </div>
         <div class="agent-quick-actions" id="agent-quick-actions">
@@ -315,7 +364,7 @@ INSTRUCCIONES:
           </svg>
         </button>
       </div>
-      <div class="agent-footer-note">ARIA · METATRONIX INTELLIGENCE · POWERED BY CLAUDE</div>
+      <div class="agent-footer-note">CLIPPY · METATRONIX · POWERED BY CLAUDE AI</div>
     `;
 
     document.body.appendChild(btn);
@@ -366,8 +415,8 @@ INSTRUCCIONES:
       const msgBox = document.getElementById('agent-messages');
       msgBox.innerHTML = `
         <div class="agent-welcome">
-          <div class="agent-welcome-title">⬡ Nueva conversación</div>
-          <div class="agent-welcome-text">¿En qué te puedo ayudar?</div>
+          <div class="agent-welcome-title">📎 Nueva conversación</div>
+          <div class="agent-welcome-text">¡Listo para ayudarte con el seguimiento!</div>
         </div>`;
     });
 
@@ -405,6 +454,7 @@ INSTRUCCIONES:
 
     appendMessage('user', text);
     showTyping();
+    setClippyTalking(true);
 
     document.getElementById('mtx-agent-send').disabled = true;
     isTyping = true;
@@ -412,6 +462,7 @@ INSTRUCCIONES:
     const reply = await callClaude(text);
 
     hideTyping();
+    setClippyTalking(false);
     appendMessage('agent', reply);
 
     document.getElementById('mtx-agent-send').disabled = false;
@@ -431,8 +482,8 @@ INSTRUCCIONES:
     div.className = `msg ${role}`;
 
     const avatarHTML = role === 'agent'
-      ? `<div class="msg-avatar">⬡</div>`
-      : `<div class="msg-avatar">${initials}</div>`;
+      ? `<div class="msg-avatar clippy-msg">${clippySVG('clippy-msg-' + Date.now())}</div>`
+      : `<div class="msg-avatar" style="border-radius:50%;background:#0055ff;color:#fff;font-size:11px;font-weight:700;width:28px;height:28px;">${initials}</div>`;
 
     const rendered = renderMarkdown(text);
     div.innerHTML = `
@@ -454,7 +505,7 @@ INSTRUCCIONES:
     div.className = 'typing-indicator';
     div.id = 'agent-typing';
     div.innerHTML = `
-      <div class="msg-avatar">⬡</div>
+      <div class="msg-avatar clippy-msg">${clippySVG('clippy-typing')}</div>
       <div class="typing-dots">
         <span></span><span></span><span></span>
       </div>`;
