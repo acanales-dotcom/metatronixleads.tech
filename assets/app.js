@@ -424,7 +424,13 @@ function renderHeader(user, activePage) {
       <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">Documentos</a>
       <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">Leads</a>
       <a href="/generate.html" class="sidebar-nav-link ${activePage==='generate'?'active':''}">Generar</a>
-      <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">Docs MTX</a>
+      <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
+        <span class="nav-line1">Documento</span>
+        <span class="nav-line2">MetaTronix</span>
+      </a>
+      ${hasAdminAccess ? `
+      <a href="/generate.html?action=upload-plantilla" class="sidebar-sub-link">+ Subir Plantilla</a>
+      ` : ''}
       <a href="/oportunidades.html" class="sidebar-nav-link ${activePage==='oportunidades'?'active':''}">Oportunidades</a>
       ${hasAdminAccess ? `
       <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">Admin</a>` : ''}

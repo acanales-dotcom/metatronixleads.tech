@@ -97,17 +97,18 @@ h4 { font-size: 1.2rem; }
 }
 .sidebar-nav-link {
   display: block;
-  padding: 11px 16px;
+  padding: 10px 14px;
   border-radius: 50px;
   border: 2px solid var(--border2);
   background: var(--surface);
   color: var(--text);
-  font-size: 14px; font-weight: 700;
+  font-size: 13px; font-weight: 700;
   letter-spacing: .02em;
   text-decoration: none;
   transition: all .15s;
-  white-space: nowrap;
+  white-space: normal;
   text-align: center;
+  line-height: 1.2;
 }
 .sidebar-nav-link:hover {
   border-color: var(--accent);
@@ -123,6 +124,32 @@ h4 { font-size: 1.2rem; }
   color: #fff;
   font-weight: 800;
   box-shadow: 0 4px 14px rgba(0,85,255,.3);
+}
+.nav-line1 { display: block; font-size: 12px; }
+.nav-line2 { display: block; font-size: 11px; font-weight: 600; opacity: .8; }
+.sidebar-nav-link.active .nav-line2 { opacity: .9; }
+
+/* Sub-button (Subir Plantilla) */
+.sidebar-sub-link {
+  display: block;
+  margin: -4px 6px 0;
+  padding: 5px 10px;
+  border-radius: 50px;
+  border: 1px dashed var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px; font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  transition: all .15s;
+  letter-spacing: .01em;
+}
+.sidebar-sub-link:hover {
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--accent);
+  background: var(--accent-dim);
+  opacity: 1;
 }
 
 /* Footer */
