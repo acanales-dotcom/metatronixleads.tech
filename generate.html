@@ -195,7 +195,7 @@
           <span id="preview-wc" style="font-size:11px;color:var(--accent);font-family:var(--font-mono)"></span>
           <button class="btn btn-secondary btn-sm" onclick="saveDoc()" id="save-btn">💾 Guardar</button>
           <button class="btn btn-primary btn-sm" onclick="downloadDoc()" id="dl-btn">⬇ Descargar</button>
-          <button class="btn btn-ghost btn-sm" onclick="sendReview()" id="review-btn" style="display:none">📤 Revisión</button>
+          <button class="btn btn-ghost btn-sm" onclick="sendReview()" id="review-btn" style="display:none">📤 Enviar a revisión</button>
         </div>
         <div class="stream-status" id="stream-status">
           <span class="spinner"></span>
@@ -547,7 +547,8 @@ REGLAS ABSOLUTAS:
 4. NO añadas secciones que la plantilla no contempla.
 5. Devuelve SOLO el HTML del cuerpo del documento (sin <!DOCTYPE>, <html>, <head>, <body>, <style>).
 6. Usa h1 para título, h2 secciones, h3 subsecciones, p, ul, ol, table, strong, em.
-7. Fecha: ${today}`;
+7. Fecha: ${today}
+8. CRÍTICO — Placeholders de precio: Si la plantilla contiene {{PRECIO_PROYECTO}}, {{PRECIO}}, {{MONTO}}, {{VALOR}}, {{COSTO}}, {{IMPORTE}} o {{TOTAL_PROYECTO}}, escríbelos EXACTAMENTE con esa sintaxis en tu respuesta. NO los reemplaces con ningún valor. La administración los definirá al aprobar el documento.`;
 
   const userMsg = `Documento: ${title}\nCliente: ${company}${fieldsInfo}\n\nGenera el documento siguiendo estrictamente la plantilla.`;
 
@@ -574,6 +575,8 @@ REGLAS ABSOLUTAS:
       document.getElementById('preview-actions').style.display = 'flex';
       document.getElementById('preview-wc').textContent = wordCount + ' palabras';
       btn.disabled = false; btn.textContent = '⚡ Regenerar';
+      // Show review button — auto-save in background then reveal
+      autoSaveForReview(title);
       if (typeof incrementClaudeUsage === 'function') incrementClaudeUsage(currentUser.id).catch(()=>{});
       logActivity('generate_document', 'document', null, { title, template: selectedTpl.title });
     },
@@ -585,6 +588,32 @@ REGLAS ABSOLUTAS:
       btn.disabled = false; btn.textContent = '⚡ Generar Documento';
     }
   );
+}
+
+// ── Auto-save in background and reveal review button ──────
+async function autoSaveForReview(title) {
+  try {
+    const company = document.getElementById('doc-company')?.value?.trim() || '';
+    const doc = await saveDocument({
+      id:       savedDocId || null,
+      title:    title || selectedTpl.title,
+      doc_type: 'plantilla',
+      prompt:   JSON.stringify({
+        _v: 1,
+        templateId:    selectedTpl?.id    || '',
+        templateTitle: selectedTpl?.title || '',
+        company,
+        fields: collectFieldValues(),
+        hasPricePlaceholder: /\{\{(PRECIO_PROYECTO|PRECIO|MONTO|VALOR|COSTO|IMPORTE|TOTAL_PROYECTO)\}\}/i.test(generatedHTML),
+      }),
+      content: generatedHTML,
+    });
+    savedDocId = doc.id;
+    document.getElementById('review-btn').style.display = 'inline-flex';
+  } catch(_) {
+    // Silent — user can still manually save+review
+    document.getElementById('review-btn').style.display = 'inline-flex';
+  }
 }
 
 // ── Download ──────────────────────────────────────────────
@@ -600,16 +629,40 @@ function downloadDoc() {
 }
 
 // ── Save ──────────────────────────────────────────────────
+function collectFieldValues() {
+  const htmlContent = getTemplateHTML(selectedTpl);
+  const placeholders = extractPlaceholders(htmlContent);
+  const out = {};
+  if (placeholders.length > 0) {
+    placeholders.forEach(p => {
+      const v = document.getElementById('f-' + p.key)?.value?.trim();
+      if (v) out[p.key] = v;
+    });
+  } else {
+    const ctx = document.getElementById('doc-context')?.value?.trim();
+    if (ctx) out['_contexto'] = ctx;
+  }
+  return out;
+}
+
 async function saveDoc() {
   if (!generatedHTML) { showToast('Genera el documento primero', 'warning'); return; }
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
+    const company = document.getElementById('doc-company')?.value?.trim() || '';
     const doc = await saveDocument({
       id:       savedDocId || null,
       title:    document.getElementById('doc-title')?.value?.trim() || selectedTpl.title,
       doc_type: 'plantilla',
-      prompt:   `Plantilla: ${selectedTpl.title} | Cliente: ${document.getElementById('doc-company')?.value?.trim() || ''}`,
+      prompt:   JSON.stringify({
+        _v: 1,
+        templateId:    selectedTpl?.id    || '',
+        templateTitle: selectedTpl?.title || '',
+        company,
+        fields: collectFieldValues(),
+        hasPricePlaceholder: /\{\{(PRECIO_PROYECTO|PRECIO|MONTO|VALOR|COSTO|IMPORTE|TOTAL_PROYECTO)\}\}/i.test(generatedHTML),
+      }),
       content:  generatedHTML,
     });
     savedDocId = doc.id;
@@ -757,7 +810,7 @@ function extractPlaceholders(html) {
     const raw = m[1].trim();
     const [keyRaw, hintRaw] = raw.split(':').map(s => s.trim());
     const key = keyRaw.toUpperCase().replace(/\s+/g,'_');
-    if (seen.has(key) || ['FECHA','DATE','HOY'].includes(key)) continue;
+    if (seen.has(key) || ['FECHA','DATE','HOY','PRECIO','PRECIO_PROYECTO','MONTO','VALOR','COSTO','IMPORTE','TOTAL_PROYECTO','PRECIO_TOTAL'].includes(key)) continue;
     seen.add(key);
     const label = keyRaw.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
     const multiline = ['DESCRIPCION','SERVICIOS','CONTENIDO','DETALLES','ALCANCE',
