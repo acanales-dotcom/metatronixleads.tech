@@ -837,8 +837,8 @@ async function init() {
   CU = await requireAuth();
   document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'archivos');
 
-  const role = CU?.profile?.role;
-  if (!ADMINS.includes(role)) {
+  const email = (CU?.email || '').toLowerCase().trim();
+  if (!IBANOR_EMAILS.includes(email)) {
     document.getElementById('adScreen').classList.add('show');
     return;
   }

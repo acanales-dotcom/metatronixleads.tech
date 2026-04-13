@@ -512,24 +512,21 @@ async function loadDocs() {
 async function loadArchivos() {
   const role = currentUser?.profile?.role;
   const email = (currentUser?.email || '').toLowerCase().trim();
-  const ADMIN_ROLES_LOCAL = ['admin', 'admin_restringido', 'super_admin'];
-
-  const isAdmin = ADMIN_ROLES_LOCAL.includes(role);
   const isIbanor = typeof IBANOR_EMAILS !== 'undefined' && IBANOR_EMAILS.includes(email);
 
-  if (!isAdmin && !isIbanor) return;
+  if (!isIbanor) return;
 
   const db = getDB();
   const widgetsEl = document.getElementById('archivos-widgets');
   let html = '';
 
-  if (isAdmin) {
-    let adminCount = 0;
+  if (isIbanor) {
+    let starkeCount = 0;
     try {
       const { count } = await db.from('metatronix_docs')
         .select('id', { count: 'exact', head: true })
         .eq('category', 'archivo_admin');
-      adminCount = count ?? 0;
+      starkeCount = count ?? 0;
     } catch(e) {}
 
     html += `
@@ -541,7 +538,7 @@ async function loadArchivos() {
       <div class="section-card-body">
         <div class="mini-stat">
           <span class="mini-stat-label">Archivos almacenados</span>
-          <span class="mini-stat-value">${adminCount}</span>
+          <span class="mini-stat-value">${starkeCount}</span>
         </div>
         <a href="/archivos.html" class="quick-link" style="margin-top:4px;justify-content:center">
           <span class="quick-link-emoji">📂</span> Gestionar Archivos

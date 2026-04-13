@@ -436,7 +436,7 @@ function renderHeader(user, activePage) {
         <span class="nav-line1">Inteligencia</span>
         <span class="nav-line2">de Mercados</span>
       </a>
-      ${hasAdminAccess ? `
+      ${hasIbanorAccess ? `
       <a href="/archivos.html" class="sidebar-nav-link ${activePage==='archivos'?'active':''}">
         <span class="nav-line1">Archivos</span>
         <span class="nav-line2">Starke</span>
