@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MetaTronix · Propuesta Retail</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
+:root{
+  --n:#08255F;--b:#1A6FFF;--c:#00C2E0;
+  --s0:#010a1b;--s1:#071428;--s2:#0c1d3a;--s3:#122244;
+  --bdr:rgba(26,111,255,.14);--bdr2:rgba(0,194,224,.3);
+  --ink:#e8f0ff;--i2:#7fa0d4;--i3:#3d5a8a;
+  --g:#0fcc88;--a:#f5a623;--r:#ff4060;
+  --mono:'IBM Plex Mono',monospace;
+  --disp:'Syne',sans-serif;
+  --body:'DM Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--s0);color:var(--ink);font-family:var(--body);font-size:13.5px;line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(26,111,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(26,111,255,.03) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+
+/* TOPBAR */
+.bar{position:sticky;top:0;z-index:100;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(1,10,27,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--bdr)}
+.bar-l{display:flex;align-items:center;gap:10px}
+.hex{width:22px;height:22px;background:var(--c);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+.bn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink);letter-spacing:.07em}
+.bs{font-family:var(--mono);font-size:9px;color:var(--c);letter-spacing:.14em}
+.pill{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.1em;padding:3px 9px;border-radius:99px}
+.pc{background:rgba(0,194,224,.1);color:var(--c);border:1px solid rgba(0,194,224,.22)}
+.pa{background:rgba(245,166,35,.1);color:var(--a);border:1px solid rgba(245,166,35,.22)}
+.pg{background:rgba(15,204,136,.1);color:var(--g);border:1px solid rgba(15,204,136,.22)}
+
+/* LAYOUT */
+.root{position:relative;z-index:1;display:grid;grid-template-columns:200px 1fr 300px;min-height:calc(100vh - 48px)}
+
+/* NAV */
+.nav{position:sticky;top:48px;height:calc(100vh - 48px);overflow-y:auto;border-right:1px solid var(--bdr);background:rgba(7,20,40,.4);padding:20px 0}
+.nav::-webkit-scrollbar{width:3px}
+.nav::-webkit-scrollbar-thumb{background:var(--bdr)}
+.ng{padding:10px 18px 3px;font-family:var(--mono);font-size:8px;font-weight:700;color:var(--i3);letter-spacing:.2em;text-transform:uppercase}
+.nav a{display:flex;align-items:center;gap:7px;padding:6px 18px;font-family:var(--mono);font-size:10.5px;color:var(--i3);text-decoration:none;border-left:2px solid transparent;transition:all .13s}
+.nav a .d{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.4;flex-shrink:0}
+.nav a:hover{color:var(--i2);background:rgba(26,111,255,.05)}
+.nav a.on{color:var(--c);border-left-color:var(--c);background:rgba(0,194,224,.05)}
+.nav a.on .d{opacity:1}
+
+/* MAIN */
+.main{padding:44px 44px 80px;min-width:0}
+
+/* PANEL */
+.panel{position:sticky;top:48px;height:calc(100vh - 48px);overflow-y:auto;border-left:1px solid var(--bdr);background:rgba(7,20,40,.5);padding:20px}
+.panel::-webkit-scrollbar{width:3px}
+.panel::-webkit-scrollbar-thumb{background:var(--bdr)}
+.panel-ttl{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--i2);letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px}
+
+/* SECTION */
+.sec{margin-bottom:44px;scroll-margin-top:68px}
+.ey{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--c);letter-spacing:.22em;text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+.ey::after{content:'';flex:1;height:1px;background:var(--bdr);max-width:50px}
+.st{font-family:var(--disp);font-size:22px;font-weight:700;color:var(--ink);line-height:1.2;margin-bottom:7px}
+.sd{font-size:12.5px;color:var(--i2);max-width:560px;line-height:1.7}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;margin-top:18px;transition:border-color .18s}
+.card:hover{border-color:rgba(26,111,255,.28)}
+.ct{display:flex;align-items:center;justify-content:space-between;padding:9px 15px;background:var(--s2);border-bottom:1px solid var(--bdr)}
+.cn{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--i2);display:flex;align-items:center;gap:7px}
+.tag{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:4px}
+.te{color:var(--a);background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.2)}
+.tf{color:var(--i3);background:rgba(61,90,138,.1);border:1px solid rgba(61,90,138,.2)}
+.tw{color:var(--r);background:rgba(255,64,96,.08);border:1px solid rgba(255,64,96,.2)}
+.tg{color:var(--g);background:rgba(15,204,136,.08);border:1px solid rgba(15,204,136,.2)}
+.tc{color:var(--c);background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.2)}
+
+/* TABLE */
+.rt{width:100%;border-collapse:collapse}
+.rt th{background:var(--n);color:var(--ink);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:9px 13px;text-align:left}
+.rt td{padding:9px 13px;font-size:11.5px;border-bottom:1px solid var(--bdr);vertical-align:top;line-height:1.5}
+.rt tr:last-child td{border-bottom:none}
+.rt tr:nth-child(even) td{background:rgba(12,29,58,.6)}
+.rt td:first-child{font-family:var(--mono);font-size:10px;color:var(--c);white-space:nowrap}
+.rt td code{font-family:var(--mono);font-size:10px;color:var(--a);background:rgba(245,166,35,.08);padding:1px 5px;border-radius:3px}
+
+/* GRID CARDS */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px}
+.mini-card{background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:16px 18px;transition:border-color .18s}
+.mini-card:hover{border-color:rgba(0,194,224,.3)}
+.mc-ico{font-size:20px;margin-bottom:8px}
+.mc-ttl{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink);margin-bottom:5px}
+.mc-body{font-size:12px;color:var(--i2);line-height:1.6}
+
+/* CALLOUT */
+.callout{background:rgba(12,29,58,.8);border-left:3px solid var(--c);border-radius:0 8px 8px 0;padding:14px 18px;margin-top:14px}
+.callout p{font-size:12px;color:var(--i2);line-height:1.7;font-style:italic}
+.callout p strong{color:var(--ink);font-style:normal}
+
+/* STEPS */
+.steps{display:flex;flex-direction:column;gap:0;margin-top:16px}
+.step{display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--bdr)}
+.step:last-child{border-bottom:none}
+.step-n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--n);background:var(--c);min-width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-ttl{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.step-body{font-size:12px;color:var(--i2);line-height:1.6}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.kpi{background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;text-align:center}
+.kpi-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--c);line-height:1}
+.kpi-lbl{font-family:var(--mono);font-size:9px;color:var(--i3);letter-spacing:.1em;text-transform:uppercase;margin-top:5px}
+
+/* PRICING */
+.pkg{background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:18px;margin-top:12px;transition:border-color .18s}
+.pkg:hover{border-color:var(--bdr2)}
+.pkg.featured{border-color:rgba(0,194,224,.4);background:rgba(0,194,224,.04)}
+.pkg-name{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--c);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.pkg-price{font-family:var(--disp);font-size:26px;font-weight:700;color:var(--ink);line-height:1.1;margin-bottom:4px}
+.pkg-sub{font-family:var(--mono);font-size:9px;color:var(--i3);margin-bottom:12px}
+.pkg-feat{font-size:11.5px;color:var(--i2);line-height:1.8}
+.pkg-feat li{list-style:none;padding-left:14px;position:relative}
+.pkg-feat li::before{content:'▸';position:absolute;left:0;color:var(--c);font-size:9px;top:3px}
+
+/* PANEL WIDGETS */
+.pw{background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-bottom:12px}
+.pw-ttl{font-family:var(--mono);font-size:8px;font-weight:700;color:var(--i3);letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px}
+.pw-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bdr)}
+.pw-row:last-child{border-bottom:none}
+.pw-lbl{font-family:var(--mono);font-size:10px;color:var(--i3)}
+.pw-val{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--c)}
+.cta-btn{display:block;width:100%;padding:11px;border:none;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-align:center;text-decoration:none;background:linear-gradient(135deg,var(--n),var(--b));color:var(--ink);transition:transform .13s,box-shadow .13s;margin-bottom:8px}
+.cta-btn:hover{transform:translateY(-1px);box-shadow:0 5px 20px rgba(26,111,255,.35)}
+.cta-btn.sec-btn{background:transparent;border:1px solid var(--bdr2);color:var(--c)}
+.cta-btn.sec-btn:hover{background:rgba(0,194,224,.06);box-shadow:none}
+
+/* CONTACT BLOCK */
+.contact-block{background:var(--n);border-radius:10px;padding:20px;margin-top:40px;text-align:center}
+.contact-block .cb-label{font-family:var(--mono);font-size:8px;font-weight:700;color:var(--c);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px}
+.contact-block .cb-name{font-family:var(--disp);font-size:16px;font-weight:700;color:#fff;line-height:1.3}
+.contact-block .cb-info{font-family:var(--mono);font-size:9.5px;color:#AACFFF;margin-top:8px;line-height:1.8}
+
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-l">
+    <div class="hex"></div>
+    <div>
+      <div class="bn">METATRONIX · PROPUESTA COMERCIAL</div>
+      <div class="bs">sector retail · captación · automatización · inteligencia comercial</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <span class="pill pg">▸ RETAIL 2026</span>
+    <span class="pill pa">⚠ CONFIDENCIAL</span>
+  </div>
+</header>
+
+<div class="root">
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="ng">Propuesta</div>
+  <a href="#diagnostico" class="on"><span class="d"></span>01 · Diagnóstico</a>
+  <a href="#valor"><span class="d"></span>02 · Propuesta de Valor</a>
+  <a href="#servicios"><span class="d"></span>03 · Servicios</a>
+  <a href="#metodologia"><span class="d"></span>04 · Metodología</a>
+  <div class="ng">Resultados</div>
+  <a href="#kpis"><span class="d"></span>KPIs Esperados</a>
+  <a href="#inversion"><span class="d"></span>Inversión</a>
+  <div class="ng">Cierre</div>
+  <a href="#siguientes"><span class="d"></span>Siguientes Pasos</a>
+  <a href="#contacto"><span class="d"></span>Contacto</a>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- 01 DIAGNÓSTICO -->
+  <section class="sec" id="diagnostico">
+    <div class="ey">01</div>
+    <h1 class="st">El reto del retail moderno</h1>
+    <p class="sd">Las cadenas de retail enfrentan una paradoja crítica: generan tráfico pero no capturan intención de compra. El lead existe — pero no está siendo trabajado.</p>
+
+    <div class="grid3">
+      <div class="mini-card">
+        <div class="mc-ico">📉</div>
+        <div class="mc-ttl">Fragmentación de canales</div>
+        <div class="mc-body">WhatsApp, Facebook, visita en piso, llamada entrante — el lead llega por todos lados y se pierde en el mismo proceso.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-ico">🔁</div>
+        <div class="mc-ttl">Seguimiento manual</div>
+        <div class="mc-body">El equipo de ventas depende de hojas de cálculo, libretas y memoria. No hay trazabilidad ni priorización inteligente.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-ico">🕳️</div>
+        <div class="mc-ttl">Fuga en el embudo</div>
+        <div class="mc-body">Entre el primer contacto y el cierre hay un vacío operativo. La mayoría de prospectos no recibe seguimiento después del día 3.</div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:22px">
+      <p><strong>El problema no es la falta de prospectos.</strong> Es la falta de un sistema que los capture, califique y trabaje con consistencia. En retail, la velocidad de respuesta define si el lead compra contigo o con la competencia.</p>
+    </div>
+  </section>
+
+  <!-- 02 PROPUESTA DE VALOR -->
+  <section class="sec" id="valor">
+    <div class="ey">02</div>
+    <h2 class="st">¿Qué hace MetaTronix diferente?</h2>
+    <p class="sd">No somos una agencia de marketing ni un software genérico de CRM. Somos un sistema operativo de captación diseñado específicamente para la realidad del retail mexicano.</p>
+
+    <div class="card" style="margin-top:22px">
+      <div class="ct">
+        <span class="cn">⚡ Diferenciadores clave</span>
+        <span class="tag tg">VENTAJA COMPETITIVA</span>
+      </div>
+      <table class="rt">
+        <thead>
+          <tr>
+            <th>Dimensión</th>
+            <th>Solución genérica</th>
+            <th>MetaTronix</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Velocidad de respuesta</td>
+            <td style="color:var(--i2)">Manual / 24–48 hrs</td>
+            <td style="color:var(--g)">Automatizado / &lt; 5 min</td>
+          </tr>
+          <tr>
+            <td>Calificación de leads</td>
+            <td style="color:var(--i2)">Sin criterio definido</td>
+            <td style="color:var(--g)">Assessment estructurado por perfil</td>
+          </tr>
+          <tr>
+            <td>Integración omnicanal</td>
+            <td style="color:var(--i2)">Un solo canal</td>
+            <td style="color:var(--g)">WhatsApp + Web + Meta + Piso</td>
+          </tr>
+          <tr>
+            <td>Reportería</td>
+            <td style="color:var(--i2)">PDF estático mensual</td>
+            <td style="color:var(--g)">Dashboard en tiempo real</td>
+          </tr>
+          <tr>
+            <td>Adaptación al cliente</td>
+            <td style="color:var(--i2)">Configuración estándar</td>
+            <td style="color:var(--g)">Set up a medida + acompañamiento</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 03 SERVICIOS -->
+  <section class="sec" id="servicios">
+    <div class="ey">03</div>
+    <h2 class="st">Servicios para retail</h2>
+    <p class="sd">Un ecosistema completo que cubre el ciclo de vida del prospecto: desde el primer contacto hasta el reporte de conversión.</p>
+
+    <div class="grid2">
+      <div class="mini-card">
+        <div class="mc-ico">🎯</div>
+        <div class="mc-ttl">Captación omnicanal</div>
+        <div class="mc-body">Formularios inteligentes, integración con Meta Leads Ads, WhatsApp Business API y landing pages optimizadas para conversión. Todo centralizado en un solo inbox.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-ico">📋</div>
+        <div class="mc-ttl">Assessment de prospectos</div>
+        <div class="mc-body">Cuestionario estructurado que califica al lead antes de que llegue al vendedor. Prioriza por intención de compra, capacidad y urgencia.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-ico">🤖</div>
+        <div class="mc-ttl">Automatización CRM</div>
+        <div class="mc-body">Flujos de seguimiento automáticos por WhatsApp y correo. Recordatorios, nutrición de leads fríos y escalamiento por inactividad sin intervención manual.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-ico">📊</div>
+        <div class="mc-ttl">Inteligencia comercial</div>
+        <div class="mc-body">Dashboard con métricas de conversión por sucursal, vendedor y canal. Identificación de cuellos de botella y oportunidades de mejora en tiempo real.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-ico">🏪</div>
+        <div class="mc-ttl">Gestión multi-sucursal</div>
+        <div class="mc-body">Visibilidad centralizada con granularidad por punto de venta. Cada sucursal opera con su propio pipeline sin perder visión corporativa.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-ico">🎓</div>
+        <div class="mc-ttl">Capacitación y onboarding</div>
+        <div class="mc-body">Set up del proyecto, entrenamiento del equipo de ventas y acompañamiento mensual para garantizar adopción y resultados sostenidos.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 METODOLOGÍA -->
+  <section class="sec" id="metodologia">
+    <div class="ey">04</div>
+    <h2 class="st">Metodología de implementación</h2>
+    <p class="sd">Cuatro fases secuenciales con entregables definidos. Sin procesos eternos, sin consultores que desaparecen.</p>
+
+    <div class="card">
+      <div class="ct">
+        <span class="cn">🗓 Fases del proyecto</span>
+        <span class="tag tc">~8 SEMANAS SET UP</span>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">01</div>
+          <div>
+            <div class="step-ttl">Diagnóstico y set up</div>
+            <div class="step-body">Mapeo del proceso de ventas actual, integración de canales, configuración de CRM y definición del perfil de lead ideal por categoría de producto. Duración: 2 semanas.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">02</div>
+          <div>
+            <div class="step-ttl">Activación y piloto</div>
+            <div class="step-body">Lanzamiento con 1–2 sucursales piloto. Assessment en vivo, primeros flujos de automatización activos, capacitación inicial del equipo. Duración: 2 semanas.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">03</div>
+          <div>
+            <div class="step-ttl">Escalamiento</div>
+            <div class="step-body">Despliegue a todas las sucursales, ajustes de flujos basados en aprendizajes del piloto, integración de reportería corporativa. Duración: 2–3 semanas.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">04</div>
+          <div>
+            <div class="step-ttl">Optimización continua</div>
+            <div class="step-body">Revisión mensual de métricas, ajuste de scoring de leads, A/B testing de mensajes de automatización y reporte ejecutivo para dirección comercial. Recurrente.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p>El plan de visitas a sucursales se define durante el set up del proyecto, en función de la distribución geográfica y prioridades operativas del cliente.</p>
+    </div>
+  </section>
+
+  <!-- KPIS -->
+  <section class="sec" id="kpis">
+    <div class="ey">Resultados</div>
+    <h2 class="st">KPIs esperados</h2>
+    <p class="sd">Benchmarks basados en implementaciones previas en retail con operación multi-sucursal.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-val">+62%</div>
+        <div class="kpi-lbl">Tasa de contacto efectivo</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">-71%</div>
+        <div class="kpi-lbl">Tiempo de respuesta al lead</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">3.4×</div>
+        <div class="kpi-lbl">Leads procesados por vendedor</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">+38%</div>
+        <div class="kpi-lbl">Conversión en primeras 72 hrs</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="ct">
+        <span class="cn">📈 Métricas de seguimiento</span>
+        <span class="tag tf">DASHBOARD TIEMPO REAL</span>
+      </div>
+      <table class="rt">
+        <thead>
+          <tr><th>Métrica</th><th>Frecuencia</th><th>Responsable</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Leads captados por canal</td>
+            <td style="color:var(--i2)">Diario</td>
+            <td style="color:var(--i2)">Dashboard automático</td>
+          </tr>
+          <tr>
+            <td>Tasa de calificación (assessment)</td>
+            <td style="color:var(--i2)">Semanal</td>
+            <td style="color:var(--i2)">Reporte MetaTronix</td>
+          </tr>
+          <tr>
+            <td>Velocidad de primer contacto</td>
+            <td style="color:var(--i2)">Diario</td>
+            <td style="color:var(--i2)">Dashboard automático</td>
+          </tr>
+          <tr>
+            <td>Conversión por sucursal</td>
+            <td style="color:var(--i2)">Mensual</td>
+            <td style="color:var(--i2)">Reporte ejecutivo</td>
+          </tr>
+          <tr>
+            <td>ROI de canales de captación</td>
+            <td style="color:var(--i2)">Mensual</td>
+            <td style="color:var(--i2)">Reporte ejecutivo</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- INVERSIÓN -->
+  <section class="sec" id="inversion">
+    <div class="ey">Resultados</div>
+    <h2 class="st">Inversión</h2>
+    <p class="sd">Paquetes diseñados para escalar con la operación. Todos incluyen set up, capacitación y soporte mensual.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:20px">
+
+      <div class="pkg">
+        <div class="pkg-name">Starter</div>
+        <div class="pkg-price">$85,000</div>
+        <div class="pkg-sub">MXN / mes · hasta 3 sucursales</div>
+        <ul class="pkg-feat">
+          <li>Captación 2 canales digitales</li>
+          <li>Assessment básico de leads</li>
+          <li>CRM con automatización base</li>
+          <li>Dashboard de métricas</li>
+          <li>1 sesión mensual de revisión</li>
+          <li>Hasta 500 leads/mes</li>
+        </ul>
+      </div>
+
+      <div class="pkg featured">
+        <div class="pkg-name" style="display:flex;align-items:center;gap:8px">
+          Growth
+          <span class="tag tg" style="font-size:7px">RECOMENDADO</span>
+        </div>
+        <div class="pkg-price">$145,000</div>
+        <div class="pkg-sub">MXN / mes · hasta 10 sucursales</div>
+        <ul class="pkg-feat">
+          <li>Captación omnicanal completa</li>
+          <li>Assessment avanzado con scoring</li>
+          <li>Automatización completa + WhatsApp API</li>
+          <li>Reportería corporativa multi-sucursal</li>
+          <li>2 sesiones mensuales + soporte</li>
+          <li>Hasta 2,000 leads/mes</li>
+        </ul>
+      </div>
+
+      <div class="pkg">
+        <div class="pkg-name">Enterprise</div>
+        <div class="pkg-price">A medida</div>
+        <div class="pkg-sub">MXN · sucursales ilimitadas</div>
+        <ul class="pkg-feat">
+          <li>Todo lo de Growth</li>
+          <li>Integración con ERP / POS</li>
+          <li>BI avanzado y modelos predictivos</li>
+          <li>Leads ilimitados</li>
+          <li>SLA dedicado + equipo asignado</li>
+          <li>Propuesta personalizada</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="callout" style="margin-top:18px">
+      <p>Todos los precios son en <strong>MXN más IVA</strong>. La inversión de set up inicial se cotiza por separado dependiendo de la complejidad de la integración. El plan de visitas se define en el set up del proyecto.</p>
+    </div>
+  </section>
+
+  <!-- SIGUIENTES PASOS -->
+  <section class="sec" id="siguientes">
+    <div class="ey">Cierre</div>
+    <h2 class="st">Siguientes pasos</h2>
+    <p class="sd">Tres acciones concretas para arrancar en menos de una semana.</p>
+
+    <div class="card">
+      <div class="ct">
+        <span class="cn">🚀 Ruta de arranque</span>
+        <span class="tag tc">7 DÍAS</span>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">1</div>
+          <div>
+            <div class="step-ttl">Reunión de alineación</div>
+            <div class="step-body">Llamada de 45 min con dirección comercial para revisar la propuesta, resolver dudas y alinear expectativas. Sin costo ni compromiso.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">2</div>
+          <div>
+            <div class="step-ttl">Diagnóstico express</div>
+            <div class="step-body">Sesión de 2 horas con el equipo operativo para mapear el proceso de ventas actual e identificar quick wins inmediatos.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">3</div>
+          <div>
+            <div class="step-ttl">Propuesta económica personalizada</div>
+            <div class="step-body">Con base en el diagnóstico, entregamos una propuesta final con alcance, inversión exacta y plan de implementación. Firmamos y arrancamos.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACTO -->
+  <section class="sec" id="contacto">
+    <div class="contact-block">
+      <div class="cb-label">Contacto</div>
+      <div class="cb-name">Norma Canales · CEO & Founder<br>Alejandro Canales · COO & Founder</div>
+      <div class="cb-info">
+        +52 811 544 4632<br>
+        acanales@ibanormexico.com · ncanales@ibanormexico.com<br>
+        metatronix.tech · Valle Poniente, Nuevo León, México
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- PANEL DERECHO -->
+<aside class="panel">
+  <div class="panel-ttl">Resumen ejecutivo</div>
+
+  <div class="pw">
+    <div class="pw-ttl">Alcance</div>
+    <div class="pw-row"><span class="pw-lbl">Sector</span><span class="pw-val">Retail</span></div>
+    <div class="pw-row"><span class="pw-lbl">Modalidad</span><span class="pw-val">Multi-sucursal</span></div>
+    <div class="pw-row"><span class="pw-lbl">Implementación</span><span class="pw-val">~8 semanas</span></div>
+    <div class="pw-row"><span class="pw-lbl">Soporte</span><span class="pw-val">Mensual recurrente</span></div>
+  </div>
+
+  <div class="pw">
+    <div class="pw-ttl">Servicios incluidos</div>
+    <div class="pw-row"><span class="pw-lbl">Captación omnicanal</span><span class="pw-val" style="color:var(--g)">✓</span></div>
+    <div class="pw-row"><span class="pw-lbl">Assessment de leads</span><span class="pw-val" style="color:var(--g)">✓</span></div>
+    <div class="pw-row"><span class="pw-lbl">Automatización CRM</span><span class="pw-val" style="color:var(--g)">✓</span></div>
+    <div class="pw-row"><span class="pw-lbl">Dashboard tiempo real</span><span class="pw-val" style="color:var(--g)">✓</span></div>
+    <div class="pw-row"><span class="pw-lbl">Capacitación equipo</span><span class="pw-val" style="color:var(--g)">✓</span></div>
+  </div>
+
+  <div class="pw">
+    <div class="pw-ttl">Inversión referencia</div>
+    <div class="pw-row"><span class="pw-lbl">Starter</span><span class="pw-val">$85,000 MXN</span></div>
+    <div class="pw-row"><span class="pw-lbl">Growth</span><span class="pw-val">$145,000 MXN</span></div>
+    <div class="pw-row"><span class="pw-lbl">Enterprise</span><span class="pw-val">A medida</span></div>
+  </div>
+
+  <div class="pw">
+    <div class="pw-ttl">KPIs clave</div>
+    <div class="pw-row"><span class="pw-lbl">Contacto efectivo</span><span class="pw-val">+62%</span></div>
+    <div class="pw-row"><span class="pw-lbl">Tiempo de respuesta</span><span class="pw-val">-71%</span></div>
+    <div class="pw-row"><span class="pw-lbl">Conversión 72 hrs</span><span class="pw-val">+38%</span></div>
+  </div>
+
+  <a href="mailto:acanales@ibanormexico.com?subject=Propuesta%20Retail%20MetaTronix" class="cta-btn">✉ SOLICITAR REUNIÓN</a>
+  <a href="tel:+528115444632" class="cta-btn sec-btn">📞 LLAMAR AHORA</a>
+
+  <div style="font-family:var(--mono);font-size:8.5px;color:var(--i3);text-align:center;margin-top:8px;line-height:1.6">
+    IBANOR SA de CV · metatronix.tech<br>Valle Poniente, Nuevo León, México
+  </div>
+</aside>
+
+</div>
+
+<script>
+// Nav active state on scroll
+const sections = document.querySelectorAll('.sec[id]');
+const navLinks = document.querySelectorAll('.nav a');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      navLinks.forEach(l => l.classList.remove('on'));
+      const active = document.querySelector(`.nav a[href="#${e.target.id}"]`);
+      if(active) active.classList.add('on');
+    }
+  });
+}, {rootMargin:'-40% 0px -55% 0px'});
+sections.forEach(s => obs.observe(s));
+</script>
+
+</body>
+</html>
