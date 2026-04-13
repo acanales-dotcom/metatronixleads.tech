@@ -212,50 +212,6 @@
   </div>
 </div>
 
-<!-- Upload plantilla modal (admin) -->
-<div id="upload-modal" class="modal-overlay" style="display:none">
-  <div class="modal" style="max-width:540px">
-    <div class="modal-header">
-      <span class="modal-title">⚙️ Subir Plantilla de Documento</span>
-      <button class="modal-close" onclick="closeUploadModal()">✕</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div class="form-group">
-        <label class="form-label">Nombre de la Plantilla *</label>
-        <input type="text" id="u-title" class="form-input" placeholder="Ej: Propuesta Comercial MetaTronix" maxlength="120">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descripción</label>
-        <textarea id="u-desc" class="form-textarea" style="min-height:60px"
-                  placeholder="Explica qué tipo de documento genera esta plantilla y para qué contexto..."></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Archivo HTML de la Plantilla *</label>
-        <div id="u-dropzone" style="border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:24px;text-align:center;cursor:pointer;transition:all .15s"
-             onclick="document.getElementById('u-file').click()"
-             ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-             ondragleave="this.style.borderColor='var(--border2)'"
-             ondrop="handleDrop(event)">
-          <div style="font-size:28px;margin-bottom:8px">📄</div>
-          <div id="u-file-name" style="font-size:13px;color:var(--text-muted)">Arrastra un archivo .html o haz clic para seleccionar</div>
-          <div style="font-size:11px;color:var(--text-faint);margin-top:4px">Solo archivos HTML</div>
-        </div>
-        <input type="file" id="u-file" accept=".html,text/html" style="display:none" onchange="handleFileSelect(this.files[0])">
-      </div>
-      <div id="u-progress-wrap" style="display:none">
-        <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
-          <div id="u-progress" style="height:100%;background:var(--accent);width:0%;transition:width .3s;border-radius:2px"></div>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="u-progress-label">Subiendo...</div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeUploadModal()">Cancelar</button>
-      <button class="btn btn-primary" id="u-submit-btn" onclick="uploadPlantilla()">Subir Plantilla</button>
-    </div>
-  </div>
-</div>
-
 <!-- Review modal -->
 <div id="review-modal" class="modal-overlay" style="display:none">
   <div class="modal" style="max-width:480px">
@@ -286,7 +242,6 @@ let templates     = [];
 let selectedTpl   = null;
 let generatedHTML = '';   // full HTML string ready to render + download
 let savedDocId    = null;
-let selectedFile  = null;
 
 // ── Init ──────────────────────────────────────────────────
 async function init() {
@@ -298,14 +253,6 @@ async function init() {
   isAdmin = ['admin', 'super_admin'].includes(role);
 
   await loadTemplates();
-
-  // Sidebar sub-button triggers upload modal
-  const params = new URLSearchParams(location.search);
-  if (params.get('action') === 'upload-plantilla' && isAdmin) {
-    openUploadModal();
-    // Clean URL
-    history.replaceState({}, '', '/generate.html');
-  }
 }
 
 // ── Load templates ────────────────────────────────────────
@@ -331,11 +278,7 @@ function renderPanel() {
       <div class="no-tpl">
         <div class="icon">📄</div>
         <p><strong>Sin plantillas disponibles.</strong></p>
-        <p>${isAdmin
-          ? 'Sube una plantilla HTML usando el botón "+ Subir Plantilla" en la barra lateral.'
-          : 'Solicita a un administrador que suba plantillas de documentos.'
-        }</p>
-        ${isAdmin ? `<button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="openUploadModal()">+ Subir primera plantilla</button>` : ''}
+        <p>Las plantillas son gestionadas internamente por la administración.</p>
       </div>`;
     return;
   }
@@ -343,7 +286,6 @@ function renderPanel() {
   document.getElementById('panel-badge').textContent = templates.length + ' plantilla' + (templates.length !== 1 ? 's' : '');
 
   document.getElementById('panel-body').innerHTML = `
-    ${isAdmin ? `<button class="btn btn-secondary btn-sm" style="width:100%" onclick="openUploadModal()">⚙️ + Subir Plantilla</button>` : ''}
     ${templates.map(t => `
     <div class="tpl-card" data-id="${t.id}" onclick="selectTemplate('${t.id}')">
       <div class="tpl-name">${escHtml(t.title)}</div>
@@ -689,106 +631,6 @@ async function submitForReview() {
     document.getElementById('review-btn').style.display = 'none';
   } catch(e) { showToast('Error: ' + e.message, 'error'); }
   btn.disabled = false; btn.textContent = 'Enviar';
-}
-
-// ── Upload plantilla (admin) ──────────────────────────────
-function openUploadModal() {
-  if (!isAdmin) { showToast('Solo administradores pueden subir plantillas', 'warning'); return; }
-  selectedFile = null;
-  document.getElementById('u-title').value = '';
-  document.getElementById('u-desc').value = '';
-  document.getElementById('u-file-name').textContent = 'Arrastra un archivo .html o haz clic para seleccionar';
-  document.getElementById('u-dropzone').style.borderColor = 'var(--border2)';
-  document.getElementById('u-progress-wrap').style.display = 'none';
-  document.getElementById('upload-modal').style.display = 'flex';
-}
-function closeUploadModal() { document.getElementById('upload-modal').style.display = 'none'; }
-
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('u-dropzone').style.borderColor = 'var(--border2)';
-  const file = e.dataTransfer.files[0];
-  if (file) handleFileSelect(file);
-}
-
-function handleFileSelect(file) {
-  if (!file) return;
-  if (!file.name.endsWith('.html') && file.type !== 'text/html') {
-    showToast('Solo se aceptan archivos .html', 'warning'); return;
-  }
-  selectedFile = file;
-  document.getElementById('u-file-name').textContent = '✓ ' + file.name;
-  document.getElementById('u-dropzone').style.borderColor = 'var(--accent)';
-  // Auto-fill title from filename
-  if (!document.getElementById('u-title').value) {
-    document.getElementById('u-title').value = file.name.replace(/\.html?$/i,'').replace(/[-_]/g,' ');
-  }
-}
-
-async function uploadPlantilla() {
-  const title = document.getElementById('u-title').value.trim();
-  if (!title) { showToast('Escribe el nombre de la plantilla', 'warning'); return; }
-  if (!selectedFile) { showToast('Selecciona un archivo HTML', 'warning'); return; }
-
-  const btn = document.getElementById('u-submit-btn');
-  btn.disabled = true; btn.textContent = 'Subiendo...';
-  document.getElementById('u-progress-wrap').style.display = 'block';
-
-  try {
-    // Read file as text
-    const htmlText = await readFileAsText(selectedFile);
-    setProgress(40, 'Procesando plantilla...');
-
-    // Encode to base64
-    const base64 = btoa(unescape(encodeURIComponent(htmlText)));
-    setProgress(70, 'Guardando en portal...');
-
-    const db = getDB();
-    const { data: { user } } = await db.auth.getUser();
-
-    const { data: inserted, error } = await db.from('metatronix_docs').insert({
-      title,
-      description: document.getElementById('u-desc').value.trim() || null,
-      category: 'plantilla',
-      visibility: 'all',
-      file_name: selectedFile.name,
-      file_type: 'text/html',
-      file_size: selectedFile.size,
-      file_data: base64,
-      text_content: htmlText,   // full HTML stored as text for Clippy + generation
-      uploaded_by: user.id,
-      uploaded_by_name: currentUser?.profile?.full_name || user.email,
-      uploaded_by_role: currentUser?.profile?.role || 'admin',
-    }).select().single();
-
-    if (error) throw error;
-    setProgress(100, 'Plantilla subida ✓');
-
-    setTimeout(async () => {
-      closeUploadModal();
-      showToast('Plantilla subida correctamente ✓', 'success');
-      await loadTemplates();
-    }, 600);
-
-  } catch(e) {
-    showToast('Error al subir: ' + e.message, 'error');
-    document.getElementById('u-progress-wrap').style.display = 'none';
-  }
-  btn.disabled = false; btn.textContent = 'Subir Plantilla';
-}
-
-function setProgress(pct, label) {
-  document.getElementById('u-progress').style.width = pct + '%';
-  document.getElementById('u-progress-label').textContent = label;
-}
-
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = e => resolve(e.target.result);
-    r.onerror = reject;
-    r.readAsText(file, 'UTF-8');
-  });
 }
 
 // ── Helpers ────────────────────────────────────────────────
