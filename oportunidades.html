@@ -10,9 +10,9 @@
     .opgen-layout {
       display: grid;
       grid-template-columns: 240px 1fr;
+      grid-template-rows: 1fr;    /* una fila que estira los items */
+      align-items: stretch;
       gap: 0;
-      height: calc(100vh - var(--header-h) - 120px);
-      min-height: 520px;
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       overflow: hidden;
@@ -87,8 +87,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      min-height: 0;   /* grid item: permite que el flex hijo se contraiga */
-      height: 100%;    /* hereda la altura del grid row */
+      min-height: 0;
+      /* sin height:100% — el grid stretch hace el trabajo */
     }
 
     /* ── Segment header ───────────────────────────────────────── */
@@ -383,13 +383,18 @@
       .sidebar-products { display: none; }
     }
 
-    /* ── Full-viewport shell (fix: prevents content cutoff) ───── */
+    /* ── Full-viewport shell — position:fixed para no depender de calc() ── */
     body { overflow: hidden; }
     .opp-shell {
+      position: fixed;
+      top: 0;
+      left: var(--sidebar-w, 224px);
+      right: 0;
+      bottom: 0;
       display: flex;
       flex-direction: column;
-      height: calc(100vh - var(--header-h));
       overflow: hidden;
+      background: var(--bg, #f5f6fa);
     }
     .opp-head {
       flex-shrink: 0;
@@ -407,10 +412,13 @@
       min-height: 0;
       padding: 0 24px 12px;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     .opgen-layout {
-      height: 100% !important;   /* override old calc() */
+      height: 100% !important;
       min-height: 0 !important;
+      flex: 1;
     }
   </style>
 </head>
