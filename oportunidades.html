@@ -379,29 +379,60 @@
       .seg-btn { min-width: 120px; border-bottom: none; border-right: 1px solid var(--border); }
       .sidebar-products { display: none; }
     }
+
+    /* ── Full-viewport shell (fix: prevents content cutoff) ───── */
+    body { overflow: hidden; }
+    .opp-shell {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - var(--header-h));
+      overflow: hidden;
+    }
+    .opp-head {
+      flex-shrink: 0;
+      padding: 16px 24px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .opp-head h1 { font-size: 1.6rem; }
+    .opp-head .muted { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .opp-content {
+      flex: 1;
+      min-height: 0;
+      padding: 0 24px 12px;
+      overflow: hidden;
+    }
+    .opgen-layout {
+      height: 100% !important;   /* override old calc() */
+      min-height: 0 !important;
+    }
   </style>
 </head>
 <body>
 <div id="header-placeholder"></div>
 
-<div class="page" style="padding-bottom: 0">
-  <div class="page-header mt-24" style="margin-bottom:16px">
-    <div class="page-header-text">
-      <h1>Generador de Oportunidades</h1>
-      <p class="muted">Inteligencia de ventas en tiempo real para todos los productos y propuestas de MetaTronix.</p>
+<div class="opp-shell">
+
+<!-- Top bar -->
+<div class="opp-head">
+  <div>
+    <h1>Generador de Oportunidades</h1>
+    <p class="muted">Inteligencia de ventas en tiempo real para todos los productos y propuestas de MetaTronix.</p>
+  </div>
+  <div class="flex gap-8 align-center">
+    <div class="intel-status" id="intel-status">
+      <span class="intel-dot"></span>
+      IA DE VENTAS · EN LÍNEA
     </div>
-    <div class="flex gap-8 align-center">
-      <div class="intel-status" id="intel-status">
-        <span class="intel-dot"></span>
-        IA DE VENTAS · EN LÍNEA
-      </div>
-      <button class="btn btn-ghost" onclick="clearResults()">↺ Limpiar</button>
-    </div>
+    <button class="btn btn-ghost" onclick="clearResults()">↺ Limpiar</button>
   </div>
 </div>
 
 <!-- Access denied screen (shown if not authorized) -->
-<div id="access-screen" class="page" style="display:none">
+<div id="access-screen" style="display:none; flex:1; align-items:center; justify-content:center;">
   <div class="access-screen">
     <div class="access-screen-icon">🔍</div>
     <h2>Generador de Oportunidades</h2>
@@ -414,7 +445,7 @@
 </div>
 
 <!-- Main layout -->
-<div id="main-layout" class="page" style="padding-top:0; display:none">
+<div id="main-layout" class="opp-content" style="display:none">
   <div class="opgen-layout">
 
     <!-- Sidebar -->
@@ -530,7 +561,9 @@
 
     </div><!-- /.opgen-main -->
   </div><!-- /.opgen-layout -->
-</div><!-- /.page -->
+</div><!-- /.opp-content / #main-layout -->
+
+</div><!-- /.opp-shell -->
 
 <!-- ══════════════════════════════════════════════════════════════ -->
 <!-- SCRIPTS                                                        -->
@@ -656,7 +689,7 @@ async function init() {
   // Check authorization
   const profile = currentUser.profile || {};
   if (!profile.perplexity_enabled) {
-    document.getElementById('access-screen').style.display = 'block';
+    document.getElementById('access-screen').style.display = 'flex';
     // If already pending, show message
     if (profile.perplexity_pending_auth) {
       document.getElementById('req-access-btn').disabled = true;
