@@ -7,7 +7,7 @@
   'use strict';
 
   /* ── Config ─────────────────────────────────────────────── */
-  const AGENT_NAME   = 'Clippy';
+  const AGENT_NAME   = 'MetaGenio';
   const AGENT_ROLE   = 'Agente de Seguimiento';
   const SESSION_KEY  = 'mtx_agent_session_' + Date.now().toString(36);
   const HISTORY_LIMIT = 30; // mensajes máx en contexto
@@ -21,60 +21,101 @@
   let sharedDocs      = [];   // metatronix_docs con text_content
   let approvedDocs    = [];   // documents aprobados del portal
 
-  /* ── Clippy SVG ─────────────────────────────────────────────── */
-  function clippySVG (id) {
-    return `<svg id="${id}" class="clippy-svg" viewBox="0 0 64 82" xmlns="http://www.w3.org/2000/svg">
+    /* ── MetaGenio SVG ─────────────────────────────────────────── */
+  function metaGenioSVG (id) {
+    return `<svg id="${id}" class="mgenio-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="cg1-${id}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#d4dae8"/>
-      <stop offset="100%" stop-color="#8890a4"/>
+    <linearGradient id="mg-bg-${id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c8e4ff"/>
+      <stop offset="100%" stop-color="#a2c8f5"/>
     </linearGradient>
-    <linearGradient id="cg2-${id}" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#c0c8d8"/>
-      <stop offset="100%" stop-color="#9098b0"/>
-    </linearGradient>
-    <filter id="cshadow-${id}">
-      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="rgba(0,0,0,.25)"/>
+    <clipPath id="mg-clip-${id}">
+      <rect x="22" y="20" width="56" height="60" rx="9"/>
+    </clipPath>
+    <filter id="mg-sh-${id}" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="rgba(0,30,100,.3)"/>
     </filter>
   </defs>
-  <!-- Paperclip body -->
-  <g class="clippy-body" filter="url(#cshadow-${id})">
-    <!-- Outer loop left side down -->
-    <path d="M32 5 C16 5 9 16 9 28 L9 64 C9 73 15 79 24 79 C30 79 35 76 37 70"
-          fill="none" stroke="url(#cg1-${id})" stroke-width="5.5" stroke-linecap="round"/>
-    <!-- Outer loop top -->
-    <path d="M32 5 C48 5 55 16 55 28 L55 50 C55 58 49 63 41 63 L9 63"
-          fill="none" stroke="url(#cg2-${id})" stroke-width="5" stroke-linecap="round"/>
-    <!-- Inner loop -->
-    <path d="M32 16 C22 16 17 22 17 30 L17 52"
-          fill="none" stroke="url(#cg1-${id})" stroke-width="4" stroke-linecap="round"/>
-    <path d="M32 16 C42 16 47 22 47 30 L47 50"
-          fill="none" stroke="url(#cg2-${id})" stroke-width="4" stroke-linecap="round"/>
+  <!-- Neural lines TOP -->
+  <line x1="33" y1="20" x2="20" y2="3"  stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="33" y1="20" x2="42" y2="3"  stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="67" y1="20" x2="58" y2="3"  stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="67" y1="20" x2="80" y2="3"  stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="33" y1="20" x2="58" y2="3"  stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="67" y1="20" x2="42" y2="3"  stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Neural lines BOTTOM -->
+  <line x1="33" y1="80" x2="20" y2="97" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="33" y1="80" x2="42" y2="97" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="67" y1="80" x2="58" y2="97" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="67" y1="80" x2="80" y2="97" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="33" y1="80" x2="58" y2="97" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="67" y1="80" x2="42" y2="97" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Neural lines LEFT -->
+  <line x1="22" y1="35" x2="4"  y2="28" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="22" y1="35" x2="4"  y2="50" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="22" y1="65" x2="4"  y2="50" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="22" y1="65" x2="4"  y2="72" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Neural lines RIGHT -->
+  <line x1="78" y1="35" x2="96" y2="28" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="78" y1="35" x2="96" y2="50" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="78" y1="65" x2="96" y2="50" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="78" y1="65" x2="96" y2="72" stroke="#1a6fff" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Chip body -->
+  <rect x="22" y="20" width="56" height="60" rx="9"
+        fill="url(#mg-bg-${id})" stroke="#1870e8" stroke-width="2.5"
+        filter="url(#mg-sh-${id})"/>
+  <!-- Teal right accent -->
+  <rect x="60" y="20" width="18" height="60" fill="#00c8e0" clip-path="url(#mg-clip-${id})"/>
+  <!-- Screen highlight -->
+  <rect x="26" y="24" width="15" height="8" rx="2.5" fill="rgba(255,255,255,.42)"/>
+  <!-- Brain/head area -->
+  <path d="M34 45 Q36 36 41 40 Q45 34 50 38 Q55 34 59 40 Q64 36 66 45 Q66 53 62 55 Q64 59 61 65 Q56 69 50 65 Q44 69 39 65 Q36 59 38 55 Q34 53 34 45Z"
+        fill="#1a5fd4" opacity="0.88"/>
+  <!-- Glasses + eyes group (animated) -->
+  <g class="mgenio-eyes" style="transform-origin: 50px 48px">
+    <circle cx="43" cy="48" r="5.8" fill="rgba(255,255,255,.96)" stroke="#0d3fa8" stroke-width="1.8"/>
+    <circle cx="57" cy="48" r="5.8" fill="rgba(255,255,255,.96)" stroke="#0d3fa8" stroke-width="1.8"/>
+    <circle class="mgenio-pupil-l" cx="43" cy="48.5" r="2.2" fill="#141420"/>
+    <circle class="mgenio-pupil-r" cx="57" cy="48.5" r="2.2" fill="#141420"/>
+    <circle cx="44.2" cy="47.2" r="0.9" fill="white"/>
+    <circle cx="58.2" cy="47.2" r="0.9" fill="white"/>
   </g>
-  <!-- Eyes -->
-  <g class="clippy-eyes">
-    <!-- Left eye white -->
-    <ellipse cx="22" cy="33" rx="8" ry="9" fill="white" stroke="#70788a" stroke-width="1.3"/>
-    <!-- Right eye white -->
-    <ellipse cx="42" cy="33" rx="8" ry="9" fill="white" stroke="#70788a" stroke-width="1.3"/>
-    <!-- Left pupil -->
-    <circle class="clippy-pupil-l" cx="23" cy="34" r="4.8" fill="#141420"/>
-    <!-- Right pupil -->
-    <circle class="clippy-pupil-r" cx="43" cy="34" r="4.8" fill="#141420"/>
-    <!-- Left shine -->
-    <circle cx="25" cy="31" r="2" fill="white"/>
-    <!-- Right shine -->
-    <circle cx="45" cy="31" r="2" fill="white"/>
-  </g>
+  <!-- Glasses bridge + temples -->
+  <line x1="48.8" y1="48" x2="51.2" y2="48" stroke="#0d3fa8" stroke-width="1.8"/>
+  <line x1="37.2" y1="47" x2="35"   y2="44" stroke="#0d3fa8" stroke-width="1.6"/>
+  <line x1="62.8" y1="47" x2="65"   y2="44" stroke="#0d3fa8" stroke-width="1.6"/>
+  <!-- Nose -->
+  <ellipse cx="50" cy="56" rx="2" ry="1.6" fill="#e8b87a"/>
+  <!-- Mustache -->
+  <path d="M36 60 Q41 55 45 59 Q48 57 50 57 Q52 57 55 59 Q59 55 64 60 Q62 67 56 62 Q53 65 50 64 Q47 65 44 62 Q38 67 36 60Z"
+        fill="white"/>
+  <!-- Top orange nodes -->
+  <circle cx="20" cy="3"  r="4.5" fill="#f5a623"/>
+  <circle cx="42" cy="3"  r="4.5" fill="#f5a623"/>
+  <circle cx="58" cy="3"  r="4.5" fill="#f5a623"/>
+  <circle cx="80" cy="3"  r="4.5" fill="#f5a623"/>
+  <!-- Bottom orange nodes -->
+  <circle cx="20" cy="97" r="4.5" fill="#f5a623"/>
+  <circle cx="42" cy="97" r="4.5" fill="#f5a623"/>
+  <circle cx="58" cy="97" r="4.5" fill="#f5a623"/>
+  <circle cx="80" cy="97" r="4.5" fill="#f5a623"/>
+  <!-- Left orange nodes -->
+  <circle cx="4"  cy="28" r="4.5" fill="#f5a623"/>
+  <circle cx="4"  cy="50" r="4.5" fill="#f5a623"/>
+  <circle cx="4"  cy="72" r="4.5" fill="#f5a623"/>
+  <!-- Right orange nodes -->
+  <circle cx="96" cy="28" r="4.5" fill="#f5a623"/>
+  <circle cx="96" cy="50" r="4.5" fill="#f5a623"/>
+  <circle cx="96" cy="72" r="4.5" fill="#f5a623"/>
 </svg>`;
   }
 
-  /* ── Set Clippy talking state ───────────────────────────────── */
-  function setClippyTalking (active) {
-    const avatar = document.getElementById('clippy-header-avatar');
+  /* ── Set MetaGenio talking state ───────────────────────────── */
+  function setMetaGenioTalking (active) {
+    const avatar = document.getElementById('mgenio-header-avatar');
     if (!avatar) return;
-    if (active) avatar.classList.add('clippy-talking');
-    else avatar.classList.remove('clippy-talking');
+    if (active) avatar.classList.add('mgenio-talking');
+    else avatar.classList.remove('mgenio-talking');
   }
 
   /* ── Init ───────────────────────────────────────────────── */
@@ -99,18 +140,18 @@
     const isReturning = messages.length > 0;
     const text = isReturning
       ? `¡Hola de nuevo, <strong>${name}</strong>! Tu historial está listo. ¿En qué te ayudo?`
-      : `¡Hola, <strong>${name}</strong>! Soy Clippy. Puedo ayudarte con el portal, leads, documentos y más.`;
+      : `¡Hola, <strong>${name}</strong>! Soy MetaGenio. Puedo ayudarte con el portal, leads, documentos y más.`;
 
     const bubble = document.createElement('div');
-    bubble.id = 'clippy-bubble';
-    bubble.className = 'clippy-bubble';
+    bubble.id = 'mgenio-bubble';
+    bubble.className = 'mgenio-bubble';
     bubble.innerHTML = `
-      <button class="clippy-bubble-close" onclick="document.getElementById('clippy-bubble')?.remove()">✕</button>
+      <button class="mgenio-bubble-close" onclick="document.getElementById('mgenio-bubble')?.remove()">✕</button>
       <p>${text}</p>
       <p style="margin-top:4px;font-size:11px;color:#5a6a85">Haz clic en mí para abrir el chat 💬</p>`;
 
     bubble.addEventListener('click', (e) => {
-      if (e.target.classList.contains('clippy-bubble-close')) return;
+      if (e.target.classList.contains('mgenio-bubble-close')) return;
       bubble.remove();
       togglePanel(true);
     });
@@ -237,7 +278,7 @@
 
     const hasAnyKnowledge = websiteSources.length || sharedDocs.length || approvedDocs.length;
 
-    return `Eres Clippy, el Agente Inteligente de MetaTronix. Asistes a los colaboradores de IBANOR SA de CV en el Portal Interno metatronixleads.tech.
+    return `Eres MetaGenio, el Agente Inteligente de MetaTronix. Asistes a los colaboradores de IBANOR SA de CV en el Portal Interno metatronixleads.tech.
 
 IDENTIDAD: Eres un experto en el portal MetaTronix y en todos los productos y subsidiarias de la empresa. Respondes siempre en español. Tienes una personalidad servicial, directa y con un leve toque de humor de oficina. Ocasionalmente puedes hacer referencias sutiles y cálidas a tu historia como asistente de oficina clásico.
 
@@ -288,7 +329,7 @@ Cuando el usuario pregunte cómo hacer algo en el portal, da instrucciones compl
   - Todos los usuarios pueden SUBIR archivos
   - Para SUBIR: botón "+ Subir Documento" → completa título, descripción, categoría → arrastra el archivo o usa el selector → selecciona visibilidad (Todos / Solo Admin) → "Subir Documento"
   - Formatos soportados: PDF, Word, Excel, imágenes, texto, CSV, JSON y más
-  - Clippy aprende automáticamente del contenido de los documentos subidos
+  - MetaGenio aprende automáticamente del contenido de los documentos subidos
   - Para DESCARGAR: botón "Descargar" en la tarjeta del documento
   - Para ELIMINAR: solo el que lo subió o un admin puede eliminarlo
 
@@ -310,14 +351,14 @@ Cuando el usuario pregunte cómo hacer algo en el portal, da instrucciones compl
   - En la parte inferior del sidebar: avatar del usuario, rol y botón "↩ Salir" para cerrar sesión
   - El ícono de campana (🔔) abre las alertas del sistema
 
-▸ CLIPPY (este asistente)
-  - Aparece como un clip animado en la esquina inferior derecha
+▸ METAGENIO (este asistente)
+  - Aparece como un chip animado con red neuronal en la esquina inferior derecha
   - Clic para abrir/cerrar el chat
   - Botón de recarga (↺) en el header del chat para nueva conversación
   - El historial se guarda automáticamente por usuario
 
 ════════════════════════════════════════
-CAPACIDADES DE CLIPPY
+CAPACIDADES DE METAGENIO
 ════════════════════════════════════════
 - Explicas cómo usar cualquier función del portal PASO A PASO con instrucciones exactas
 - Respondes preguntas sobre MetaTronix basándote en los documentos y sitios web cargados
@@ -489,8 +530,8 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     } catch (e) {
       const isAuthErr = e.message && (e.message.includes('401') || e.message.includes('authentication') || e.message.includes('api-key'));
       const reply = isAuthErr
-        ? 'Clippy está pendiente de activación. El administrador debe configurar la API key. Contacta a acanales@ibanormexico.com.'
-        : 'Ocurrió un error al conectar con Clippy. Intenta de nuevo en un momento.';
+        ? 'MetaGenio está pendiente de activación. El administrador debe configurar la API key. Contacta a acanales@ibanormexico.com.'
+        : 'Ocurrió un error al conectar con MetaGenio. Intenta de nuevo en un momento.';
       messages.push({ role: 'assistant', content: reply });
       return reply;
     }
@@ -517,14 +558,14 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     // Trigger button
     const btn = document.createElement('button');
     btn.id = 'mtx-agent-btn';
-    btn.setAttribute('aria-label', 'Abrir asistente Aria');
-    btn.innerHTML = clippySVG('clippy-svg') + `<span id="mtx-agent-badge"></span>`;
+    btn.setAttribute('aria-label', 'Abrir MetaGenio');
+    btn.innerHTML = metaGenioSVG('mgenio-svg') + `<span id="mtx-agent-badge"></span>`;
 
     // Panel
     const panel = document.createElement('div');
     panel.id = 'mtx-agent-panel';
     panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-label', 'Asistente Aria de MetaTronix');
+    panel.setAttribute('aria-label', 'Asistente MetaGenio de MetaTronix');
 
     const initials = (currentUser?.profile?.full_name || currentUser?.email || 'U')
       .split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
@@ -532,8 +573,8 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     panel.innerHTML = `
       <!-- Header -->
       <div class="agent-header">
-        <div class="agent-avatar" id="clippy-header-avatar">
-          ${clippySVG('clippy-header')}
+        <div class="agent-avatar" id="mgenio-header-avatar">
+          ${metaGenioSVG('mgenio-header')}
         </div>
         <div class="agent-header-info">
           <div class="agent-name">${AGENT_NAME} · ${AGENT_ROLE}</div>
@@ -557,7 +598,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
         <div class="agent-welcome">
           <div class="agent-welcome-title">📎 ¡Hola! Parece que estás trabajando en MetaTronix.</div>
           <div class="agent-welcome-text">
-            Soy Clippy, tu agente de seguimiento. Puedo ayudarte con documentos, prospectos,
+            Soy MetaGenio, tu agente de seguimiento. Puedo ayudarte con documentos, prospectos,
             el portal y cualquier duda sobre MetaTronix. ¿Necesitas ayuda?
           </div>
         </div>
@@ -665,7 +706,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     panel.classList.toggle('open', isOpen);
 
     // Ocultar burbuja al abrir
-    document.getElementById('clippy-bubble')?.remove();
+    document.getElementById('mgenio-bubble')?.remove();
 
     if (isOpen) {
       document.getElementById('mtx-agent-input')?.focus();
@@ -686,7 +727,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
 
     const intro = isReturning
       ? `¡Hola de nuevo, **${name}**! 👋 Retomamos donde lo dejamos.\n\nEstás en **${page.name}**. Recuerda que puedo:\n- 📋 Explicarte cualquier función del portal paso a paso\n- 🧭 Guiarte a la sección correcta\n- 📂 Ayudarte con leads, documentos y oportunidades\n- 💡 Responder preguntas sobre MetaTronix y sus productos\n\n¿En qué te ayudo hoy?`
-      : `¡Hola, **${name}**! 👋 Soy **Clippy**, tu asistente inteligente de MetaTronix.\n\nEstás en **${page.name}**. Aquí te cuento cómo puedo ayudarte:\n\n- 🧭 **Navegar el portal** — te explico cada sección paso a paso\n- 📄 **Documentos** — cómo generarlos, editarlos y enviarlos a revisión\n- 🎯 **Leads** — registrar prospectos, dar seguimiento y usar el Kanban\n- 📂 **Docs MTX** — cómo subir y consultar archivos compartidos\n- 🪙 **Oportunidades** — cómo usar la inteligencia de ventas\n- 🏢 **MetaTronix** — información de la empresa, productos y subsidiarias\n\nPuedes preguntarme cualquier cosa con tus propias palabras. ¿Por dónde empezamos?`;
+      : `¡Hola, **${name}**! 👋 Soy **MetaGenio**, tu asistente inteligente de MetaTronix.\n\nEstás en **${page.name}**. Aquí te cuento cómo puedo ayudarte:\n\n- 🧭 **Navegar el portal** — te explico cada sección paso a paso\n- 📄 **Documentos** — cómo generarlos, editarlos y enviarlos a revisión\n- 🎯 **Leads** — registrar prospectos, dar seguimiento y usar el Kanban\n- 📂 **Docs MTX** — cómo subir y consultar archivos compartidos\n- 🪙 **Oportunidades** — cómo usar la inteligencia de ventas\n- 🏢 **MetaTronix** — información de la empresa, productos y subsidiarias\n\nPuedes preguntarme cualquier cosa con tus propias palabras. ¿Por dónde empezamos?`;
 
     appendMessage('agent', intro);
   }
@@ -703,7 +744,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
       if (!access.allowed) {
         if (input && !overrideText) { input.value = ''; input.style.height = 'auto'; }
         const msgs = {
-          disabled:     '🚫 El acceso a Clippy (Claude) está deshabilitado por el administrador.',
+          disabled:     '🚫 El acceso a MetaGenio (Claude) está deshabilitado por el administrador.',
           pending_auth: '⏳ Alcanzaste tu límite mensual. Tu solicitud de autorización fue enviada al SuperAdmin.',
           limit_reached:`⚠️ Límite mensual alcanzado (${access.used}/${access.limit} usos). Solicitud enviada al administrador.`,
         };
@@ -719,7 +760,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
 
     appendMessage('user', text);
     showTyping();
-    setClippyTalking(true);
+    setMetaGenioTalking(true);
 
     document.getElementById('mtx-agent-send').disabled = true;
     isTyping = true;
@@ -727,7 +768,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     const reply = await callClaude(text);
 
     hideTyping();
-    setClippyTalking(false);
+    setMetaGenioTalking(false);
 
     // Detectar comando de navegación [NAV:/url]
     const navMatch = reply.match(/\[NAV:(\/[^\]]+)\]/);
@@ -769,7 +810,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     div.className = `msg ${role}${isHistory ? ' msg-history' : ''}`;
 
     const avatarHTML = role === 'agent'
-      ? `<div class="msg-avatar clippy-msg">${clippySVG('clippy-msg-' + Date.now())}</div>`
+      ? `<div class="msg-avatar mgenio-msg">${metaGenioSVG('mgenio-msg-' + Date.now())}</div>`
       : `<div class="msg-avatar user-avatar">${initials}</div>`;
 
     const rendered = renderMarkdown(text);
@@ -792,7 +833,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     div.className = 'typing-indicator';
     div.id = 'agent-typing';
     div.innerHTML = `
-      <div class="msg-avatar clippy-msg">${clippySVG('clippy-typing')}</div>
+      <div class="msg-avatar mgenio-msg">${metaGenioSVG('mgenio-typing')}</div>
       <div class="typing-dots">
         <span></span><span></span><span></span>
       </div>`;
