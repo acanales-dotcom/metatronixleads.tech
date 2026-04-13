@@ -335,12 +335,16 @@ function showToast(msg, type = 'info') {
   }, 3500);
 }
 
+const IBANOR_EMAILS = ['acanales@ibanormexico.com','nibarra@ibanormexico.com','acanalesf@ibanormexico.com'];
+
 function renderHeader(user, activePage) {
   const role = user?.profile?.role;
   const isAdmin = role === 'admin';
   const isSuperAdmin = role === 'super_admin';
   const isRestrictedAdmin = role === 'admin_restringido';
   const hasAdminAccess = ADMIN_ROLES.includes(role);
+  const userEmail = (user?.email || '').toLowerCase().trim();
+  const hasIbanorAccess = IBANOR_EMAILS.includes(userEmail);
   const name = user?.profile?.full_name || user?.email || '—';
   // Store user globally for badge refresh
   window._mtxCurrentUser = user;
@@ -436,7 +440,13 @@ function renderHeader(user, activePage) {
       <a href="/archivos.html" class="sidebar-nav-link ${activePage==='archivos'?'active':''}">
         <span class="nav-line1">Archivos</span>
         <span class="nav-line2">Admin</span>
-      </a>
+      </a>` : ''}
+      ${hasIbanorAccess ? `
+      <a href="/archivos-ibanor.html" class="sidebar-nav-link ${activePage==='archivos-ibanor'?'active':''}">
+        <span class="nav-line1">Archivos</span>
+        <span class="nav-line2">IBANOR</span>
+      </a>` : ''}
+      ${hasAdminAccess ? `
       <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">Admin</a>` : ''}
     </nav>
 
