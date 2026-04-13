@@ -7,6 +7,12 @@
   <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
   <style>
+
+    /* ═══════════════════════════════════════════════════
+       LAYOUT PRINCIPAL
+       La barra lateral del portal fija padding-left:224px
+       en el body. Todo el layout vive dentro de eso.
+    ═══════════════════════════════════════════════════ */
     html, body { height: 100%; margin: 0; overflow: hidden; }
 
     .fm-layout {
@@ -15,7 +21,7 @@
       overflow: hidden;
     }
 
-    /* ── Panel árbol ── */
+    /* ── Panel izquierdo: árbol de carpetas ── */
     .fm-tree-panel {
       width: 240px;
       flex-shrink: 0;
@@ -49,7 +55,9 @@
     .fm-tree-scroll::-webkit-scrollbar { width: 3px; }
     .fm-tree-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    /* Sección raíz */
+    /* ── Sección raíz (ej. ADMINISTRACIÓN) ── */
+    .sec {}
+
     .sec-hdr {
       display: flex;
       align-items: center;
@@ -77,10 +85,13 @@
     }
 
     .sec.open > .sec-hdr > .sec-arrow { transform: rotate(90deg); }
+
     .sec-body { display: none; }
     .sec.open > .sec-body { display: block; }
 
-    /* Sub-grupo */
+    /* ── Nodo sub-grupo (ej. Bancos DLLS) ── */
+    .grp {}
+
     .grp-hdr {
       display: flex;
       align-items: center;
@@ -98,8 +109,10 @@
     .grp-hdr::before {
       content: '';
       position: absolute;
-      left: 16px; top: 50%;
-      width: 5px; height: 1px;
+      left: 16px;
+      top: 50%;
+      width: 5px;
+      height: 1px;
       background: var(--border);
     }
 
@@ -113,10 +126,11 @@
     }
 
     .grp.open > .grp-hdr > .grp-arrow { transform: rotate(90deg); }
+
     .grp-body { display: none; }
     .grp.open > .grp-body { display: block; }
 
-    /* Hoja */
+    /* ── Nodo hoja clickeable (carga archivos) ── */
     .leaf {
       display: flex;
       align-items: center;
@@ -134,8 +148,10 @@
     .leaf::before {
       content: '';
       position: absolute;
-      left: 26px; top: 50%;
-      width: 5px; height: 1px;
+      left: 26px;
+      top: 50%;
+      width: 5px;
+      height: 1px;
       background: var(--border);
     }
 
@@ -147,7 +163,7 @@
       border-left-color: var(--accent);
     }
 
-    /* Entidad dinámica */
+    /* Hoja de entidad dinámica (empresa) */
     .ent-hdr {
       display: flex;
       align-items: center;
@@ -164,8 +180,10 @@
     .ent-hdr::before {
       content: '';
       position: absolute;
-      left: 16px; top: 50%;
-      width: 5px; height: 1px;
+      left: 16px;
+      top: 50%;
+      width: 5px;
+      height: 1px;
       background: var(--border);
     }
 
@@ -200,7 +218,7 @@
 
     .add-ent-btn:hover { opacity: 1; }
 
-    /* ── Panel archivos ── */
+    /* ── Panel derecho: archivos ── */
     .fm-file-panel {
       flex: 1;
       min-width: 0;
@@ -231,21 +249,6 @@
 
     .fm-bc .cur { color: var(--accent); }
     .fm-bc .sep { margin: 0 4px; color: var(--border); }
-
-    .ibanor-badge {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      background: rgba(26,111,255,.15);
-      border: 1px solid rgba(26,111,255,.35);
-      border-radius: var(--radius);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: .06em;
-      color: #4d9fff;
-      white-space: nowrap;
-    }
 
     .btn-up {
       display: flex;
@@ -279,7 +282,7 @@
 
     .btn-ico:hover { border-color: var(--text); color: var(--text); }
 
-    /* Período */
+    /* Barra de período (Contabilidad) */
     .period-bar {
       display: none;
       align-items: center;
@@ -313,7 +316,7 @@
 
     .period-bar select:focus { outline: none; border-color: var(--accent); }
 
-    /* Área archivos */
+    /* Área de archivos */
     .fm-files {
       flex: 1;
       overflow-y: auto;
@@ -338,7 +341,11 @@
     .empty-state .ei { font-size: 2.5rem; opacity: .25; }
 
     /* Tabla */
-    .ftbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .ftbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
 
     .ftbl th {
       padding: 8px 10px;
@@ -372,7 +379,13 @@
       max-width: 320px;
     }
 
-    .fmeta { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+    .fmeta {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
     .fact { display: flex; gap: 6px; }
 
     .btr {
@@ -390,7 +403,9 @@
     .btr:hover { border-color: var(--accent); color: var(--accent); }
     .btr.d:hover { border-color: var(--danger); color: var(--danger); }
 
-    /* ── Modales ── */
+    /* ═══════════════════════════════════════════════════
+       MODALES
+    ═══════════════════════════════════════════════════ */
     .mbg {
       display: none;
       position: fixed;
@@ -447,7 +462,8 @@
       transition: border-color .15s;
     }
 
-    .frow input:focus, .frow select:focus { outline: none; border-color: var(--accent); }
+    .frow input:focus,
+    .frow select:focus { outline: none; border-color: var(--accent); }
 
     .drop-zone {
       border: 2px dashed var(--border);
@@ -460,7 +476,8 @@
       color: var(--text-muted);
     }
 
-    .drop-zone:hover, .drop-zone.over {
+    .drop-zone:hover,
+    .drop-zone.over {
       border-color: var(--accent);
       background: var(--accent-dim);
       color: var(--text);
@@ -488,7 +505,12 @@
     .prog-fill { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
     .prog-txt { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 5px; text-align: center; }
 
-    .mact { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .mact {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
 
     .btn-prim {
       padding: 8px 18px;
@@ -542,7 +564,9 @@
       margin: 8px 0;
     }
 
-    /* Toasts */
+    /* ═══════════════════════════════════════════════════
+       TOASTS
+    ═══════════════════════════════════════════════════ */
     .toasts {
       position: fixed;
       bottom: 18px;
@@ -553,14 +577,23 @@
       gap: 6px;
     }
 
-    .toast { padding: 9px 14px; border-radius: var(--radius); font-size: 12.5px; max-width: 300px; animation: tin .2s ease; }
+    .toast {
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      max-width: 300px;
+      animation: tin .2s ease;
+    }
+
     .toast.ok  { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); }
     .toast.err { background: rgba(200,40,40,.12); border: 1px solid var(--danger); color: var(--danger); }
     .toast.inf { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
 
-    @keyframes tin { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes tin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Acceso denegado */
+    /* ═══════════════════════════════════════════════════
+       PANTALLA DE ACCESO DENEGADO
+    ═══════════════════════════════════════════════════ */
     .ad {
       display: none;
       position: fixed;
@@ -583,6 +616,7 @@
       line-height: 1;
     }
 
+    /* spinner */
     .spin {
       display: inline-block;
       width: 13px; height: 13px;
@@ -598,38 +632,43 @@
 </head>
 <body>
 
-<!-- Acceso denegado -->
+<!-- Access denied -->
 <div class="ad" id="adScreen">
   <div class="ad-code">403</div>
   <div style="font-size:15px;font-weight:600;color:var(--text)">Acceso restringido</div>
-  <div style="color:var(--text-muted);font-size:13px">Esta sección es exclusiva para usuarios autorizados de IBANOR.</div>
+  <div style="color:var(--text-muted);font-size:13px">Esta sección es exclusiva para administradores.</div>
   <a href="/dashboard.html" style="margin-top:8px;color:var(--accent);font-size:12px;text-decoration:none">← Volver al portal</a>
 </div>
 
-<!-- Sidebar del portal -->
+<!-- Portal sidebar -->
 <div id="header-placeholder"></div>
 
-<!-- ═══════════════════ LAYOUT ═══════════════════ -->
+<!-- ═══════════════════════════════════════════════════════
+     MAIN LAYOUT
+═══════════════════════════════════════════════════════ -->
 <div class="fm-layout" id="fmLayout" style="display:none;">
 
-  <!-- Árbol de carpetas -->
+  <!-- ── Árbol de carpetas ── -->
   <div class="fm-tree-panel">
     <div class="fm-tree-head">
       <div class="fm-tree-head-title">🏢 Archivos IBANOR</div>
     </div>
-    <div class="fm-tree-scroll" id="treeScroll"></div>
+    <div class="fm-tree-scroll" id="treeScroll">
+      <!-- JS lo rellena -->
+    </div>
   </div>
 
-  <!-- Panel archivos -->
+  <!-- ── Panel de archivos ── -->
   <div class="fm-file-panel">
 
     <div class="fm-toolbar">
       <div class="fm-bc" id="bc"><span class="cur">Selecciona una carpeta</span></div>
-      <div class="ibanor-badge">🏢 IBANOR SA de CV</div>
+      <span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#4d9fff;background:rgba(26,111,255,.12);border:1px solid rgba(26,111,255,.3);border-radius:var(--radius);padding:4px 9px;white-space:nowrap;">🏢 IBANOR SA de CV</span>
       <button class="btn-ico" onclick="refresh()" title="Recargar">⟳</button>
       <button class="btn-up" id="btnUp" onclick="openUpload()" disabled>↑ Subir archivo</button>
     </div>
 
+    <!-- Selector de período (Contabilidad) -->
     <div class="period-bar" id="periodBar">
       <label>Período:</label>
       <select id="selMes" onchange="onPeriod()"></select>
@@ -638,22 +677,26 @@
 
     <div class="fm-files" id="fileArea">
       <div class="empty-state">
-        <div class="ei">🏢</div>
+        <div class="ei">🗂</div>
         <div>Selecciona una carpeta del panel izquierdo</div>
       </div>
     </div>
 
-  </div>
-</div>
+  </div><!-- /fm-file-panel -->
+</div><!-- /fm-layout -->
 
-<!-- MODAL: Subir -->
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: Subir archivo
+═══════════════════════════════════════════════════════ -->
 <div class="mbg" id="mUpload">
   <div class="modal">
     <div class="m-title">Subir archivo</div>
+
     <div class="frow">
       <label>Carpeta destino</label>
       <input type="text" id="upDest" readonly style="opacity:.6;cursor:default;">
     </div>
+
     <div class="frow">
       <div class="drop-zone" id="dzone" onclick="document.getElementById('fInput').click()">
         Arrastra archivos aquí o <strong style="color:var(--accent)">haz clic</strong>
@@ -662,10 +705,12 @@
       </div>
       <div class="file-preview" id="fPreview"></div>
     </div>
+
     <div class="prog-wrap" id="progWrap">
       <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
       <div class="prog-txt" id="progTxt">Subiendo…</div>
     </div>
+
     <div class="mact">
       <button class="btn-can" onclick="closeUpload()">Cancelar</button>
       <button class="btn-prim" id="btnDo" onclick="doUpload()" disabled>Subir</button>
@@ -673,7 +718,9 @@
   </div>
 </div>
 
-<!-- MODAL: Agregar entidad -->
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: Agregar cliente / proveedor
+═══════════════════════════════════════════════════════ -->
 <div class="mbg" id="mEnt">
   <div class="modal">
     <div class="m-title" id="entTitle">Agregar Cliente</div>
@@ -688,7 +735,9 @@
   </div>
 </div>
 
-<!-- MODAL: Eliminar -->
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: Confirmar eliminar
+═══════════════════════════════════════════════════════ -->
 <div class="mbg" id="mDel">
   <div class="modal">
     <div class="m-title danger">Eliminar archivo</div>
@@ -703,93 +752,89 @@
 
 <div class="toasts" id="toasts"></div>
 
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js"></script>
 <script src="/assets/agent.js"></script>
 <script>
-/* ═══════════════════════════════════════════════════════
-   ACCESO EXCLUSIVO — solo estos correos pueden entrar
-═══════════════════════════════════════════════════════ */
-const IBANOR_EMAILS = [
-  'acanales@ibanormexico.com',
-  'nibarra@ibanormexico.com',
-  'acanalesf@ibanormexico.com'
-];
-
-/* Categorías propias (datos separados de archivos admin) */
-const CAT_FILE   = 'archivo_ibanor';
-const CAT_FOLDER = 'carpeta_ibanor';
-const PATH_PFX   = 'ibanor/';
-
-/* ── Estado ──────────────────────────────────────────── */
-let CU      = null;
-let CF      = null;
-let period  = '';
-let pending = [];
+/* ── Estado global ─────────────────────────────────────── */
+let CU = null;          // currentUser
+let CF = null;          // currentFolder { path, label, needsMonth }
+let period = '';        // 'YYYY-MM'
+let pending = [];       // archivos pendientes de subir
 let delId   = null;
 let entCtx  = null;
 
-const MAX_MB = 10 * 1024 * 1024;
+/* Acceso exclusivo por email */
+const IBANOR_EMAILS = ['acanales@ibanormexico.com','nibarra@ibanormexico.com','acanalesf@ibanormexico.com'];
+/* Categorías y prefijo propios de IBANOR (datos separados) */
+const CAT_FILE   = 'archivo_ibanor';
+const CAT_FOLDER = 'carpeta_ibanor';
+const PFX        = 'ibanor/';
 
-/* ── Árbol de carpetas (idéntico a Archivos Admin) ────── */
+const MAX_MB  = 10 * 1024 * 1024;
+
+/* ── Árbol de carpetas (definición) ────────────────────── */
 const TREE = [
   {
     id:'admon', icon:'🏦', label:'Administración',
     children:[
       { label:'Bancos DLLS', children:[
-          { label:'Estados de Cuenta DLLS', path:`${PATH_PFX}administracion/bancos-dlls/estados-cuenta/` }
+          { label:'Estados de Cuenta DLLS', path:PFX+'administracion/bancos-dlls/estados-cuenta/' }
       ]},
       { label:'Bancos Pesos', children:[
-          { label:'Estados de Cuenta Pesos', path:`${PATH_PFX}administracion/bancos-pesos/estados-cuenta/` }
+          { label:'Estados de Cuenta Pesos', path:PFX+'administracion/bancos-pesos/estados-cuenta/' }
       ]}
     ]
   },
   {
     id:'clientes', icon:'🤝', label:'Clientes',
     dynamic:true, etype:'cliente',
-    base:`${PATH_PFX}clientes/`,
+    base:PFX+'clientes/',
     subs:['Cotizaciones','Contratos','POs','Facturas','Varios']
   },
   {
     id:'prov', icon:'🏭', label:'Proveedores',
     dynamic:true, etype:'proveedor',
-    base:`${PATH_PFX}proveedores/`,
+    base:PFX+'proveedores/',
     subs:['Cotizaciones','Contratos','POs','Facturas','Varios']
   },
   {
     id:'fiscal', icon:'📋', label:'Fiscal',
     children:[
-      { label:'Facturas Starke',            path:`${PATH_PFX}fiscal/facturas-starke/` },
-      { label:'Facturas Asimilados Starke', path:`${PATH_PFX}fiscal/facturas-asimilados/` },
-      { label:'Declaraciones Mensuales',    path:`${PATH_PFX}fiscal/declaraciones-mensuales/` },
-      { label:'Declaraciones Anuales',      path:`${PATH_PFX}fiscal/declaraciones-anuales/` },
-      { label:'Documentos SAT',             path:`${PATH_PFX}fiscal/documentos-sat/` },
-      { label:'FIEL',                       path:`${PATH_PFX}fiscal/fiel/` },
-      { label:'Planeaciones Fiscales',      path:`${PATH_PFX}fiscal/planeaciones-fiscales/` }
+      { label:'Facturas Starke',            path:PFX+'fiscal/facturas-starke/' },
+      { label:'Facturas Asimilados Starke', path:PFX+'fiscal/facturas-asimilados/' },
+      { label:'Declaraciones Mensuales',    path:PFX+'fiscal/declaraciones-mensuales/' },
+      { label:'Declaraciones Anuales',      path:PFX+'fiscal/declaraciones-anuales/' },
+      { label:'Documentos SAT',             path:PFX+'fiscal/documentos-sat/' },
+      { label:'FIEL',                       path:PFX+'fiscal/fiel/' },
+      { label:'Planeaciones Fiscales',      path:PFX+'fiscal/planeaciones-fiscales/' }
     ]
   },
   {
     id:'cont', icon:'📊', label:'Contabilidad',
     children:[
-      { label:'Pagos Pesos · Egresos',    path:`${PATH_PFX}contabilidad/pagos-pesos/egresos/`,      nm:true },
-      { label:'Pagos Pesos · Ingresos',   path:`${PATH_PFX}contabilidad/pagos-pesos/ingresos/`,     nm:true },
-      { label:'Pagos DLLS · Egresos',     path:`${PATH_PFX}contabilidad/pagos-dlls/egresos/`,       nm:true },
-      { label:'Pagos DLLS · Ingresos',    path:`${PATH_PFX}contabilidad/pagos-dlls/ingresos/`,      nm:true },
-      { label:'Pólizas DLLS · Egresos',   path:`${PATH_PFX}contabilidad/polizas-dlls/egresos/`,     nm:true },
-      { label:'Pólizas DLLS · Ingresos',  path:`${PATH_PFX}contabilidad/polizas-dlls/ingresos/`,    nm:true },
-      { label:'Pólizas Pesos · Egresos',  path:`${PATH_PFX}contabilidad/polizas-pesos/egresos/`,    nm:true },
-      { label:'Pólizas Pesos · Ingresos', path:`${PATH_PFX}contabilidad/polizas-pesos/ingresos/`,   nm:true }
+      { label:'Pagos Pesos · Egresos',      path:PFX+'contabilidad/pagos-pesos/egresos/',      nm:true },
+      { label:'Pagos Pesos · Ingresos',     path:PFX+'contabilidad/pagos-pesos/ingresos/',     nm:true },
+      { label:'Pagos DLLS · Egresos',       path:PFX+'contabilidad/pagos-dlls/egresos/',       nm:true },
+      { label:'Pagos DLLS · Ingresos',      path:PFX+'contabilidad/pagos-dlls/ingresos/',      nm:true },
+      { label:'Pólizas DLLS · Egresos',     path:PFX+'contabilidad/polizas-dlls/egresos/',     nm:true },
+      { label:'Pólizas DLLS · Ingresos',    path:PFX+'contabilidad/polizas-dlls/ingresos/',    nm:true },
+      { label:'Pólizas Pesos · Egresos',    path:PFX+'contabilidad/polizas-pesos/egresos/',    nm:true },
+      { label:'Pólizas Pesos · Ingresos',   path:PFX+'contabilidad/polizas-pesos/ingresos/',   nm:true }
     ]
   },
   {
     id:'acta', icon:'📜', label:'Acta Constitutiva',
     children:[
-      { label:'Cambios y Asambleas',       path:`${PATH_PFX}acta-constitutiva/cambios-asambleas/` },
-      { label:'Docs Representante Legal',  path:`${PATH_PFX}acta-constitutiva/representante-legal/` },
-      { label:'Alejandro Canales Farías',  path:`${PATH_PFX}acta-constitutiva/alejandro-canales-farias/` },
-      { label:'Alejandro Canales Ibarra',  path:`${PATH_PFX}acta-constitutiva/alejandro-canales-ibarra/` },
-      { label:'Norma B Canales Ibarra',    path:`${PATH_PFX}acta-constitutiva/norma-b-canales-ibarra/` }
+      { label:'Cambios y Asambleas',        path:PFX+'acta-constitutiva/cambios-asambleas/' },
+      { label:'Docs Representante Legal',   path:PFX+'acta-constitutiva/representante-legal/' },
+      { label:'Alejandro Canales Farías',   path:PFX+'acta-constitutiva/alejandro-canales-farias/' },
+      { label:'Alejandro Canales Ibarra',   path:PFX+'acta-constitutiva/alejandro-canales-ibarra/' },
+      { label:'Norma B Canales Ibarra',     path:PFX+'acta-constitutiva/norma-b-canales-ibarra/' }
     ]
   }
 ];
@@ -800,7 +845,6 @@ async function init() {
   document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'archivos-ibanor');
 
   const email = (CU?.email || '').toLowerCase().trim();
-
   if (!IBANOR_EMAILS.includes(email)) {
     document.getElementById('adScreen').classList.add('show');
     return;
@@ -811,7 +855,7 @@ async function init() {
   await buildTree();
 }
 
-/* ── Período ─────────────────────────────────────────── */
+/* ── Período ──────────────────────────────────────────── */
 function fillPeriod() {
   const MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -839,20 +883,23 @@ function syncPeriod() {
   period = `${y}-${m}`;
 }
 
-function onPeriod() { syncPeriod(); if (CF?.nm) loadFiles(); }
+function onPeriod() {
+  syncPeriod();
+  if (CF?.nm) loadFiles();
+}
 
-/* ── Árbol ───────────────────────────────────────────── */
+/* ── Árbol ────────────────────────────────────────────── */
 async function buildTree() {
   const db = getDB();
   const { data: carpetas } = await db
     .from('metatronix_docs')
     .select('file_path, title')
     .eq('category', CAT_FOLDER)
-    .like('file_path', PATH_PFX + '%');
+    .like('file_path', PFX + '%');
 
   const ents = { clientes:[], proveedores:[] };
   (carpetas||[]).forEach(f => {
-    const m = f.file_path.match(new RegExp(`^${PATH_PFX}(clientes|proveedores)\\/([^\\/]+)\\/`));
+    const m = f.file_path.match(/^ibanor\/(clientes|proveedores)\/([^/]+)\//);
     if (!m) return;
     const arr = ents[m[1]];
     const slug = m[2];
@@ -861,32 +908,44 @@ async function buildTree() {
 
   const container = document.getElementById('treeScroll');
   container.innerHTML = '';
-  TREE.forEach(section => container.appendChild(mkSec(section, ents)));
+
+  TREE.forEach(section => {
+    const secEl = mkSec(section, ents);
+    container.appendChild(secEl);
+  });
 }
 
 function mkSec(section, ents) {
   const div = document.createElement('div');
-  div.className = 'sec open';
+  div.className = 'sec open'; // abierto por defecto
 
+  /* Header de sección */
   const hdr = document.createElement('div');
   hdr.className = 'sec-hdr';
   hdr.innerHTML = `<span class="sec-arrow">▶</span><span>${section.icon}</span><span>${section.label.toUpperCase()}</span>`;
   hdr.onclick = () => div.classList.toggle('open');
 
+  /* Cuerpo de sección */
   const body = document.createElement('div');
   body.className = 'sec-body';
 
   if (section.dynamic) {
     const group = section.etype === 'cliente' ? 'clientes' : 'proveedores';
     ents[group].forEach(e => body.appendChild(mkEnt(e, section.base, section.subs)));
+
     const addBtn = document.createElement('button');
     addBtn.className = 'add-ent-btn';
     addBtn.textContent = `＋ Agregar ${section.etype}`;
     addBtn.onclick = () => openMEnt(section.etype, section.base, section.subs, body, addBtn);
     body.appendChild(addBtn);
+
   } else {
     (section.children||[]).forEach(child => {
-      body.appendChild(child.children ? mkGrp(child) : mkLeaf(child));
+      if (child.children) {
+        body.appendChild(mkGrp(child));
+      } else {
+        body.appendChild(mkLeaf(child));
+      }
     });
   }
 
@@ -895,6 +954,7 @@ function mkSec(section, ents) {
   return div;
 }
 
+/* Sub-grupo con hijos (ej. Bancos DLLS > Estados de Cuenta) */
 function mkGrp(node) {
   const grp = document.createElement('div');
   grp.className = 'grp';
@@ -913,15 +973,17 @@ function mkGrp(node) {
   return grp;
 }
 
+/* Hoja clickeable que carga archivos */
 function mkLeaf(node, indent) {
   const el = document.createElement('div');
-  el.className = 'leaf';
-  if (indent) el.style.paddingLeft = '42px';
+  el.className = 'leaf' + (indent ? ' leaf-ind' : '');
   el.textContent = node.label;
+  if (indent) el.style.paddingLeft = '42px';
   el.onclick = () => selectFolder(node, el);
   return el;
 }
 
+/* Entidad dinámica (empresa cliente/proveedor) */
 function mkEnt(entity, base, subs) {
   const wrap = document.createElement('div');
   wrap.className = 'ent-wrap';
@@ -933,9 +995,13 @@ function mkEnt(entity, base, subs) {
 
   const subsEl = document.createElement('div');
   subsEl.className = 'ent-subs';
+
   subs.forEach(sf => {
     const slug = sf.toLowerCase().replace(/\s+/g,'-');
-    subsEl.appendChild(mkLeaf({ label:sf, path:`${base}${entity.slug}/${slug}/` }, true));
+    subsEl.appendChild(mkLeaf({
+      label: sf,
+      path: `${base}${entity.slug}/${slug}/`
+    }, true));
   });
 
   wrap.appendChild(hdr);
@@ -943,18 +1009,21 @@ function mkEnt(entity, base, subs) {
   return wrap;
 }
 
-/* ── Seleccionar carpeta ─────────────────────────────── */
+/* ── Seleccionar carpeta ───────────────────────────────── */
 function selectFolder(node, el) {
   document.querySelectorAll('.leaf.active').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
+
   CF = node;
+
   const pb = document.getElementById('periodBar');
   node.nm ? pb.classList.add('show') : pb.classList.remove('show');
+
   document.getElementById('btnUp').disabled = false;
   loadFiles();
 }
 
-/* ── Cargar archivos ─────────────────────────────────── */
+/* ── Cargar archivos ──────────────────────────────────── */
 async function loadFiles() {
   if (!CF) return;
   updateBc();
@@ -969,10 +1038,10 @@ async function loadFiles() {
     .select('id,title,file_name,file_type,file_size,created_at')
     .eq('category', CAT_FILE)
     .like('file_path', fp + '%')
-    .order('created_at', {ascending:false});
+    .order('created_at',{ascending:false});
 
   if (error) {
-    toast('Error: '+error.message,'err');
+    toast('Error: ' + error.message,'err');
     document.getElementById('fileArea').innerHTML = '<div class="empty-state"><div class="ei">⚠️</div><div>Error al cargar</div></div>';
     return;
   }
@@ -989,7 +1058,7 @@ function renderFiles(files) {
 
   const rows = files.map(f => {
     const ico = fIcon(f.file_type);
-    const name = f.file_name||f.title||'archivo';
+    const name = f.file_name || f.title || 'archivo';
     return `<tr>
       <td><div class="fn-cell"><span class="fic">${ico}</span><span class="fn-txt" title="${h(name)}">${h(name)}</span></div></td>
       <td class="fmeta">${fmtSz(f.file_size)}</td>
@@ -1019,7 +1088,7 @@ function updateBc() {
   bc.innerHTML = `IBANOR<span class="sep">/</span>${lbl}`;
 }
 
-/* ── Upload ──────────────────────────────────────────── */
+/* ── Upload ───────────────────────────────────────────── */
 function openUpload() {
   if (!CF) return;
   let fp = CF.path;
@@ -1064,7 +1133,7 @@ async function doUpload() {
   btn.disabled = true;
   pw.style.display = 'block';
 
-  for (let i=0; i<pending.length; i++) {
+  for (let i = 0; i < pending.length; i++) {
     const file = pending[i];
     pt.textContent = `Subiendo ${i+1}/${pending.length}: ${file.name}…`;
     pf.style.width = `${(i/pending.length)*100}%`;
@@ -1077,7 +1146,7 @@ async function doUpload() {
         visibility: 'admin',
         file_name: file.name,
         file_path: dest,
-        file_type: file.type||'application/octet-stream',
+        file_type: file.type || 'application/octet-stream',
         file_size: file.size,
         file_data: b64,
       });
@@ -1113,15 +1182,15 @@ async function dlFile(id) {
     for (let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([arr],{type:data.file_type||'application/octet-stream'}));
-    a.download = data.file_name||'archivo';
+    a.download = data.file_name || 'archivo';
     a.click();
   } catch(e) { toast('Error decodificando archivo','err'); }
 }
 
 /* ── Eliminar ─────────────────────────────────────────── */
-function openMDel(id,name) {
-  delId=id;
-  document.getElementById('delName').textContent=name;
+function openMDel(id, name) {
+  delId = id;
+  document.getElementById('delName').textContent = name;
   document.getElementById('mDel').classList.add('open');
 }
 
@@ -1138,13 +1207,13 @@ async function confirmDel() {
   loadFiles();
 }
 
-/* ── Entidad ──────────────────────────────────────────── */
-function openMEnt(etype,base,subs,bodyEl,addBtn) {
-  entCtx={etype,base,subs,bodyEl,addBtn};
-  const isCli = etype==='cliente';
+/* ── Entidad (cliente / proveedor) ────────────────────── */
+function openMEnt(etype, base, subs, bodyEl, addBtn) {
+  entCtx = { etype, base, subs, bodyEl, addBtn };
+  const isCli = etype === 'cliente';
   document.getElementById('entTitle').textContent = isCli ? 'Agregar Cliente' : 'Agregar Proveedor';
   document.getElementById('entLabel').textContent  = isCli ? 'Nombre del cliente' : 'Nombre del proveedor';
-  document.getElementById('entName').value='';
+  document.getElementById('entName').value = '';
   document.getElementById('mEnt').classList.add('open');
 }
 
@@ -1158,7 +1227,7 @@ async function createEnt() {
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 
-  const fp = entCtx.base+slug+'/';
+  const fp = entCtx.base + slug + '/';
 
   const { error } = await getDB().from('metatronix_docs').insert({
     title: name,
@@ -1175,12 +1244,15 @@ async function createEnt() {
   closeMEnt();
   toast(`Carpeta "${name}" creada`,'ok');
 
-  const entEl = mkEnt({slug,name}, entCtx.base, entCtx.subs);
+  const entEl = mkEnt({slug, name}, entCtx.base, entCtx.subs);
   entCtx.bodyEl.insertBefore(entEl, entCtx.addBtn);
 }
 
 /* ── Refresh ──────────────────────────────────────────── */
-async function refresh() { await buildTree(); if (CF) loadFiles(); }
+async function refresh() {
+  await buildTree();
+  if (CF) loadFiles();
+}
 
 /* ── Utils ────────────────────────────────────────────── */
 function fIcon(mime) {
@@ -1209,14 +1281,15 @@ function h(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function toast(msg,type='inf') {
-  const el=document.createElement('div');
-  el.className=`toast ${type}`;
-  el.textContent=msg;
+function toast(msg, type='inf') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
   document.getElementById('toasts').appendChild(el);
-  setTimeout(()=>el.remove(),3200);
+  setTimeout(() => el.remove(), 3200);
 }
 
+/* ── Arranque ─────────────────────────────────────────── */
 init();
 </script>
 </body>
