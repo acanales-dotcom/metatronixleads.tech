@@ -85,6 +85,27 @@
       background: var(--accent-dim); color: var(--accent);
     }
 
+    /* ── Folder headers ──────────────────────────────────── */
+    .tpl-folder-header {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 4px 5px;
+      margin-top: 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+    .tpl-folder-header:first-child { margin-top: 0; }
+    .tpl-folder-icon { font-size: 13px; }
+    .tpl-folder-name {
+      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--accent); flex: 1;
+    }
+    .tpl-folder-count {
+      font-size: 10px; font-weight: 700;
+      background: var(--accent-dim); color: var(--accent);
+      padding: 1px 6px; border-radius: 99px;
+      font-family: var(--font-mono);
+    }
+
     .back-btn {
       display: flex; align-items: center; gap: 5px;
       font-size: 12px; color: var(--text-muted);
@@ -268,6 +289,21 @@ async function loadTemplates() {
   renderPanel();
 }
 
+// ── Get folder name from file_path ────────────────────────
+function getFolder(tpl) {
+  if (!tpl.file_path) return '';
+  const parts = tpl.file_path.split('/');
+  // 'plantillas/assessment/file.html' → 'assessment'
+  // 'plantillas/file.html'            → ''
+  return parts.length >= 3 ? parts[1].toLowerCase() : '';
+}
+
+function folderLabel(slug) {
+  if (!slug) return '';
+  return slug.replace(/-/g,' ').replace(/_/g,' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
 // ── Render left panel (step 1: grid) ─────────────────────
 function renderPanel() {
   document.getElementById('panel-title').textContent = 'Seleccionar Plantilla';
@@ -285,16 +321,41 @@ function renderPanel() {
 
   document.getElementById('panel-badge').textContent = templates.length + ' plantilla' + (templates.length !== 1 ? 's' : '');
 
-  document.getElementById('panel-body').innerHTML = `
-    ${templates.map(t => `
+  // ── Group by folder ───────────────────────────────────
+  const grouped = {};
+  templates.forEach(t => {
+    const folder = getFolder(t);
+    if (!grouped[folder]) grouped[folder] = [];
+    grouped[folder].push(t);
+  });
+
+  // Sort: root ('') first, then alphabetical folders
+  const folderKeys = Object.keys(grouped).sort((a, b) => {
+    if (a === '') return -1;
+    if (b === '') return 1;
+    return a.localeCompare(b);
+  });
+
+  const tplCard = t => `
     <div class="tpl-card" data-id="${t.id}" onclick="selectTemplate('${t.id}')">
       <div class="tpl-name">${escHtml(t.title)}</div>
       ${t.description ? `<div class="tpl-desc">${escHtml(t.description)}</div>` : ''}
       <div class="tpl-meta">
         <span class="tpl-badge">Plantilla aprobada</span>
-        ${t.uploaded_by_name ? `<span style="font-size:10px;color:var(--text-faint)">por ${escHtml(t.uploaded_by_name)}</span>` : ''}
       </div>
-    </div>`).join('')}`;
+    </div>`;
+
+  document.getElementById('panel-body').innerHTML = folderKeys.map(folder => {
+    const items = grouped[folder];
+    const header = folder
+      ? `<div class="tpl-folder-header">
+           <span class="tpl-folder-icon">📁</span>
+           <span class="tpl-folder-name">${escHtml(folderLabel(folder))}</span>
+           <span class="tpl-folder-count">${items.length}</span>
+         </div>`
+      : '';
+    return header + items.map(tplCard).join('');
+  }).join('');
 }
 
 // ── Select template → step 2 ──────────────────────────────
@@ -315,6 +376,7 @@ function selectTemplate(id) {
 
     <div class="selected-tpl-header">
       <div class="selected-tpl-name">📄 ${escHtml(selectedTpl.title)}</div>
+      ${getFolder(selectedTpl) ? `<div style="font-size:10px;color:var(--accent);font-family:var(--font-mono);margin-top:2px;opacity:.8">📁 ${escHtml(folderLabel(getFolder(selectedTpl)))}</div>` : ''}
       ${selectedTpl.description ? `<div class="selected-tpl-desc">${escHtml(selectedTpl.description)}</div>` : ''}
     </div>
 
