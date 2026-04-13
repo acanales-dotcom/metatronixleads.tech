@@ -817,6 +817,7 @@ async function sendQuery() {
     if (sk) sk.remove();
 
     appendResultCard(query, result.text, result.citations);
+    saveEstudioMercado(query, result.text, result.citations);
     await logActivity('opgen_search', 'oportunidades', null, {
       segment: currentSegment, query: query.slice(0, 100)
     });
@@ -918,6 +919,51 @@ async function callIntelligence(query, systemPrompt, onChunk) {
   }
 
   return { text: fullText, citations };
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* GUARDAR ESTUDIO EN METATRONIX DOCS                             */
+/* ══════════════════════════════════════════════════════════════ */
+async function saveEstudioMercado(query, text, citations = []) {
+  try {
+    const seg = SEGMENTS[currentSegment];
+    const ts  = new Date();
+    const tsStr = ts.toISOString().slice(0,19).replace('T',' ');
+    const titleShort = query.length > 80 ? query.slice(0, 77) + '…' : query;
+
+    // Texto completo con fuentes al final
+    let fullText = `ESTUDIO DE MERCADO — ${seg.title}\n`;
+    fullText += `Consulta: ${query}\n`;
+    fullText += `Fecha: ${tsStr}\n`;
+    fullText += `Segmento: ${seg.title}\n\n`;
+    fullText += '─'.repeat(60) + '\n\n';
+    fullText += text;
+    if (citations.length) {
+      fullText += '\n\n' + '─'.repeat(60) + '\nFUENTES:\n';
+      citations.forEach((c, i) => { fullText += `[${i+1}] ${c}\n`; });
+    }
+
+    // Base64 encode (UTF-8 safe)
+    const b64 = btoa(unescape(encodeURIComponent(fullText)));
+    const fileName = `estudio-${currentSegment}-${ts.getTime()}.txt`;
+    const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'Portal';
+
+    await getDB().from('metatronix_docs').insert({
+      title:            `${seg.icon} ${titleShort}`,
+      description:      query,
+      category:         'estudios_mercado',
+      visibility:       'all',
+      file_name:        fileName,
+      file_type:        'text/plain',
+      file_size:        fullText.length,
+      file_data:        b64,
+      text_content:     fullText.slice(0, 8000),   // para MetaGenio
+      uploaded_by:      currentUser?.id,
+      uploaded_by_name: userName,
+    });
+  } catch (e) {
+    console.warn('saveEstudioMercado:', e.message);
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════ */

@@ -224,11 +224,27 @@
     }
 
     // ── Sección 2: Documentos externos subidos por colaboradores ──
-    const docsWithText = sharedDocs.filter(d => d.text_content && d.text_content.trim().length > 20);
-    const docsMetaOnly = sharedDocs.filter(d => !d.text_content || d.text_content.trim().length <= 20);
+    const estudios    = sharedDocs.filter(d => d.category === 'estudios_mercado');
+    const otrosDocs   = sharedDocs.filter(d => d.category !== 'estudios_mercado');
+    const docsWithText = otrosDocs.filter(d => d.text_content && d.text_content.trim().length > 20);
+    const docsMetaOnly = otrosDocs.filter(d => !d.text_content || d.text_content.trim().length <= 20);
+
+    // Estudios de mercado — sección dedicada
+    let estudiosText = '';
+    if (estudios.length) {
+      estudiosText = '\n\n════════════════════════════════════════\n';
+      estudiosText += 'ESTUDIOS DE MERCADO (generados por Inteligencia de Mercados)\n';
+      estudiosText += '════════════════════════════════════════\n';
+      estudiosText += 'IMPORTANTE: Estos estudios fueron generados por el equipo con datos reales. Úsalos como base para responder preguntas sobre mercados, sectores, leads y oportunidades.\n';
+      estudios.forEach(d => {
+        estudiosText += `\n▸ ${d.title}\n`;
+        if (d.description) estudiosText += `  Consulta original: ${d.description}\n`;
+        if (d.text_content) estudiosText += `${d.text_content.slice(0, 4000)}\n`;
+      });
+    }
 
     let sharedDocsText = '';
-    if (sharedDocs.length) {
+    if (otrosDocs.length) {
       sharedDocsText = '\n\n════════════════════════════════════════\n';
       sharedDocsText += 'DOCUMENTOS EXTERNOS SUBIDOS POR COLABORADORES\n';
       sharedDocsText += '════════════════════════════════════════\n';
@@ -375,7 +391,7 @@ Solo incluye [NAV:...] si el usuario pide explícitamente navegar o ir a una sec
 SOBRE METATRONIX Y SUBSIDIARIAS:
 - Portal interno de IBANOR SA de CV
 - Contacto admin: acanales@ibanormexico.com
-${sitesText}${sharedDocsText}${approvedText}${kbText}
+${estudiosText}${sitesText}${sharedDocsText}${approvedText}${kbText}
 
 ════════════════════════════════════════
 REGLAS DE COMPORTAMIENTO

@@ -135,7 +135,8 @@
     .cat-contratos   { background: rgba(217,119,6,.1); color: var(--warning); }
     .cat-politicas   { background: rgba(224,48,48,.09); color: var(--danger); }
     .cat-capacitacion{ background: rgba(0,160,80,.1);  color: #00a050; }
-    .cat-formatos    { background: rgba(180,90,220,.1); color: #b45adc; }
+    .cat-formatos        { background: rgba(180,90,220,.1); color: #b45adc; }
+    .cat-estudios_mercado{ background: rgba(0,200,150,.12); color: #00b890; }
 
     /* ── Delete button (admin) ────────────────────────────────── */
     .doc-actions { display: flex; gap: 6px; }
@@ -230,7 +231,8 @@
     <button class="cat-tab" data-cat="contratos"    onclick="setCategory(this)">📑 Contratos</button>
     <button class="cat-tab" data-cat="politicas"    onclick="setCategory(this)">📋 Políticas</button>
     <button class="cat-tab" data-cat="capacitacion" onclick="setCategory(this)">🎓 Capacitación</button>
-    <button class="cat-tab" data-cat="formatos"     onclick="setCategory(this)">📐 Formatos</button>
+    <button class="cat-tab" data-cat="formatos"        onclick="setCategory(this)">📐 Formatos</button>
+    <button class="cat-tab" data-cat="estudios_mercado" onclick="setCategory(this)">📊 Estudios de Mercado</button>
   </div>
 
   <!-- Doc count -->
@@ -471,7 +473,7 @@ function catName(cat) {
     general: 'General', corporativo: 'Corporativo',
     contratos: 'Contratos', politicas: 'Políticas',
     capacitacion: 'Capacitación', formatos: 'Formatos',
-    plantilla: 'Plantilla',
+    plantilla: 'Plantilla', estudios_mercado: 'Estudio de Mercado',
   };
   return map[cat] || 'General';
 }
