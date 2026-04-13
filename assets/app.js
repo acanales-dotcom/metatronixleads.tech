@@ -439,7 +439,7 @@ function renderHeader(user, activePage) {
       ${hasAdminAccess ? `
       <a href="/archivos.html" class="sidebar-nav-link ${activePage==='archivos'?'active':''}">
         <span class="nav-line1">Archivos</span>
-        <span class="nav-line2">Admin</span>
+        <span class="nav-line2">Starke</span>
       </a>` : ''}
       ${hasIbanorAccess ? `
       <a href="/archivos-ibanor.html" class="sidebar-nav-link ${activePage==='archivos-ibanor'?'active':''}">
