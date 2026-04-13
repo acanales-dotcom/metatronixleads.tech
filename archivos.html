@@ -3,80 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Archivos · MetaTronix Portal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <link rel="stylesheet" href="assets/style.css">
+  <title>MetaTronix — Archivos Admin</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/agent.css">
   <style>
-    /* ── File Manager Shell ────────────────────────────── */
-    body { overflow: hidden; }
-
-    .fm-shell {
+    /* ── File Manager Layout ─────────────────────────────── */
+    .fm-wrap {
       display: flex;
-      flex-direction: column;
-      height: calc(100vh - var(--header-h));
+      height: 100vh;
       overflow: hidden;
     }
 
-    .fm-head {
-      flex-shrink: 0;
-      padding: 14px 24px 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .fm-head h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.6rem;
-      letter-spacing: .08em;
-      color: var(--accent);
-      margin: 0;
-    }
-
-    .fm-head-meta {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .7rem;
-      color: var(--muted);
-    }
-
-    .fm-body {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      overflow: hidden;
-    }
-
-    /* ── Sidebar / Folder Tree ──────────────────────────── */
+    /* Sidebar del file manager (dentro del layout del portal) */
     .fm-sidebar {
-      width: 260px;
+      width: 240px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
       border-right: 1px solid var(--border);
+      background: var(--surface);
       overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: var(--sidebar-w, 224px);
+      bottom: 0;
+      z-index: 10;
     }
 
     .fm-sidebar-head {
       flex-shrink: 0;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      padding: 16px 14px 10px;
       border-bottom: 1px solid var(--border);
-      background: var(--surface);
     }
 
-    .fm-sidebar-head span {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .68rem;
-      color: var(--muted);
+    .fm-sidebar-title {
+      font-family: var(--font-head);
+      font-size: .85rem;
+      letter-spacing: .12em;
       text-transform: uppercase;
-      letter-spacing: .1em;
+      color: var(--text-muted);
     }
 
     .fm-tree {
@@ -85,470 +50,396 @@
       padding: 8px 0;
     }
 
-    .fm-tree::-webkit-scrollbar { width: 4px; }
-    .fm-tree::-webkit-scrollbar-track { background: transparent; }
+    .fm-tree::-webkit-scrollbar { width: 3px; }
     .fm-tree::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    /* Tree nodes */
-    .tree-section {
-      margin-bottom: 2px;
-    }
-
-    .tree-section-label {
+    /* ── Tree Nodes ──────────────────────────────────────── */
+    .ts-label {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
+      padding: 7px 14px;
       cursor: pointer;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: .95rem;
-      letter-spacing: .1em;
-      color: var(--fg);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text);
       user-select: none;
       transition: background .15s;
     }
+    .ts-label:hover { background: var(--surface2); }
 
-    .tree-section-label:hover { background: rgba(255,255,255,.04); }
-
-    .tree-section-label .arrow {
-      font-size: .55rem;
-      color: var(--muted);
+    .ts-arrow {
+      font-size: 9px;
+      color: var(--text-faint);
       transition: transform .2s;
       flex-shrink: 0;
     }
 
-    .tree-section-label .section-icon {
-      font-size: .9rem;
-      flex-shrink: 0;
-    }
+    .ts-children { display: none; }
+    .ts-open > .ts-children { display: block; }
+    .ts-open > .ts-label .ts-arrow { transform: rotate(90deg); }
 
-    .tree-section-children {
-      display: none;
-      padding-left: 0;
-    }
-
-    .tree-section.open > .tree-section-children { display: block; }
-    .tree-section.open > .tree-section-label .arrow { transform: rotate(90deg); }
-
-    .tree-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 14px 5px 28px;
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .8rem;
-      color: var(--muted);
-      user-select: none;
-      transition: background .15s, color .15s;
-      position: relative;
-    }
-
-    .tree-item::before {
-      content: '';
-      position: absolute;
-      left: 18px;
-      top: 50%;
-      width: 6px;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .tree-item:hover { background: rgba(255,255,255,.04); color: var(--fg); }
-
-    .tree-item.active {
-      color: var(--accent);
-      background: rgba(0,255,136,.06);
-    }
-
-    .tree-item.active::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--accent);
-    }
-
-    /* sub-level 2 */
-    .tree-item-sub {
-      padding-left: 42px;
-      font-size: .76rem;
-    }
-
-    .tree-item-sub::before { left: 32px; }
-
-    /* ── Dynamic entity group (Clientes / Proveedores) ── */
-    .entity-group {}
-
-    .entity-node {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 14px 4px 28px;
-      position: relative;
-    }
-
-    .entity-node::before {
-      content: '';
-      position: absolute;
-      left: 18px;
-      top: 50%;
-      width: 6px;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .entity-node-label {
-      flex: 1;
+    .ti {
       display: flex;
       align-items: center;
       gap: 5px;
+      padding: 5px 14px 5px 26px;
       cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .78rem;
-      color: var(--muted);
+      font-size: 12px;
+      color: var(--text-muted);
+      user-select: none;
+      transition: background .15s, color .15s;
+      position: relative;
+      border-left: 2px solid transparent;
+      line-height: 1.3;
+    }
+
+    .ti::before {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      width: 5px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .ti:hover { background: var(--surface2); color: var(--text); }
+
+    .ti.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+      border-left-color: var(--accent);
+    }
+
+    .ti-sub {
+      padding-left: 38px;
+      font-size: 11.5px;
+    }
+    .ti-sub::before { left: 32px; }
+
+    /* Grupo dinámico */
+    .entity-wrap {}
+
+    .entity-header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 14px 5px 26px;
+      position: relative;
+    }
+    .entity-header::before {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      width: 5px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .entity-label {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-muted);
       transition: color .15s;
       user-select: none;
     }
+    .entity-label:hover { color: var(--text); }
 
-    .entity-node-label:hover { color: var(--fg); }
+    .ea { font-size: 8px; transition: transform .2s; }
+    .entity-header.open .ea { transform: rotate(90deg); }
 
-    .entity-node-label .e-arrow {
-      font-size: .5rem;
-      transition: transform .2s;
-    }
+    .entity-subs { display: none; }
+    .entity-header.open + .entity-subs { display: block; }
 
-    .entity-node.open .e-arrow { transform: rotate(90deg); }
-
-    .entity-sub-items { display: none; }
-    .entity-node.open + .entity-sub-items { display: block; }
-
-    .add-entity-btn {
+    .add-btn {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 14px 5px 28px;
+      gap: 5px;
+      padding: 4px 14px 4px 26px;
       cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .75rem;
+      font-size: 11px;
       color: var(--accent);
-      opacity: .7;
+      opacity: .65;
       transition: opacity .15s;
       border: none;
       background: transparent;
       width: 100%;
       text-align: left;
     }
+    .add-btn:hover { opacity: 1; }
 
-    .add-entity-btn:hover { opacity: 1; }
-
-    /* ── Main Content ───────────────────────────────────── */
+    /* ── Main Content ────────────────────────────────────── */
     .fm-main {
+      margin-left: 240px; /* fm-sidebar width */
       flex: 1;
-      min-width: 0;
       display: flex;
       flex-direction: column;
+      min-width: 0;
       overflow: hidden;
+      height: 100vh;
     }
 
     .fm-toolbar {
       flex-shrink: 0;
-      padding: 10px 20px;
+      padding: 12px 20px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
     }
 
     .fm-breadcrumb {
       flex: 1;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .72rem;
-      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
+    .fm-breadcrumb .bc-cur { color: var(--accent); }
     .fm-breadcrumb .bc-sep { margin: 0 4px; color: var(--border); }
-    .fm-breadcrumb .bc-current { color: var(--accent); }
 
     .btn-upload {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
+      gap: 5px;
+      padding: 7px 14px;
       background: var(--accent);
       color: #000;
       border: none;
-      border-radius: 4px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: .78rem;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 12px;
       cursor: pointer;
       transition: opacity .15s;
-      white-space: nowrap;
     }
-
     .btn-upload:hover { opacity: .85; }
-    .btn-upload:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-upload:disabled { opacity: .35; cursor: not-allowed; }
 
-    .btn-ghost {
-      padding: 6px 12px;
+    .btn-icon {
+      padding: 6px 10px;
       background: transparent;
       border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--muted);
-      font-family: 'DM Sans', sans-serif;
-      font-size: .78rem;
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-size: 13px;
       cursor: pointer;
-      transition: border-color .15s, color .15s;
+      transition: all .15s;
     }
+    .btn-icon:hover { border-color: var(--text); color: var(--text); }
 
-    .btn-ghost:hover { border-color: var(--fg); color: var(--fg); }
+    /* Month bar */
+    .month-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      background: var(--accent-dim);
+      border-bottom: 1px solid rgba(0,255,136,.2);
+      flex-shrink: 0;
+    }
+    .month-bar.show { display: flex; }
+    .month-bar label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .month-bar select {
+      padding: 4px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .month-bar select:focus { outline: none; border-color: var(--accent); }
 
-    /* ── File List ──────────────────────────────────────── */
-    .fm-file-area {
+    /* File list area */
+    .fm-files {
       flex: 1;
-      min-height: 0;
       overflow-y: auto;
       padding: 16px 20px;
     }
+    .fm-files::-webkit-scrollbar { width: 4px; }
+    .fm-files::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    .fm-file-area::-webkit-scrollbar { width: 4px; }
-    .fm-file-area::-webkit-scrollbar-track { background: transparent; }
-    .fm-file-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    .fm-empty {
+    .fm-placeholder {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100%;
       gap: 10px;
-      color: var(--muted);
-      font-family: 'DM Sans', sans-serif;
-      font-size: .85rem;
+      color: var(--text-faint);
+      font-size: 13px;
     }
-
-    .fm-empty .em-icon { font-size: 2rem; opacity: .3; }
-
-    .fm-no-selection {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      gap: 10px;
-      color: var(--muted);
-      font-family: 'DM Sans', sans-serif;
-      font-size: .85rem;
-    }
-
-    .fm-no-selection .ns-icon { font-size: 2.5rem; opacity: .2; }
+    .fm-placeholder .ph-icon { font-size: 2.5rem; opacity: .25; }
 
     /* File table */
-    .file-table {
+    .ftable {
       width: 100%;
       border-collapse: collapse;
-      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
     }
-
-    .file-table th {
+    .ftable th {
       padding: 8px 12px;
       text-align: left;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .65rem;
+      font-family: var(--font-mono);
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: .1em;
-      color: var(--muted);
+      color: var(--text-faint);
       border-bottom: 1px solid var(--border);
       white-space: nowrap;
     }
-
-    .file-table td {
+    .ftable td {
       padding: 9px 12px;
-      font-size: .82rem;
-      color: var(--fg);
-      border-bottom: 1px solid rgba(255,255,255,.04);
+      color: var(--text);
+      border-bottom: 1px solid var(--border2, rgba(255,255,255,.04));
       vertical-align: middle;
     }
+    .ftable tr:last-child td { border-bottom: none; }
+    .ftable tr:hover td { background: var(--surface2); }
 
-    .file-table tr:hover td { background: rgba(255,255,255,.03); }
-
-    .file-name-cell {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .file-icon { font-size: 1rem; flex-shrink: 0; }
-
-    .file-name-text {
+    .fname-cell { display: flex; align-items: center; gap: 8px; }
+    .ficon { font-size: 15px; flex-shrink: 0; }
+    .fname-text {
       font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 300px;
+      max-width: 340px;
     }
-
-    .file-size-cell {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .7rem;
-      color: var(--muted);
+    .fmeta {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
       white-space: nowrap;
     }
+    .factions { display: flex; gap: 6px; }
 
-    .file-date-cell {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .7rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    .file-actions-cell {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-action {
-      padding: 4px 8px;
-      background: transparent;
+    .btn-row {
+      padding: 4px 9px;
       border: 1px solid var(--border);
-      border-radius: 3px;
-      color: var(--muted);
-      font-size: .72rem;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
       cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
       transition: all .15s;
+      white-space: nowrap;
     }
+    .btn-row:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-row.danger:hover { border-color: var(--danger); color: var(--danger); }
 
-    .btn-action:hover { border-color: var(--accent); color: var(--accent); }
-
-    .btn-action.danger:hover { border-color: #ff4444; color: #ff4444; }
-
-    /* ── Modals ─────────────────────────────────────────── */
+    /* ── Modals ──────────────────────────────────────────── */
     .modal-bg {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.7);
+      background: rgba(0,0,0,.65);
       z-index: 1000;
       align-items: center;
       justify-content: center;
     }
-
     .modal-bg.open { display: flex; }
 
     .modal {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: var(--radius-lg);
       padding: 24px;
       width: 420px;
-      max-width: 90vw;
+      max-width: 92vw;
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
     .modal-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.2rem;
+      font-family: var(--font-head);
+      font-size: 1.15rem;
       letter-spacing: .08em;
       color: var(--accent);
-      margin: 0 0 16px;
+      margin: 0 0 18px;
     }
 
-    .modal-field {
-      margin-bottom: 14px;
-    }
+    .form-row { margin-bottom: 14px; }
 
-    .modal-field label {
+    .form-row label {
       display: block;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .75rem;
-      color: var(--muted);
-      margin-bottom: 5px;
+      font-size: 10px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .06em;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      margin-bottom: 5px;
     }
 
-    .modal-field input,
-    .modal-field select {
+    .form-row input[type="text"],
+    .form-row select {
       width: 100%;
       padding: 8px 10px;
-      background: var(--bg);
+      background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--fg);
-      font-family: 'DM Sans', sans-serif;
-      font-size: .85rem;
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
       box-sizing: border-box;
       transition: border-color .15s;
     }
+    .form-row input:focus,
+    .form-row select:focus { outline: none; border-color: var(--accent); }
 
-    .modal-field input:focus,
-    .modal-field select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .modal-field input[type="file"] {
-      padding: 6px;
-      cursor: pointer;
-    }
-
-    .upload-drop-zone {
+    .drop-zone {
       border: 2px dashed var(--border);
-      border-radius: 6px;
-      padding: 24px;
+      border-radius: var(--radius);
+      padding: 28px 20px;
       text-align: center;
       cursor: pointer;
       transition: border-color .15s, background .15s;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .82rem;
-      color: var(--muted);
+      font-size: 13px;
+      color: var(--text-muted);
     }
-
-    .upload-drop-zone:hover,
-    .upload-drop-zone.drag-over {
+    .drop-zone:hover,
+    .drop-zone.over {
       border-color: var(--accent);
-      background: rgba(0,255,136,.04);
-      color: var(--fg);
+      background: var(--accent-dim);
+      color: var(--text);
+    }
+    .drop-zone input { display: none; }
+    .drop-zone strong { color: var(--accent); }
+
+    .file-list-preview { margin-top: 10px; }
+    .flp-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
     }
 
-    .upload-drop-zone input[type="file"] {
-      display: none;
-    }
-
-    .upload-progress {
-      display: none;
-      margin-top: 12px;
-    }
-
-    .upload-progress-bar {
-      height: 3px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .upload-progress-fill {
-      height: 100%;
-      background: var(--accent);
-      width: 0;
-      transition: width .3s;
-    }
-
-    .upload-progress-text {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .68rem;
-      color: var(--muted);
-      margin-top: 6px;
-      text-align: center;
-    }
+    .progress-wrap { display: none; margin-top: 12px; }
+    .progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+    .progress-text { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 5px; text-align: center; }
 
     .modal-actions {
       display: flex;
@@ -562,277 +453,190 @@
       background: var(--accent);
       color: #000;
       border: none;
-      border-radius: 4px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: .82rem;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 12px;
       cursor: pointer;
       transition: opacity .15s;
     }
-
     .btn-primary:hover { opacity: .85; }
-    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
-
-    .btn-cancel {
-      padding: 8px 18px;
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--muted);
-      font-family: 'DM Sans', sans-serif;
-      font-size: .82rem;
-      cursor: pointer;
-      transition: all .15s;
-    }
-
-    .btn-cancel:hover { border-color: var(--fg); color: var(--fg); }
-
-    /* ── Toast ──────────────────────────────────────────── */
-    .toast-container {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 2000;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .toast {
-      padding: 10px 16px;
-      border-radius: 5px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .82rem;
-      animation: toast-in .25s ease;
-      max-width: 320px;
-    }
-
-    .toast.ok { background: #0a2a1a; border: 1px solid var(--accent); color: var(--accent); }
-    .toast.err { background: #2a0a0a; border: 1px solid #ff4444; color: #ff7777; }
-    .toast.info { background: var(--surface); border: 1px solid var(--border); color: var(--fg); }
-
-    @keyframes toast-in {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── Access denied ──────────────────────────────────── */
-    .access-denied {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      z-index: 500;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 12px;
-      font-family: 'DM Sans', sans-serif;
-      color: var(--muted);
-    }
-
-    .access-denied.show { display: flex; }
-
-    .access-denied .ad-code {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 5rem;
-      letter-spacing: .15em;
-      color: #ff4444;
-      line-height: 1;
-    }
-
-    /* Month selector for Contabilidad */
-    .month-selector {
-      display: flex;
-      gap: 8px;
-      padding: 8px 12px;
-      background: rgba(0,255,136,.04);
-      border: 1px solid rgba(0,255,136,.15);
-      border-radius: 6px;
-      margin-bottom: 14px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    .month-selector label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .68rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-
-    .month-selector select {
-      padding: 4px 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      color: var(--fg);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .72rem;
-      cursor: pointer;
-    }
-
-    .month-selector select:focus { outline: none; border-color: var(--accent); }
-
-    /* Loading spinner inline */
-    .spin {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .6s linear infinite;
-      vertical-align: middle;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Badge for file count */
-    .fc-badge {
-      margin-left: auto;
-      background: rgba(255,255,255,.06);
-      color: var(--muted);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .6rem;
-      padding: 1px 5px;
-      border-radius: 8px;
-    }
-
-    /* Confirm delete modal */
-    .confirm-msg {
-      font-family: 'DM Sans', sans-serif;
-      font-size: .85rem;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .confirm-name {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .78rem;
-      color: var(--fg);
-      background: var(--bg);
-      padding: 6px 10px;
-      border-radius: 4px;
-      word-break: break-all;
-    }
+    .btn-primary:disabled { opacity: .35; cursor: not-allowed; }
 
     .btn-danger {
       padding: 8px 18px;
-      background: #ff4444;
+      background: var(--danger);
       color: #fff;
       border: none;
-      border-radius: 4px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: .82rem;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 12px;
       cursor: pointer;
       transition: opacity .15s;
     }
-
     .btn-danger:hover { opacity: .85; }
+
+    .btn-cancel {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+    .confirm-name {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--text);
+      background: var(--surface2);
+      padding: 7px 10px;
+      border-radius: var(--radius);
+      word-break: break-all;
+      margin: 8px 0;
+    }
+
+    /* ── Toasts ──────────────────────────────────────────── */
+    .toast-stack {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .toast {
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      max-width: 300px;
+      animation: tst .2s ease;
+    }
+    .toast.ok  { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); }
+    .toast.err { background: var(--danger-dim, rgba(220,50,50,.12)); border: 1px solid var(--danger); color: var(--danger); }
+    .toast.inf { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+
+    @keyframes tst { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Access denied ───────────────────────────────────── */
+    .ad-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg, #0b0f1a);
+      z-index: 600;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .ad-screen.show { display: flex; }
+    .ad-code {
+      font-family: var(--font-head);
+      font-size: 6rem;
+      letter-spacing: .15em;
+      color: var(--danger);
+      line-height: 1;
+    }
+
+    /* spin */
+    .spin {
+      display: inline-block;
+      width: 13px;
+      height: 13px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: sp .6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes sp { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
-<!-- Access Denied overlay -->
-<div class="access-denied" id="accessDenied">
+<!-- Access denied overlay -->
+<div class="ad-screen" id="adScreen">
   <div class="ad-code">403</div>
-  <div style="font-size:1.1rem; font-weight:600;">Acceso restringido</div>
-  <div style="font-size:.85rem;">Esta sección requiere permisos de administrador.</div>
-  <a href="dashboard.html" style="margin-top:10px; color:var(--accent); font-size:.82rem; text-decoration:none;">← Volver al portal</a>
+  <div style="font-size:15px;font-weight:600;color:var(--text)">Acceso restringido</div>
+  <div>Esta sección requiere permisos de administrador.</div>
+  <a href="/dashboard.html" style="margin-top:8px;color:var(--accent);font-size:12px;text-decoration:none">← Volver al portal</a>
 </div>
 
-<!-- Header (shared) -->
-<header class="header" id="appHeader">
-  <div class="header-left">
-    <span class="logo">MTX</span>
-    <nav class="nav" id="mainNav"></nav>
+<!-- Sidebar del portal (renderHeader lo inyecta aquí) -->
+<div id="header-placeholder"></div>
+
+<!-- ════════════════════════════════════════════════════════
+     FILE MANAGER LAYOUT
+     ════════════════════════════════════════════════════════ -->
+
+<!-- Sidebar de carpetas -->
+<aside class="fm-sidebar" id="fmSidebar" style="display:none;">
+  <div class="fm-sidebar-head">
+    <div class="fm-sidebar-title">📁 Carpetas</div>
   </div>
-  <div class="header-right">
-    <span class="user-badge" id="userBadge">—</span>
-    <button class="btn-sm" id="btnLogout" onclick="doLogout()">Salir</button>
+  <div class="fm-tree" id="folderTree"></div>
+</aside>
+
+<!-- Área principal -->
+<main class="fm-main" id="fmMain" style="display:none;">
+
+  <!-- Toolbar -->
+  <div class="fm-toolbar">
+    <div class="fm-breadcrumb" id="breadcrumb">
+      <span class="bc-cur">Selecciona una carpeta</span>
+    </div>
+    <button class="btn-icon" onclick="refreshFiles()" title="Recargar">⟳</button>
+    <button class="btn-upload" id="btnUpload" onclick="openUpload()" disabled>↑ Subir archivo</button>
   </div>
-</header>
 
-<!-- ── MAIN SHELL ──────────────────────────────────────── -->
-<div class="fm-shell" id="fmShell" style="display:none;">
-
-  <div class="fm-head">
-    <h1>📁 Archivos Administrativos</h1>
-    <span class="fm-head-meta" id="headMeta">Cargando…</span>
+  <!-- Month selector (contabilidad) -->
+  <div class="month-bar" id="monthBar">
+    <label>Período:</label>
+    <select id="selMonth" onchange="onPeriodChange()"></select>
+    <select id="selYear"  onchange="onPeriodChange()"></select>
   </div>
 
-  <div class="fm-body">
-
-    <!-- ── Sidebar ── -->
-    <aside class="fm-sidebar">
-      <div class="fm-sidebar-head">
-        <span>Carpetas</span>
-      </div>
-      <div class="fm-tree" id="folderTree">
-        <!-- Rendered by JS -->
-      </div>
-    </aside>
-
-    <!-- ── Main ── -->
-    <main class="fm-main">
-
-      <div class="fm-toolbar">
-        <div class="fm-breadcrumb" id="breadcrumb">
-          <span class="bc-current">Selecciona una carpeta</span>
-        </div>
-        <button class="btn-ghost" id="btnRefresh" onclick="refreshFolder()" title="Recargar">⟳</button>
-        <button class="btn-upload" id="btnUpload" onclick="openUpload()" disabled>
-          ↑ Subir archivo
-        </button>
-      </div>
-
-      <!-- Month selector (contabilidad only) -->
-      <div class="month-selector" id="monthSelector" style="display:none; margin: 10px 20px 0;">
-        <label>Mes:</label>
-        <select id="monthPicker" onchange="onMonthChange()"></select>
-        <label style="margin-left:8px;">Año:</label>
-        <select id="yearPicker" onchange="onMonthChange()"></select>
-      </div>
-
-      <div class="fm-file-area" id="fileArea">
-        <div class="fm-no-selection">
-          <div class="ns-icon">🗂</div>
-          <div>Selecciona una carpeta del panel izquierdo</div>
-        </div>
-      </div>
-
-    </main>
+  <!-- Files -->
+  <div class="fm-files" id="fileArea">
+    <div class="fm-placeholder">
+      <div class="ph-icon">🗂</div>
+      <div>Selecciona una carpeta del panel izquierdo</div>
+    </div>
   </div>
-</div>
 
-<!-- ── UPLOAD MODAL ──────────────────────────────────── -->
+</main>
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL: Upload
+     ════════════════════════════════════════════════════════ -->
 <div class="modal-bg" id="uploadModal">
   <div class="modal">
     <div class="modal-title">Subir archivo</div>
 
-    <div class="modal-field">
-      <label>Carpeta destino</label>
-      <input type="text" id="uploadPath" readonly style="cursor:default; opacity:.7;">
+    <div class="form-row">
+      <label>Destino</label>
+      <input type="text" id="uploadDest" readonly style="opacity:.6;cursor:default;">
     </div>
 
-    <div class="modal-field">
-      <div class="upload-drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        <div>Arrastra archivos aquí o <strong style="color:var(--accent)">haz clic</strong> para seleccionar</div>
-        <div style="font-size:.72rem; margin-top:4px; opacity:.6;">Tamaño máx. 10 MB por archivo</div>
+    <div class="form-row">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        Arrastra archivos aquí o <strong>haz clic para seleccionar</strong>
+        <div style="font-size:11px;margin-top:4px;opacity:.5;">Máx. 10 MB por archivo</div>
         <input type="file" id="fileInput" multiple onchange="handleFiles(this.files)">
       </div>
+      <div class="file-list-preview" id="filePreview"></div>
     </div>
 
-    <div id="selectedFilesList" style="display:none; margin-bottom:10px;"></div>
-
-    <div class="upload-progress" id="uploadProgress">
-      <div class="upload-progress-bar">
-        <div class="upload-progress-fill" id="progressFill"></div>
-      </div>
-      <div class="upload-progress-text" id="progressText">Subiendo…</div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">Subiendo…</div>
     </div>
 
     <div class="modal-actions">
@@ -842,12 +646,14 @@
   </div>
 </div>
 
-<!-- ── ADD ENTITY MODAL (Cliente / Proveedor) ──────── -->
+<!-- ════════════════════════════════════════════════════════
+     MODAL: Add entity (cliente / proveedor)
+     ════════════════════════════════════════════════════════ -->
 <div class="modal-bg" id="entityModal">
   <div class="modal">
-    <div class="modal-title" id="entityModalTitle">Agregar Cliente</div>
-    <div class="modal-field">
-      <label id="entityModalLabel">Nombre del cliente</label>
+    <div class="modal-title" id="entityTitle">Agregar Cliente</div>
+    <div class="form-row">
+      <label id="entityLabel">Nombre del cliente</label>
       <input type="text" id="entityName" placeholder="Ej: Empresa XYZ SA de CV">
     </div>
     <div class="modal-actions">
@@ -857,399 +663,319 @@
   </div>
 </div>
 
-<!-- ── DELETE CONFIRM MODAL ──────────────────────── -->
+<!-- ════════════════════════════════════════════════════════
+     MODAL: Delete confirm
+     ════════════════════════════════════════════════════════ -->
 <div class="modal-bg" id="deleteModal">
   <div class="modal">
-    <div class="modal-title" style="color:#ff4444;">Eliminar archivo</div>
-    <p class="confirm-msg">¿Estás seguro de que deseas eliminar este archivo?</p>
-    <div class="confirm-name" id="deleteFileName"></div>
+    <div class="modal-title" style="color:var(--danger)">Eliminar archivo</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;">¿Confirmas que deseas eliminar este archivo?</div>
+    <div class="confirm-name" id="delName"></div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeDeleteModal()">Cancelar</button>
-      <button class="btn-danger" id="btnConfirmDelete" onclick="confirmDelete()">Eliminar</button>
+      <button class="btn-cancel" onclick="closeDelModal()">Cancelar</button>
+      <button class="btn-danger" id="btnConfDel" onclick="confirmDel()">Eliminar</button>
     </div>
   </div>
 </div>
 
-<!-- Toast container -->
-<div class="toast-container" id="toastContainer"></div>
+<!-- Toasts -->
+<div class="toast-stack" id="toasts"></div>
 
-<!-- ──────────────────────────────────────────────────────
-     JAVASCRIPT
-     ────────────────────────────────────────────────────── -->
+<!-- ════════════════════════════════════════════════════════
+     SCRIPTS
+     ════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script src="/assets/agent.js"></script>
 <script>
-// ── Config & State ──────────────────────────────────────
-let supabase = null;
+// ── State ─────────────────────────────────────────────────
 let currentUser = null;
-let currentRole = null;
 let currentFolder = null; // { path, label, needsMonth }
-let selectedMonth = null; // 'YYYY-MM'
+let selectedPeriod = '';   // 'YYYY-MM'
 let pendingFiles = [];
-let deleteTargetId = null;
+let deleteId = null;
+let entityCtx = null;
 
 const ADMIN_ROLES = ['admin', 'super_admin'];
-const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_BYTES   = 10 * 1024 * 1024;
 
-// ── Folder Tree Definition ────────────────────────────
-const STATIC_TREE = [
+// ── Static folder tree ────────────────────────────────────
+const TREE = [
   {
-    id: 'administracion',
-    icon: '🏦',
-    label: 'ADMINISTRACIÓN',
+    id: 'admon', icon: '🏦', label: 'ADMINISTRACIÓN',
     children: [
       {
-        id: 'bancos-dlls',
-        label: 'Bancos DLLS',
-        children: [
-          { id: 'bancos-dlls/estados-cuenta', label: 'Estados de Cuenta DLLS', path: 'admin/administracion/bancos-dlls/estados-cuenta/' }
+        id: 'admon-dlls', label: 'Bancos DLLS', children: [
+          { label: 'Estados de Cuenta DLLS', path: 'admin/administracion/bancos-dlls/estados-cuenta/' }
         ]
       },
       {
-        id: 'bancos-pesos',
-        label: 'Bancos Pesos',
-        children: [
-          { id: 'bancos-pesos/estados-cuenta', label: 'Estados de Cuenta Pesos', path: 'admin/administracion/bancos-pesos/estados-cuenta/' }
+        id: 'admon-pesos', label: 'Bancos Pesos', children: [
+          { label: 'Estados de Cuenta Pesos', path: 'admin/administracion/bancos-pesos/estados-cuenta/' }
         ]
       }
     ]
   },
   {
-    id: 'clientes',
-    icon: '🤝',
-    label: 'CLIENTES',
-    dynamic: true,
-    entityType: 'cliente',
+    id: 'clientes', icon: '🤝', label: 'CLIENTES',
+    dynamic: true, entityType: 'cliente',
     basePath: 'admin/clientes/',
     subFolders: ['Cotizaciones','Contratos','POs','Facturas','Varios']
   },
   {
-    id: 'proveedores',
-    icon: '🏭',
-    label: 'PROVEEDORES',
-    dynamic: true,
-    entityType: 'proveedor',
+    id: 'proveedores', icon: '🏭', label: 'PROVEEDORES',
+    dynamic: true, entityType: 'proveedor',
     basePath: 'admin/proveedores/',
     subFolders: ['Cotizaciones','Contratos','POs','Facturas','Varios']
   },
   {
-    id: 'fiscal',
-    icon: '📋',
-    label: 'FISCAL',
+    id: 'fiscal', icon: '📋', label: 'FISCAL',
     children: [
-      { id: 'fiscal/facturas-starke',       label: 'Facturas Starke',               path: 'admin/fiscal/facturas-starke/' },
-      { id: 'fiscal/facturas-asimilados',   label: 'Facturas Asimilados Starke',    path: 'admin/fiscal/facturas-asimilados/' },
-      { id: 'fiscal/declaraciones-mens',    label: 'Declaraciones Mensuales',       path: 'admin/fiscal/declaraciones-mensuales/' },
-      { id: 'fiscal/declaraciones-anuales', label: 'Declaraciones Anuales',         path: 'admin/fiscal/declaraciones-anuales/' },
-      { id: 'fiscal/documentos-sat',        label: 'Documentos SAT',                path: 'admin/fiscal/documentos-sat/' },
-      { id: 'fiscal/fiel',                  label: 'FIEL',                          path: 'admin/fiscal/fiel/' },
-      { id: 'fiscal/planeaciones',          label: 'Planeaciones Fiscales',         path: 'admin/fiscal/planeaciones-fiscales/' }
+      { label: 'Facturas Starke',              path: 'admin/fiscal/facturas-starke/' },
+      { label: 'Facturas Asimilados Starke',   path: 'admin/fiscal/facturas-asimilados/' },
+      { label: 'Declaraciones Mensuales',      path: 'admin/fiscal/declaraciones-mensuales/' },
+      { label: 'Declaraciones Anuales',        path: 'admin/fiscal/declaraciones-anuales/' },
+      { label: 'Documentos SAT',               path: 'admin/fiscal/documentos-sat/' },
+      { label: 'FIEL',                         path: 'admin/fiscal/fiel/' },
+      { label: 'Planeaciones Fiscales',        path: 'admin/fiscal/planeaciones-fiscales/' }
     ]
   },
   {
-    id: 'contabilidad',
-    icon: '📊',
-    label: 'CONTABILIDAD',
+    id: 'contabilidad', icon: '📊', label: 'CONTABILIDAD',
     children: [
-      { id: 'cont/pagos-pesos-egresos',  label: 'Pagos Pesos · Egresos',       path: 'admin/contabilidad/pagos-pesos/egresos/',       needsMonth: true },
-      { id: 'cont/pagos-pesos-ingresos', label: 'Pagos Pesos · Ingresos',      path: 'admin/contabilidad/pagos-pesos/ingresos/',      needsMonth: true },
-      { id: 'cont/pagos-dlls-egresos',   label: 'Pagos DLLS · Egresos',        path: 'admin/contabilidad/pagos-dlls/egresos/',        needsMonth: true },
-      { id: 'cont/pagos-dlls-ingresos',  label: 'Pagos DLLS · Ingresos',       path: 'admin/contabilidad/pagos-dlls/ingresos/',       needsMonth: true },
-      { id: 'cont/polizas-dlls-egresos', label: 'Pólizas DLLS · Egresos',      path: 'admin/contabilidad/polizas-dlls/egresos/',      needsMonth: true },
-      { id: 'cont/polizas-dlls-ingresos',label: 'Pólizas DLLS · Ingresos',     path: 'admin/contabilidad/polizas-dlls/ingresos/',     needsMonth: true },
-      { id: 'cont/polizas-pesos-egresos',label: 'Pólizas Pesos · Egresos',     path: 'admin/contabilidad/polizas-pesos/egresos/',     needsMonth: true },
-      { id: 'cont/polizas-pesos-ingresos',label:'Pólizas Pesos · Ingresos',    path: 'admin/contabilidad/polizas-pesos/ingresos/',    needsMonth: true }
+      { label: 'Pagos Pesos · Egresos',        path: 'admin/contabilidad/pagos-pesos/egresos/',        needsMonth: true },
+      { label: 'Pagos Pesos · Ingresos',       path: 'admin/contabilidad/pagos-pesos/ingresos/',       needsMonth: true },
+      { label: 'Pagos DLLS · Egresos',         path: 'admin/contabilidad/pagos-dlls/egresos/',         needsMonth: true },
+      { label: 'Pagos DLLS · Ingresos',        path: 'admin/contabilidad/pagos-dlls/ingresos/',        needsMonth: true },
+      { label: 'Pólizas DLLS · Egresos',       path: 'admin/contabilidad/polizas-dlls/egresos/',       needsMonth: true },
+      { label: 'Pólizas DLLS · Ingresos',      path: 'admin/contabilidad/polizas-dlls/ingresos/',      needsMonth: true },
+      { label: 'Pólizas Pesos · Egresos',      path: 'admin/contabilidad/polizas-pesos/egresos/',      needsMonth: true },
+      { label: 'Pólizas Pesos · Ingresos',     path: 'admin/contabilidad/polizas-pesos/ingresos/',     needsMonth: true }
     ]
   },
   {
-    id: 'acta',
-    icon: '📜',
-    label: 'ACTA CONSTITUTIVA',
+    id: 'acta', icon: '📜', label: 'ACTA CONSTITUTIVA',
     children: [
-      { id: 'acta/cambios',      label: 'Cambios y Asambleas',           path: 'admin/acta-constitutiva/cambios-asambleas/' },
-      { id: 'acta/rep-legal',    label: 'Docs Representante Legal',      path: 'admin/acta-constitutiva/representante-legal/' },
-      { id: 'acta/ac-farias',    label: 'Alejandro Canales Farías',      path: 'admin/acta-constitutiva/alejandro-canales-farias/' },
-      { id: 'acta/ac-ibarra',    label: 'Alejandro Canales Ibarra',      path: 'admin/acta-constitutiva/alejandro-canales-ibarra/' },
-      { id: 'acta/norma',        label: 'Norma B Canales Ibarra',        path: 'admin/acta-constitutiva/norma-b-canales-ibarra/' }
+      { label: 'Cambios y Asambleas',          path: 'admin/acta-constitutiva/cambios-asambleas/' },
+      { label: 'Docs Representante Legal',     path: 'admin/acta-constitutiva/representante-legal/' },
+      { label: 'Alejandro Canales Farías',     path: 'admin/acta-constitutiva/alejandro-canales-farias/' },
+      { label: 'Alejandro Canales Ibarra',     path: 'admin/acta-constitutiva/alejandro-canales-ibarra/' },
+      { label: 'Norma B Canales Ibarra',       path: 'admin/acta-constitutiva/norma-b-canales-ibarra/' }
     ]
   }
 ];
 
-// ── Init ─────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────
 async function init() {
-  const cfg = window.MTX_CONFIG;
-  supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  currentUser = await requireAuth();
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = 'index.html'; return; }
+  const role = currentUser?.profile?.role;
+  document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'archivos');
 
-  currentUser = session.user;
-
-  // Load profile to check role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, full_name')
-    .eq('id', currentUser.id)
-    .single();
-
-  currentRole = profile?.role || 'user';
-  const displayName = profile?.full_name || currentUser.email;
-
-  document.getElementById('userBadge').textContent = displayName;
-
-  // Build nav
-  buildNav(currentRole);
-
-  if (!ADMIN_ROLES.includes(currentRole)) {
-    document.getElementById('accessDenied').classList.add('show');
+  if (!ADMIN_ROLES.includes(role)) {
+    document.getElementById('adScreen').classList.add('show');
     return;
   }
 
-  // Show app
-  document.getElementById('fmShell').style.display = 'flex';
+  document.getElementById('fmSidebar').style.display = 'flex';
+  document.getElementById('fmMain').style.display = 'flex';
 
-  // Build folder tree
+  fillPeriodPickers();
   await buildTree();
-
-  // Month selectors
-  populateMonthPickers();
-
-  document.getElementById('headMeta').textContent = `${displayName} · ${currentRole.toUpperCase()}`;
 }
 
-// ── Nav ───────────────────────────────────────────────
-function buildNav(role) {
-  const links = [
-    { href: 'dashboard.html', label: 'Dashboard' },
-    { href: 'leads.html',     label: 'Leads' },
-    { href: 'generate.html',  label: 'Generar' },
-    { href: 'oportunidades.html', label: 'Inteligencia' },
-  ];
-  if (ADMIN_ROLES.includes(role)) {
-    links.push({ href: 'archivos.html', label: 'Archivos', active: true });
-    links.push({ href: 'admin.html',    label: 'Admin' });
-  }
-  const nav = document.getElementById('mainNav');
-  nav.innerHTML = links.map(l =>
-    `<a href="${l.href}" class="nav-link${l.active ? ' active' : ''}">${l.label}</a>`
-  ).join('');
-}
-
-// ── Month Pickers ─────────────────────────────────────
-function populateMonthPickers() {
-  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+// ── Period pickers ────────────────────────────────────────
+function fillPeriodPickers() {
+  const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const mp = document.getElementById('monthPicker');
-  const yp = document.getElementById('yearPicker');
-
   const now = new Date();
-  months.forEach((m, i) => {
-    const o = document.createElement('option');
-    o.value = String(i + 1).padStart(2, '0');
-    o.textContent = m;
+  const sm = document.getElementById('selMonth');
+  const sy = document.getElementById('selYear');
+
+  MONTHS.forEach((m, i) => {
+    const o = new Option(m, String(i + 1).padStart(2, '0'));
     if (i + 1 === now.getMonth() + 1) o.selected = true;
-    mp.appendChild(o);
+    sm.appendChild(o);
   });
 
   for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) {
-    const o = document.createElement('option');
-    o.value = String(y);
-    o.textContent = String(y);
+    const o = new Option(y, y);
     if (y === now.getFullYear()) o.selected = true;
-    yp.appendChild(o);
+    sy.appendChild(o);
   }
-  updateSelectedMonth();
+  refreshPeriod();
 }
 
-function updateSelectedMonth() {
-  const m = document.getElementById('monthPicker').value;
-  const y = document.getElementById('yearPicker').value;
-  selectedMonth = `${y}-${m}`;
+function refreshPeriod() {
+  const m = document.getElementById('selMonth').value;
+  const y = document.getElementById('selYear').value;
+  selectedPeriod = `${y}-${m}`;
 }
 
-function onMonthChange() {
-  updateSelectedMonth();
-  if (currentFolder) loadFiles();
+function onPeriodChange() {
+  refreshPeriod();
+  if (currentFolder?.needsMonth) loadFiles();
 }
 
-// ── Folder Tree Builder ───────────────────────────────
+// ── Tree ──────────────────────────────────────────────────
 async function buildTree() {
-  // Load dynamic entities (clientes + proveedores)
-  const { data: folders } = await supabase
+  const db = getDB();
+  const { data: folders } = await db
     .from('metatronix_docs')
     .select('file_path, title')
     .eq('category', 'carpeta_admin')
     .like('file_path', 'admin/%');
 
   const entities = { clientes: [], proveedores: [] };
-
   (folders || []).forEach(f => {
     const m = f.file_path.match(/^admin\/(clientes|proveedores)\/([^/]+)\//);
-    if (m) {
-      const group = m[1];
-      const slug = m[2];
-      const name = f.title || slug;
-      const arr = entities[group];
-      if (!arr.find(e => e.slug === slug)) arr.push({ slug, name });
-    }
+    if (!m) return;
+    const arr = entities[m[1]];
+    const slug = m[2];
+    if (!arr.find(e => e.slug === slug)) arr.push({ slug, name: f.title || slug });
   });
 
   const tree = document.getElementById('folderTree');
   tree.innerHTML = '';
 
-  STATIC_TREE.forEach(section => {
-    const sEl = document.createElement('div');
-    sEl.className = 'tree-section';
-    sEl.id = `sec-${section.id}`;
+  TREE.forEach(section => {
+    const sec = document.createElement('div');
+    sec.className = 'ts-open'; // open by default
 
-    const labelEl = document.createElement('div');
-    labelEl.className = 'tree-section-label';
-    labelEl.innerHTML = `<span class="arrow">▶</span><span class="section-icon">${section.icon}</span>${section.label}`;
-    labelEl.onclick = () => sEl.classList.toggle('open');
+    // Section header
+    const lbl = document.createElement('div');
+    lbl.className = 'ts-label';
+    lbl.innerHTML = `<span class="ts-arrow">▶</span><span>${section.icon}</span>${section.label}`;
+    lbl.onclick = () => sec.classList.toggle('ts-open');
 
-    const childrenEl = document.createElement('div');
-    childrenEl.className = 'tree-section-children';
+    const children = document.createElement('div');
+    children.className = 'ts-children';
 
     if (section.dynamic) {
-      // Dynamic (clientes / proveedores)
       const group = section.entityType === 'cliente' ? 'clientes' : 'proveedores';
-      const entityList = entities[group];
-      const subFolders = section.subFolders;
+      entities[group].forEach(e => renderEntity(children, e, section.basePath, section.subFolders));
 
-      entityList.forEach(entity => {
-        renderEntityNode(childrenEl, entity, section.basePath, subFolders);
-      });
-
-      // Add entity button
       const addBtn = document.createElement('button');
-      addBtn.className = 'add-entity-btn';
-      addBtn.innerHTML = `＋ Agregar ${section.entityType === 'cliente' ? 'cliente' : 'proveedor'}`;
-      addBtn.onclick = () => openEntityModal(section.entityType, section.basePath, subFolders, sEl, childrenEl);
-      childrenEl.appendChild(addBtn);
-
+      addBtn.className = 'add-btn';
+      addBtn.innerHTML = `＋ Agregar ${section.entityType}`;
+      addBtn.onclick = () => openEntityModal(section.entityType, section.basePath, section.subFolders, children, addBtn);
+      children.appendChild(addBtn);
     } else {
-      // Static children
-      (section.children || []).forEach(child => {
-        if (child.children) {
-          // Sub-group
-          const subGroup = document.createElement('div');
-          subGroup.className = 'tree-section';
-          subGroup.style.cssText = 'margin-bottom:0;';
-          const subLabel = document.createElement('div');
-          subLabel.className = 'tree-item';
-          subLabel.style.fontWeight = '500';
-          subLabel.innerHTML = `▶ ${child.label}`;
-          subLabel.style.fontSize = '.78rem';
-
-          const subChildren = document.createElement('div');
-          subChildren.className = 'tree-section-children';
-
-          child.children.forEach(leaf => {
-            const item = makeTreeItem(leaf);
-            subChildren.appendChild(item);
-          });
-
-          subLabel.onclick = () => {
-            const open = subGroup.classList.toggle('open');
-            subLabel.querySelector && void 0;
-          };
-
-          subGroup.appendChild(subLabel);
-          subGroup.appendChild(subChildren);
-          childrenEl.appendChild(subGroup);
-        } else {
-          const item = makeTreeItem(child);
-          childrenEl.appendChild(item);
-        }
-      });
+      renderStaticChildren(children, section.children || []);
     }
 
-    sEl.appendChild(labelEl);
-    sEl.appendChild(childrenEl);
-    tree.appendChild(sEl);
+    sec.appendChild(lbl);
+    sec.appendChild(children);
+    tree.appendChild(sec);
   });
 }
 
-function renderEntityNode(container, entity, basePath, subFolders) {
-  const nodeEl = document.createElement('div');
-  nodeEl.className = 'entity-node';
-  nodeEl.id = `entity-${entity.slug}`;
+function renderStaticChildren(container, nodes) {
+  nodes.forEach(node => {
+    if (node.children) {
+      // Sub-group
+      const grp = document.createElement('div');
+      const glbl = document.createElement('div');
+      glbl.className = 'ti';
+      glbl.style.fontWeight = '600';
+      glbl.innerHTML = `▶ ${node.label}`;
 
-  const labelEl = document.createElement('div');
-  labelEl.className = 'entity-node-label';
-  labelEl.innerHTML = `<span class="e-arrow">▶</span>🏢 ${entity.name}`;
-  labelEl.onclick = () => {
-    const open = nodeEl.classList.toggle('open');
-  };
+      const gsubs = document.createElement('div');
+      gsubs.style.display = 'none';
 
-  nodeEl.appendChild(labelEl);
-  container.appendChild(nodeEl);
+      node.children.forEach(leaf => gsubs.appendChild(makeTi(leaf, true)));
 
-  // Sub-folders
-  const subEl = document.createElement('div');
-  subEl.className = 'entity-sub-items';
-  subFolders.forEach(sf => {
-    const slug = sf.toLowerCase().replace(/\s+/g, '-');
-    const item = makeTreeItem({
-      id: `${entity.slug}/${slug}`,
-      label: sf,
-      path: `${basePath}${entity.slug}/${slug}/`,
-      indent: 2
-    });
-    subEl.appendChild(item);
+      glbl.onclick = () => {
+        const open = gsubs.style.display === 'block';
+        gsubs.style.display = open ? 'none' : 'block';
+        glbl.innerHTML = `${open ? '▶' : '▼'} ${node.label}`;
+      };
+
+      grp.appendChild(glbl);
+      grp.appendChild(gsubs);
+      container.appendChild(grp);
+    } else {
+      container.appendChild(makeTi(node, false));
+    }
   });
-  container.appendChild(subEl);
 }
 
-function makeTreeItem(node) {
+function makeTi(node, sub) {
   const el = document.createElement('div');
-  el.className = 'tree-item' + (node.indent === 2 ? ' tree-item-sub' : '');
-  el.dataset.path = node.path || '';
-  el.dataset.label = node.label;
-  el.dataset.needsMonth = node.needsMonth ? '1' : '';
+  el.className = 'ti' + (sub ? ' ti-sub' : '');
+  el.dataset.path = node.path;
   el.textContent = node.label;
-  el.onclick = () => selectFolder(node.path, node.label, !!node.needsMonth, el);
+  el.onclick = () => selectFolder(node, el);
   return el;
 }
 
-function selectFolder(path, label, needsMonth, el) {
-  // Deactivate previous
-  document.querySelectorAll('.tree-item.active').forEach(e => e.classList.remove('active'));
+function renderEntity(container, entity, basePath, subFolders) {
+  const hdr = document.createElement('div');
+  hdr.className = 'entity-header';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'entity-label';
+  lbl.innerHTML = `<span class="ea">▶</span>🏢 ${entity.name}`;
+  lbl.onclick = () => {
+    hdr.classList.toggle('open');
+  };
+
+  hdr.appendChild(lbl);
+  container.appendChild(hdr);
+
+  const subs = document.createElement('div');
+  subs.className = 'entity-subs';
+  subFolders.forEach(sf => {
+    const slug = sf.toLowerCase().replace(/\s+/g, '-');
+    subs.appendChild(makeTi({
+      label: sf,
+      path: `${basePath}${entity.slug}/${slug}/`
+    }, true));
+  });
+  container.appendChild(subs);
+}
+
+// ── Select folder ─────────────────────────────────────────
+function selectFolder(node, el) {
+  document.querySelectorAll('.ti.active').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
 
-  currentFolder = { path, label, needsMonth };
+  currentFolder = node;
 
-  // Month selector visibility
-  const ms = document.getElementById('monthSelector');
-  ms.style.display = needsMonth ? 'flex' : 'none';
+  const mb = document.getElementById('monthBar');
+  if (node.needsMonth) {
+    mb.classList.add('show');
+  } else {
+    mb.classList.remove('show');
+  }
 
-  // Enable upload
   document.getElementById('btnUpload').disabled = false;
-  document.getElementById('uploadPath').value = path;
 
   loadFiles();
 }
 
-// ── Load Files ────────────────────────────────────────
+// ── Load files ────────────────────────────────────────────
 async function loadFiles() {
   if (!currentFolder) return;
-
-  document.getElementById('fileArea').innerHTML = '<div class="fm-empty"><span class="spin"></span><span>Cargando…</span></div>';
   updateBreadcrumb();
 
-  let folderPath = currentFolder.path;
-  if (currentFolder.needsMonth) {
-    folderPath += selectedMonth + '/';
-  }
+  document.getElementById('fileArea').innerHTML = '<div class="fm-placeholder"><span class="spin"></span><span>Cargando…</span></div>';
 
-  const { data: files, error } = await supabase
+  let fp = currentFolder.path;
+  if (currentFolder.needsMonth) fp += selectedPeriod + '/';
+
+  const db = getDB();
+  const { data: files, error } = await db
     .from('metatronix_docs')
-    .select('id, title, file_name, file_type, file_size, created_at, file_data')
+    .select('id, title, file_name, file_type, file_size, created_at')
     .eq('category', 'archivo_admin')
-    .like('file_path', folderPath + '%')
+    .like('file_path', fp + '%')
     .order('created_at', { ascending: false });
 
   if (error) {
-    showToast('Error al cargar archivos: ' + error.message, 'err');
-    document.getElementById('fileArea').innerHTML = '<div class="fm-empty"><div class="em-icon">⚠️</div><div>Error al cargar archivos</div></div>';
+    toast('Error al cargar: ' + error.message, 'err');
+    document.getElementById('fileArea').innerHTML = '<div class="fm-placeholder"><div class="ph-icon">⚠️</div><div>Error al cargar archivos</div></div>';
     return;
   }
 
@@ -1258,326 +984,274 @@ async function loadFiles() {
 
 function renderFiles(files) {
   const area = document.getElementById('fileArea');
-
-  if (files.length === 0) {
-    area.innerHTML = '<div class="fm-empty"><div class="em-icon">📭</div><div>Esta carpeta está vacía</div><div style="font-size:.75rem; opacity:.6;">Sube archivos con el botón superior derecho</div></div>';
+  if (!files.length) {
+    area.innerHTML = '<div class="fm-placeholder"><div class="ph-icon">📭</div><div>Carpeta vacía</div><div style="font-size:11px;opacity:.5;margin-top:4px">Usa "Subir archivo" para agregar documentos</div></div>';
     return;
   }
 
   const rows = files.map(f => {
-    const icon = getFileIcon(f.file_type);
-    const size = formatSize(f.file_size);
-    const date = formatDate(f.created_at);
-    const name = f.file_name || f.title || 'Archivo';
-
+    const icon = fileIcon(f.file_type);
+    const name = f.file_name || f.title || 'archivo';
     return `<tr>
-      <td>
-        <div class="file-name-cell">
-          <span class="file-icon">${icon}</span>
-          <span class="file-name-text" title="${name}">${name}</span>
-        </div>
-      </td>
-      <td class="file-size-cell">${size}</td>
-      <td class="file-date-cell">${date}</td>
-      <td>
-        <div class="file-actions-cell">
-          <button class="btn-action" onclick="downloadFile('${f.id}')">↓ Descargar</button>
-          <button class="btn-action danger" onclick="openDeleteModal('${f.id}', '${(f.file_name||'').replace(/'/g,"\\'")}')">Eliminar</button>
-        </div>
-      </td>
+      <td><div class="fname-cell"><span class="ficon">${icon}</span><span class="fname-text" title="${escHtmlSafe(name)}">${escHtmlSafe(name)}</span></div></td>
+      <td class="fmeta">${fmtSize(f.file_size)}</td>
+      <td class="fmeta">${fmtDate(f.created_at)}</td>
+      <td><div class="factions">
+        <button class="btn-row" onclick="downloadFile('${f.id}')">↓ Descargar</button>
+        <button class="btn-row danger" onclick="openDelModal('${f.id}','${escHtmlSafe(name)}')">Eliminar</button>
+      </div></td>
     </tr>`;
   }).join('');
 
-  area.innerHTML = `
-    <table class="file-table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Tamaño</th>
-          <th>Fecha</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  area.innerHTML = `<table class="ftable">
+    <thead><tr><th>Nombre</th><th>Tamaño</th><th>Fecha</th><th>Acciones</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 function updateBreadcrumb() {
   const bc = document.getElementById('breadcrumb');
-  if (!currentFolder) { bc.innerHTML = '<span class="bc-current">Selecciona una carpeta</span>'; return; }
-
+  if (!currentFolder) { bc.innerHTML = '<span class="bc-cur">Selecciona una carpeta</span>'; return; }
   let label = currentFolder.label;
-  if (currentFolder.needsMonth && selectedMonth) {
-    const [y, m] = selectedMonth.split('-');
-    const mNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    label += ` <span class="bc-sep">/</span> <span class="bc-current">${mNames[parseInt(m)-1]} ${y}</span>`;
+  if (currentFolder.needsMonth && selectedPeriod) {
+    const [y, m] = selectedPeriod.split('-');
+    const mn = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    label += `<span class="bc-sep">/</span><span class="bc-cur">${mn[parseInt(m)-1]} ${y}</span>`;
   }
-
-  bc.innerHTML = `ARCHIVOS <span class="bc-sep">/</span> ${label}`;
+  bc.innerHTML = `Archivos<span class="bc-sep">/</span>${label}`;
 }
 
-// ── Upload ────────────────────────────────────────────
+// ── Upload ────────────────────────────────────────────────
 function openUpload() {
   if (!currentFolder) return;
-  document.getElementById('uploadPath').value = currentFolder.path + (currentFolder.needsMonth ? selectedMonth + '/' : '');
-  document.getElementById('selectedFilesList').style.display = 'none';
-  document.getElementById('selectedFilesList').innerHTML = '';
+  let fp = currentFolder.path;
+  if (currentFolder.needsMonth) fp += selectedPeriod + '/';
+  document.getElementById('uploadDest').value = fp;
+  document.getElementById('filePreview').innerHTML = '';
   document.getElementById('fileInput').value = '';
   document.getElementById('btnDoUpload').disabled = true;
-  document.getElementById('uploadProgress').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
   pendingFiles = [];
   document.getElementById('uploadModal').classList.add('open');
 }
 
-function closeUpload() {
-  document.getElementById('uploadModal').classList.remove('open');
-}
+function closeUpload() { document.getElementById('uploadModal').classList.remove('open'); }
 
-function handleFiles(files) {
-  pendingFiles = Array.from(files).filter(f => {
-    if (f.size > MAX_SIZE_BYTES) {
-      showToast(`"${f.name}" supera el límite de 10 MB`, 'err');
-      return false;
-    }
-    return true;
+function handleFiles(fileList) {
+  pendingFiles = [];
+  const preview = document.getElementById('filePreview');
+  preview.innerHTML = '';
+
+  Array.from(fileList).forEach(f => {
+    if (f.size > MAX_BYTES) { toast(`"${f.name}" supera el límite de 10 MB`, 'err'); return; }
+    pendingFiles.push(f);
+    preview.innerHTML += `<div class="flp-item"><span>📄 ${escHtmlSafe(f.name)}</span><span>${fmtSize(f.size)}</span></div>`;
   });
 
-  const list = document.getElementById('selectedFilesList');
-  if (pendingFiles.length === 0) { list.style.display = 'none'; return; }
-
-  list.style.display = 'block';
-  list.innerHTML = pendingFiles.map(f =>
-    `<div style="font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--muted); padding:3px 0; border-bottom:1px solid var(--border);">📄 ${f.name} <span style="float:right;">${formatSize(f.size)}</span></div>`
-  ).join('');
-
-  document.getElementById('btnDoUpload').disabled = false;
+  document.getElementById('btnDoUpload').disabled = pendingFiles.length === 0;
 }
 
-// Drag & Drop
-const dropZone = document.getElementById('dropZone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  handleFiles(e.dataTransfer.files);
-});
+// Drag & drop
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); handleFiles(e.dataTransfer.files); });
 
 async function doUpload() {
-  if (pendingFiles.length === 0) return;
-
+  if (!pendingFiles.length) return;
   const btn = document.getElementById('btnDoUpload');
-  const prog = document.getElementById('uploadProgress');
-  const fill = document.getElementById('progressFill');
-  const txt  = document.getElementById('progressText');
+  const pw  = document.getElementById('progressWrap');
+  const pf  = document.getElementById('progressFill');
+  const pt  = document.getElementById('progressText');
+  const db  = getDB();
+  const dest = document.getElementById('uploadDest').value;
 
   btn.disabled = true;
-  prog.style.display = 'block';
-
-  const destPath = document.getElementById('uploadPath').value;
+  pw.style.display = 'block';
 
   for (let i = 0; i < pendingFiles.length; i++) {
     const file = pendingFiles[i];
-    txt.textContent = `Subiendo ${i + 1}/${pendingFiles.length}: ${file.name}…`;
-    fill.style.width = ((i / pendingFiles.length) * 100) + '%';
+    pt.textContent = `Subiendo ${i + 1}/${pendingFiles.length}: ${file.name}…`;
+    pf.style.width = `${(i / pendingFiles.length) * 100}%`;
 
     try {
-      const b64 = await fileToBase64(file);
-
-      const { error } = await supabase.from('metatronix_docs').insert({
+      const b64 = await toBase64(file);
+      const { error } = await db.from('metatronix_docs').insert({
         title: file.name,
-        description: `Archivo administrativo · ${currentFolder.label}`,
+        description: `Archivo admin · ${currentFolder.label}`,
         category: 'archivo_admin',
         visibility: 'admin',
         file_name: file.name,
-        file_path: destPath,
+        file_path: dest,
         file_type: file.type || 'application/octet-stream',
         file_size: file.size,
         file_data: b64,
-        uploaded_by: currentUser.id
       });
-
       if (error) throw error;
     } catch (e) {
-      showToast(`Error subiendo "${file.name}": ${e.message}`, 'err');
+      toast(`Error subiendo "${file.name}": ${e.message}`, 'err');
     }
   }
 
-  fill.style.width = '100%';
-  txt.textContent = '¡Completado!';
-
+  pf.style.width = '100%';
+  pt.textContent = '¡Listo!';
   setTimeout(() => {
     closeUpload();
-    showToast(`${pendingFiles.length} archivo(s) subido(s) correctamente`, 'ok');
+    toast(`${pendingFiles.length} archivo(s) subido(s)`, 'ok');
     loadFiles();
-  }, 600);
+  }, 500);
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
+function toBase64(file) {
+  return new Promise((res, rej) => {
     const reader = new FileReader();
-    reader.onload = e => {
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(e.target.result)));
-      resolve(b64);
-    };
-    reader.onerror = reject;
+    reader.onload = e => res(btoa(String.fromCharCode(...new Uint8Array(e.target.result))));
+    reader.onerror = rej;
     reader.readAsArrayBuffer(file);
   });
 }
 
-// ── Download ──────────────────────────────────────────
+// ── Download ──────────────────────────────────────────────
 async function downloadFile(id) {
-  const { data, error } = await supabase
+  const db = getDB();
+  const { data, error } = await db
     .from('metatronix_docs')
     .select('file_data, file_name, file_type')
     .eq('id', id)
     .single();
 
-  if (error || !data) { showToast('No se pudo descargar el archivo', 'err'); return; }
+  if (error || !data) { toast('No se pudo descargar el archivo', 'err'); return; }
 
   try {
-    const binary = atob(data.file_data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: data.file_type || 'application/octet-stream' });
+    const bin = atob(data.file_data);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const blob = new Blob([arr], { type: data.file_type || 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = data.file_name || 'archivo';
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch(e) {
-    showToast('Error al decodificar el archivo', 'err');
-  }
+    a.href = url; a.download = data.file_name || 'archivo';
+    a.click(); URL.revokeObjectURL(url);
+  } catch (e) { toast('Error al decodificar archivo', 'err'); }
 }
 
-// ── Delete ────────────────────────────────────────────
-function openDeleteModal(id, name) {
-  deleteTargetId = id;
-  document.getElementById('deleteFileName').textContent = name;
+// ── Delete ────────────────────────────────────────────────
+function openDelModal(id, name) {
+  deleteId = id;
+  document.getElementById('delName').textContent = name;
   document.getElementById('deleteModal').classList.add('open');
 }
+function closeDelModal() { deleteId = null; document.getElementById('deleteModal').classList.remove('open'); }
 
-function closeDeleteModal() {
-  deleteTargetId = null;
-  document.getElementById('deleteModal').classList.remove('open');
-}
+async function confirmDel() {
+  if (!deleteId) return;
+  const btn = document.getElementById('btnConfDel');
+  btn.disabled = true; btn.textContent = 'Eliminando…';
 
-async function confirmDelete() {
-  if (!deleteTargetId) return;
-  const btn = document.getElementById('btnConfirmDelete');
-  btn.disabled = true;
-  btn.textContent = 'Eliminando…';
+  const { error } = await getDB().from('metatronix_docs').delete().eq('id', deleteId);
 
-  const { error } = await supabase.from('metatronix_docs').delete().eq('id', deleteTargetId);
+  closeDelModal();
+  btn.disabled = false; btn.textContent = 'Eliminar';
 
-  closeDeleteModal();
-  btn.disabled = false;
-  btn.textContent = 'Eliminar';
-
-  if (error) { showToast('Error al eliminar: ' + error.message, 'err'); return; }
-
-  showToast('Archivo eliminado', 'ok');
+  if (error) { toast('Error: ' + error.message, 'err'); return; }
+  toast('Archivo eliminado', 'ok');
   loadFiles();
 }
 
-// ── Refresh ───────────────────────────────────────────
-function refreshFolder() {
-  buildTree().then(() => loadFiles());
+// ── Refresh ───────────────────────────────────────────────
+async function refreshFiles() {
+  await buildTree();
+  if (currentFolder) loadFiles();
 }
 
-// ── Entity Modal (Cliente / Proveedor) ────────────────
-let entityContext = null;
-
-function openEntityModal(type, basePath, subFolders, sectionEl, childrenEl) {
-  entityContext = { type, basePath, subFolders, sectionEl, childrenEl };
-  document.getElementById('entityModalTitle').textContent = type === 'cliente' ? 'Agregar Cliente' : 'Agregar Proveedor';
-  document.getElementById('entityModalLabel').textContent = type === 'cliente' ? 'Nombre del cliente' : 'Nombre del proveedor';
+// ── Entity modal ──────────────────────────────────────────
+function openEntityModal(type, basePath, subFolders, childrenEl, addBtn) {
+  entityCtx = { type, basePath, subFolders, childrenEl, addBtn };
+  const isCliente = type === 'cliente';
+  document.getElementById('entityTitle').textContent = isCliente ? 'Agregar Cliente' : 'Agregar Proveedor';
+  document.getElementById('entityLabel').textContent  = isCliente ? 'Nombre del cliente' : 'Nombre del proveedor';
   document.getElementById('entityName').value = '';
   document.getElementById('entityModal').classList.add('open');
 }
 
-function closeEntityModal() {
-  entityContext = null;
-  document.getElementById('entityModal').classList.remove('open');
-}
+function closeEntityModal() { entityCtx = null; document.getElementById('entityModal').classList.remove('open'); }
 
 async function createEntity() {
   const name = document.getElementById('entityName').value.trim();
-  if (!name) { showToast('Ingresa un nombre', 'err'); return; }
+  if (!name) { toast('Ingresa un nombre', 'err'); return; }
 
   const slug = name.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-  const folderPath = entityContext.basePath + slug + '/';
+  const fp = entityCtx.basePath + slug + '/';
 
-  // Create a marker entry in metatronix_docs
-  const { error } = await supabase.from('metatronix_docs').insert({
+  const { error } = await getDB().from('metatronix_docs').insert({
     title: name,
-    description: `Carpeta ${entityContext.type}: ${name}`,
+    description: `Carpeta ${entityCtx.type}: ${name}`,
     category: 'carpeta_admin',
     visibility: 'admin',
     file_name: '',
-    file_path: folderPath,
+    file_path: fp,
     file_type: 'folder',
     file_size: 0,
   });
 
-  if (error) { showToast('Error: ' + error.message, 'err'); return; }
+  if (error) { toast('Error: ' + error.message, 'err'); return; }
 
   closeEntityModal();
-  showToast(`Carpeta "${name}" creada`, 'ok');
+  toast(`Carpeta "${name}" creada`, 'ok');
 
-  // Add to tree without full rebuild
-  const addBtn = entityContext.childrenEl.querySelector('.add-entity-btn');
+  // Insert entity before add button
   const entity = { slug, name };
-  renderEntityNode(entityContext.childrenEl, entity, entityContext.basePath, entityContext.subFolders);
-  if (addBtn) entityContext.childrenEl.appendChild(addBtn);
-  entityContext.sectionEl.classList.add('open');
+  renderEntity(entityCtx.childrenEl, entity, entityCtx.basePath, entityCtx.subFolders);
+  entityCtx.childrenEl.insertBefore(
+    entityCtx.childrenEl.lastElementChild,
+    entityCtx.addBtn
+  );
+  // Actually renderEntity appends 2 elements (hdr + subs), move both
+  const subs = entityCtx.childrenEl.lastElementChild;
+  const hdr  = subs.previousElementSibling;
+  entityCtx.childrenEl.insertBefore(subs, entityCtx.addBtn);
+  entityCtx.childrenEl.insertBefore(hdr, subs);
 }
 
-// ── Utils ─────────────────────────────────────────────
-function getFileIcon(mime) {
+// ── Utils ─────────────────────────────────────────────────
+function fileIcon(mime) {
   if (!mime) return '📄';
   if (mime.includes('pdf')) return '📕';
   if (mime.includes('image')) return '🖼️';
-  if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('xlsx') || mime.includes('csv')) return '📊';
-  if (mime.includes('word') || mime.includes('document') || mime.includes('docx')) return '📝';
-  if (mime.includes('zip') || mime.includes('rar') || mime.includes('7z')) return '🗜️';
-  if (mime.includes('xml') || mime.includes('json') || mime.includes('html')) return '📋';
-  if (mime.includes('text')) return '📄';
+  if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv')) return '📊';
+  if (mime.includes('word') || mime.includes('document')) return '📝';
+  if (mime.includes('zip') || mime.includes('rar')) return '🗜️';
   return '📦';
 }
 
-function formatSize(bytes) {
-  if (!bytes || bytes === 0) return '—';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+function fmtSize(b) {
+  if (!b) return '—';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(2) + ' MB';
 }
 
-function formatDate(iso) {
+function fmtDate(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: '2-digit' });
+  return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: '2-digit' });
 }
 
-function showToast(msg, type = 'info') {
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.textContent = msg;
-  document.getElementById('toastContainer').appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+function escHtmlSafe(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-async function doLogout() {
-  await supabase.auth.signOut();
-  window.location.href = 'index.html';
+function toast(msg, type = 'inf') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
 }
 
-// ── Start ─────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', init);
+// ── Boot ──────────────────────────────────────────────────
+init();
 </script>
 </body>
 </html>
