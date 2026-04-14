@@ -317,7 +317,7 @@ Cuando el usuario pregunte cómo hacer algo en el portal, da instrucciones compl
   - Resumen de documentos del usuario, alertas recientes y accesos rápidos
 
 ▸ DOCUMENTOS / DASHBOARD (/dashboard.html)
-  - Botón "Documentos" en la barra lateral izquierda
+  - Botón "Adm. Docs para Venta" en la barra lateral izquierda
   - Muestra todos los documentos generados por el usuario con su estado: Borrador, En Revisión, Aprobado
   - Acciones por documento: Ver, Descargar (HTML), Editar, Enviar a revisión
   - Para ENVIAR A REVISIÓN: abre el documento → botón "Enviar a Revisión" → escribe un mensaje opcional → confirmar
@@ -363,7 +363,7 @@ Cuando el usuario pregunte cómo hacer algo en el portal, da instrucciones compl
 
 ▸ SIDEBAR Y NAVEGACIÓN
   - La barra de navegación está en el lado IZQUIERDO de la pantalla (columna vertical)
-  - Los botones son: Home, Documentos, Leads, Generar, Docs MTX, Oportunidades, Admin
+  - Los botones son: Home, Adm. Docs para Venta, Leads, Generar, Docs MTX, Oportunidades, Admin
   - En la parte inferior del sidebar: avatar del usuario, rol y botón "↩ Salir" para cerrar sesión
   - El ícono de campana (🔔) abre las alertas del sistema
 
@@ -410,7 +410,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     const path = window.location.pathname;
     const pages = {
       '/home.html':      { name: 'Home',       desc: 'Panel de inicio con KPIs personales, leads urgentes y resumen del portal.' },
-      '/dashboard.html': { name: 'Documentos', desc: 'Vista general con documentos generados y su estado de revisión.' },
+      '/dashboard.html': { name: 'Adm. Docs para Venta', desc: 'Vista general con documentos generados y su estado de revisión.' },
       '/generate.html':  { name: 'Generar',    desc: 'Módulo para crear documentos con IA: propuestas, contratos, cotizaciones.' },
       '/leads.html':     { name: 'Leads',      desc: 'Gestión de prospectos y clientes de ventas con Kanban y KPIs personales.' },
       '/admin.html':     { name: 'Admin',      desc: 'Panel de administración: usuarios, alertas, configuración del portal.' },
