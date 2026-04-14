@@ -602,7 +602,6 @@ async function saveLead() {
     fuente:            document.getElementById('f-fuente').value,
     valor_estimado:    parseFloat(document.getElementById('f-valor').value)   || null,
     seguimiento:       document.getElementById('f-seguimiento').value         || null,
-    confianza_nivel:   document.getElementById('f-confianza').value           || 'acercamiento',
     notas:             document.getElementById('f-notas').value.trim()        || null,
     updated_at:        new Date().toISOString(),
   };
