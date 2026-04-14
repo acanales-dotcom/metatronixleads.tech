@@ -333,7 +333,7 @@
 <!-- ══════════════════════════════════════════════════════════ -->
 <!-- SCRIPTS                                                   -->
 <!-- ══════════════════════════════════════════════════════════ -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js"></script>
 <script>
@@ -662,7 +662,6 @@ async function saveDocument() {
       text_content: textContent || null,
       uploaded_by: user.id,
       uploaded_by_name: uploaderName,
-      uploaded_by_role: uploaderRole,
     };
 
     const { data: inserted, error } = await db

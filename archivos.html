@@ -1142,6 +1142,8 @@ async function doUpload() {
         file_type: file.type || 'application/octet-stream',
         file_size: file.size,
         file_data: b64,
+        uploaded_by: CU?.id || null,
+        uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
       });
       if (error) throw error;
     } catch(e) { toast(`Error: ${file.name} — ${e.message}`,'err'); }
@@ -1231,6 +1233,8 @@ async function createEnt() {
     file_path: fp,
     file_type: 'folder',
     file_size: 0,
+    uploaded_by: CU?.id || null,
+    uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
   });
 
   if (error) { toast('Error: '+error.message,'err'); return; }

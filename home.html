@@ -448,7 +448,7 @@ function renderUrgencyList() {
       <div class="urgency-dot ${uLevel}"></div>
       <div style="flex:1;min-width:0">
         <div class="urgency-company">${escHtml(lead.empresa || '—')}</div>
-        <div class="urgency-contact">${escHtml(lead.contacto || '')}${lead.cargo ? ' · ' + escHtml(lead.cargo) : ''}</div>
+        <div class="urgency-contact">${escHtml(lead.contacto_nombre || '')}${lead.cargo ? ' · ' + escHtml(lead.cargo) : ''}</div>
         <div class="urgency-days">${daysText}</div>
       </div>
       <div class="urgency-meta">
