@@ -425,7 +425,10 @@ function renderHeader(user, activePage) {
 
     <nav class="sidebar-nav">
       <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}">Home</a>
-      <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">Documentos</a>
+      <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">
+        <span class="nav-line1">Adm. Docs</span>
+        <span class="nav-line2">para Venta</span>
+      </a>
       <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">Leads</a>
       <a href="/generate.html" class="sidebar-nav-link ${activePage==='generate'?'active':''}">Generar</a>
       <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
