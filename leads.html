@@ -269,14 +269,6 @@
         <label class="form-label">Fecha de Seguimiento</label>
         <input type="date" id="f-seguimiento" class="form-input">
       </div>
-      <div class="form-group">
-        <label class="form-label">Nivel de Confianza con Cliente</label>
-        <select id="f-confianza" class="form-select">
-          <option value="acercamiento">Acercamiento</option>
-          <option value="confianza">Confianza</option>
-          <option value="plena">Confianza Plena</option>
-        </select>
-      </div>
       <div class="form-group" style="grid-column:1/-1">
         <label class="form-label">Notas</label>
         <textarea id="f-notas" class="form-textarea" style="min-height:90px" placeholder="Contexto, historial de conversaciones, próximos pasos..."></textarea>
@@ -564,7 +556,6 @@ function openForm(leadId = null) {
     document.getElementById('f-fuente').value     = l.fuente || 'otro';
     document.getElementById('f-valor').value      = l.valor_estimado || '';
     document.getElementById('f-seguimiento').value= l.seguimiento || '';
-    document.getElementById('f-confianza').value  = l.confianza_nivel || 'acercamiento';
     document.getElementById('f-notas').value      = l.notas || '';
   } else {
     document.getElementById('f-empresa').value    = '';
@@ -576,7 +567,6 @@ function openForm(leadId = null) {
     document.getElementById('f-fuente').value     = 'otro';
     document.getElementById('f-valor').value      = '';
     document.getElementById('f-seguimiento').value= '';
-    document.getElementById('f-confianza').value  = 'acercamiento';
     document.getElementById('f-notas').value      = '';
   }
   document.getElementById('lead-modal').style.display = 'flex';
