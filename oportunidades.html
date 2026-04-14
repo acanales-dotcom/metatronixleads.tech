@@ -697,9 +697,10 @@ async function requestPerplexityAccess() {
 
   try {
     const db = getDB();
-    await db.from('profiles')
+    const { error: upErr } = await db.from('profiles')
       .update({ perplexity_pending_auth: true })
       .eq('id', currentUser.id);
+    if (upErr) throw new Error(upErr.message);
 
     const name = currentUser.profile?.full_name || currentUser.email;
     addAlert({
@@ -932,23 +933,34 @@ async function saveEstudioMercado(query, text, citations = []) {
     const titleShort = query.length > 80 ? query.slice(0, 77) + '…' : query;
 
     // Texto completo con fuentes al final
-    let fullText = `ESTUDIO DE MERCADO — ${seg.title}\n`;
+    let fullText = `ESTUDIO DE MERCADO - ${seg.title}\n`;
     fullText += `Consulta: ${query}\n`;
     fullText += `Fecha: ${tsStr}\n`;
     fullText += `Segmento: ${seg.title}\n\n`;
-    fullText += '─'.repeat(60) + '\n\n';
+    fullText += '-'.repeat(60) + '\n\n';
     fullText += text;
     if (citations.length) {
-      fullText += '\n\n' + '─'.repeat(60) + '\nFUENTES:\n';
+      fullText += '\n\n' + '-'.repeat(60) + '\nFUENTES:\n';
       citations.forEach((c, i) => { fullText += `[${i+1}] ${c}\n`; });
     }
 
-    // Base64 encode (UTF-8 safe)
-    const b64 = btoa(unescape(encodeURIComponent(fullText)));
+    // Base64 encode — método robusto con TextEncoder (maneja todos los Unicode)
+    let b64 = '';
+    try {
+      const bytes = new TextEncoder().encode(fullText);
+      let binary = '';
+      bytes.forEach(b => binary += String.fromCharCode(b));
+      b64 = btoa(binary);
+    } catch (_) {
+      // Fallback: solo guardar sin file_data
+      b64 = btoa(encodeURIComponent(fullText).replace(/%([0-9A-F]{2})/g,
+        (_, p1) => String.fromCharCode(parseInt(p1, 16))));
+    }
+
     const fileName = `estudio-${currentSegment}-${ts.getTime()}.txt`;
     const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'Portal';
 
-    await getDB().from('metatronix_docs').insert({
+    const { error } = await getDB().from('metatronix_docs').insert({
       title:            `${seg.icon} ${titleShort}`,
       description:      query,
       category:         'estudios_mercado',
@@ -961,9 +973,16 @@ async function saveEstudioMercado(query, text, citations = []) {
       uploaded_by:      currentUser?.id,
       uploaded_by_name: userName,
     });
+
+    if (error) {
+      console.error('saveEstudioMercado Supabase error:', error.code, error.message, error.details);
+      showToast(`Error al guardar estudio: ${error.message}`, 'error');
+      return;
+    }
     showToast('📊 Estudio guardado en Docs MTX', 'success');
   } catch (e) {
-    console.warn('saveEstudioMercado:', e.message);
+    console.error('saveEstudioMercado exception:', e);
+    showToast('Error inesperado al guardar estudio', 'error');
   }
 }
 

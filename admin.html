@@ -783,19 +783,21 @@ async function resolveDoc(newStatus) {
   const btn = document.getElementById('btn-approve-doc');
   if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
 
-  await db.from('documents').update({
+  const { error: docErr } = await db.from('documents').update({
     status: newStatus,
     content: updatedContent,
     updated_at: new Date().toISOString()
   }).eq('id', currentDocModal.id);
+  if (docErr) { showToast('Error al actualizar documento: ' + docErr.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Aprobar'; } return; }
 
   if (currentAlertId) {
-    await db.from('alerts').update({
+    const { error: alertErr } = await db.from('alerts').update({
       is_read: true,
       resolved_by: currentUser.id,
       resolved_at: new Date().toISOString(),
       admin_note: note || null,
     }).eq('id', currentAlertId);
+    if (alertErr) console.warn('markAlert error:', alertErr.message);
   }
 
   await logActivity(`document_${newStatus}`, 'document', currentDocModal.id, { title: currentDocModal.title });
@@ -808,7 +810,8 @@ async function resolveDoc(newStatus) {
 }
 
 async function markRead(alertId) {
-  await getDB().from('alerts').update({ is_read: true }).eq('id', alertId);
+  const { error } = await getDB().from('alerts').update({ is_read: true }).eq('id', alertId);
+  if (error) { console.warn('markRead error:', error.message); return; }
   const el = document.getElementById(`alert-${alertId}`);
   if (el) { el.classList.remove('unread'); el.querySelector('.alert-dot').style.background = 'var(--border2)'; }
   await loadStats();
@@ -826,14 +829,16 @@ function downloadCurrentDoc() {
 }
 
 async function toggleAdmin(userId, makeAdmin) {
-  await getDB().from('profiles').update({ role: makeAdmin ? 'admin' : 'user' }).eq('id', userId);
-  showToast('Rol actualizado', 'success');
+  const { error } = await getDB().from('profiles').update({ role: makeAdmin ? 'admin' : 'user' }).eq('id', userId);
+  if (error) { showToast('Error al cambiar rol: ' + error.message, 'error'); return; }
+  showToast('Rol actualizado ✓', 'success');
   await loadUsers();
 }
 
 async function toggleActive(userId, makeActive) {
-  await getDB().from('profiles').update({ is_active: makeActive }).eq('id', userId);
-  showToast(makeActive ? 'Usuario activado' : 'Usuario desactivado', 'info');
+  const { error } = await getDB().from('profiles').update({ is_active: makeActive }).eq('id', userId);
+  if (error) { showToast('Error al actualizar usuario: ' + error.message, 'error'); return; }
+  showToast(makeActive ? 'Usuario activado ✓' : 'Usuario desactivado', 'info');
   await loadUsers();
 }
 
