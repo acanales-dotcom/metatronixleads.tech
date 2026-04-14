@@ -961,6 +961,7 @@ async function saveEstudioMercado(query, text, citations = []) {
       uploaded_by:      currentUser?.id,
       uploaded_by_name: userName,
     });
+    showToast('📊 Estudio guardado en Docs MTX', 'success');
   } catch (e) {
     console.warn('saveEstudioMercado:', e.message);
   }

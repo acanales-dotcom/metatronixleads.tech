@@ -456,6 +456,7 @@ function fileIcon(type, name) {
   if (type?.includes('presentation') || ['ppt','pptx'].includes(ext)) return '📊';
   if (type?.includes('image') || ['png','jpg','jpeg','gif','webp','svg'].includes(ext)) return '🖼';
   if (['zip','rar','7z'].includes(ext)) return '🗜';
+  if (type?.includes('text') || ['txt','md','log'].includes(ext)) return '📄';
   return '📁';
 }
 
