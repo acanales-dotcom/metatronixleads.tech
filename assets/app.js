@@ -385,19 +385,19 @@ function renderHeader(user, activePage) {
 
   return `
   <style>
-    body { padding-left: var(--sidebar-w, 224px); }
+    body { padding-left: var(--sidebar-w, 220px); }
     /* Bell dropdown */
     .bell-wrap { position:relative; cursor:pointer; display:flex; align-items:center; justify-content:center; }
     .bell-badge {
       position:absolute; top:-4px; right:-4px;
       min-width:15px; height:15px; border-radius:8px;
-      background:#e03030; border:2px solid #fff;
+      background:#EF4444; border:2px solid var(--bg-2,#10141F);
       font-size:9px; color:#fff; font-weight:700;
       display:flex; align-items:center; justify-content:center;
       padding:0 3px; font-family:var(--font-mono);
     }
     .bell-dropdown {
-      display:none; position:fixed; bottom:80px; left:calc(var(--sidebar-w,224px) + 8px);
+      display:none; position:fixed; bottom:80px; left:calc(var(--sidebar-w,220px) + 8px);
       width:340px; background:#fff;
       border:1px solid var(--border); border-radius:var(--radius-lg);
       box-shadow:0 8px 32px rgba(0,30,80,.15); z-index:9999; overflow:hidden;
