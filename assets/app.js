@@ -438,15 +438,37 @@ function renderHeader(user, activePage) {
       </div>
     </a>
 
-    <!-- Navigation — Odoo-style sections -->
+    <!-- Navigation — 5 primary modules + tools -->
     <nav class="sidebar-nav">
 
-      <!-- VENTAS -->
-      <div class="sidebar-section-label">Ventas</div>
-      <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">
-        <span class="nav-icon">🎯</span>
-        <span class="nav-label">Pipeline CRM</span>
+      <!-- PRIMARY 5 MODULES (always visible, top) -->
+      <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}" id="nav-home">
+        <span class="nav-icon">⌂</span>
+        <span class="nav-label">Inicio</span>
       </a>
+      <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">
+        <span class="nav-icon">◈</span>
+        <span class="nav-label">Pipeline</span>
+        <span class="nav-count" id="nav-count-pipeline">—</span>
+      </a>
+      <a href="/home.html#cuentas" class="sidebar-nav-link ${activePage==='cuentas'?'active':''}">
+        <span class="nav-icon">◉</span>
+        <span class="nav-label">Cuentas</span>
+      </a>
+      <a href="/home.html#actividad" class="sidebar-nav-link ${activePage==='actividad'?'active':''}">
+        <span class="nav-icon">◎</span>
+        <span class="nav-label">Actividad</span>
+        <span class="nav-count" id="nav-count-tasks" style="display:none">0</span>
+      </a>
+      <a href="/home.html#reportes" class="sidebar-nav-link ${activePage==='reportes'?'active':''}">
+        <span class="nav-icon">◇</span>
+        <span class="nav-label">Reportes</span>
+      </a>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- VENTAS TOOLS -->
+      <div class="sidebar-section-label">Ventas</div>
       <a href="/oportunidades.html" class="sidebar-nav-link ${activePage==='oportunidades'?'active':''}">
         <span class="nav-icon">🔍</span>
         <span class="nav-label">Inteligencia de Mercados</span>
@@ -455,8 +477,8 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">📣</span>
         <span class="nav-label">Marketing IA</span>
       </a>
-      <a href="/captureform.html" class="sidebar-nav-link ${activePage==='captureform'?'active':''}" target="_blank" title="Formulario de captura para compartir con prospectos">
-        <span class="nav-icon">🎯</span>
+      <a href="/captureform.html" class="sidebar-nav-link" target="_blank" title="Formulario público de captura de leads">
+        <span class="nav-icon">↗</span>
         <span class="nav-label">Formulario Web</span>
       </a>
 
@@ -490,20 +512,16 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">✨</span>
         <span class="nav-label">Generador IA</span>
       </a>
-      <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-label">Inicio</span>
-      </a>
 
       ${hasAdminAccess ? `
       <div class="sidebar-divider"></div>
-      <div class="sidebar-section-label">Configuración</div>
+      <div class="sidebar-section-label">Sistema</div>
       <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">
-        <span class="nav-icon">⚙️</span>
+        <span class="nav-icon">⚙</span>
         <span class="nav-label">Administración</span>
       </a>` : ''}
       ${isSuperAdmin ? `
-      <a href="/security-audit.html" class="sidebar-nav-link ${activePage==='security-audit'?'active':''}" style="border-left:2px solid #DC2626">
+      <a href="/security-audit.html" class="sidebar-nav-link ${activePage==='security-audit'?'active':''}" style="color:var(--red)">
         <span class="nav-icon">🛡</span>
         <span class="nav-label">Seguridad & Auditoría</span>
       </a>

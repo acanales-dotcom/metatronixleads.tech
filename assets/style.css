@@ -1160,3 +1160,26 @@ body { padding-left: var(--sidebar-w); }
 /* ── Page fade-in ───────────────────────────────────────────────── */
 .page { animation: fadeIn .2s ease; }
 
+
+/* ── SIDEBAR SKELETON — visible durante la carga de JS ─────────── */
+/* El #header-placeholder ocupa el espacio del sidebar mientras carga */
+#header-placeholder {
+  position: fixed; left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-w, 220px);
+  background: var(--bg-2, #10141F);
+  border-right: 1px solid rgba(255,255,255,.05);
+  z-index: 200;
+  /* Skeleton while JS loads */
+  min-width: 220px;
+}
+/* Once sidebar is rendered, app-sidebar takes over */
+.app-sidebar { z-index: 201; }
+
+/* Ensure body always has correct left padding */
+body { padding-left: var(--sidebar-w, 220px) !important; }
+
+/* Hide skeleton placeholder content when real sidebar is in it */
+#header-placeholder:has(.app-sidebar) {
+  position: static; width: auto; background: transparent;
+  border-right: none;
+}

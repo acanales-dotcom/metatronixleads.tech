@@ -482,7 +482,7 @@
   const session = await getSession();
   if (session) {
     const user = await getCurrentUser();
-    window.location.href = user?.profile?.role === 'admin' ? '/admin.html' : '/dashboard.html';
+    window.location.href = '/home.html';
     return;
   }
 
@@ -513,7 +513,7 @@
 
     const { data: profile } = await db.from('profiles').select('role').eq('id', data.user.id).single();
     await logActivity('login', 'user', data.user.id);
-    window.location.href = profile?.role === 'admin' ? '/admin.html' : '/dashboard.html';
+    window.location.href = '/home.html';
   });
 })();
 </script>
