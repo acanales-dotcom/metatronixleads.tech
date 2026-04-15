@@ -152,10 +152,10 @@
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <!-- Search -->
-        <div class="o-searchbar">
+        <div class="o-searchbar" onclick="openSearch()" style="cursor:pointer" title="Buscar (⌘K)">
           <span class="o-searchbar-icon">🔍</span>
-          <input type="text" id="global-search" placeholder="Buscar leads, empresas, contactos…" oninput="applyFilters()">
-          <button class="o-filter-btn" onclick="toggleFilters()" title="Filtros avanzados">Filtros ▾</button>
+          <input type="text" id="global-search" placeholder="Buscar… (⌘K)" readonly style="cursor:pointer" oninput="applyFilters()">
+          <button class="o-filter-btn" onclick="event.stopPropagation();toggleFilters()" title="Filtros avanzados">Filtros ▾</button>
         </div>
         <!-- Create -->
         <button class="btn btn-primary" onclick="openLeadForm()" style="white-space:nowrap">
@@ -1349,34 +1349,78 @@ function renderKanban(leads) {
   }
 }
 
+/* ── Lead Score Calculator ── */
+function calcLeadScore(l) {
+  let score = 0;
+  const stage = getLeadStage(l);
+  const conf  = getLeadConf(l);
+  const days  = getDaysInStage(l.id, l.updated_at);
+  const comms = LS.comms(l.id);
+  // Stage weight
+  const stageW = { generacion:10, primer_contacto:20, calificacion:35, propuesta:55, negociacion:70, cierre:90, postventa:95, retencion:90, fidelizacion:95, cerrado_perdido:0 };
+  score += stageW[stage] || 0;
+  // Confidence bonus
+  if (conf === 'plena') score += 15; else if (conf === 'confianza') score += 8;
+  // Value bonus
+  if (l.valor_estimado > 1000000) score += 10; else if (l.valor_estimado > 250000) score += 5;
+  // Activity recency (penalise inactivity)
+  if (days > 14) score -= 20; else if (days > 7) score -= 10;
+  // Recent positive comms
+  const posComms = comms.filter(c => c.sentiment === 'pos').length;
+  score += Math.min(posComms * 3, 12);
+  // Seguimiento set?
+  if (l.seguimiento) {
+    const daysToFollowUp = (new Date(l.seguimiento) - Date.now()) / 86400000;
+    if (daysToFollowUp < 0) score -= 15;       // overdue!
+    else if (daysToFollowUp <= 3) score += 8;  // imminent close
+  }
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function getScoreBadge(score) {
+  if (score >= 75) return `<span class="lead-score lead-score-hot">🔥 ${score}</span>`;
+  if (score >= 50) return `<span class="lead-score lead-score-warm">⚡ ${score}</span>`;
+  if (score >= 25) return `<span class="lead-score lead-score-cold">💧 ${score}</span>`;
+  return `<span class="lead-score lead-score-new">🌱 ${score}</span>`;
+}
+
 function kanbanCard(l) {
-  const conf    = getLeadConf(l);
-  const days    = getDaysInStage(l.id, l.updated_at);
-  const unread  = getUnreadChatCount(l.id);
-  const sent    = getSentimentEmoji(l.id);
-  const initials= getInitials(l.contacto_nombre || l.empresa);
+  const conf     = getLeadConf(l);
+  const days     = getDaysInStage(l.id, l.updated_at);
+  const unread   = getUnreadChatCount(l.id);
+  const sent     = getSentimentEmoji(l.id);
+  const initials = getInitials(l.contacto_nombre || l.empresa);
+  const score    = calcLeadScore(l);
 
-  // Confidence badge (exact spec: gray/blue/green)
-  const confMap = {
-    acercamiento: ['badge-gray', 'Acercamiento'],
-    confianza:    ['badge-blue', 'Confianza'],
-    plena:        ['badge-green', 'Confianza Plena'],
-  };
+  // Confidence badge
+  const confMap  = { acercamiento:['badge-gray','Acercamiento'], confianza:['badge-blue','Confianza'], plena:['badge-green','Confianza Plena'] };
   const [confCls, confLbl] = conf ? (confMap[conf] || ['badge-gray','—']) : ['',''];
-  const confBadge = conf ? `<span class="badge ${confCls}" style="font-size:10px;padding:1px 6px">${confLbl}</span>` : '';
+  const confBadge = conf ? `<span class="badge ${confCls}" style="font-size:10px;padding:1px 5px">${confLbl}</span>` : '';
 
-  // Days badge: warn if > 7
-  const daysCls = days > 7 ? 'color:#ef4444;font-weight:700' : '';
+  // Days badge
+  const daysStale = days > 7;
+  const daysBadge = `<span class="kb-card-days ${daysStale ? 'stale':''}" title="${daysStale?'⚠️ Sin actividad hace '+days+' días':days+' días en esta etapa'}">${days}d${daysStale?' ⚠':''}</span>`;
+
+  // Seguimiento indicator
+  const hasSeg = l.seguimiento;
+  const segOverdue = hasSeg && new Date(l.seguimiento) < new Date();
+  const segToday   = hasSeg && !segOverdue && (new Date(l.seguimiento) - Date.now()) < 86400000;
+  const segBadge   = segOverdue ? '<span class="overdue-badge">VENCIDO</span>'
+                   : segToday   ? '<span class="today-badge">HOY</span>'
+                   : '';
 
   return `<div class="kb-card" data-id="${l.id}" onclick="openDrawer('${l.id}')">
     ${unread > 0 ? `<span class="kb-card-unread">${unread}</span>` : ''}
-    <div class="kb-card-name" title="${escHtml(l.contacto_nombre||'')}">${escHtml(l.contacto_nombre||'Sin contacto')}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div class="kb-card-name" title="${escHtml(l.contacto_nombre||'')}" style="flex:1;min-width:0">${escHtml(l.contacto_nombre||'Sin contacto')}</div>
+      ${getScoreBadge(score)}
+    </div>
     <div class="kb-card-company" title="${escHtml(l.empresa)}">${escHtml(l.empresa)}</div>
-    ${l.valor_estimado ? `<span class="kb-card-valor">${fmtMXN(l.valor_estimado)}</span>` : ''}
-    <div class="kb-card-badges">${confBadge}</div>
+    ${l.valor_estimado ? `<div class="kb-card-valor">${fmtMXN(l.valor_estimado)}</div>` : ''}
+    <div class="kb-card-badges" style="gap:3px;margin-bottom:4px">${confBadge}${segBadge}</div>
     <div class="kb-card-footer">
-      <span class="kb-card-days" style="${daysCls}">${days}d</span>
-      <span class="sent-emoji" title="Sentimiento IA">${sent}</span>
+      ${daysBadge}
+      <span class="sent-emoji" title="Sentimiento IA: ${sent==='🟢'?'Positivo':sent==='🔴'?'Negativo':'Neutral'}">${sent}</span>
       <span class="kb-card-avatar" title="${escHtml(l.contacto_nombre||l.empresa)}">${initials}</span>
     </div>
   </div>`;
@@ -1624,6 +1668,96 @@ function switchTab(tab) {
   }
 }
 
+/* ── INSTANT SEARCH ─────────────────────────────────────── */
+function openSearch() {
+  let overlay = document.getElementById('instant-search');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'instant-search';
+    overlay.className = 'search-overlay';
+    overlay.innerHTML = `
+      <div class="search-box">
+        <div class="search-box-input">
+          <span style="font-size:20px;color:var(--text-faint)">🔍</span>
+          <input id="instant-search-input" placeholder="Buscar leads, empresas, contactos…" autocomplete="off">
+          <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;color:var(--text-faint)">ESC</kbd>
+        </div>
+        <div class="search-results" id="instant-search-results">
+          <div class="search-empty">Empieza a escribir para buscar…</div>
+        </div>
+        <div class="search-hint">
+          <span><kbd>↑↓</kbd> navegar</span>
+          <span><kbd>Enter</kbd> abrir</span>
+          <span><kbd>ESC</kbd> cerrar</span>
+        </div>
+      </div>`;
+    overlay.onclick = e => { if(e.target===overlay) closeSearch(); };
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#instant-search-input');
+    input.addEventListener('input', () => runInstantSearch(input.value));
+    input.addEventListener('keydown', e => {
+      if (e.key==='Escape') closeSearch();
+      if (e.key==='Enter') {
+        const first = overlay.querySelector('.search-result-item');
+        if (first) first.click();
+      }
+    });
+    setTimeout(()=>input.focus(), 50);
+  } else {
+    overlay.style.display='flex';
+    const input = overlay.querySelector('#instant-search-input');
+    input.value=''; input.focus();
+    runInstantSearch('');
+  }
+}
+
+function closeSearch() {
+  const overlay = document.getElementById('instant-search');
+  if (overlay) overlay.style.display='none';
+}
+
+function runInstantSearch(q) {
+  const resultsEl = document.getElementById('instant-search-results');
+  if (!resultsEl) return;
+  const query = q.trim().toLowerCase();
+  if (!query) { resultsEl.innerHTML = '<div class="search-empty">Empieza a escribir para buscar…</div>'; return; }
+
+  const results = allLeads.filter(l =>
+    (l.empresa||'').toLowerCase().includes(query) ||
+    (l.contacto_nombre||'').toLowerCase().includes(query) ||
+    (l.contacto_email||'').toLowerCase().includes(query) ||
+    (l.ciudad||'').toLowerCase().includes(query) ||
+    (l.notas||'').toLowerCase().includes(query)
+  ).slice(0, 8);
+
+  if (!results.length) {
+    resultsEl.innerHTML = `<div class="search-empty">Sin resultados para "<strong>${escHtml(q)}</strong>"</div>`;
+    return;
+  }
+  resultsEl.innerHTML = results.map(l => {
+    const stage = getLeadStage(l);
+    const st = STAGES[stage]||{};
+    const score = calcLeadScore(l);
+    return `<div class="search-result-item" onclick="closeSearch();openDrawer('${l.id}')">
+      <span class="search-result-icon">${st.icon||'🎯'}</span>
+      <div class="search-result-main">
+        <div class="search-result-title">${escHtml(l.empresa)}</div>
+        <div class="search-result-sub">${escHtml(l.contacto_nombre||'—')} · ${escHtml(l.ciudad||'')} · ${fmtMXN(l.valor_estimado)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <span style="font-size:11px;color:${st.color};font-weight:600">${st.label}</span>
+        ${getScoreBadge(score)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Override global search to open overlay
+document.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); openSearch(); }
+  if (e.key==='Escape') closeSearch();
+});
+
 /* TAB: INFO */
 function renderTabInfo(l) {
   const conf = getLeadConf(l);
@@ -1631,28 +1765,76 @@ function renderTabInfo(l) {
   const st   = STAGES[stage]||{};
   const daysInStage = getDaysInStage(l.id, l.updated_at);
   const planStatus  = getLatestPlan(l.id);
+  const score       = calcLeadScore(l);
+  // Score label
+  const scoreLabel = score >= 75 ? 'Deal Caliente 🔥' : score >= 50 ? 'Prospecto Activo ⚡' : score >= 25 ? 'En Seguimiento 💧' : 'Nuevo Lead 🌱';
+  const scoreColor = score >= 75 ? '#DC2626' : score >= 50 ? '#D97706' : score >= 25 ? '#2563EB' : '#16A34A';
+
   return `
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+  <!-- Score + Quick Actions bar -->
+  <div style="background:linear-gradient(135deg,#08255F,#1a3a8a);border-radius:10px;padding:14px 16px;margin-bottom:16px;color:#fff">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="font-size:11px;opacity:.65;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">Score IA</div>
+        <div style="font-size:1.6rem;font-family:var(--font-head);letter-spacing:.04em">${score}/100</div>
+        <div style="font-size:12px;opacity:.8;margin-top:2px">${scoreLabel}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-head);font-size:1.3rem;color:#00FF88">${l.valor_estimado?fmtMXN(l.valor_estimado):'Sin valor'}</div>
+        <div style="font-size:11px;opacity:.65;margin-top:2px">${st.icon} ${st.label}</div>
+      </div>
+    </div>
+    <!-- Progress bar -->
+    <div style="height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden">
+      <div style="height:100%;width:${score}%;background:linear-gradient(90deg,#00C2E0,#00FF88);border-radius:3px;transition:width .6s ease"></div>
+    </div>
+  </div>
+
+  <!-- Quick action bar — Steve Jobs would love this -->
+  <div class="quick-action-bar">
+    ${l.contacto_telefono ? `<button class="qa-btn qa-call" onclick="window.open('tel:${l.contacto_telefono}','_self')" title="Llamar">📞 Llamar</button>` : ''}
+    ${l.contacto_telefono ? `<button class="qa-btn qa-whatsapp" onclick="window.open('https://wa.me/${(l.contacto_telefono||'').replace(/[^0-9]/g,'')}','_blank')" title="WhatsApp">💬 WhatsApp</button>` : ''}
+    ${l.contacto_email ? `<button class="qa-btn qa-email" onclick="toggleEmailComposer('${l.id}')" title="Email">📧 Email</button>` : ''}
+    <button class="qa-btn qa-ai" onclick="generatePropuesta('${l.id}')" title="Generar propuesta con IA">✨ Propuesta IA</button>
+  </div>
+
+  <!-- Email composer (hidden by default) -->
+  <div id="email-composer-${l.id}" class="email-composer" style="display:none">
+    <div class="email-composer-header">
+      <span class="email-composer-title">✉️ Redactar Email</span>
+      <button class="btn btn-ghost btn-sm" onclick="generateEmailDraft('${l.id}')">✨ Generar con IA</button>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">Para:</div>
+      <div style="font-size:13px;font-weight:500">${l.contacto_email||'Sin email registrado'}</div>
+    </div>
+    <textarea id="email-draft-${l.id}" class="o-form-textarea" style="min-height:120px;margin-bottom:8px" placeholder="Escribe tu mensaje o usa ✨ Generar con IA…"></textarea>
+    <div style="display:flex;gap:6px">
+      <a ${l.contacto_email?`href="mailto:${l.contacto_email}?body="+encodeURIComponent(document.getElementById('email-draft-${l.id}')?.value||'')`:'href="#"'}
+         class="btn btn-primary btn-sm" onclick="copyEmailDraft('${l.id}')">📤 Copiar y Abrir Email</a>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('email-composer-${l.id}').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Info grid -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
     ${infoRow('👤 Contacto', l.contacto_nombre||'—')}
     ${infoRow('💼 Cargo', l.cargo||'—')}
-    ${infoRow('📧 Email', l.contacto_email ? `<a href="mailto:${l.contacto_email}" style="color:var(--blue)">${l.contacto_email}</a>` : '—')}
-    ${infoRow('📱 Teléfono', l.contacto_telefono ? `<a href="tel:${l.contacto_telefono}" style="color:var(--blue)">${l.contacto_telefono}</a>` : '—')}
-    ${infoRow('🗂 Etapa', `<span style="color:${st.color};font-weight:600">${st.icon} ${st.label}</span>`)}
-    ${infoRow('⏱ Días en etapa', `<span style="font-family:monospace">${daysInStage} días</span>`)}
-    ${infoRow('💰 Valor Est.', l.valor_estimado ? fmtMXN(l.valor_estimado) : '—')}
+    ${infoRow('📧 Email', l.contacto_email ? `<a href="mailto:${l.contacto_email}" style="color:var(--accent)">${l.contacto_email}</a>` : '—')}
+    ${infoRow('📱 Teléfono', l.contacto_telefono ? `<a href="tel:${l.contacto_telefono}" style="color:var(--accent)">${l.contacto_telefono}</a>` : '—')}
+    ${infoRow('⏱ Días en etapa', `${daysInStage}d ${daysInStage>7?'<span style="color:#ef4444">⚠️ Requiere atención</span>':''}`)}
     ${infoRow('📣 Fuente', FUENTE_LABELS[l.fuente]||l.fuente||'—')}
     ${infoRow('📢 Campaña', l.campana||'—')}
     ${infoRow('📍 Ciudad', l.ciudad||'—')}
     ${infoRow('🤝 Confianza', conf ? `<span class="badge badge-conf-${conf}">${CONF_LABELS[conf]}</span>` : '—')}
-    ${infoRow('📅 Seguimiento', l.seguimiento||'—')}
+    ${infoRow('📅 Seguimiento', l.seguimiento ? `<span style="color:${new Date(l.seguimiento)<new Date()?'#ef4444':''}">${l.seguimiento}${new Date(l.seguimiento)<new Date()?' ⚠️':''}</span>` : '—')}
     ${infoRow('🏢 Competidores', l.competidores_zona||'—')}
     ${infoRow('📋 Plan', planStatus)}
   </div>
-  ${l.notas ? `<div style="background:var(--surface3);border-radius:8px;padding:12px;font-size:13px;color:#475569;line-height:1.6">${escHtml(l.notas)}</div>` : ''}
-  <div style="margin-top:16px;display:flex;gap:8px">
+  ${l.notas ? `<div style="background:var(--surface3);border-radius:8px;padding:12px;font-size:13px;color:#475569;line-height:1.6;border-left:3px solid var(--accent)">${escHtml(l.notas)}</div>` : ''}
+  <div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap">
     <button class="btn btn-primary btn-sm" onclick="openLeadForm('${l.id}')">✏ Editar</button>
-    <button class="btn btn-ghost btn-sm" onclick="openPlanModal('${l.id}','${escHtml(l.empresa)}')">📋 Nuevo Plan</button>
-    <button class="btn btn-ghost btn-sm" onclick="generatePropuesta('${l.id}')">✨ Propuesta IA</button>
+    <button class="btn btn-ghost btn-sm" onclick="openPlanModal('${l.id}','${escHtml(l.empresa)}');closeDrawer()">📋 Plan</button>
   </div>`;
 }
 
@@ -3043,6 +3225,62 @@ function openBiblioteca() {
       confirmButtonText:'Cerrar',
       confirmButtonColor:'#1A6FFF',
     });
+  }
+}
+
+/* ── EMAIL COMPOSER HELPERS ─────────────────────────────── */
+function toggleEmailComposer(leadId) {
+  const el = document.getElementById(`email-composer-${leadId}`);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function generateEmailDraft(leadId) {
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (!lead) return;
+  const textarea = document.getElementById(`email-draft-${leadId}`);
+  if (!textarea) return;
+
+  // Try AI first, fallback to template
+  if (window.CRM_LLM?.engine) {
+    try {
+      textarea.value = 'Generando con IA…';
+      const stage = getLeadStage(lead);
+      const st = STAGES[stage]||{};
+      const draft = await window.CRM_LLM.chat(
+        'Eres un experto en ventas B2B para MetaTronix (empresa de IA y software). Escribe emails profesionales, concisos y personalizados en español.',
+        `Escribe un email de seguimiento para: Empresa: ${lead.empresa}, Contacto: ${lead.contacto_nombre||'—'}, Cargo: ${lead.cargo||'—'}, Etapa: ${st.label}, Valor: ${fmtMXN(lead.valor_estimado)}. Máximo 5 líneas. Incluye un CTA claro.`
+      );
+      textarea.value = draft;
+      notify('Email generado con IA ✓', 'success');
+      return;
+    } catch(e) { /* fallback */ }
+  }
+
+  // Smart template based on stage
+  const stage = getLeadStage(lead);
+  const stageTemplates = {
+    generacion:       `Estimado ${lead.contacto_nombre||'equipo de '+lead.empresa},\n\nMe permito presentarme — soy parte del equipo MetaTronix. Hemos ayudado a empresas como la suya a [beneficio clave].\n\n¿Tendría 15 minutos esta semana para una breve llamada?\n\nQuedo a sus órdenes,`,
+    primer_contacto:  `Hola ${lead.contacto_nombre||''},\n\nGracias por nuestro primer contacto. Me gustaría profundizar en cómo MetaTronix puede generar valor para ${lead.empresa}.\n\n¿Podemos agendar una demo la próxima semana?\n\nSaludos,`,
+    calificacion:     `Hola ${lead.contacto_nombre||''},\n\nComo acordamos, le comparto más información sobre nuestras soluciones para ${lead.empresa}.\n\nHe identificado 3 áreas de impacto inmediato para su operación. ¿Le parece si las revisamos juntos?\n\nSaludos,`,
+    propuesta:        `Estimado ${lead.contacto_nombre||''},\n\nAdjunto la propuesta personalizada para ${lead.empresa}. El retorno estimado supera el costo de inversión en menos de 8 meses.\n\n¿Tiene alguna pregunta antes de tomar una decisión?\n\nQuedo disponible,`,
+    negociacion:      `Hola ${lead.contacto_nombre||''},\n\nQuiero asegurarme de que tengamos todo resuelto para avanzar juntos. ¿Hay algún punto pendiente en la propuesta que podamos clarificar?\n\nEstamos muy emocionados de trabajar con ${lead.empresa}.\n\nSaludos,`,
+    cierre:           `Estimado ${lead.contacto_nombre||''},\n\nFelicitaciones por esta decisión estratégica. Nuestro equipo ya está preparando el plan de implementación para ${lead.empresa}.\n\nLe confirmaremos los próximos pasos a la brevedad.\n\nMuchas gracias por su confianza,`,
+  };
+  textarea.value = (stageTemplates[stage] || stageTemplates.generacion) + `\n\n[Tu nombre]\nMetaTronix | metatronixleads.tech`;
+  notify('Template cargado ✓', 'success');
+}
+
+function copyEmailDraft(leadId) {
+  const textarea = document.getElementById(`email-draft-${leadId}`);
+  if (!textarea?.value) return;
+  navigator.clipboard?.writeText(textarea.value).then(()=>notify('Email copiado al portapapeles ✓','success')).catch(()=>{});
+  // Try to open mailto
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (lead?.contacto_email) {
+    const subject = encodeURIComponent(`Seguimiento — MetaTronix × ${lead.empresa}`);
+    const body = encodeURIComponent(textarea.value);
+    window.open(`mailto:${lead.contacto_email}?subject=${subject}&body=${body}`, '_blank');
   }
 }
 

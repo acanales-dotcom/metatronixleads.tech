@@ -168,9 +168,22 @@
   </div>
 
   <!-- Greeting -->
-  <div class="home-greeting mt-24" style="padding:0 24px">
-    <h1 id="home-greeting-text" style="font-size:1.8rem">Buen día 👋</h1>
-    <p id="home-greeting-sub" style="color:var(--text-muted);margin-top:4px">Cargando resumen del portal...</p>
+  <div style="padding:24px 24px 0;display:flex;justify-content:space-between;align-items:flex-end">
+    <div>
+      <h1 id="home-greeting-text" style="font-size:1.8rem;margin:0">Buen día 👋</h1>
+      <p id="home-greeting-sub" style="color:var(--text-muted);margin-top:4px">Cargando resumen del portal...</p>
+    </div>
+    <div style="font-size:12px;color:var(--text-faint);font-family:var(--font-mono)" id="home-date"></div>
+  </div>
+
+  <!-- Today's Focus — Steve Jobs would put this first -->
+  <div style="padding:16px 24px 0">
+    <div class="focus-card" id="todays-focus">
+      <div class="focus-card-title">ENFOQUE DEL DÍA</div>
+      <div class="focus-items" id="focus-items">
+        <div style="color:rgba(255,255,255,.5);font-size:13px">Cargando leads del día…</div>
+      </div>
+    </div>
   </div>
 
   <!-- KPI Bar -->
@@ -621,6 +634,129 @@ async function loadAlerts() {
       </div>
       ${!a.read?'<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0"></span>':''}
     </div>`).join('');
+}
+
+/* ── TODAY'S FOCUS ─────────────────────────────────── */
+async function loadTodaysFocus() {
+  // Set date
+  const dateEl = document.getElementById('home-date');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  }
+
+  const focusEl = document.getElementById('focus-items');
+  if (!focusEl) return;
+
+  const db = getDB();
+  const { data: leads } = await db.from('leads').select('*').order('updated_at',{ascending:false});
+  if (!leads?.length) {
+    focusEl.innerHTML = `<div class="focus-item" onclick="window.location='/leads.html'">
+      <span class="focus-item-icon">🎯</span>
+      <div class="focus-item-text"><div class="focus-item-title">Crea tu primer lead</div><div class="focus-item-sub">Empieza registrando un prospecto</div></div>
+    </div>`;
+    return;
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const items = [];
+  const STATUS_TO_STAGE = {nuevo:'generacion',contactado:'primer_contacto',en_negociacion:'negociacion',propuesta_enviada:'propuesta',cerrado_ganado:'cierre',cerrado_perdido:'cerrado_perdido'};
+  const STAGE_ICONS = {generacion:'🌱',primer_contacto:'📞',calificacion:'🎯',propuesta:'📋',negociacion:'🤝',cierre:'🏆',postventa:'⭐',retencion:'🔄',fidelizacion:'💎',cerrado_perdido:'❌'};
+
+  // Get stages from localStorage
+  const stages = JSON.parse(localStorage.getItem('mtx_stages_v2')||'{}');
+  const getStage = l => stages[l.id] || STATUS_TO_STAGE[l.status] || 'generacion';
+
+  // Overdue seguimiento
+  const overdue = leads.filter(l => {
+    if (!l.seguimiento) return false;
+    const d = new Date(l.seguimiento); d.setHours(0,0,0,0);
+    return d < today && !['cerrado_ganado','cerrado_perdido'].includes(l.status);
+  }).slice(0,3);
+
+  overdue.forEach(l => items.push({
+    icon: '⚠️', title: escHtml(l.empresa),
+    sub: `Seguimiento vencido: ${l.seguimiento}`,
+    badge: '<span class="focus-badge-hot">VENCIDO</span>',
+    url: `/leads.html`,
+    id: l.id,
+  }));
+
+  // Due today
+  const dueToday = leads.filter(l => {
+    if (!l.seguimiento) return false;
+    const d = new Date(l.seguimiento); d.setHours(0,0,0,0);
+    return d.getTime() === today.getTime();
+  }).slice(0,2);
+
+  dueToday.forEach(l => items.push({
+    icon: STAGE_ICONS[getStage(l)] || '📅',
+    title: escHtml(l.empresa),
+    sub: `Seguimiento programado para hoy · ${l.contacto_nombre||''}`,
+    badge: '<span class="focus-badge-today">HOY</span>',
+    url: `/leads.html`,
+    id: l.id,
+  }));
+
+  // Stale leads (>7 days no activity)
+  const stale = leads.filter(l => {
+    const days = (Date.now() - new Date(l.updated_at)) / 86400000;
+    return days > 7 && !['cerrado_ganado','cerrado_perdido'].includes(l.status);
+  }).slice(0, 2);
+
+  stale.forEach(l => {
+    const days = Math.round((Date.now() - new Date(l.updated_at)) / 86400000);
+    items.push({
+      icon: '⏰', title: escHtml(l.empresa),
+      sub: `Sin actividad hace ${days} días · ${STAGE_ICONS[getStage(l)]} ${getStage(l)}`,
+      badge: `<span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700">${days}d</span>`,
+      url: `/leads.html`,
+      id: l.id,
+    });
+  });
+
+  // Hot leads (high value in negotiation)
+  const hot = leads.filter(l => ['negociacion','propuesta_enviada','propuesta'].includes(l.status === 'en_negociacion' ? 'en_negociacion' : getStage(l)) && l.valor_estimado > 100000).slice(0,2);
+  hot.forEach(l => items.push({
+    icon: '🔥', title: escHtml(l.empresa),
+    sub: `${fmtMXN(l.valor_estimado)} · ${l.contacto_nombre||''}`,
+    badge: '<span class="focus-badge-hot">HOT</span>',
+    url: `/leads.html`,
+    id: l.id,
+  }));
+
+  if (!items.length) {
+    // All good — show positive state
+    focusEl.innerHTML = `<div class="focus-item" onclick="window.location='/leads.html'">
+      <span class="focus-item-icon">✅</span>
+      <div class="focus-item-text"><div class="focus-item-title">Todo al día — excelente trabajo</div><div class="focus-item-sub">Sin seguimientos pendientes ni leads estancados</div></div>
+      <span class="focus-badge-new" style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);border-radius:10px;padding:3px 8px;font-size:11px">Al día ✓</span>
+    </div>`;
+    return;
+  }
+
+  focusEl.innerHTML = items.slice(0,5).map(item =>
+    `<a class="focus-item" href="${item.url}" onclick="localStorage.setItem('focus_lead','${item.id||''}')">
+      <span class="focus-item-icon">${item.icon}</span>
+      <div class="focus-item-text">
+        <div class="focus-item-title">${item.title}</div>
+        <div class="focus-item-sub">${item.sub}</div>
+      </div>
+      ${item.badge}
+    </a>`
+  ).join('');
+}
+
+function fmtMXN(n) {
+  if (!n || n === 0) return '—';
+  return '$' + parseFloat(n).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+// Patch init to also load today's focus
+const _homeInit = init;
+async function init() {
+  await _homeInit();
+  await loadTodaysFocus();
 }
 
 init();
