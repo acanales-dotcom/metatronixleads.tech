@@ -882,7 +882,7 @@ h1,h2,h3,.headline {
     <div class="drawer-tabs">
       <button class="dtab active" data-tab="info"      onclick="switchTab('info')">📋 Datos</button>
       <button class="dtab"        data-tab="historial" onclick="switchTab('historial')">💬 Historial</button>
-      <button class="dtab"        data-tab="docs"      onclick="switchTab('docs')">📁 Docs</button>
+      <button class="dtab"        data-tab="docs"      onclick="switchTab('docs')">📋 Adm. Venta</button>
       <button class="dtab"        data-tab="chat"      onclick="switchTab('chat')">👥 Chat</button>
       <button class="dtab"        data-tab="plan"      onclick="switchTab('plan')">📅 Plan</button>
       <button class="dtab"        data-tab="postventa" onclick="switchTab('postventa')">⭐ Post-Venta</button>
@@ -949,12 +949,58 @@ h1,h2,h3,.headline {
         <div class="fg"><label>Ciudad / Región</label><input type="text" id="f-ciudad" class="crm-input" placeholder="CDMX, Monterrey, Guadalajara…"></div>
         <div class="fg"><label>Fecha de Seguimiento</label><input type="date" id="f-seguimiento" class="crm-input"></div>
         <div class="fg"><label>Competidores en Zona</label><input type="text" id="f-competidores" class="crm-input" placeholder="SAP, Salesforce, HubSpot…"></div>
+        <div class="fg"><label>Vertical / Industria *</label>
+          <select id="f-vertical" class="crm-select">
+            <option value="">— Selecciona vertical —</option>
+            <option value="Retail">🛒 Retail</option>
+            <option value="Industrial">🏭 Industrial</option>
+            <option value="Farma">💊 Farma / Salud</option>
+            <option value="Gimnasios">🏋️ Gimnasios / Fitness</option>
+            <option value="FinTech">💳 FinTech / Bancos</option>
+            <option value="Gobierno">🏛️ Gobierno</option>
+            <option value="Educacion">🎓 Educación</option>
+            <option value="Logistica">🚚 Logística</option>
+            <option value="Corporativo">🏢 Corporativo</option>
+            <option value="Otro">📌 Otro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Canal Primer Contacto</label>
+          <select id="f-canal" class="crm-select">
+            <option value="linkedin">LinkedIn</option>
+            <option value="whatsapp">WhatsApp Business</option>
+            <option value="email">Email</option>
+            <option value="llamada">Llamada</option>
+            <option value="evento">Evento</option>
+            <option value="referido">Referido</option>
+            <option value="web">Web / Formulario</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Estado / Provincia</label>
+          <input type="text" id="f-estado" class="crm-input" placeholder="CDMX, NL, JAL…">
+        </div>
+        <div class="fg"><label>País</label>
+          <input type="text" id="f-pais" class="crm-input" placeholder="México" value="México">
+        </div>
         <div class="fg full"><label>Notas</label><textarea id="f-notas" class="crm-textarea" placeholder="Contexto, próximos pasos, observaciones…"></textarea></div>
       </div>
+
+      <!-- AI Assignment Panel -->
+      <div id="ai-assign-panel" style="display:none;margin-top:16px;background:#F4F7FB;border:1px solid #E2E8F0;border-radius:8px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-family:var(--font-title);font-size:1rem;letter-spacing:.05em;color:var(--navy)">✨ ASIGNACIÓN INTELIGENTE</span>
+          <span style="font-size:11px;color:#94a3b8">Calculando match semántico…</span>
+        </div>
+        <div id="ai-assign-results" style="font-size:13px;color:#64748b">
+          Ingresa empresa y vertical para ver sugerencias de asignación
+        </div>
+      </div>
+
     </div>
     <div class="crm-modal-footer">
       <button class="btn btn-ghost" onclick="closeLeadForm()">Cancelar</button>
       <button class="btn btn-danger btn-sm" id="btn-delete-lead" style="display:none;margin-right:auto" onclick="deleteLeadConfirm()">🗑 Eliminar</button>
+      <button class="btn btn-secondary btn-sm" onclick="suggestAssignment()" title="Sugerir ejecutivo con IA">✨ Asignar IA</button>
       <button class="btn btn-primary" id="btn-save-lead" onclick="saveLead()">Guardar Lead</button>
     </div>
   </div>
@@ -2937,6 +2983,603 @@ function notify(msg, type='info') {
 // Preserve compatibility with app.js helpers
 function escHtml(s) { if(typeof window.escHtml==='function')return window.escHtml(s); const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
 function formatDate(s) { if(!s) return '—'; try { return new Date(s).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch{return s;} }
+
+/* ══════════════════════════════════════════════════════════
+   BLOQUE 5 — ALTA INTELIGENTE + ASIGNACIÓN IA
+   ══════════════════════════════════════════════════════════ */
+
+// Extend openLeadForm to populate new fields
+const _origOpenLeadForm = openLeadForm;
+function openLeadForm(leadId=null) {
+  _origOpenLeadForm(leadId);
+  // New fields
+  if (leadId) {
+    const l = allLeads.find(x=>x.id===leadId);
+    if (l) {
+      setVal('f-vertical', l.vertical || '');
+      setVal('f-canal', l.canal_primer_contacto || 'otro');
+      setVal('f-estado', l.estado || '');
+      setVal('f-pais', l.pais || 'México');
+    }
+  } else {
+    setVal('f-vertical',''); setVal('f-canal','otro');
+    setVal('f-estado',''); setVal('f-pais','México');
+  }
+  // Show AI panel if editing
+  const panel = document.getElementById('ai-assign-panel');
+  if (panel) panel.style.display = leadId ? 'block' : 'none';
+}
+
+function setVal(id, v) { const el=document.getElementById(id); if(el) el.value=v; }
+
+// Extend saveLead to include new fields
+const _origSaveLead = saveLead;
+async function saveLead() {
+  // Inject extra fields into payload before original save
+  const extras = {
+    vertical:             document.getElementById('f-vertical')?.value || null,
+    canal_primer_contacto:document.getElementById('f-canal')?.value    || null,
+    estado:               document.getElementById('f-estado')?.value   || null,
+    pais:                 document.getElementById('f-pais')?.value     || 'México',
+  };
+  // Patch: we'll store these in LS since DB may not have these columns yet
+  window._pendingLeadExtras = extras;
+  await _origSaveLead();
+}
+
+// Called after save to persist extras
+function persistLeadExtras(leadId) {
+  if (!window._pendingLeadExtras || !leadId) return;
+  const pv = LS.pv(leadId) || {};
+  LS.setPV(leadId, { ...pv, ...window._pendingLeadExtras });
+  window._pendingLeadExtras = null;
+}
+
+async function suggestAssignment() {
+  const empresa  = document.getElementById('f-empresa')?.value?.trim();
+  const vertical = document.getElementById('f-vertical')?.value;
+  const panel    = document.getElementById('ai-assign-panel');
+  const results  = document.getElementById('ai-assign-results');
+  if (!empresa) { notify('Ingresa el nombre de la empresa primero','warning'); return; }
+  if (panel) panel.style.display = 'block';
+  if (results) results.innerHTML = '<span style="color:#94a3b8">⏳ Calculando match semántico…</span>';
+
+  // Build fake executive pool from allLeads assignees
+  const execMap = {};
+  allLeads.forEach(l => {
+    if (l.user_id) {
+      execMap[l.user_id] = execMap[l.user_id] || { id:l.user_id, count:0, verticals:[] };
+      execMap[l.user_id].count++;
+      const v = LS.pv(l.id)?.vertical || l.vertical;
+      if (v) execMap[l.user_id].verticals.push(v);
+    }
+  });
+  const execs = Object.values(execMap);
+
+  // Current user is a candidate
+  const me = { id: currentUser.id, name: currentUser.profile?.full_name || currentUser.email,
+    count: execs.find(e=>e.id===currentUser.id)?.count || 0,
+    verticals: execs.find(e=>e.id===currentUser.id)?.verticals || [] };
+
+  // Simple semantic match: count vertical overlap
+  function matchScore(exec) {
+    const vertMatch = exec.verticals.filter(v=>v===vertical).length;
+    const loadScore = Math.max(0, 10 - exec.count); // lower load = higher score
+    return vertMatch * 3 + loadScore;
+  }
+
+  const scored = [me, ...execs.filter(e=>e.id!==currentUser.id)]
+    .sort((a,b) => matchScore(b) - matchScore(a))
+    .slice(0,2);
+
+  if (window.CRM_AI && vertical) {
+    try {
+      const fn = await window.CRM_AI.zeroShot();
+      const r  = await fn(`${empresa} ${vertical}`, ['retail','industrial','farma','tecnologia','gobierno','educacion']);
+      const topLabel = r.labels[0]; const topScore = Math.round(r.scores[0]*100);
+      if (results) results.innerHTML = `
+        <div style="margin-bottom:10px;font-size:12px;color:#64748b">Sector detectado por IA: <strong style="color:var(--blue)">${topLabel}</strong> (${topScore}% confianza)</div>
+        ${renderAssignSuggestions(scored)}`;
+      return;
+    } catch(_) {}
+  }
+
+  // Fallback without AI
+  if (results) results.innerHTML = renderAssignSuggestions(scored);
+}
+
+function renderAssignSuggestions(execs) {
+  if (!execs.length) return '<span style="color:#94a3b8">Sin ejecutivos disponibles aún</span>';
+  return execs.map((e,i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #E2E8F0;border-radius:6px;margin-bottom:6px">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0">${getInitials(e.name||'EJ')}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--dark)">${e.name||'Ejecutivo'}</div>
+        <div style="font-size:11px;color:#94a3b8">${e.count} leads activos · ${e.verticals.slice(0,2).join(', ')||'General'}</div>
+      </div>
+      <span class="badge badge-${i===0?'green':'blue'}">${i===0?'⭐ Top Match':'#2'}</span>
+    </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   BLOQUE 6 — HISTORIAL COMUNICACIONES + IA MEJORADA
+   ══════════════════════════════════════════════════════════ */
+
+function renderTabHistorial(l) {
+  const comms = LS.comms(l.id);
+  const typeColors = { llamada:'#3b82f6', email:'#8b5cf6', whatsapp:'#10b981', visita:'#f59e0b', videollamada:'#06b6d4', sistema:'#94a3b8' };
+  const typeIcons  = { llamada:'📞', email:'📧', whatsapp:'💬', visita:'🤝', videollamada:'📹', sistema:'⚙️' };
+
+  const timeline = comms.length ? `<div class="comm-timeline">${comms.map((c,i) => {
+    const sentLabel = c.sentiment==='pos'?'🟢':c.sentiment==='neg'?'🔴':'🟡';
+    const sentPct   = c.sentiment_score ? ` ${Math.round(c.sentiment_score*100)}%` : '';
+    return `
+    <div class="comm-item" style="position:relative">
+      ${i < comms.length-1 ? '<div style="position:absolute;left:20px;top:52px;bottom:-10px;width:2px;background:var(--border);z-index:0"></div>' : ''}
+      <div class="comm-header" style="position:relative;z-index:1">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:36px;height:36px;border-radius:50%;background:${typeColors[c.tipo]||'#94a3b8'}22;color:${typeColors[c.tipo]||'#94a3b8'};display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${typeIcons[c.tipo]||'📌'}</span>
+          <div>
+            <span class="comm-type-badge" style="background:${typeColors[c.tipo]||'#94a3b8'}22;color:${typeColors[c.tipo]||'#94a3b8'}">${c.tipo||'nota'}</span>
+            ${c.respuesta ? `<span class="badge" style="margin-left:4px;font-size:10px;background:${c.respuesta==='positiva'?'#F0FDF4':c.respuesta==='negativa'?'#FEF2F2':'#F8FAFC'};color:${c.respuesta==='positiva'?'#16A34A':c.respuesta==='negativa'?'#DC2626':'#64748B'}">${c.respuesta}</span>` : ''}
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="comm-time">${formatDate(c.fecha)}</div>
+          <div style="font-size:11px;margin-top:2px">${sentLabel}${sentPct}</div>
+        </div>
+      </div>
+      <div class="comm-text" style="padding-left:44px;margin-top:4px">${escHtml(c.resumen||'')}</div>
+      <div class="comm-meta" style="padding-left:44px">
+        ${c.doc_ref ? `<span class="comm-meta-tag">📎 ${escHtml(c.doc_ref)}</span>` : ''}
+        ${c.proxima_accion ? `<span class="comm-meta-tag">→ ${escHtml(c.proxima_accion)}</span>` : ''}
+        ${c.proxima_fecha ? `<span class="comm-meta-tag">📅 ${c.proxima_fecha}</span>` : ''}
+      </div>
+    </div>`}).join('')}</div>`
+    : '<div style="color:#94a3b8;text-align:center;padding:24px">Sin interacciones registradas</div>';
+
+  return `
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn btn-ghost btn-sm" onclick="voiceNote('${l.id}')">🎙 Nota de Voz</button>
+    <button class="btn btn-ghost btn-sm" onclick="summarizeHistory('${l.id}')">✨ Resumir</button>
+    <button class="btn btn-ghost btn-sm" onclick="classifyOpportunity('${l.id}')">🏷 Clasificar IA</button>
+  </div>
+  <div id="comm-list">${timeline}</div>
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-top:16px">
+    <div style="font-family:var(--font-title);font-size:.95rem;letter-spacing:.05em;color:var(--navy);margin-bottom:10px">+ REGISTRAR INTERACCIÓN</div>
+    <div class="form-grid-2" style="gap:10px">
+      <div class="fg"><label>Tipo</label>
+        <select id="comm-tipo" class="crm-select">
+          <option value="llamada">📞 Llamada</option>
+          <option value="email">📧 Email</option>
+          <option value="whatsapp">💬 WhatsApp</option>
+          <option value="visita">🤝 Visita</option>
+          <option value="videollamada">📹 Videollamada</option>
+        </select>
+      </div>
+      <div class="fg"><label>Respuesta Recibida</label>
+        <select id="comm-respuesta" class="crm-select">
+          <option value="positiva">✅ Positiva</option>
+          <option value="neutral" selected>➡ Neutral</option>
+          <option value="sin_respuesta">📭 Sin respuesta</option>
+          <option value="negativa">❌ Negativa</option>
+        </select>
+      </div>
+      <div class="fg full"><label>Resumen <span style="color:#94a3b8;font-size:11px">— o usa 🎙 para dictar</span></label>
+        <textarea id="comm-resumen" class="crm-textarea" style="min-height:70px" placeholder="¿Qué pasó en esta interacción?"></textarea>
+      </div>
+      <div class="fg"><label>Documento enviado (referencia)</label>
+        <input type="text" id="comm-doc" class="crm-input" placeholder="Propuesta v2.pdf, Ficha técnica…">
+      </div>
+      <div class="fg"><label>Próxima Acción</label>
+        <input type="text" id="comm-proxima" class="crm-input" placeholder="Enviar propuesta, llamar el lunes…">
+      </div>
+      <div class="fg"><label>Fecha Próxima Acción</label>
+        <input type="date" id="comm-proxima-fecha" class="crm-input">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="saveComm('${l.id}')">💾 Guardar</button>
+    </div>
+  </div>`;
+}
+
+// Override saveComm to include new fields + async sentiment with %
+function saveComm(leadId) {
+  const resumen = document.getElementById('comm-resumen')?.value.trim();
+  if (!resumen) { notify('Escribe un resumen','warning'); return; }
+  const comm = {
+    id: 'c'+Date.now(),
+    tipo:         document.getElementById('comm-tipo')?.value,
+    fecha:        new Date().toISOString(),
+    resumen,
+    respuesta:    document.getElementById('comm-respuesta')?.value,
+    proxima_accion:document.getElementById('comm-proxima')?.value.trim()||null,
+    proxima_fecha: document.getElementById('comm-proxima-fecha')?.value||null,
+    doc_ref:      document.getElementById('comm-doc')?.value.trim()||null,
+    sentiment: 'neutral', sentiment_score: null,
+  };
+  LS.addComm(leadId, comm);
+
+  // Async IA sentiment with confidence %
+  if (window.CRM_AI) {
+    window.CRM_AI.sentiment().then(fn => fn(resumen)).then(r => {
+      const label = r[0]?.label?.toLowerCase() || '';
+      const score = r[0]?.score || 0;
+      const s = label.includes('pos') ? 'pos' : label.includes('neg') ? 'neg' : 'neu';
+      const comms = LS.comms(leadId);
+      const i = comms.findIndex(c=>c.id===comm.id);
+      if (i>=0) {
+        comms[i].sentiment = s;
+        comms[i].sentiment_score = score;
+        LS.set(`mtx_comms_${leadId}`, comms);
+      }
+    }).catch(()=>{});
+  }
+  notify('Interacción guardada ✓','success');
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (lead) switchTab('historial');
+}
+
+async function classifyOpportunity(leadId) {
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (!lead) return;
+  const text = lead.notas || LS.comms(leadId).slice(0,3).map(c=>c.resumen).join(' ') || lead.empresa;
+  if (!window.CRM_AI) { notify('IA cargando, intenta en unos segundos','warning'); return; }
+  try {
+    notify('Clasificando oportunidad con IA…','info');
+    const fn = await window.CRM_AI.zeroShot();
+    const labels = ['urgente','seguimiento pendiente','propuesta enviada','en negociación','deal caliente','riesgo de churn'];
+    const r = await fn(text, labels);
+    const top = r.labels[0];
+    const pct = Math.round(r.scores[0]*100);
+
+    // Stage suggestion
+    const stageMap = {
+      'urgente':'cierre', 'deal caliente':'negociacion',
+      'propuesta enviada':'propuesta', 'en negociación':'negociacion',
+      'seguimiento pendiente':'calificacion', 'riesgo de churn':'retencion',
+    };
+    const suggestedStage = stageMap[top];
+    const currentStage   = getLeadStage(lead);
+
+    let extra = '';
+    if (suggestedStage && suggestedStage !== currentStage) {
+      extra = `<br><br><button class="btn-primary" style="padding:7px 14px;font-size:13px" onclick="moveLeadStage('${leadId}','${suggestedStage}');Swal.close()">
+        → Mover a ${STAGES[suggestedStage]?.label||suggestedStage}</button>`;
+    }
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title:'🏷 Clasificación IA',
+        html:`<div style="font-size:14px">
+          <div style="font-size:1.4rem;margin-bottom:6px"><strong>${top}</strong></div>
+          <div style="color:#94a3b8">${pct}% de confianza</div>
+          <div style="margin-top:12px;font-size:12px;color:#64748b">
+            ${r.labels.map((l,i)=>`<div style="display:flex;justify-content:space-between;gap:8px;margin:3px 0">
+              <span>${l}</span><span style="font-family:monospace">${Math.round(r.scores[i]*100)}%</span>
+            </div>`).join('')}
+          </div>${extra}
+        </div>`,
+        icon:'info', confirmButtonColor:'#1A6FFF',
+      });
+    } else { notify(`IA: ${top} (${pct}%)`, 'info'); }
+  } catch(e) { notify('Error IA: '+e.message,'error'); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   BLOQUE 7 — CHAT INTERNO @MENCIONES
+   ══════════════════════════════════════════════════════════ */
+
+function renderTabChat(l) {
+  const msgs = LS.chat(l.id);
+  // Mark as read
+  localStorage.setItem(`mtx_chat_seen_${l.id}`, Date.now().toString());
+  renderKanban(getFilteredLeads()); // refresh unread badge
+
+  const MENTION_ROLES = ['@Admin','@Operaciones','@Administración','@Finanzas','@Director','@Ejecutivo'];
+
+  const msgsHtml = msgs.length
+    ? msgs.map(m => {
+        const mine     = m.user_id === currentUser?.id;
+        const external = m.type === 'external';
+        const bgColor  = external ? '#E8F4FD' : mine ? 'var(--blue)' : 'var(--surface3)';
+        const txtColor = mine && !external ? '#fff' : 'var(--dark)';
+        const borderL  = external ? '2px solid var(--cyan)' : 'none';
+        const align    = mine ? 'flex-end' : 'flex-start';
+        const text     = escHtml(m.text).replace(/@(\w+)/g,
+          '<strong style="background:rgba(26,111,255,.15);color:var(--blue);border-radius:4px;padding:0 4px">@$1</strong>');
+        return `<div style="display:flex;flex-direction:column;align-items:${align};gap:2px">
+          <div style="font-size:10px;color:#94a3b8">${mine?'Tú':escHtml(m.user_name||'')} ${external?'· Cliente':''} · ${formatDate(m.fecha)}</div>
+          <div style="max-width:84%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;background:${bgColor};color:${txtColor};border-left:${borderL};border-bottom-${mine?'right':'left'}-radius:3px">
+            ${text}
+          </div>
+        </div>`;
+      }).join('')
+    : '<div style="color:#94a3b8;text-align:center;padding:20px;font-size:13px">Sin mensajes internos. Usa @Admin, @Operaciones para notificar.</div>';
+
+  const mentionBtns = MENTION_ROLES.map(r=>`<button class="btn btn-ghost" style="font-size:11px;padding:3px 7px" onclick="insertMention('${r}')">${r}</button>`).join('');
+
+  return `<div class="chat-wrap" style="height:100%">
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span>Mencionar:</span>${mentionBtns}
+    </div>
+    <div class="chat-messages" id="chat-messages" style="flex:1;overflow-y:auto;min-height:200px">${msgsHtml}</div>
+    <div style="margin-top:8px">
+      <div style="display:flex;gap:4px;margin-bottom:6px">
+        <button class="btn btn-ghost btn-sm" onclick="setChatType('internal')">💬 Interno</button>
+        <button class="btn btn-ghost btn-sm" onclick="setChatType('external')">📤 Cliente</button>
+        <span id="chat-type-label" style="font-size:11px;color:#94a3b8;align-self:center">Tipo: interno</span>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Mensaje… @Admin @Operaciones para notificar"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('${l.id}')}">
+        <button class="btn btn-primary btn-sm" onclick="sendChat('${l.id}')">Enviar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+let _chatType = 'internal';
+function setChatType(t) {
+  _chatType = t;
+  const el = document.getElementById('chat-type-label');
+  if (el) el.textContent = 'Tipo: '+(t==='external'?'mensaje al cliente':'interno');
+}
+
+function insertMention(mention) {
+  const input = document.getElementById('chat-input');
+  if (input) { input.value += mention + ' '; input.focus(); }
+}
+
+function sendChat(leadId) {
+  const input = document.getElementById('chat-input');
+  const text  = input?.value.trim();
+  if (!text) return;
+
+  // Check @mentions → Notiflix notifications
+  const mentionNotifs = {
+    '@Operaciones':  ['Operaciones','⚙️'],
+    '@Administración':['Administración','💼'],
+    '@Admin':        ['Admin/Director','👔'],
+    '@Finanzas':     ['Finanzas','💰'],
+  };
+  Object.entries(mentionNotifs).forEach(([mention,[area,icon]]) => {
+    if (text.includes(mention) && typeof Notiflix !== 'undefined') {
+      setTimeout(() => Notiflix.Notify.info(`${icon} ${area} fue mencionado en el chat`), 400);
+    }
+  });
+
+  LS.addChat(leadId, {
+    id: 'm'+Date.now(),
+    user_id:   currentUser.id,
+    user_name: currentUser.profile?.full_name || currentUser.email.split('@')[0],
+    text, type: _chatType,
+    fecha: new Date().toISOString(),
+  });
+  input.value = '';
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (lead) switchTab('chat');
+}
+
+/* ══════════════════════════════════════════════════════════
+   BLOQUE 8 — ADMINISTRACIÓN DE VENTA (Documentos mejorado)
+   ══════════════════════════════════════════════════════════ */
+
+function renderTabDocs(l) {
+  const docs = LS.docs(l.id);
+  const stage = getLeadStage(l);
+
+  return `
+  <!-- Process Canvas -->
+  <div class="adv-canvas-wrap">
+    <div style="font-family:var(--font-title);font-size:.9rem;letter-spacing:.06em;color:var(--navy);margin-bottom:8px">FLUJO DEL PROCESO</div>
+    <canvas id="process-canvas" width="620" height="72"></canvas>
+  </div>
+
+  <!-- Documents by buyer role -->
+  <div style="font-family:var(--font-title);font-size:1rem;letter-spacing:.05em;color:var(--navy);margin-bottom:12px">DOCUMENTOS POR ROL DEL COMPRADOR</div>
+  ${renderDocsByRole(l.id, docs)}
+
+  <!-- Quick upload -->
+  <div style="margin-top:16px">
+    <div style="font-family:var(--font-title);font-size:.9rem;letter-spacing:.05em;color:var(--navy);margin-bottom:8px">SUBIR ARCHIVO</div>
+    <div class="adv-upload-zone" onclick="document.getElementById('adv-file-input-${l.id}').click()">
+      📎 Clic para subir archivo (max 5MB, se guarda en base64)
+      <input type="file" id="adv-file-input-${l.id}" style="display:none"
+        onchange="handleDocUpload(event,'${l.id}')">
+    </div>
+  </div>
+
+  <!-- AI Proposal -->
+  <div style="margin-top:16px;display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="generatePropuesta('${l.id}')">✨ Generar Propuesta IA + PDF</button>
+    <button class="btn btn-secondary" onclick="openBiblioteca()">📚 Biblioteca Corporativa</button>
+  </div>`;
+}
+
+// Override original renderTabDocs — already done since we redefined it
+
+function renderDocsByRole(leadId, docs) {
+  const statuses  = ['Sin enviar','Enviado','Revisado','Aprobado'];
+  const statusColors = {'Sin enviar':'#94a3b8','Enviado':'#3b82f6','Revisado':'#f59e0b','Aprobado':'#10b981'};
+  let html = '';
+  Object.entries(BUYER_ROLES).forEach(([roleKey, role]) => {
+    html += `<div class="buyer-role-section">
+      <div class="buyer-role-title">${role.icon} ${role.label}</div>`;
+    role.docs.forEach(docName => {
+      const key     = roleKey+'_'+docName.replace(/\s+/g,'_');
+      const current = docs[key] || 'Sin enviar';
+      const color   = statusColors[current] || '#94a3b8';
+      const fileKey = `${leadId}_${key}_file`;
+      const fileData= docs[fileKey];
+      html += `<div class="adv-doc-row">
+        <span class="adv-doc-name">${docName}</span>
+        <select class="doc-status-select adv-doc-status crm-select" style="height:30px;font-size:12px;border-color:${color}22;color:${color}"
+          onchange="updateDocStatus('${leadId}','${key}',this.value)">
+          ${statuses.map(s=>`<option value="${s}" ${current===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <div class="adv-doc-actions">
+          ${fileData
+            ? `<button class="btn btn-ghost btn-sm" onclick="downloadDocFile('${leadId}','${key}')">⬇</button>
+               <button class="btn btn-ghost btn-sm" onclick="deleteDocFile('${leadId}','${key}')">🗑</button>`
+            : `<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="document.getElementById('doc-upload-${leadId}-${key.replace(/_/g,'-')}').click()">📎</button>
+               <input type="file" id="doc-upload-${leadId}-${key.replace(/_/g,'-')}" style="display:none"
+                 onchange="uploadDocFile(event,'${leadId}','${key}')">`
+          }
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  html += `<button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="saveDocs('${leadId}')">💾 Guardar Cambios</button>`;
+  return html;
+}
+
+// Draw canvas process flow
+function drawProcessCanvas(currentStage) {
+  const canvas = document.getElementById('process-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const stages = Object.keys(STAGES);
+  const nodeW = 56; const gap = 6;
+  const totalNeeded = stages.length * (nodeW + gap) - gap;
+  canvas.width = totalNeeded;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  stages.forEach((key, i) => {
+    const st = STAGES[key];
+    const x = i * (nodeW + gap);
+    const isCurrent = key === currentStage;
+
+    // Connecting line
+    if (i > 0) {
+      ctx.beginPath();
+      ctx.strokeStyle = '#E2E8F0';
+      ctx.lineWidth = 2;
+      ctx.moveTo(x - gap, 36);
+      ctx.lineTo(x, 36);
+      ctx.stroke();
+    }
+
+    // Node background
+    const radius = 10;
+    ctx.beginPath();
+    ctx.roundRect(x, 12, nodeW, 48, radius);
+    ctx.fillStyle = isCurrent ? st.color + '33' : '#F8FAFC';
+    ctx.strokeStyle = isCurrent ? st.color : '#E2E8F0';
+    ctx.lineWidth = isCurrent ? 2.5 : 1;
+    ctx.fill();
+    ctx.stroke();
+
+    // Icon
+    ctx.font = '16px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(st.icon||'●', x + nodeW/2, 38);
+
+    // Label
+    ctx.font = '600 8px DM Sans,sans-serif';
+    ctx.fillStyle = isCurrent ? st.color : '#94a3b8';
+    ctx.textAlign = 'center';
+    const shortLabel = st.label.slice(0,7);
+    ctx.fillText(shortLabel, x + nodeW/2, 53);
+
+    // Pulse animation via CSS (add data attribute)
+    if (isCurrent) {
+      canvas.dataset.currentX = x;
+      canvas.dataset.currentColor = st.color;
+    }
+  });
+}
+
+// Override switchTab to draw canvas when docs tab opens
+const _origSwitchTab = switchTab;
+function switchTab(tab) {
+  _origSwitchTab(tab);
+  if (tab === 'docs') {
+    setTimeout(() => {
+      const lead = allLeads.find(l=>l.id===currentLeadId);
+      if (lead) drawProcessCanvas(getLeadStage(lead));
+    }, 50);
+  }
+}
+
+function handleDocUpload(evt, leadId) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  if (file.size > 5*1024*1024) { notify('Archivo demasiado grande (máx 5MB)','error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const docs = LS.docs(leadId);
+    docs['_upload_'+Date.now()] = { name:file.name, type:file.type, size:file.size, data:e.target.result };
+    LS.setDocs(leadId, docs);
+    notify(`Archivo "${file.name}" guardado ✓`,'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function uploadDocFile(evt, leadId, key) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  if (file.size > 5*1024*1024) { notify('Máximo 5MB','error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const docs = LS.docs(leadId);
+    docs[`${leadId}_${key}_file`] = { name:file.name, type:file.type, size:file.size, data:e.target.result };
+    LS.setDocs(leadId, docs);
+    notify(`"${file.name}" subido ✓`,'success');
+    const lead = allLeads.find(l=>l.id===leadId);
+    if (lead) switchTab('docs');
+  };
+  reader.readAsDataURL(file);
+}
+
+function downloadDocFile(leadId, key) {
+  const docs  = LS.docs(leadId);
+  const file  = docs[`${leadId}_${key}_file`];
+  if (!file) { notify('Archivo no encontrado','error'); return; }
+  const a = document.createElement('a');
+  a.href     = file.data;
+  a.download = file.name;
+  a.click();
+  notify(`Descargando "${file.name}" ✓`,'success');
+}
+
+function deleteDocFile(leadId, key) {
+  const docs = LS.docs(leadId);
+  delete docs[`${leadId}_${key}_file`];
+  LS.setDocs(leadId, docs);
+  notify('Archivo eliminado','info');
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (lead) switchTab('docs');
+}
+
+function openBiblioteca() {
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      title:'📚 Biblioteca Corporativa',
+      width:580,
+      html:`<div style="text-align:left">
+        <p style="color:#64748b;font-size:13px;margin-bottom:16px">Plantillas y materiales por vertical</p>
+        ${[
+          ['🛒 Retail',      ['Propuesta Metaview Retail.pdf','Caso de éxito OXXO.pdf','ROI Retail Template.xlsx']],
+          ['🏭 Industrial',  ['Propuesta QuantumTron Industrial.pdf','Caso manufactura Bajío.pdf']],
+          ['💊 Farma/Salud', ['Propuesta NeuroTron Lab Farma.pdf','Caso IMSS.pdf']],
+          ['🏢 General',     ['Presentación MTX Corporativa.pptx','NDA Template.docx','Términos de Pago.pdf']],
+        ].map(([ver,files])=>`
+          <div style="margin-bottom:12px">
+            <div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:6px">${ver}</div>
+            ${files.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;font-size:13px">
+              <span>📄 ${f}</span>
+              <button class="btn btn-ghost btn-sm" onclick="notify('Solicita este archivo al admin para descargarlo','info')">⬇ Descargar</button>
+            </div>`).join('')}
+          </div>`).join('')}
+      </div>`,
+      confirmButtonText:'Cerrar',
+      confirmButtonColor:'#1A6FFF',
+    });
+  }
+}
 
 // Init
 init();
