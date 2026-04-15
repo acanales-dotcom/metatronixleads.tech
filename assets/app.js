@@ -451,6 +451,10 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">🔍</span>
         <span class="nav-label">Inteligencia de Mercados</span>
       </a>
+      <a href="/marketing.html" class="sidebar-nav-link ${activePage==='marketing'?'active':''}">
+        <span class="nav-icon">📣</span>
+        <span class="nav-label">Marketing IA</span>
+      </a>
 
       <div class="sidebar-divider"></div>
 

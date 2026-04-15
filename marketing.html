@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Marketing IA</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/agent.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- HF Transformers -->
+  <script type="module">
+    import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.1";
+    env.allowLocalModels = false;
+    window.HFPipeline = pipeline;
+    if (!window.CRM_AI) {
+      window.CRM_AI = {
+        _p: {},
+        async get(task, model, opts={}) {
+          if (!this._p[task]) this._p[task] = await pipeline(task, model, {device:'webgpu', dtype:'q4', ...opts});
+          return this._p[task];
+        },
+        sentiment:  () => window.CRM_AI.get('sentiment-analysis','Xenova/distilbert-base-multilingual-cased-sentiments-student'),
+        embeddings: () => window.CRM_AI.get('feature-extraction','Xenova/all-MiniLM-L6-v2'),
+        zeroShot:   () => window.CRM_AI.get('zero-shot-classification','Xenova/mobilebert-uncased-mnli',{}),
+        summary:    () => window.CRM_AI.get('summarization','Xenova/distilbart-cnn-6-6',{}),
+        ner:        () => window.CRM_AI.get('ner','Xenova/bert-base-NER',{aggregation_strategy:'simple'})
+      };
+    }
+  </script>
+  <script type="module">
+    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+    if (!window.CRM_LLM) {
+      window.CRM_LLM = {
+        engine: null,
+        async init(cb) { this.engine = await webllm.CreateMLCEngine('SmolLM2-360M-Instruct-q4f16_1-MLC',{initProgressCallback:cb}); },
+        async chat(sys, msg) {
+          if (!this.engine) throw new Error('LLM no inicializado');
+          const r = await this.engine.chat.completions.create({messages:[{role:'system',content:sys},{role:'user',content:msg}]});
+          return r.choices[0].message.content;
+        }
+      };
+    }
+  </script>
+
+  <style>
+/* ── Marketing IA — Estilos específicos ────────────────────── */
+.mkt-shell { display:flex; flex-direction:column; min-height:100vh; }
+
+/* Control panel */
+.mkt-cp {
+  position:sticky; top:0; z-index:50;
+  background:#fff; border-bottom:1px solid var(--border);
+  padding:0 24px; box-shadow:0 1px 4px rgba(0,30,80,.04);
+}
+.mkt-cp-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 0; gap:12px;
+}
+
+/* Knowledge Base panel */
+.kb-panel {
+  background:linear-gradient(135deg,#08255F 0%,#1A3A8A 100%);
+  padding:20px 24px; border-bottom:1px solid rgba(255,255,255,.1);
+  display:none;
+}
+.kb-panel.open { display:block; }
+.kb-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+.kb-field { display:flex; flex-direction:column; gap:5px; }
+.kb-field label { font-size:11px; font-weight:700; color:rgba(255,255,255,.65); letter-spacing:.06em; text-transform:uppercase; }
+.kb-field textarea, .kb-field input {
+  border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1);
+  color:#fff; border-radius:6px; padding:8px 10px;
+  font-family:var(--font-body); font-size:13px; resize:none;
+  outline:none; transition:border-color .15s;
+}
+.kb-field textarea::placeholder, .kb-field input::placeholder { color:rgba(255,255,255,.4); }
+.kb-field textarea:focus, .kb-field input:focus { border-color:var(--cyan); }
+
+/* Agent grid */
+.agents-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(340px,1fr));
+  gap:16px; padding:20px 24px;
+}
+
+/* Agent card */
+.agent-card {
+  background:#fff; border:1px solid var(--border); border-radius:12px;
+  overflow:hidden; transition:box-shadow .2s, transform .15s;
+  cursor:pointer;
+}
+.agent-card:hover { box-shadow:0 8px 32px rgba(8,37,95,.14); transform:translateY(-2px); }
+.agent-card.active { border-color:var(--blue); box-shadow:0 0 0 2px rgba(26,111,255,.15); }
+
+.agent-card-header {
+  padding:16px 18px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-start; gap:12px;
+}
+.agent-icon {
+  width:44px; height:44px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+}
+.agent-card-meta { flex:1; min-width:0; }
+.agent-name { font-family:var(--font-head); font-size:1rem; letter-spacing:.04em; color:var(--navy); line-height:1; margin-bottom:4px; }
+.agent-desc { font-size:12px; color:var(--text-muted); line-height:1.4; }
+.agent-status {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:10px; font-weight:700; padding:2px 7px;
+  border-radius:10px; letter-spacing:.04em; text-transform:uppercase;
+  flex-shrink:0;
+}
+.agent-status.ready  { background:#F0FDF4; color:#16A34A; }
+.agent-status.busy   { background:#EFF6FF; color:#2563EB; }
+.agent-status.idle   { background:#F8FAFC; color:#94A3B8; }
+
+/* Agent models badges */
+.agent-models { display:flex; gap:4px; flex-wrap:wrap; padding:8px 18px; border-bottom:1px solid var(--border); background:var(--surface); }
+.model-tag {
+  font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px;
+  background:#EFF6FF; color:#2563EB; letter-spacing:.02em;
+}
+
+/* Agent workspace (expanded) */
+.agent-workspace { padding:16px 18px; }
+.agent-input-row { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.agent-input-row textarea {
+  border:1px solid var(--border); border-radius:8px; padding:10px 12px;
+  font-family:var(--font-body); font-size:13px; resize:vertical;
+  min-height:80px; outline:none; transition:border-color .15s;
+}
+.agent-input-row textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(26,111,255,.08); }
+.agent-run-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:10px 18px; background:var(--accent); color:#fff;
+  border:none; border-radius:8px; font-family:var(--font-body);
+  font-weight:700; font-size:14px; cursor:pointer; transition:all .15s;
+  width:100%;
+}
+.agent-run-btn:hover { background:#0044dd; transform:translateY(-1px); }
+.agent-run-btn:disabled { background:var(--border2); color:var(--text-faint); cursor:not-allowed; transform:none; }
+
+/* Output area */
+.agent-output {
+  margin-top:12px; background:var(--surface);
+  border:1px solid var(--border); border-radius:8px;
+  padding:12px; font-size:13px; line-height:1.7;
+  color:var(--text); min-height:60px; white-space:pre-wrap;
+  max-height:400px; overflow-y:auto;
+  display:none;
+}
+.agent-output.show { display:block; animation:fadeIn .2s ease; }
+.agent-output .output-section { margin-bottom:12px; }
+.agent-output .output-title { font-weight:700; color:var(--navy); margin-bottom:4px; }
+.agent-output .output-item {
+  padding:8px 10px; background:#fff; border:1px solid var(--border);
+  border-radius:6px; margin-bottom:6px; font-size:12.5px;
+}
+
+/* Output tabs */
+.output-tabs { display:flex; gap:4px; margin-top:10px; margin-bottom:6px; }
+.out-tab {
+  padding:4px 10px; font-size:11px; font-weight:600;
+  border:1px solid var(--border); border-radius:4px;
+  background:#fff; cursor:pointer; color:var(--text-muted);
+  transition:all .12s;
+}
+.out-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* Loading animation */
+.agent-loading {
+  display:flex; align-items:center; gap:8px;
+  color:var(--text-muted); font-size:13px; padding:12px 0;
+}
+.agent-spinner {
+  width:16px; height:16px; border:2px solid var(--border2);
+  border-top-color:var(--blue); border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+
+/* Larry integration panel */
+.larry-leads { margin-top:10px; }
+.larry-lead-item {
+  display:flex; align-items:center; gap:10px; padding:8px 10px;
+  border:1px solid var(--border); border-radius:6px; margin-bottom:6px;
+  background:#fff; cursor:pointer; transition:background .1s;
+}
+.larry-lead-item:hover { background:var(--surface2); }
+.larry-lead-selected { border-color:var(--blue); background:#EFF6FF !important; }
+
+/* Clio form */
+.clio-form { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+.clio-q { display:flex; flex-direction:column; gap:4px; }
+.clio-q label { font-size:11px; font-weight:700; color:var(--navy); letter-spacing:.04em; }
+.clio-q input, .clio-q textarea {
+  border:1px solid var(--border); border-radius:6px; padding:8px 10px;
+  font-family:var(--font-body); font-size:13px; outline:none;
+  transition:border-color .15s;
+}
+.clio-q input:focus, .clio-q textarea:focus { border-color:var(--blue); }
+
+/* Knowledge base floating indicator */
+.kb-status {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:12px; font-size:11px; font-weight:600;
+  background:rgba(0,194,224,.1); color:#0891B2; cursor:pointer;
+  transition:background .15s; border:1px solid rgba(0,194,224,.2);
+}
+.kb-status:hover { background:rgba(0,194,224,.18); }
+
+/* LLM init bar */
+.llm-init-bar {
+  background:var(--surface2); border-bottom:1px solid var(--border);
+  padding:10px 24px; display:flex; align-items:center; gap:12px;
+  font-size:13px; color:var(--text-muted);
+}
+.llm-init-bar.hidden { display:none; }
+.llm-progress { flex:1; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+.llm-progress-fill { height:100%; background:linear-gradient(90deg,var(--blue),var(--cyan)); border-radius:2px; transition:width .3s; }
+
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+/* Flywheel diagram */
+.flywheel {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:0;
+  border:1px solid var(--border); border-radius:10px; overflow:hidden;
+  margin:16px 24px;
+}
+.flywheel-step {
+  padding:14px 16px; border-right:1px solid var(--border);
+  background:#fff; text-align:center;
+}
+.flywheel-step:last-child { border-right:none; }
+.flywheel-step:hover { background:var(--surface2); }
+.flywheel-num { font-family:var(--font-head); font-size:1.8rem; color:var(--blue); line-height:1; }
+.flywheel-label { font-size:11px; color:var(--text-muted); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
+.flywheel-arrow { display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--cyan); }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page mkt-shell">
+
+  <!-- Control Panel -->
+  <div class="mkt-cp">
+    <div class="mkt-cp-row">
+      <nav class="o-breadcrumbs">
+        <a href="/home.html">MetaTronix</a>
+        <span class="o-breadcrumbs-sep">›</span>
+        <span class="o-breadcrumbs-current">Marketing IA</span>
+      </nav>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="kb-status" onclick="toggleKB()" id="kb-status-btn">
+          🧠 Base de Conocimiento <span id="kb-status-dot">●</span>
+        </span>
+        <button class="btn btn-primary btn-sm" onclick="initLLM()">
+          ⚡ Activar LLM
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LLM Init Bar -->
+  <div class="llm-init-bar" id="llm-bar">
+    <div class="agent-spinner"></div>
+    <span id="llm-bar-text">LLM listo para activarse — click "⚡ Activar LLM" para inicializar</span>
+    <div class="llm-progress"><div class="llm-progress-fill" id="llm-fill" style="width:0%"></div></div>
+    <span id="llm-pct" style="font-family:var(--font-mono);font-size:11px;white-space:nowrap">0%</span>
+  </div>
+
+  <!-- Knowledge Base -->
+  <div class="kb-panel" id="kb-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-family:var(--font-head);font-size:1.1rem;letter-spacing:.08em;color:#fff">🧠 BASE DE CONOCIMIENTO — Alimenta a todos los agentes</div>
+      <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.3)" onclick="saveKB()">💾 Guardar</button>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Esta información es el contexto central que todos los agentes usan para generar contenido personalizado.</div>
+    <div class="kb-grid">
+      <div class="kb-field">
+        <label>Empresa / Marca</label>
+        <input id="kb-empresa" placeholder="MetaTronix — Soluciones IA para LATAM">
+      </div>
+      <div class="kb-field">
+        <label>Productos / Servicios principales</label>
+        <textarea id="kb-productos" rows="2" placeholder="Metaview Systems, QuantumTron, Aria New Gen, NeuroTron Lab, Aria Digital..."></textarea>
+      </div>
+      <div class="kb-field">
+        <label>Audiencia objetivo</label>
+        <textarea id="kb-audiencia" rows="2" placeholder="Directores de tecnología, PYMES México/LATAM, startups FinTech..."></textarea>
+      </div>
+      <div class="kb-field">
+        <label>Propuesta de valor única</label>
+        <textarea id="kb-valor" rows="2" placeholder="IA especializada para LATAM, soporte 24/7 en español, implementación en 1 semana..."></textarea>
+      </div>
+      <div class="kb-field">
+        <label>Tono de comunicación</label>
+        <input id="kb-tono" placeholder="Experto pero accesible, innovador, confiable, inspirador">
+      </div>
+      <div class="kb-field">
+        <label>Competidores principales</label>
+        <input id="kb-competidores" placeholder="Salesforce, HubSpot, SAP, Oracle, Zoho...">
+      </div>
+    </div>
+  </div>
+
+  <!-- Chris West Flywheel -->
+  <div style="padding:14px 24px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="font-family:var(--font-head);font-size:.9rem;letter-spacing:.06em;color:var(--navy)">FLYWHEEL DE CONVERSIÓN</span>
+    <span style="font-size:11px;color:var(--text-faint)">Modelo Chris West — 7 agentes coordinados</span>
+  </div>
+  <div class="flywheel">
+    <div class="flywheel-step">
+      <div style="font-size:20px;margin-bottom:4px">🔍</div>
+      <div class="flywheel-num">01</div>
+      <div class="flywheel-label">Investigación</div>
+    </div>
+    <div class="flywheel-step">
+      <div style="font-size:20px;margin-bottom:4px">✍️</div>
+      <div class="flywheel-num">02</div>
+      <div class="flywheel-label">Contenido</div>
+    </div>
+    <div class="flywheel-step">
+      <div style="font-size:20px;margin-bottom:4px">📢</div>
+      <div class="flywheel-num">03</div>
+      <div class="flywheel-label">Publicidad</div>
+    </div>
+    <div class="flywheel-step">
+      <div style="font-size:20px;margin-bottom:4px">📺</div>
+      <div class="flywheel-num">04</div>
+      <div class="flywheel-label">YouTube SEO</div>
+    </div>
+    <div class="flywheel-step">
+      <div style="font-size:20px;margin-bottom:4px">🤖</div>
+      <div class="flywheel-num">05</div>
+      <div class="flywheel-label">Larry SDR</div>
+    </div>
+    <div class="flywheel-step">
+      <div style="font-size:20px;margin-bottom:4px">📡</div>
+      <div class="flywheel-num">06</div>
+      <div class="flywheel-label">Comunidad</div>
+    </div>
+    <div class="flywheel-step" style="border-right:none">
+      <div style="font-size:20px;margin-bottom:4px">🎯</div>
+      <div class="flywheel-num">07</div>
+      <div class="flywheel-label">Clio</div>
+    </div>
+  </div>
+
+  <!-- Agents Grid -->
+  <div class="agents-grid" id="agents-grid"></div>
+
+</div><!-- /.page -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════
+   MetaTronix — Marketing IA
+   7 Agentes basados en Chris West — 100% sin APIs de pago
+   Modelos: HuggingFace Xenova/ + WebLLM SmolLM2-360M
+   ════════════════════════════════════════════════════════ */
+
+let currentUser = null;
+let llmReady    = false;
+let allLeads    = [];
+
+/* ── KNOWLEDGE BASE ─────────────────────────────────── */
+const KB_KEY = 'mtx_marketing_kb';
+
+function getKB() {
+  try { return JSON.parse(localStorage.getItem(KB_KEY) || '{}'); } catch { return {}; }
+}
+function saveKB() {
+  const kb = {
+    empresa:      document.getElementById('kb-empresa')?.value || '',
+    productos:    document.getElementById('kb-productos')?.value || '',
+    audiencia:    document.getElementById('kb-audiencia')?.value || '',
+    valor:        document.getElementById('kb-valor')?.value || '',
+    tono:         document.getElementById('kb-tono')?.value || '',
+    competidores: document.getElementById('kb-competidores')?.value || '',
+    updated:      new Date().toISOString(),
+  };
+  localStorage.setItem(KB_KEY, JSON.stringify(kb));
+  updateKBStatus(true);
+  if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Base de conocimiento guardada ✓');
+  else showToast('Base de conocimiento guardada ✓', 'success');
+}
+function loadKBToForm() {
+  const kb = getKB();
+  if (document.getElementById('kb-empresa')) document.getElementById('kb-empresa').value = kb.empresa || 'MetaTronix — Soluciones IA para empresas en LATAM';
+  if (document.getElementById('kb-productos')) document.getElementById('kb-productos').value = kb.productos || 'Metaview Systems (computer vision), QuantumTron (data platform), Aria New Gen (educación IA), NeuroTron Lab (agentes autónomos), Aria Digital (marketing IA)';
+  if (document.getElementById('kb-audiencia')) document.getElementById('kb-audiencia').value = kb.audiencia || 'Directores de tecnología, CEOs de PYMES, startups FinTech, empresas retail e industrial en México y LATAM';
+  if (document.getElementById('kb-valor')) document.getElementById('kb-valor').value = kb.valor || 'IA especializada para LATAM, soporte 24/7 en español, implementación 1 semana, 30% del costo de Salesforce';
+  if (document.getElementById('kb-tono')) document.getElementById('kb-tono').value = kb.tono || 'Experto pero accesible, innovador, orientado a resultados, confiable';
+  if (document.getElementById('kb-competidores')) document.getElementById('kb-competidores').value = kb.competidores || 'Salesforce, HubSpot, SAP, Oracle, Zoho CRM';
+}
+function updateKBStatus(hasData) {
+  const dot = document.getElementById('kb-status-dot');
+  if (dot) { dot.style.color = hasData ? '#16A34A' : '#94A3B8'; }
+}
+function toggleKB() {
+  const p = document.getElementById('kb-panel');
+  if (p) { p.classList.toggle('open'); loadKBToForm(); }
+}
+function buildSystemPrompt(agentName) {
+  const kb = getKB();
+  return `Eres el ${agentName} de MetaTronix, experto en marketing y ventas B2B para el mercado latinoamericano.
+
+CONOCIMIENTO DE LA EMPRESA:
+- Empresa: ${kb.empresa || 'MetaTronix'}
+- Productos: ${kb.productos || 'Soluciones IA (computer vision, data, agentes autónomos, educación, marketing)'}
+- Audiencia objetivo: ${kb.audiencia || 'Empresas medianas en México y LATAM'}
+- Propuesta de valor: ${kb.valor || 'IA accesible, soporte en español, implementación rápida'}
+- Tono: ${kb.tono || 'Experto, confiable, innovador'}
+- Competidores: ${kb.competidores || 'Salesforce, HubSpot, SAP'}
+
+REGLAS:
+1. Responde SIEMPRE en español
+2. Sé específico, accionable y orientado a resultados
+3. Usa el tono de la empresa
+4. Genera contenido listo para usar, no genérico
+5. Incluye CTAs y elementos de persuasión`;
+}
+
+/* ── AGENTS DEFINITION ──────────────────────────────── */
+const AGENTS = [
+  {
+    id: 'investigacion',
+    icon: '🔍',
+    iconBg: 'linear-gradient(135deg,#EFF6FF,#DBEAFE)',
+    name: 'AGENTE INVESTIGACIÓN',
+    desc: 'Monitorea tendencias del sector, analiza competidores e identifica oportunidades de contenido y mercado.',
+    models: ['CRM_AI.zeroShot', 'CRM_AI.ner', 'CRM_LLM'],
+    inputLabel: '¿Qué sector o tema quieres investigar?',
+    inputPlaceholder: 'Ej: Tendencias de IA para retail en México 2026, o: Análisis de competidores de CRM en LATAM',
+    outputTabs: ['Tendencias', 'Competidores', 'Oportunidades'],
+    run: runAgentInvestigacion,
+  },
+  {
+    id: 'contenido',
+    icon: '✍️',
+    iconBg: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)',
+    name: 'AGENTE CONTENIDO',
+    desc: 'Genera scripts de Reels, posts, emails y blogs listos para publicar con la voz de tu marca.',
+    models: ['CRM_LLM', 'SmolLM2-360M'],
+    inputLabel: 'Tema o producto para generar contenido',
+    inputPlaceholder: 'Ej: Cómo la IA reduce costos en retail, o: Beneficios de QuantumTron para empresas medianas',
+    outputTabs: ['Reel Script', 'Post LinkedIn', 'Email', 'Blog Intro'],
+    run: runAgentContenido,
+  },
+  {
+    id: 'publicidad',
+    icon: '📢',
+    iconBg: 'linear-gradient(135deg,#FFF7ED,#FFEDD5)',
+    name: 'AGENTE PUBLICIDAD',
+    desc: 'Genera variaciones de copy para Meta Ads, Google Ads y LinkedIn Ads. 10 creativos por ejecución.',
+    models: ['CRM_LLM', 'CRM_AI.summary'],
+    inputLabel: 'Producto/servicio y audiencia objetivo',
+    inputPlaceholder: 'Ej: Metaview Systems para directores de operaciones de retail con 50+ tiendas',
+    outputTabs: ['Headlines', 'Descripciones', 'CTAs', 'Variaciones Completas'],
+    run: runAgentPublicidad,
+  },
+  {
+    id: 'youtube',
+    icon: '📺',
+    iconBg: 'linear-gradient(135deg,#FEF2F2,#FEE2E2)',
+    name: 'AGENTE YOUTUBE SEO',
+    desc: 'Optimiza títulos, descripciones, tags y conceptos de thumbnail para maximizar el alcance orgánico.',
+    models: ['CRM_LLM', 'CRM_AI.ner'],
+    inputLabel: 'Tema del video',
+    inputPlaceholder: 'Ej: Cómo implementé IA en mi empresa en 1 semana y reduje costos 40%',
+    outputTabs: ['Títulos (10x)', 'Descripción SEO', 'Tags', 'Thumbnail Concept'],
+    run: runAgentYoutube,
+  },
+  {
+    id: 'larry',
+    icon: '🤖',
+    iconBg: 'linear-gradient(135deg,#F5F3FF,#EDE9FE)',
+    name: 'LARRY — AI SDR',
+    desc: 'Califica leads automáticamente, genera emails personalizados y responde objeciones en tiempo real.',
+    models: ['CRM_LLM', 'CRM_AI.sentiment', 'CRM_AI.zeroShot'],
+    inputLabel: 'Selecciona un lead o escribe datos del prospecto',
+    inputPlaceholder: 'Ej: Empresa: Liverpool, Contacto: Carlos Mendoza, Cargo: Director TI, Pain: seguridad en tiendas',
+    outputTabs: ['Email Calificación', 'Email Seguimiento', 'Resp. Objeciones', 'Voice Note Script'],
+    run: runAgentLarry,
+    hasCRM: true,
+  },
+  {
+    id: 'streams',
+    icon: '📡',
+    iconBg: 'linear-gradient(135deg,#ECFEFF,#CFFAFE)',
+    name: 'AGENTE COMUNIDAD',
+    desc: 'Genera guiones para live streams y webinars. Identifica creencias a romper y construye confianza.',
+    models: ['CRM_LLM', 'CRM_AI.zeroShot'],
+    inputLabel: 'Objeciones o preguntas frecuentes de tus leads',
+    inputPlaceholder: 'Ej: "La IA es muy cara", "No tenemos datos suficientes", "Mi equipo no sabe usarla"',
+    outputTabs: ['Guión Stream', 'Creencias a Romper', 'Preguntas Clave', 'CTA del Stream'],
+    run: runAgentStreams,
+  },
+  {
+    id: 'clio',
+    icon: '🎯',
+    iconBg: 'linear-gradient(135deg,#FDF4FF,#FAE8FF)',
+    name: 'CLIO — ONBOARDING',
+    desc: 'Formulario de 28 preguntas que extrae la voz de marca, análisis de competidores y genera SOPs automáticos.',
+    models: ['CRM_LLM', 'CRM_AI.ner', 'CRM_AI.summary'],
+    inputLabel: 'Inicia el formulario de onboarding del cliente',
+    inputPlaceholder: null,
+    outputTabs: ['Voz de Marca', 'Análisis Competencia', 'SOPs Iniciales', 'Copy de Ventas'],
+    run: runAgentClio,
+    hasForm: true,
+  },
+];
+
+/* ── RENDER AGENTS ──────────────────────────────────── */
+function renderAgents() {
+  const grid = document.getElementById('agents-grid');
+  if (!grid) return;
+  grid.innerHTML = AGENTS.map(a => `
+    <div class="agent-card" id="card-${a.id}" onclick="toggleAgent('${a.id}')">
+      <div class="agent-card-header">
+        <div class="agent-icon" style="background:${a.iconBg}">${a.icon}</div>
+        <div class="agent-card-meta">
+          <div class="agent-name">${a.name}</div>
+          <div class="agent-desc">${a.desc}</div>
+        </div>
+        <span class="agent-status idle" id="status-${a.id}">Listo</span>
+      </div>
+      <div class="agent-models">
+        ${a.models.map(m=>`<span class="model-tag">${m}</span>`).join('')}
+        <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
+      </div>
+      <div class="agent-workspace" id="ws-${a.id}" style="display:none">
+        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : `
+          <div class="agent-input-row">
+            <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
+            <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
+          </div>`}
+        <button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')">
+          <span>⚡ Ejecutar ${a.name}</span>
+        </button>
+        <div id="output-${a.id}" class="agent-output"></div>
+      </div>
+    </div>
+  `).join('');
+  // Init Larry CRM dropdown
+  loadLarryLeads();
+}
+
+function toggleAgent(id) {
+  const ws = document.getElementById(`ws-${id}`);
+  const card = document.getElementById(`card-${id}`);
+  if (!ws) return;
+  const isOpen = ws.style.display !== 'none';
+  // Close all
+  document.querySelectorAll('.agent-workspace').forEach(w=>w.style.display='none');
+  document.querySelectorAll('.agent-card').forEach(c=>c.classList.remove('active'));
+  // Toggle current
+  if (!isOpen) { ws.style.display='block'; card.classList.add('active'); }
+}
+
+function renderLarryCRM(a) {
+  return `
+    <div class="agent-input-row">
+      <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">Selecciona un lead del CRM o escribe datos del prospecto</label>
+      <div class="larry-leads" id="larry-leads-list"></div>
+      <textarea id="input-larry" placeholder="${a.inputPlaceholder}" rows="3" style="margin-top:8px"></textarea>
+    </div>`;
+}
+
+function loadLarryLeads() {
+  const list = document.getElementById('larry-leads-list');
+  if (!list || !allLeads.length) return;
+  const top5 = allLeads.filter(l=>!['cerrado_ganado','cerrado_perdido'].includes(l.status)).slice(0,5);
+  list.innerHTML = top5.map(l=>`
+    <div class="larry-lead-item" id="larry-lead-${l.id}" onclick="selectLarryLead('${l.id}')">
+      <span style="font-size:16px">🎯</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${escHtml(l.empresa)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${escHtml(l.contacto_nombre||'—')} · ${escHtml(l.cargo||'—')}</div>
+      </div>
+      <span style="font-size:11px;color:var(--text-faint);font-family:monospace">${l.valor_estimado?'$'+parseInt(l.valor_estimado).toLocaleString('es-MX'):'—'}</span>
+    </div>`).join('') || '<div style="color:var(--text-faint);font-size:12px;padding:8px">Sin leads activos</div>';
+}
+
+function selectLarryLead(leadId) {
+  const l = allLeads.find(x=>x.id===leadId);
+  if (!l) return;
+  document.querySelectorAll('.larry-lead-item').forEach(el=>el.classList.remove('larry-lead-selected'));
+  document.getElementById(`larry-lead-${leadId}`)?.classList.add('larry-lead-selected');
+  const input = document.getElementById('input-larry');
+  if (input) input.value = `Empresa: ${l.empresa}\nContacto: ${l.contacto_nombre||'—'}\nCargo: ${l.cargo||'—'}\nEmail: ${l.contacto_email||'—'}\nTeléfono: ${l.contacto_telefono||'—'}\nEtapa: ${l.status}\nValor: ${l.valor_estimado?'$'+parseInt(l.valor_estimado).toLocaleString('es-MX'):'No definido'}\nNotas: ${l.notas||'Sin notas'}`;
+}
+
+function renderClioForm() {
+  const questions = [
+    ['¿Cuál es el nombre de tu empresa y qué hace?','Mi empresa es...'],
+    ['¿Cuál es tu producto/servicio estrella y a quién va dirigido?','Mi producto principal es...'],
+    ['¿Cuál es el resultado/transformación que ofreces?','Ayudo a mis clientes a...'],
+    ['¿Qué te diferencia de la competencia?','A diferencia de otros...'],
+    ['¿Cuáles son las 3 principales objeciones que escuchas?','Las objeciones más comunes son...'],
+    ['¿Por qué compraron tus últimos 3 clientes?','Compraron porque...'],
+  ];
+  return `
+    <div class="clio-form" id="clio-form">
+      ${questions.map((q,i)=>`
+        <div class="clio-q">
+          <label>${i+1}. ${q[0]}</label>
+          <textarea id="clio-q${i+1}" placeholder="${q[1]}" rows="2"></textarea>
+        </div>`).join('')}
+      <div style="font-size:11px;color:var(--text-muted);padding:6px;background:var(--surface);border-radius:6px;border:1px solid var(--border)">
+        📋 Versión completa incluye 28 preguntas. Esta es la versión acelerada de 6 preguntas clave.
+      </div>
+    </div>`;
+}
+
+/* ── RUN AGENTS ─────────────────────────────────────── */
+async function runAgent(id) {
+  const agent = AGENTS.find(a=>a.id===id);
+  if (!agent) return;
+  const btn    = document.getElementById(`btn-${id}`);
+  const output = document.getElementById(`output-${id}`);
+  const status = document.getElementById(`status-${id}`);
+  if (!output) return;
+
+  setAgentBusy(id, true, status, btn);
+  output.className = 'agent-output show';
+  output.innerHTML = `<div class="agent-loading"><div class="agent-spinner"></div> Procesando con IA...</div>`;
+
+  try {
+    await agent.run(id, output);
+  } catch(e) {
+    output.innerHTML = `<div style="color:var(--danger)">❌ Error: ${e.message}</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Consejo: Activa el LLM con ⚡ o verifica la conexión a internet para los modelos HuggingFace.</div>`;
+  } finally {
+    setAgentBusy(id, false, status, btn);
+  }
+}
+
+function setAgentBusy(id, busy, status, btn) {
+  if (status) { status.textContent = busy ? '⚡ Ejecutando' : 'Listo'; status.className = `agent-status ${busy?'busy':'ready'}`; }
+  if (btn)    { btn.disabled = busy; btn.querySelector('span').textContent = busy ? '⏳ Procesando...' : `⚡ Ejecutar ${AGENTS.find(a=>a.id===id)?.name||''}`; }
+}
+
+function getInput(id) {
+  return document.getElementById(`input-${id}`)?.value.trim() || '';
+}
+
+function renderOutput(output, sections) {
+  output.innerHTML = sections.map(s=>`
+    <div class="output-section">
+      <div class="output-title">${s.title}</div>
+      ${s.items.map(item=>`<div class="output-item">${item}</div>`).join('')}
+    </div>`).join('') + `<div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar todo</button>
+      <button class="btn btn-ghost btn-sm" onclick="saveToKB(this.closest('.agent-output'))">💾 Guardar en KB</button>
+    </div>`;
+}
+
+function copyOutput(el) {
+  const text = el?.innerText || '';
+  navigator.clipboard?.writeText(text).catch(()=>{});
+  if (typeof Notiflix!=='undefined') Notiflix.Notify.success('Copiado al portapapeles ✓');
+}
+function saveToKB(el) {
+  if (typeof Notiflix!=='undefined') Notiflix.Notify.info('Para guardar en la base de conocimiento, añádelo en la sección 🧠 Base de Conocimiento');
+}
+
+/* ── AGENT IMPLEMENTATIONS ──────────────────────────── */
+async function runAgentInvestigacion(id, output) {
+  const query = getInput(id) || 'Tendencias de IA para empresas en México 2026';
+  const sys = buildSystemPrompt('Agente de Investigación e Inteligencia');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys, `Analiza este tema y provee: (1) Top 5 tendencias actuales, (2) Análisis de 3 competidores clave, (3) 3 oportunidades de contenido específicas.\n\nTema: ${query}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📊 Análisis: ${escHtml(query)}</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
+    return;
+  }
+
+  // Fallback: structured analysis without LLM
+  const kb = getKB();
+  renderOutput(output, [
+    { title: '📈 Tendencias Detectadas (Template)',
+      items: ['Adopción de IA generativa en ventas B2B (+340% YoY)', 'Automatización de SDR con IA conversacional', 'Integración CRM + WhatsApp Business como canal principal', 'Computer vision para retail analytics en expansión', 'Demanda de IA en español para mercado LATAM'] },
+    { title: '🔍 Análisis de Competencia',
+      items: [`Competidores de ${kb.empresa||'tu empresa'}: ${kb.competidores||'Salesforce, HubSpot'}`, 'Gaps identificados: soporte en español, precio para PYMES, implementación rápida'] },
+    { title: '💡 Oportunidades de Contenido',
+      items: ['Caso de éxito: "Cómo redujimos costos 40% con IA en 30 días"', 'Educacional: "5 errores que cometen las PYMES al adoptar IA"', 'Demo: "Metaview Systems en vivo: detección de pérdidas en retail"'] },
+  ]);
+}
+
+async function runAgentContenido(id, output) {
+  const tema = getInput(id) || 'Beneficios de la IA para empresas LATAM';
+  const sys  = buildSystemPrompt('Agente de Contenido');
+  const kb   = getKB();
+
+  if (window.CRM_LLM?.engine) {
+    const prompt = `Genera contenido de marketing para: "${tema}"\n\nNecesito:\n1. Script de Reel (60 segundos, hook + desarrollo + CTA)\n2. Post LinkedIn (150 palabras)\n3. Email subject line (5 variaciones)\n4. Primera línea de blog SEO-optimizada`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">✍️ Contenido generado para: "${escHtml(tema)}"</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar todo</button></div>`;
+    return;
+  }
+
+  // Template fallback
+  renderOutput(output, [
+    { title: '🎬 Script de Reel (60 seg)',
+      items: [
+        `HOOK (0-3s): "¿Sabías que el 70% de las empresas LATAM aún no usa IA? Aquí está lo que están perdiendo..."`,
+        `DESARROLLO (3-45s): Muestra [${tema}] con datos reales. Incluye transformación antes/después.`,
+        `CTA (45-60s): "¿Quieres implementarlo en tu empresa? Link en bio para agendar demo gratuita."`,
+      ] },
+    { title: '💼 Post LinkedIn',
+      items: [`"${tema}" ya no es una ventaja competitiva — es una necesidad.\n\n${kb.empresa||'MetaTronix'} ha ayudado a +50 empresas en LATAM a [resultado específico].\n\n¿Tu empresa ya está usando IA? Comenta 👇"`] },
+    { title: '📧 Subject Lines (5 variaciones)',
+      items: [`1. [Urgente] Tu competencia ya usa ${tema.slice(0,30)}...`, `2. Cómo [empresa similar] logró X con ${tema.slice(0,25)}`, `3. El error que cometen el 70% de las empresas con IA`, `4. Demo exclusiva: ${tema.slice(0,35)}`, `5. [Primer nombre], ¿ya tienes tu plan de IA para 2026?`] },
+  ]);
+}
+
+async function runAgentPublicidad(id, output) {
+  const input = getInput(id) || 'Metaview Systems para directores de operaciones de retail';
+  const sys   = buildSystemPrompt('Agente de Publicidad');
+
+  if (window.CRM_LLM?.engine) {
+    const prompt = `Genera copy de publicidad para Meta Ads y Google Ads:\n\nProducto/Audiencia: ${input}\n\nNecesito:\n1. 5 headlines (máx 40 chars)\n2. 3 descripciones primarias (máx 125 chars)\n3. 3 CTAs poderosos\n4. 1 anuncio completo (headline + descripción + CTA)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📢 Copy de Publicidad</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
+    return;
+  }
+
+  renderOutput(output, [
+    { title: '📣 Headlines (máx 40 chars)',
+      items: ['¿IA para tu empresa en 1 semana?', 'Reduce costos 40% con IA LATAM', 'Computer Vision para tu negocio', 'Sin Salesforce, sin costos extra', 'MetaTronix: IA que habla español'] },
+    { title: '📝 Descripciones primarias',
+      items: ['Implementa visión artificial en tu operación. Sin código. Sin meses de espera. Demo gratuita hoy.', 'Más de 50 empresas LATAM ya usan MetaTronix. ¿Tu competencia también? Agenda demo →', 'La única plataforma IA diseñada para México y LATAM. Soporte 24/7 en español. Precio PYME.'] },
+    { title: '⚡ CTAs',
+      items: ['Agenda tu demo gratuita →', 'Ver caso de éxito →', 'Calcula tu ROI en 2 min →'] },
+  ]);
+}
+
+async function runAgentYoutube(id, output) {
+  const tema = getInput(id) || 'Cómo implementé IA en mi empresa y reduje costos 40%';
+  const sys  = buildSystemPrompt('Agente de YouTube SEO');
+
+  if (window.CRM_LLM?.engine) {
+    const prompt = `Optimiza este video de YouTube:\nTema: "${tema}"\n\nGenera:\n1. 10 títulos SEO (click-baity pero verídicos)\n2. Descripción completa (300 palabras, primera línea hook, incluye keywords)\n3. 15 tags relevantes\n4. Concepto de thumbnail (descripción visual)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📺 YouTube SEO: "${escHtml(tema)}"</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
+    return;
+  }
+
+  renderOutput(output, [
+    { title: '🎬 Títulos SEO (mejores 5)',
+      items: [`Cómo ${tema} (Resultados REALES en 30 días)`, `NO implementes IA sin ver esto primero — ${tema}`, `${tema}: El método que nadie te enseña`, `De 0 a IA en 7 días: ${tema}`, `¿Vale la pena? ${tema} — Mi experiencia honesta`] },
+    { title: '🔖 Tags Keywords',
+      items: ['inteligencia artificial México, IA para empresas, MetaTronix, computer vision retail, automatización LATAM, CRM con IA, implementar IA empresa, reduce costos IA'] },
+    { title: '🖼 Thumbnail Concept',
+      items: ['Fondo: gradiente navy → azul. TEXTO GRANDE: resultado numérico (ej: -40% costos). Foto: director de empresa sorprendido. Logo MetaTronix esquina inferior. Colores: #08255F #1A6FFF #00FF88'] },
+  ]);
+}
+
+async function runAgentLarry(id, output) {
+  const leadData = getInput('larry') || 'Prospecto genérico del sector retail';
+  const sys = buildSystemPrompt('Larry — AI SDR (Sales Development Representative)');
+
+  if (window.CRM_LLM?.engine) {
+    const prompt = `Genera secuencia de ventas para este prospecto:\n\n${leadData}\n\nNecesito:\n1. Email de calificación (asunto + cuerpo, máx 5 líneas)\n2. Email de seguimiento 3 días después\n3. Respuesta a objeción "Es muy caro"\n4. Script de voice note (30 segundos, natural, no suene a ventas)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🤖 Secuencia SDR generada</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
+    return;
+  }
+
+  renderOutput(output, [
+    { title: '📧 Email de Calificación',
+      items: [`Asunto: Re: Tu consulta sobre IA para ${leadData.split('\n')[0]?.split(':')[1]?.trim()||'tu empresa'}`,
+               `Hola [nombre],\n\nVi que visitaste nuestra página. En MetaTronix hemos ayudado a empresas como la tuya a reducir costos operativos 40% con IA.\n\n¿Tienes 15 minutos esta semana? Te muestro exactamente cómo lo haríamos en tu caso.\n\n[Tu nombre]`] },
+    { title: '📧 Seguimiento D+3',
+      items: [`Asunto: [Video] Caso de éxito empresa similar a la tuya\n\nHola [nombre],\n\nTe comparto este video donde mostramos resultados reales: [link]. Similar a tu caso.\n\n¿Lo revisaste? Cuéntame qué te parece.\n\n[Tu nombre]`] },
+    { title: '💬 Respuesta objeción "Es muy caro"',
+      items: [`"Entiendo. Permíteme reformularlo: Actualmente ¿cuánto te cuesta [problema que tienen]? Nuestros clientes recuperan la inversión en 6-8 meses. El ROI promedio es 4x. ¿Te parece bien si calculamos juntos el tuyo?"`] },
+  ]);
+}
+
+async function runAgentStreams(id, output) {
+  const objeciones = getInput(id) || '"La IA es muy cara", "No tenemos tiempo", "Mi equipo no sabe usarla"';
+  const sys = buildSystemPrompt('Agente de Comunidad y Live Streams');
+
+  if (window.CRM_LLM?.engine) {
+    const prompt = `Planifica un live stream de 90 minutos basado en estas objeciones de prospectos:\n\n${objeciones}\n\nGenera:\n1. Guión completo (intro, 3 secciones principales, cierre)\n2. Top 5 creencias a romper\n3. 10 preguntas para la audiencia\n4. CTA final del stream (sin sonar a ventas)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📡 Guión de Live Stream</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
+    return;
+  }
+
+  renderOutput(output, [
+    { title: '📡 Estructura del Live Stream (90 min)',
+      items: ['INTRO (10 min): "Hoy vamos a destruir los mitos sobre IA que te están costando dinero..."', 'SECCIÓN 1 (25 min): Muestra el sistema en vivo. No expliques — demuestra.', 'SECCIÓN 2 (25 min): Casos de éxito reales. Números específicos.', 'SECCIÓN 3 (20 min): Q&A sobre las objeciones específicas de tu audiencia.', 'CIERRE (10 min): "Para los que quieran ver si esto aplica a su negocio, link fijo en el chat."'] },
+    { title: '🧠 Creencias a Romper',
+      items: objeciones.split('",').map((o,i)=>`${i+1}. "${o.replace(/[",]/g,'').trim()}" → Realidad: [argumento contrario con datos]`) },
+    { title: '⚡ CTA del Stream',
+      items: ['Un solo CTA en todo el stream: link fijo en el chat para agendar llamada. Nunca hacer pitch directamente. La confianza se construye con 8+ horas de contenido consumido.'] },
+  ]);
+}
+
+async function runAgentClio(id, output) {
+  const sys  = buildSystemPrompt('Clio — Agente de Onboarding');
+  // Gather form answers
+  const answers = [];
+  for (let i = 1; i <= 6; i++) {
+    const val = document.getElementById(`clio-q${i}`)?.value?.trim();
+    if (val) answers.push(val);
+  }
+  if (!answers.length) { output.innerHTML = '<div style="color:var(--danger)">Por favor completa al menos una pregunta del formulario.</div>'; output.className = 'agent-output show'; return; }
+
+  const context = answers.map((a,i)=>`Respuesta ${i+1}: ${a}`).join('\n');
+
+  if (window.CRM_LLM?.engine) {
+    const prompt = `Analiza estas respuestas de onboarding de un nuevo cliente y genera:\n\n${context}\n\n1. Voz de marca (3-5 adjetivos + ejemplo de frase)\n2. Posicionamiento único\n3. Top 3 mensajes de ventas\n4. SOP inicial de marketing (5 pasos)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🎯 Perfil de Onboarding Generado</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="saveToKB()">💾 Guardar en KB</button></div>`;
+    return;
+  }
+
+  renderOutput(output, [
+    { title: '🎨 Voz de Marca (inferida)',
+      items: ['Adjetivos: Experto, Confiable, Innovador, Cercano, Orientado a resultados', `Tono: Hablas como el mejor amigo que también es el experto en tu industria.`, 'Frase de posicionamiento: "Transformamos [negocio] con IA que realmente funciona para LATAM."'] },
+    { title: '💬 Mensajes de Ventas',
+      items: answers.slice(0,3).map((a,i)=>`M${i+1}: Basado en "${a.slice(0,50)}..." → Mensaje clave a desarrollar`) },
+    { title: '📋 SOP Marketing Inicial',
+      items: ['1. Crear video de atracción en YouTube (tema más preguntado)', '2. Configurar landing page con formulario de captura', '3. Activar Larry SDR con secuencia de email personalizada', '4. Publicar 5 Reels/semana con el Agente de Contenido', '5. Live stream semanal respondiendo objeciones detectadas'] },
+  ]);
+}
+
+/* ── LLM INIT ────────────────────────────────────────── */
+async function initLLM() {
+  if (llmReady) { if(typeof Notiflix!=='undefined') Notiflix.Notify.info('LLM ya está activo'); return; }
+  const bar  = document.getElementById('llm-bar');
+  const text = document.getElementById('llm-bar-text');
+  const fill = document.getElementById('llm-fill');
+  const pct  = document.getElementById('llm-pct');
+  if (bar) bar.className = 'llm-init-bar';
+
+  const updateProgress = (info) => {
+    const progress = info.progress || 0;
+    if (fill) fill.style.width = (progress*100)+'%';
+    if (pct)  pct.textContent  = Math.round(progress*100)+'%';
+    if (text) text.textContent = info.text || 'Descargando modelo...';
+  };
+
+  if (!window.CRM_LLM) { if(text) text.textContent = '⚠️ LLM no disponible — recarga la página'; return; }
+
+  try {
+    if(text) text.textContent = '⬇️ Descargando SmolLM2-360M (~200MB)...';
+    await window.CRM_LLM.init(updateProgress);
+    llmReady = true;
+    if (bar) bar.className = 'llm-init-bar hidden';
+    if(typeof Notiflix!=='undefined') Notiflix.Notify.success('LLM activo ✓ — Todos los agentes en modo completo');
+    // Update all agent statuses
+    AGENTS.forEach(a => {
+      const s = document.getElementById(`status-${a.id}`);
+      if (s) { s.textContent = '✓ IA Lista'; s.className = 'agent-status ready'; }
+    });
+  } catch(e) {
+    if(text) text.textContent = '❌ Error: '+e.message+' — Los agentes usarán templates inteligentes';
+    setTimeout(()=>{ if(bar) bar.className='llm-init-bar hidden'; }, 5000);
+  }
+}
+
+/* ── INIT ────────────────────────────────────────────── */
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'marketing');
+
+  if (typeof Notiflix !== 'undefined') {
+    Notiflix.Notify.init({ position:'right-bottom', timeout:3000, fontSize:'13px' });
+  }
+
+  // Load leads from Supabase for Larry
+  const { data } = await getDB().from('leads').select('*').order('updated_at',{ascending:false}).limit(20);
+  allLeads = data || [];
+
+  // Update KB status
+  const kb = getKB();
+  updateKBStatus(!!kb.empresa);
+
+  // Render agents
+  renderAgents();
+
+  // Load Larry leads
+  loadLarryLeads();
+}
+
+function escHtml(s) {
+  if (typeof window.escHtml === 'function') return window.escHtml(s);
+  const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML;
+}
+
+init();
+</script>
+</body>
+</html>
