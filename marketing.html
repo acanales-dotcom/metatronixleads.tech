@@ -1945,37 +1945,79 @@ window.initGeoMap = function(containerId, zones, lat, lng) {
    8 personas IA simulan reacción a contenido antes de publicar
    ═══════════════════════════════════════════════════════════ */
 
+// 32 Personas IA — cobertura máxima de audiencia LATAM
 const PERSONAS_SIM = [
-  { name:'Director de TI', age:42, perfil:'Técnico, escéptico, valora ROI comprobado', red:'LinkedIn', sesgo:'desconfianza a nuevas herramientas' },
-  { name:'CEO PYME',       age:38, perfil:'Ocupado, busca soluciones simples y baratas', red:'LinkedIn', sesgo:'precio sensible' },
-  { name:'Gerente Ventas', age:34, perfil:'Orientado a resultados, frustrado con CRMs complejos', red:'LinkedIn/Instagram', sesgo:'escéptico a promesas de IA' },
-  { name:'Emprendedor',    age:29, perfil:'Early adopter, innovador, influencer en su nicho', red:'TikTok/Instagram', sesgo:'positivo a tecnología' },
-  { name:'CFO Corporativo',age:48, perfil:'Analítico, requiere datos duros, proceso de aprobación', red:'LinkedIn', sesgo:'riesgo-adverso' },
-  { name:'Vendedor SDR',   age:26, perfil:'Usuario final del CRM, busca herramientas fáciles', red:'TikTok/Instagram', sesgo:'frustrado con herramientas actuales' },
-  { name:'Director Mktg',  age:36, perfil:'Orientado a data, busca impacto medible en pipeline', red:'LinkedIn', sesgo:'receptivo si hay métricas' },
-  { name:'Inversionista',  age:52, perfil:'Ve el big picture, interesado en escalabilidad LATAM', red:'LinkedIn', sesgo:'neutral, muy analítico' },
+  // ── PROFESIONALES B2B ──────────────────────────────────────────
+  { name:'Director de TI',       age:42, genero:'M', pais:'MX', nivel:'enterprise', perfil:'Técnico escéptico, valora ROI comprobado y seguridad', red:'LinkedIn', sesgo:'desconfianza a herramientas nuevas sin soporte local', emoji:'👨‍💻' },
+  { name:'CEO PYME',             age:38, genero:'M', pais:'MX', nivel:'pyme', perfil:'Ocupado, busca soluciones simples, rápidas y asequibles', red:'LinkedIn', sesgo:'muy sensible al precio, no quiere contratos largos', emoji:'👔' },
+  { name:'Gerente de Ventas',    age:34, genero:'F', pais:'MX', nivel:'medio', perfil:'Orientada a cuotas, frustrada con CRMs que nadie usa', red:'LinkedIn/Instagram', sesgo:'escéptica a promesas de IA sin demos reales', emoji:'💼' },
+  { name:'CFO Corporativo',      age:48, genero:'M', pais:'CO', nivel:'enterprise', perfil:'Analítico extremo, requiere datos duros y casos de uso', red:'LinkedIn', sesgo:'riesgo-adverso, necesita aprobación multi-nivel', emoji:'📊' },
+  { name:'Director de Marketing',age:36, genero:'F', pais:'MX', nivel:'medio', perfil:'Data-driven, busca impacto medible en pipeline y MQLs', red:'LinkedIn', sesgo:'receptiva si hay métricas de conversión comprobadas', emoji:'📣' },
+  { name:'Inversionista Ángel',  age:52, genero:'M', pais:'AR', nivel:'investor', perfil:'Ve el big picture, track record LATAM, valora escalabilidad', red:'LinkedIn', sesgo:'neutral analítico, busca unit economics sólidos', emoji:'💰' },
+  { name:'COO de Startup',       age:31, genero:'F', pais:'MX', nivel:'startup', perfil:'Velocidad de ejecución, ops-first, odia burocracia', red:'LinkedIn/Twitter', sesgo:'positiva si ahorra tiempo real y se integra fácil', emoji:'⚙️' },
+  { name:'VP de Operaciones',    age:44, genero:'M', pais:'CL', nivel:'enterprise', perfil:'Procesos y eficiencia, busca automatización de tareas manuales', red:'LinkedIn', sesgo:'escéptico sin demo técnica, exige SLA', emoji:'🔧' },
+  { name:'Gerente RRHH',         age:40, genero:'F', pais:'MX', nivel:'medio', perfil:'Gestiona equipos de ventas, le importa la adopción y el onboarding', red:'LinkedIn', sesgo:'preocupada por la curva de aprendizaje del equipo', emoji:'👥' },
+  { name:'Directora Financiera', age:46, genero:'F', pais:'PE', nivel:'enterprise', perfil:'Controla presupuestos, busca ROI en 6 meses máximo', red:'LinkedIn', sesgo:'bloquea compras sin análisis de costo-beneficio detallado', emoji:'🏦' },
+
+  // ── EMPRENDEDORES & FREELANCERS ────────────────────────────────
+  { name:'Emprendedor Tech',     age:28, genero:'M', pais:'MX', nivel:'startup', perfil:'Early adopter nato, prueba todo, influencer en su nicho', red:'TikTok/LinkedIn', sesgo:'muy positivo a IA, pero cambia de herramienta rápido', emoji:'🚀' },
+  { name:'Freelancer Creativa',  age:27, genero:'F', pais:'MX', nivel:'freelance', perfil:'Diseñadora/copywriter independiente, busca ganar tiempo', red:'Instagram/TikTok', sesgo:'le importa el precio, desconfía del "todo en uno"', emoji:'🎨' },
+  { name:'Consultora de Negocios',age:35, genero:'F', pais:'CO', nivel:'freelance', perfil:'Asesora PyMEs LATAM, recomienda herramientas a sus clientes', red:'LinkedIn/Instagram', sesgo:'muy influenciable por testimonios y casos reales', emoji:'📋' },
+  { name:'Dueño de Restaurante', age:45, genero:'M', pais:'MX', nivel:'micro', perfil:'PYME local, poco tiempo, no muy tech, busca simplicidad extrema', red:'Facebook/Instagram', sesgo:'miedo a la tecnología, necesita mucho soporte humano', emoji:'🍽️' },
+  { name:'Agente Inmobiliario',  age:32, genero:'F', pais:'MX', nivel:'pyme', perfil:'Maneja muchos leads, vive en WhatsApp, necesita organización', red:'Instagram/WhatsApp', sesgo:'positiva si se integra con WhatsApp y es móvil-first', emoji:'🏠' },
+
+  // ── GEN Z & MILLENNIALS ────────────────────────────────────────
+  { name:'Estudiante Universitario',age:22, genero:'F', pais:'MX', nivel:'estudiante', perfil:'Gen Z, nativa digital, opina en redes, muy visual', red:'TikTok/Instagram', sesgo:'positiva si el contenido es auténtico y corto', emoji:'🎓' },
+  { name:'Tiktoker / Creator',   age:24, genero:'M', pais:'MX', nivel:'creador', perfil:'Crea contenido daily, muy atento a tendencias y herramientas', red:'TikTok/YouTube', sesgo:'positivo si ve valor real, lo comparte si le gusta', emoji:'📱' },
+  { name:'Millennial Profesional',age:33, genero:'F', pais:'MX', nivel:'medio', perfil:'Trabaja en corporativo, hace side hustle, tech-savvy', red:'LinkedIn/Instagram', sesgo:'busca equilibrio precio-calidad, lee reseñas antes', emoji:'💻' },
+  { name:'Gen Z Vendedor',       age:23, genero:'M', pais:'CO', nivel:'entry', perfil:'Nuevo en ventas, aprende rápido, nativo digital, usa TikTok', red:'TikTok/Instagram', sesgo:'positivo a IA, quiere herramientas que funcionen en móvil', emoji:'⚡' },
+
+  // ── SECTORES ESPECÍFICOS ──────────────────────────────────────
+  { name:'Médico Privado',       age:41, genero:'M', pais:'MX', nivel:'profesional', perfil:'Clínica privada, muy ocupado, busca gestionar citas y pacientes', red:'Facebook/Instagram', sesgo:'desconfía de herramientas genéricas, quiere algo hecho para salud', emoji:'👨‍⚕️' },
+  { name:'Maestra de Escuela',   age:38, genero:'F', pais:'MX', nivel:'publico', perfil:'Sector educativo, presupuesto limitado, resistente al cambio', red:'Facebook/WhatsApp', sesgo:'muy resistente a tecnología nueva sin capacitación', emoji:'📚' },
+  { name:'Agricultor Tecnificado',age:44, genero:'M', pais:'MX', nivel:'agro', perfil:'Productor agrícola moderno, usa apps para monitoreo, pragmático', red:'Facebook/YouTube', sesgo:'solo adopta si hay ROI comprobado en su sector', emoji:'🌾' },
+  { name:'Influencer de Negocios',age:30, genero:'F', pais:'MX', nivel:'creador', perfil:'200K seguidores, comparte herramientas y productividad', red:'Instagram/TikTok/LinkedIn', sesgo:'muy influyente, positiva si hay beneficio para su audiencia', emoji:'⭐' },
+  { name:'Abogado Corporativo',  age:43, genero:'M', pais:'MX', nivel:'profesional', perfil:'Manejo de contratos y clientes, muy cuidadoso con datos', red:'LinkedIn', sesgo:'muy exigente en privacidad y cumplimiento LFPDPPP', emoji:'⚖️' },
+
+  // ── LATAM DIVERSO ─────────────────────────────────────────────
+  { name:'Empresaria Colombiana', age:37, genero:'F', pais:'CO', nivel:'medio', perfil:'Empresa mediana Bogotá, busca crecer a LATAM, muy ambiciosa', red:'LinkedIn/Instagram', sesgo:'positiva si hay casos LATAM comprobados, no solo USA', emoji:'🇨🇴' },
+  { name:'Startup Founder Chile', age:32, genero:'M', pais:'CL', nivel:'startup', perfil:'YC alumni, B2B SaaS, visión global desde LATAM', red:'Twitter/LinkedIn', sesgo:'compara vs HubSpot y Salesforce constantemente', emoji:'🇨🇱' },
+  { name:'Comerciante de Mercado',age:50, genero:'F', pais:'MX', nivel:'micro', perfil:'Negocio familiar generaciones, poco tech, muy práctica', red:'WhatsApp/Facebook', sesgo:'necesita solución muy simple, en español, soporte presencial', emoji:'🏪' },
+  { name:'Político Municipal',    age:48, genero:'M', pais:'MX', nivel:'gobierno', perfil:'Interesado en digitalización municipal, proceso lento de compra', red:'Facebook/Twitter', sesgo:'compra por licitación, proceso muy largo y burocrático', emoji:'🏛️' },
+  { name:'Joven Profesionista',   age:25, genero:'F', pais:'MX', nivel:'entry', perfil:'Recién egresada, primer empleo en ventas, muy observadora', red:'TikTok/Instagram/LinkedIn', sesgo:'influenciada por peers y reseñas en Google', emoji:'🌟' },
+  { name:'Periodista Digital',    age:31, genero:'M', pais:'MX', nivel:'media', perfil:'Cubre tecnología y startups, muy crítico y analítico', red:'Twitter/LinkedIn', sesgo:'verifica afirmaciones, busca datos concretos y fuentes', emoji:'📰' },
+  { name:'Mamá Emprendedora',     age:36, genero:'F', pais:'MX', nivel:'micro', perfil:'Negocio desde casa, maneja redes sola, busca simplicidad', red:'Instagram/Facebook/WhatsApp', sesgo:'busca herramientas fáciles, precio bajo, tutorial en video', emoji:'👩‍💼' },
+  { name:'Gerente de Distribución',age:40, genero:'M', pais:'MX', nivel:'medio', perfil:'Maneja fuerza de ventas campo, necesita CRM móvil offline', red:'LinkedIn/WhatsApp', sesgo:'exige app móvil funcional, cero tolerancia a bugs', emoji:'🚛' },
 ];
 
 async function runAgentSocialSim(id, output) {
   const content = getInput('social_sim');
   if (!content) { output.innerHTML='<div style="color:var(--danger);font-size:12px">Escribe el contenido o campaña a simular</div>'; return; }
 
+  // Selección inteligente: 16 personas representativas del total de 32
+  const selected = selectRepresentativePersonas(16);
+
   output.className = 'agent-output show';
   output.innerHTML = `<div style="font-size:12px;color:#818CF8;font-family:Inter,sans-serif;padding:8px 0">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <div class="agent-spinner" style="border-top-color:#818CF8"></div> Creando 8 personas y simulando reacciones…
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div class="agent-spinner" style="border-top-color:#818CF8"></div>
+      <span>Simulando reacciones — <strong style="color:#A78BFA">${selected.length} personas IA</strong> de ${PERSONAS_SIM.length} disponibles…</span>
     </div>
     <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
-      <div id="sim-fill" style="height:100%;background:linear-gradient(90deg,#818CF8,#A78BFA);width:5%;border-radius:2px;transition:width .4s"></div>
+      <div id="sim-fill" style="height:100%;background:linear-gradient(90deg,#818CF8,#A78BFA);width:3%;border-radius:2px;transition:width .3s"></div>
     </div>
+    <div id="sim-live" style="font-size:10px;color:#4A5568;margin-top:5px;font-family:monospace"></div>
   </div>`;
 
   const reactions = [];
-  const setP = p => { const f=document.getElementById('sim-fill'); if(f) f.style.width=p+'%'; };
+  const setP = (p,msg) => {
+    const f=document.getElementById('sim-fill'); if(f) f.style.width=p+'%';
+    const l=document.getElementById('sim-live'); if(l&&msg) l.textContent='→ '+msg;
+  };
 
-  for (let i = 0; i < PERSONAS_SIM.length; i++) {
-    const p = PERSONAS_SIM[i];
-    setP(10 + (i/PERSONAS_SIM.length)*80);
+  for (let i = 0; i < selected.length; i++) {
+    const p = selected[i];
+    setP(5 + (i/selected.length)*90, `${p.emoji||''} ${p.name} (${p.pais||'MX'}, ${p.red})`);
 
     let reaction = { persona: p.name, red: p.red, score: 0, emoji:'', reaction:'', objecion:'' };
 
@@ -1991,56 +2033,138 @@ async function runAgentSocialSim(id, output) {
         } catch { reaction.score = 40+Math.round(Math.random()*40); reaction.emoji='🤔'; reaction.reaction=resp.slice(0,80); }
       } catch { reaction.score = 30+Math.round(Math.random()*60); reaction.emoji='💬'; }
     } else {
-      // Heuristic fallback
-      const positive = ['emprendedor','vendedor sdr','director mktg'].some(k=>p.name.toLowerCase().includes(k.split(' ')[0]));
-      reaction.score = positive ? 60+Math.round(Math.random()*35) : 30+Math.round(Math.random()*50);
+      // Heuristic fallback — usa perfil y nivel para score más preciso
+      const posKeywords = ['emprendedor','tiktoker','creator','millennial','gen z','freelancer','agente inmobiliario','influencer'];
+      const negKeywords = ['cfo','corporativo','gobierno','político','maestro','abogado'];
+      const isPosLean = posKeywords.some(k=>p.name.toLowerCase().includes(k));
+      const isNegLean = negKeywords.some(k=>p.name.toLowerCase().includes(k));
+      reaction.score = isPosLean ? 62+Math.round(Math.random()*33) : isNegLean ? 22+Math.round(Math.random()*38) : 38+Math.round(Math.random()*42);
       reaction.emoji = reaction.score>70?'✅':reaction.score>50?'🤔':'❌';
-      reaction.reaction = positive ? 'Interesante propuesta, consideraría probarlo' : 'Necesito ver más pruebas antes de convencerme';
-      reaction.objecion = reaction.score<60 ? p.sesgo : '';
+      reaction.reaction = isPosLean ? 'Me interesa, lo compartiría con mi red' : isNegLean ? 'Necesito más contexto y datos antes de opinar' : 'Podría ser útil, dependiendo del precio y soporte';
+      reaction.objecion = reaction.score<55 ? p.sesgo : '';
     }
     reactions.push({ ...p, ...reaction });
   }
 
-  setP(100);
-  const avgScore = Math.round(reactions.reduce((s,r)=>s+r.score,0)/reactions.length);
-  const topPositive = reactions.filter(r=>r.score>=65);
-  const objections  = reactions.filter(r=>r.objecion).map(r=>r.objecion);
+  setP(100, 'Compilando resultados…');
+
+  const avgScore   = Math.round(reactions.reduce((s,r)=>s+r.score,0)/reactions.length);
+  const topPos     = reactions.filter(r=>r.score>=70).sort((a,b)=>b.score-a.score);
+  const neutral    = reactions.filter(r=>r.score>=45&&r.score<70);
+  const negative   = reactions.filter(r=>r.score<45);
+  const objections = [...new Set(reactions.filter(r=>r.objecion).map(r=>r.objecion))];
+
+  // Network breakdown
+  const redBreakdown = {};
+  reactions.forEach(r => {
+    r.red.split('/').forEach(n => {
+      const k = n.trim();
+      if (!redBreakdown[k]) redBreakdown[k] = {count:0,sum:0};
+      redBreakdown[k].count++;
+      redBreakdown[k].sum+=r.score;
+    });
+  });
+  const redScores = Object.entries(redBreakdown)
+    .map(([k,v])=>({red:k,avg:Math.round(v.sum/v.count),count:v.count}))
+    .sort((a,b)=>b.avg-a.avg);
+
+  // Country breakdown
+  const paisBreakdown = {};
+  reactions.forEach(r => {
+    if (!paisBreakdown[r.pais||'MX']) paisBreakdown[r.pais||'MX']={count:0,sum:0};
+    paisBreakdown[r.pais||'MX'].count++;
+    paisBreakdown[r.pais||'MX'].sum+=r.score;
+  });
 
   output.innerHTML = `
     <div style="font-family:Inter,sans-serif">
-      <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.2);border-radius:8px;margin-bottom:12px">
-        <div style="text-align:center;min-width:50px">
-          <div style="font-size:2rem;font-weight:700;color:${avgScore>=65?'#10B981':avgScore>=45?'#F59E0B':'#EF4444'};line-height:1">${avgScore}</div>
-          <div style="font-size:9px;color:#7E8FA8;text-transform:uppercase;letter-spacing:.06em">Score Pred.</div>
+      <!-- Hero score -->
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.22);border-radius:10px;margin-bottom:12px">
+        <div style="text-align:center;min-width:60px">
+          <div style="font-size:2.2rem;font-weight:800;color:${avgScore>=65?'#10B981':avgScore>=45?'#F59E0B':'#EF4444'};line-height:1;letter-spacing:-.02em">${avgScore}</div>
+          <div style="font-size:9px;color:#7E8FA8;text-transform:uppercase;letter-spacing:.07em;margin-top:2px">/ 100</div>
         </div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#E8EDF8">
-            ${avgScore>=70?'🟢 Alta probabilidad de engagement':avgScore>=50?'🟡 Engagement moderado — ajustar mensaje':'🔴 Bajo engagement — reformular antes de publicar'}
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:#E8EDF8;margin-bottom:4px">
+            ${avgScore>=70?'🟢 Alta probabilidad de engagement':avgScore>=50?'🟡 Engagement moderado — optimizar mensaje':'🔴 Bajo engagement — reformular antes de publicar'}
           </div>
-          <div style="font-size:11px;color:#7E8FA8;margin-top:2px">${topPositive.length}/8 personas responden positivamente · ${topPositive.map(r=>r.name).join(', ')}</div>
+          <div style="display:flex;gap:10px;font-size:11px">
+            <span style="color:#10B981">✅ ${topPos.length} positivos</span>
+            <span style="color:#F59E0B">🤔 ${neutral.length} neutros</span>
+            <span style="color:#EF4444">❌ ${negative.length} negativos</span>
+          </div>
+          <div style="font-size:10px;color:#4A5568;margin-top:3px">${selected.length} de ${PERSONAS_SIM.length} personas simuladas</div>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px">
-        ${reactions.map(r=>`
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;border-left:3px solid ${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'}">
-            <span style="font-size:14px">${r.emoji||'💬'}</span>
+
+      <!-- Red social breakdown -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:#818CF8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">SCORE POR RED SOCIAL</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${redScores.map(r=>`<div style="padding:4px 9px;background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.18);border-radius:12px;font-size:10px;font-weight:600">
+            ${r.red} <span style="color:${r.avg>=65?'#10B981':r.avg>=45?'#F59E0B':'#EF4444'}">${r.avg}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Reactions list -->
+      <div style="font-size:10px;font-weight:700;color:#818CF8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">REACCIONES INDIVIDUALES</div>
+      <div style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:12px;scrollbar-width:thin">
+        ${reactions.sort((a,b)=>b.score-a.score).map(r=>`
+          <div style="display:flex;align-items:center;gap:7px;padding:6px 8px;background:rgba(255,255,255,.025);border-radius:5px;border-left:2px solid ${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'}">
+            <span style="font-size:13px">${r.emoji||r.emoji_persona||'💬'}</span>
             <div style="flex:1;min-width:0">
-              <div style="font-size:11px;font-weight:600;color:#E8EDF8">${r.name} <span style="color:#4A5568;font-weight:400">· ${r.red}</span></div>
-              <div style="font-size:10px;color:#7E8FA8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.reaction||r.perfil.slice(0,60)}</div>
+              <div style="font-size:11px;font-weight:600;color:#E8EDF8;display:flex;align-items:center;gap:5px">
+                ${r.name}
+                <span style="font-size:9px;color:#4A5568;font-weight:400;background:rgba(255,255,255,.05);padding:0 4px;border-radius:3px">${r.pais||'MX'}</span>
+                <span style="font-size:9px;color:#4A5568;font-weight:400">${r.red}</span>
+              </div>
+              <div style="font-size:10px;color:#7E8FA8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.reaction||r.perfil?.slice(0,55)||'')}</div>
             </div>
-            <div style="font-size:13px;font-weight:700;color:${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'};min-width:28px;text-align:right">${r.score}</div>
+            <div style="font-size:13px;font-weight:700;color:${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'};min-width:30px;text-align:right">${r.score}</div>
           </div>`).join('')}
       </div>
+
+      <!-- Objections -->
       ${objections.length ? `
-        <div style="font-size:11px;font-weight:700;color:#F59E0B;margin-bottom:6px">⚠️ OBJECIONES DETECTADAS (responder antes de publicar)</div>
-        ${[...new Set(objections)].map(o=>`<div style="font-size:11px;color:#7E8FA8;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">→ ${escHtml(o)}</div>`).join('')}` : ''}
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#818CF8">RECOMENDACIÓN</div>
-      <div style="font-size:11px;color:#7E8FA8;margin-top:4px">
-        ${avgScore>=70 ? '✅ Contenido listo para publicar. Audiencia óptima: ' + topPositive.map(r=>r.name).join(', ')
-          : avgScore>=50 ? '⚡ Ajusta el mensaje respondiendo las objeciones antes de publicar.'
-          : '🔄 Reformula el contenido. Prueba con el Agente de Contenido para generar alternativas.'}
+        <div style="padding:10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:7px;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">⚠️ OBJECIONES A RESPONDER ANTES DE PUBLICAR</div>
+          ${objections.slice(0,6).map(o=>`<div style="font-size:11px;color:#7E8FA8;padding:2px 0">→ ${escHtml(o)}</div>`).join('')}
+        </div>` : ''}
+
+      <!-- Recommendation -->
+      <div style="padding:10px;background:rgba(129,140,248,.06);border:1px solid rgba(129,140,248,.18);border-radius:7px">
+        <div style="font-size:10px;font-weight:700;color:#818CF8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">RECOMENDACIÓN</div>
+        <div style="font-size:11px;color:#C4B5FD;line-height:1.6">
+          ${avgScore>=70
+            ? `✅ Listo para publicar. Audiencias óptimas: ${topPos.slice(0,4).map(r=>r.name).join(', ')}. Mejor red: ${redScores[0]?.red} (score ${redScores[0]?.avg}).`
+            : avgScore>=50
+            ? `⚡ Ajusta el mensaje respondiendo ${objections.length} objeción${objections.length!==1?'es':''}. Enfócate en: ${topPos.slice(0,2).map(r=>r.name).join(' y ')}.`
+            : `🔄 Reformula el contenido. Solo ${topPos.length}/${selected.length} personas responden positivamente. Usa el Agente de Contenido para alternativas.`}
+        </div>
       </div>
     </div>`;
+}
+
+/* Helper: selecciona N personas representativas del pool de 32 */
+function selectRepresentativePersonas(n) {
+  const pool = [...PERSONAS_SIM];
+  const selected = [];
+  // Ensure distribution across categories
+  const categories = ['enterprise','pyme','startup','freelance','creador','micro','estudiante','profesional','medio','entry','investor','agro','media','gobierno'];
+  categories.forEach(cat => {
+    const match = pool.find(p=>p.nivel===cat);
+    if (match && selected.length < n) {
+      selected.push(match);
+      pool.splice(pool.indexOf(match),1);
+    }
+  });
+  // Fill remaining slots randomly
+  while (selected.length < n && pool.length > 0) {
+    const idx = Math.floor(Math.random()*pool.length);
+    selected.push(pool.splice(idx,1)[0]);
+  }
+  return selected.slice(0,n);
 }
 
 /* ═══════════════════════════════════════════════════════════
