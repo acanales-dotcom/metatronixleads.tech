@@ -386,10 +386,11 @@ function renderHeader(user, activePage) {
   return `
   <style>
     body { padding-left: var(--sidebar-w, 224px); }
-    .bell-wrap { position:relative; cursor:pointer; display:flex; align-items:center; }
+    /* Bell dropdown */
+    .bell-wrap { position:relative; cursor:pointer; display:flex; align-items:center; justify-content:center; }
     .bell-badge {
-      position:absolute; top:-5px; right:-7px;
-      min-width:16px; height:16px; border-radius:8px;
+      position:absolute; top:-4px; right:-4px;
+      min-width:15px; height:15px; border-radius:8px;
       background:#e03030; border:2px solid #fff;
       font-size:9px; color:#fff; font-weight:700;
       display:flex; align-items:center; justify-content:center;
@@ -397,62 +398,106 @@ function renderHeader(user, activePage) {
     }
     .bell-dropdown {
       display:none; position:fixed; bottom:80px; left:calc(var(--sidebar-w,224px) + 8px);
-      width:320px; background:#fff;
+      width:340px; background:#fff;
       border:1px solid var(--border); border-radius:var(--radius-lg);
       box-shadow:0 8px 32px rgba(0,30,80,.15); z-index:9999; overflow:hidden;
     }
-    .bell-dropdown.open { display:block; }
+    .bell-dropdown.open { display:block; animation:slideUp .15s ease; }
     .bell-dropdown-head {
-      padding:10px 16px; border-bottom:1px solid var(--border);
+      padding:12px 16px; border-bottom:1px solid var(--border);
       font-size:11px; font-weight:700; letter-spacing:.08em;
       text-transform:uppercase; color:var(--text-muted);
       display:flex; justify-content:space-between; align-items:center;
+      background:var(--surface);
     }
-    .bell-alert-items { max-height:360px; overflow-y:auto; }
+    .bell-alert-items { max-height:380px; overflow-y:auto; }
     .bell-alert-item {
       display:flex; gap:10px; align-items:flex-start;
-      padding:10px 16px; border-bottom:1px solid var(--border2);
-      cursor:pointer; transition:background .15s;
+      padding:10px 16px; border-bottom:1px solid var(--border);
+      cursor:pointer; transition:background .12s;
     }
     .bell-alert-item:hover { background:var(--surface2); }
-    .bell-alert-unread { background:var(--accent-dim); }
+    .bell-alert-unread { background:var(--accent-dim); border-left:2px solid var(--accent); }
+    /* Sidebar section labels */
+    .sidebar-section-label {
+      padding:10px 16px 4px; font-size:10px; font-weight:700;
+      letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint);
+    }
+    .sidebar-divider { height:1px; background:var(--border); margin:6px 0; }
   </style>
   <aside class="app-sidebar">
-    <div class="sidebar-brand">
-      <span class="sidebar-brand-title">METATRONIX</span>
-      <span class="sidebar-brand-sub">PORTAL</span>
-    </div>
 
+    <!-- Brand -->
+    <a href="/home.html" class="sidebar-brand" style="text-decoration:none">
+      <div class="sidebar-brand-logo">
+        <span class="sidebar-brand-logo-letter">M</span>
+      </div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-title">METATRONIX</span>
+        <span class="sidebar-brand-sub">PORTAL</span>
+      </div>
+    </a>
+
+    <!-- Navigation — Odoo-style sections -->
     <nav class="sidebar-nav">
-      <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}">Home</a>
-      <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">
-        <span class="nav-line1">Adm. Docs</span>
-        <span class="nav-line2">para Venta</span>
-      </a>
-      <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">Leads</a>
-      <a href="/generate.html" class="sidebar-nav-link ${activePage==='generate'?'active':''}">Generar</a>
-      <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
-        <span class="nav-line1">Documento</span>
-        <span class="nav-line2">MetaTronix</span>
+
+      <!-- VENTAS -->
+      <div class="sidebar-section-label">Ventas</div>
+      <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">Pipeline CRM</span>
       </a>
       <a href="/oportunidades.html" class="sidebar-nav-link ${activePage==='oportunidades'?'active':''}">
-        <span class="nav-line1">Inteligencia</span>
-        <span class="nav-line2">de Mercados</span>
+        <span class="nav-icon">🔍</span>
+        <span class="nav-label">Inteligencia de Mercados</span>
+      </a>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- DOCUMENTOS -->
+      <div class="sidebar-section-label">Documentos</div>
+      <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Adm. de Venta</span>
+      </a>
+      <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
+        <span class="nav-icon">📁</span>
+        <span class="nav-label">Docs MetaTronix</span>
       </a>
       ${hasIbanorAccess ? `
       <a href="/archivos.html" class="sidebar-nav-link ${activePage==='archivos'?'active':''}">
-        <span class="nav-line1">Archivos</span>
-        <span class="nav-line2">Starke</span>
-      </a>` : ''}
-      ${hasIbanorAccess ? `
+        <span class="nav-icon">🗂</span>
+        <span class="nav-label">Archivos Starke</span>
+      </a>
       <a href="/archivos-ibanor.html" class="sidebar-nav-link ${activePage==='archivos-ibanor'?'active':''}">
-        <span class="nav-line1">Archivos</span>
-        <span class="nav-line2">IBANOR</span>
+        <span class="nav-icon">🏢</span>
+        <span class="nav-label">Archivos IBANOR</span>
       </a>` : ''}
+
+      <div class="sidebar-divider"></div>
+
+      <!-- HERRAMIENTAS -->
+      <div class="sidebar-section-label">Herramientas</div>
+      <a href="/generate.html" class="sidebar-nav-link ${activePage==='generate'?'active':''}">
+        <span class="nav-icon">✨</span>
+        <span class="nav-label">Generador IA</span>
+      </a>
+      <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Inicio</span>
+      </a>
+
       ${hasAdminAccess ? `
-      <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">Admin</a>` : ''}
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-label">Configuración</div>
+      <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Administración</span>
+      </a>` : ''}
+
     </nav>
 
+    <!-- Footer: user + bell -->
     <div class="sidebar-footer">
       <div class="sidebar-user-card">
         <div class="sidebar-user-avatar">${escHtml((name[0]||'U').toUpperCase())}</div>
@@ -460,21 +505,26 @@ function renderHeader(user, activePage) {
           <div class="sidebar-user-name">${escHtml(name)}</div>
           ${roleBadge}
         </div>
-      </div>
-      <div class="sidebar-footer-actions">
-        <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)" title="Alertas">
-          <span style="font-size:16px;line-height:1">🔔</span>
+        <div class="bell-wrap" id="bell-wrap" onclick="toggleBellDropdown(event)" title="Notificaciones"
+             style="margin-left:auto;padding:4px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span class="bell-badge" id="bell-badge" style="${unread>0?'':'display:none'}">${unread}</span>
           <div class="bell-dropdown" id="bell-dropdown">
             <div class="bell-dropdown-head">
-              <span>Alertas</span>
-              ${unread>0?`<span style="font-size:10px;background:var(--accent-dim);color:var(--accent);padding:2px 6px;border-radius:3px">${unread} nuevas</span>`:''}
+              <span>Notificaciones</span>
+              ${unread>0?`<span style="font-size:10px;background:var(--accent-dim);color:var(--accent);padding:2px 6px;border-radius:3px;font-weight:700">${unread} nueva${unread!==1?'s':''}</span>`:''}
             </div>
             <div class="bell-alert-items">${alertItems}</div>
+            <div style="padding:8px 16px;border-top:1px solid var(--border);display:flex;justify-content:center">
+              <a href="/admin.html" style="font-size:11px;color:var(--accent);text-decoration:none">Ver todas →</a>
+            </div>
           </div>
         </div>
-        <button onclick="logout()" class="btn-ghost btn-sm sidebar-logout" title="Cerrar sesión">↩ Salir</button>
       </div>
+      <button onclick="logout()" class="btn-ghost btn-sm sidebar-logout" style="width:100%;justify-content:center;gap:6px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Cerrar sesión
+      </button>
     </div>
   </aside>`;
 }

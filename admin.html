@@ -61,13 +61,29 @@
 
 <div class="page">
 
+  <!-- Odoo-style control panel -->
+  <div class="o-cp" style="margin-bottom:0">
+    <div class="o-cp-top">
+      <nav class="o-breadcrumbs">
+        <a href="/home.html">MetaTronix</a>
+        <span class="o-breadcrumbs-sep">›</span>
+        <span class="o-breadcrumbs-current">Administración</span>
+      </nav>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="refreshAll()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Actualizar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Page header -->
-  <div class="page-header mt-24">
+  <div class="page-header mt-24" style="padding:0 0">
     <div class="page-header-text">
       <h1>Panel de Administración</h1>
       <p class="muted">Control total de usuarios, documentos y actividad del portal.</p>
     </div>
-    <button class="btn btn-secondary" onclick="refreshAll()">↻ Actualizar</button>
   </div>
 
   <!-- Stats row -->

@@ -3,626 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaTronix — Pipeline CRM v3.0</title>
+  <title>MetaTronix — Pipeline CRM</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="/assets/style.css">
-  <link rel="stylesheet" href="/assets/agent.css">
   <!-- GOOGLE FONTS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
-  <!-- TABULAS -->
-  <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator_midnight.min.css">
-  <!-- MAPAS -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <!-- MAPAS CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-  <!-- ALERTAS -->
+  <!-- ALERTAS CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-3.2.7.min.css">
-  <style>
-/* ══════════════════════════════════════════════════
-   MetaTronix CRM — Design System
-   Paleta: Navy #08255F | Blue #1A6FFF | Cyan #00C2E0
-   ══════════════════════════════════════════════════ */
-:root {
-  /* ── Paleta base ── */
-  --navy:#08255F; --blue:#1A6FFF; --cyan:#00C2E0;
-  --accent:#00FF88; --light:#F4F7FB; --dark:#1E293B; --gray:#6B7280;
-  /* ── Superficies ── */
-  --surface:#ffffff; --surface2:#F8FAFC; --surface3:#F1F5F9;
-  --border:#E2E8F0; --border2:#CBD5E1;
-  /* ── Texto ── */
-  --text:#1E293B; --text-muted:#64748B; --text-faint:#94A3B8;
-  /* ── Semánticos ── */
-  --danger:#ef4444; --warning:#f59e0b; --info:#3b82f6; --success:#10b981;
-  /* ── Espaciado y forma ── */
-  --radius:8px; --radius-lg:12px; --radius-xl:16px;
-  --shadow: 0 2px 12px rgba(8,37,95,.10);
-  --shadow-hover: 0 8px 24px rgba(8,37,95,.16);
-  /* ── Tipografía ── */
-  --font-title:'Bebas Neue',sans-serif;   /* alias principal */
-  --font-head:'Bebas Neue',sans-serif;    /* backward compat */
-  --font-body:'DM Sans',sans-serif;
-  --font-mono:'JetBrains Mono',monospace;
-}
-
-/* ── GLOBAL RESET ─────────────────────────────────────── */
-*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:var(--font-body); color:var(--text); background:var(--light); }
-
-/* ── DESIGN SYSTEM — CARDS ───────────────────────────── */
-.crm-card {
-  background:#fff;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  border:1px solid var(--border);
-  transition:box-shadow 200ms ease, transform 200ms ease;
-}
-.crm-card:hover {
-  box-shadow:0 6px 24px rgba(8,37,95,.16);
-  transform:translateY(-2px);
-}
-
-/* ── DESIGN SYSTEM — BADGES ──────────────────────────── */
-.badge {
-  display:inline-flex; align-items:center; padding:2px 10px;
-  border-radius:999px; font-size:12px; font-weight:600;
-  font-family:var(--font-body); white-space:nowrap;
-}
-.badge-gray   { background:#F1F5F9; color:var(--gray); }
-.badge-blue   { background:#EFF6FF; color:var(--blue); }
-.badge-cyan   { background:#ECFEFF; color:#0891B2; }
-.badge-green  { background:#F0FDF4; color:#16A34A; }
-.badge-red    { background:#FEF2F2; color:#DC2626; }
-.badge-orange { background:#FFF7ED; color:#EA580C; }
-.badge-purple { background:#F5F3FF; color:#7C3AED; }
-
-/* ── DESIGN SYSTEM — INPUTS ──────────────────────────── */
-input.crm-input, select.crm-input, textarea.crm-input {
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:8px 12px;
-  font-family:var(--font-body);
-  font-size:14px;
-  transition:border-color 150ms, box-shadow 150ms;
-  outline:none;
-  width:100%;
-  color:var(--text);
-  background:#fff;
-}
-input.crm-input:focus, select.crm-input:focus, textarea.crm-input:focus {
-  border-color:var(--blue);
-  box-shadow:0 0 0 3px rgba(26,111,255,.12);
-}
-
-/* ── DESIGN SYSTEM — BUTTONS ─────────────────────────── */
-.btn-primary {
-  background:var(--blue); color:#fff;
-  border:none; border-radius:var(--radius);
-  padding:9px 18px; font-family:var(--font-body);
-  font-weight:600; font-size:14px; cursor:pointer;
-  transition:background 150ms, transform 100ms;
-  display:inline-flex; align-items:center; gap:6px;
-}
-.btn-primary:hover  { background:var(--navy); }
-.btn-primary:active { transform:scale(.98); }
-.btn-secondary {
-  background:var(--light); color:var(--navy);
-  border:1px solid var(--border);
-  border-radius:var(--radius); padding:9px 18px;
-  font-family:var(--font-body); font-weight:600;
-  font-size:14px; cursor:pointer;
-  transition:background 150ms, border-color 150ms;
-  display:inline-flex; align-items:center; gap:6px;
-}
-.btn-secondary:hover { background:var(--border); border-color:var(--border2); }
-
-/* ── DESIGN SYSTEM — TABLES ──────────────────────────── */
-.crm-table { width:100%; border-collapse:collapse; font-family:var(--font-body); }
-.crm-table thead th {
-  background:var(--navy); color:#fff;
-  padding:10px 14px; text-align:left;
-  font-size:13px; font-weight:600;
-  position:sticky; top:0; z-index:10;
-  letter-spacing:.04em; text-transform:uppercase;
-}
-.crm-table thead th:hover { background:#0d3282; cursor:pointer; }
-.crm-table tbody tr { border-bottom:1px solid var(--border); }
-.crm-table tbody tr:hover { background:var(--light); cursor:pointer; }
-.crm-table tbody td { padding:10px 14px; font-size:14px; color:var(--dark); }
-
-/* ── DESIGN SYSTEM — MODALS ──────────────────────────── */
-.crm-overlay {
-  position:fixed; inset:0;
-  background:rgba(8,37,95,.45);
-  backdrop-filter:blur(6px);
-  display:flex; align-items:center; justify-content:center;
-  z-index:1000;
-  animation:fadeIn 200ms ease;
-}
-.crm-overlay .crm-modal {
-  background:#fff; border-radius:12px;
-  box-shadow:0 24px 64px rgba(8,37,95,.22);
-  padding:32px; max-width:560px; width:calc(100% - 40px);
-  animation:slideUp 220ms ease;
-}
-@keyframes fadeIn  { from{opacity:0}              to{opacity:1}              }
-@keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-
-/* ── DESIGN SYSTEM — TABS ────────────────────────────── */
-.crm-tabs { display:flex; border-bottom:2px solid var(--border); gap:4px; }
-.crm-tab {
-  padding:10px 16px; font-family:var(--font-body);
-  font-size:14px; font-weight:500; color:var(--gray);
-  cursor:pointer; border:none; background:transparent;
-  border-bottom:2px solid transparent;
-  margin-bottom:-2px; transition:color 150ms, border-color 150ms;
-}
-.crm-tab.active { color:var(--blue); border-bottom-color:var(--blue); }
-.crm-tab:hover:not(.active) { color:var(--dark); }
-
-/* ── DESIGN SYSTEM — HEADINGS ────────────────────────── */
-h1,h2,h3,.headline {
-  font-family:var(--font-title);
-  letter-spacing:.5px;
-  color:var(--navy);
-  line-height:1.1;
-}
-
-/* ── CRM SHELL ──────────────────────────────── */
-/* body already has padding-left:var(--sidebar-w) from app.js renderHeader */
-.crm-shell { display:flex; flex-direction:column; min-height:100vh; padding-top:52px; }
-
-/* ── TOP NAV ────────────────────────────────── */
-/* Starts after sidebar — left:var(--sidebar-w,224px) */
-.crm-topnav {
-  position:fixed; top:0;
-  left:var(--sidebar-w, 224px); right:0; z-index:150;
-  height:52px; background:var(--navy); border-bottom:1px solid rgba(255,255,255,.1);
-  display:flex; align-items:center; justify-content:space-between; padding:0 20px;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);
-}
-.crm-brand { font-family:var(--font-title); font-size:1.15rem; letter-spacing:.14em; color:#fff; margin-right:28px; }
-.crm-topnav-left { display:flex; align-items:center; gap:0; }
-.crm-topnav-right { display:flex; align-items:center; gap:12px; }
-/* Role badge in header */
-.role-badge {
-  display:inline-flex; align-items:center; gap:5px; padding:4px 10px;
-  border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.04em;
-  background:rgba(255,255,255,.15); color:#fff; cursor:pointer;
-  transition:background .15s; border:1px solid rgba(255,255,255,.2);
-}
-.role-badge:hover { background:rgba(255,255,255,.25); }
-.role-badge.role-admin     { border-color:var(--cyan); color:var(--cyan); }
-.role-badge.role-ejecutivo { border-color:#a78bfa; color:#a78bfa; }
-.role-badge.role-operaciones{ border-color:#fb923c; color:#fb923c; }
-.role-badge.role-finanzas  { border-color:#34d399; color:#34d399; }
-.crm-nav { display:flex; gap:2px; }
-.crm-navbtn {
-  display:flex; align-items:center; gap:6px; padding:7px 14px;
-  background:transparent; border:none; color:rgba(255,255,255,.65);
-  font-family:var(--font-body); font-size:13px; font-weight:500;
-  cursor:pointer; border-radius:6px; transition:all .15s; white-space:nowrap;
-}
-.crm-navbtn:hover { background:rgba(255,255,255,.1); color:#fff; }
-.crm-navbtn.active { background:rgba(0,194,224,.2); color:var(--cyan); }
-.crm-navbtn-icon { font-size:14px; }
-.crm-search {
-  width:220px; height:32px; border:1px solid rgba(255,255,255,.2);
-  background:rgba(255,255,255,.08); color:#fff; border-radius:6px;
-  padding:0 10px; font-size:13px; outline:none; transition:all .15s;
-}
-.crm-search::placeholder { color:rgba(255,255,255,.4); }
-.crm-search:focus { border-color:var(--cyan); background:rgba(255,255,255,.12); }
-.crm-alert-btn {
-  position:relative; background:rgba(255,255,255,.1); border:none;
-  color:#fff; cursor:pointer; padding:6px 10px; border-radius:6px;
-  font-size:16px; transition:background .15s;
-}
-.crm-alert-btn:hover { background:rgba(255,255,255,.2); }
-.crm-alert-badge {
-  position:absolute; top:-4px; right:-4px; background:#ef4444;
-  color:#fff; border-radius:10px; font-size:10px; font-weight:700;
-  padding:1px 5px; min-width:18px; text-align:center;
-}
-
-/* ── VIEWS ──────────────────────────────────── */
-.crm-view { display:none; flex:1; flex-direction:column; overflow:hidden; }
-.crm-view.active { display:flex; }
-
-/* ── PIPELINE SUBBAR ────────────────────────── */
-.pipeline-subbar {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:10px 20px; background:#fff; border-bottom:1px solid var(--border);
-  gap:10px; flex-wrap:wrap;
-}
-.pipeline-subbar-left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.crm-select {
-  height:32px; border:1px solid var(--border); background:#fff;
-  color:var(--text); border-radius:var(--radius); padding:0 10px;
-  font-family:var(--font-body); font-size:13px; cursor:pointer; outline:none;
-  transition:border-color .15s;
-}
-.crm-select:focus { border-color:var(--blue); }
-.view-toggle { display:flex; gap:3px; }
-.view-btn {
-  padding:5px 12px; border:1px solid var(--border); background:#fff;
-  color:var(--text-muted); border-radius:6px; cursor:pointer; font-size:12px;
-  transition:all .15s; font-family:var(--font-body);
-}
-.view-btn.active { background:rgba(26,111,255,.08); color:var(--blue); border-color:var(--blue); }
-.pipeline-total-badge {
-  background:var(--surface3); border:1px solid var(--border);
-  border-radius:20px; padding:3px 10px; font-size:12px; color:var(--text-muted);
-  font-family:var(--font-mono);
-}
-
-/* ── KPI STRIP ──────────────────────────────── */
-.kpi-strip {
-  display:flex; gap:0; background:#fff;
-  border-bottom:1px solid var(--border); padding:0 20px;
-}
-.kpi-chip {
-  display:flex; flex-direction:column; align-items:center;
-  padding:10px 20px; border-right:1px solid var(--border);
-  min-width:100px;
-}
-.kpi-chip:last-child { border-right:none; }
-.kpi-chip-val { font-family:var(--font-title); font-size:1.4rem; color:var(--navy); line-height:1; }
-.kpi-chip-lbl { font-size:10px; color:var(--text-faint); letter-spacing:.05em; text-transform:uppercase; margin-top:2px; }
-
-/* ── KANBAN ─────────────────────────────────── */
-.kanban-wrap { flex:1; overflow-x:auto; overflow-y:hidden; padding:16px 20px 0; }
-/* ── KANBAN BOARD ───────────────────────────── */
-.kanban9 {
-  display:flex; gap:10px; min-height:calc(100vh - 196px);
-  min-width:max-content; padding:0 20px 24px; align-items:flex-start;
-}
-
-/* Column */
-.kb-col {
-  width:240px; flex-shrink:0;
-  background:var(--surface2);
-  border:1px solid var(--border);
-  border-radius:var(--radius-lg);
-  display:flex; flex-direction:column;
-  max-height:calc(100vh - 196px);
-  overflow:hidden;
-  box-shadow:0 1px 4px rgba(8,37,95,.06);
-}
-
-/* Column header — Navy background, Bebas Neue */
-.kb-col-header {
-  padding:10px 14px;
-  background:var(--navy);
-  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
-  flex-shrink:0;
-  display:flex; flex-direction:column; gap:4px;
-}
-.kb-col-title {
-  font-family:var(--font-title);
-  font-size:1.05rem; letter-spacing:.08em;
-  color:#fff; display:flex; align-items:center; gap:6px;
-}
-.kb-col-meta {
-  display:flex; justify-content:space-between; align-items:center;
-}
-.kb-col-count {
-  font-size:11px; color:rgba(255,255,255,.55);
-  background:rgba(255,255,255,.12);
-  border-radius:10px; padding:1px 7px; font-family:var(--font-mono);
-}
-.kb-col-total {
-  font-size:11px; color:var(--cyan);
-  font-family:var(--font-mono); font-weight:600;
-}
-
-/* Cards container — independent vertical scroll */
-.kb-cards {
-  flex:1; overflow-y:auto; padding:8px;
-  display:flex; flex-direction:column; gap:6px;
-  min-height:60px; scrollbar-width:thin;
-}
-.kb-cards::-webkit-scrollbar { width:4px; }
-.kb-cards::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
-.kb-cards.drag-over { background:rgba(26,111,255,.06); }
-
-/* Kanban card */
-.kb-card {
-  background:#fff;
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:11px 12px;
-  cursor:grab;
-  transition:border-color 150ms, box-shadow 150ms, transform 100ms;
-  user-select:none;
-  position:relative;
-}
-.kb-card:hover {
-  border-color:var(--blue);
-  box-shadow:0 4px 16px rgba(8,37,95,.14);
-  transform:translateY(-1px);
-}
-.kb-card:active { cursor:grabbing; }
-.kb-card.sortable-ghost  { opacity:.35; border-style:dashed; }
-.kb-card.sortable-chosen { box-shadow:0 8px 24px rgba(26,111,255,.3); transform:rotate(.5deg); }
-
-/* Card inner elements */
-.kb-card-name {
-  font-family:var(--font-body); font-size:13px; font-weight:600;
-  color:var(--dark); margin-bottom:1px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.kb-card-company {
-  font-size:11px; color:var(--text-muted);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  margin-bottom:6px;
-}
-.kb-card-valor {
-  font-family:var(--font-title); font-size:1.1rem;
-  color:var(--navy); line-height:1; margin-bottom:6px;
-  display:block;
-}
-.kb-card-badges { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px; }
-.kb-card-footer {
-  display:flex; justify-content:space-between; align-items:center;
-  gap:4px; margin-top:2px;
-}
-.kb-card-days {
-  font-size:10px; color:var(--text-faint);
-  background:var(--surface3); padding:2px 6px;
-  border-radius:8px; font-family:var(--font-mono);
-}
-.kb-card-avatar {
-  width:22px; height:22px; border-radius:50%;
-  background:var(--navy); color:#fff;
-  font-size:9px; font-weight:700; display:flex;
-  align-items:center; justify-content:center;
-  flex-shrink:0;
-}
-.kb-card-unread {
-  position:absolute; top:8px; right:8px;
-  background:#ef4444; color:#fff;
-  border-radius:10px; font-size:10px; font-weight:700;
-  padding:1px 5px; min-width:16px; text-align:center;
-  line-height:1.4;
-}
-.sent-emoji { font-size:12px; line-height:1; }
-
-/* ── BADGES ─────────────────────────────────── */
-.badge {
-  display:inline-flex; align-items:center; gap:3px; padding:2px 7px;
-  border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap;
-}
-.badge-conf-acercamiento { background:rgba(100,116,139,.12); color:#64748b; }
-.badge-conf-confianza    { background:rgba(26,111,255,.12);  color:#1A6FFF; }
-.badge-conf-plena        { background:rgba(0,255,136,.18);   color:#059669; }
-.badge-stage             { background:rgba(0,194,224,.12);   color:#0891b2; }
-.badge-sent  { background:rgba(59,130,246,.1); color:#3b82f6; }
-.badge-neutral{ background:var(--surface3); color:var(--text-muted); }
-
-/* ── SENTIMENT DOTS ─────────────────────────── */
-.sent-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
-.sent-pos { background:#10b981; }
-.sent-neu { background:#f59e0b; }
-.sent-neg { background:#ef4444; }
-.sent-unk { background:#94a3b8; }
-
-/* ── TABLE ──────────────────────────────────── */
-.crm-table { width:100%; border-collapse:collapse; font-size:13px; }
-.crm-table thead th {
-  background:var(--navy); color:rgba(255,255,255,.9); padding:10px 14px;
-  text-align:left; font-size:11px; font-weight:600; letter-spacing:.06em;
-  text-transform:uppercase; cursor:pointer; white-space:nowrap; position:sticky; top:0;
-}
-.crm-table thead th:hover { background:#0d3282; }
-.crm-table tbody td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
-.crm-table tbody tr:hover { background:var(--surface3); cursor:pointer; }
-.crm-table tbody tr:last-child td { border-bottom:none; }
-
-/* ── LEAD DRAWER ────────────────────────────── */
-.lead-drawer { position:fixed; inset:0; z-index:300; pointer-events:none; }
-.lead-drawer.open { pointer-events:all; }
-.drawer-overlay {
-  position:absolute; inset:0; background:rgba(8,37,95,.3);
-  opacity:0; transition:opacity .2s; backdrop-filter:blur(2px);
-}
-.lead-drawer.open .drawer-overlay { opacity:1; }
-.drawer-panel {
-  position:absolute; top:0; right:0; bottom:0; width:680px; max-width:96vw;
-  background:#fff; box-shadow:-4px 0 32px rgba(8,37,95,.16);
-  display:flex; flex-direction:column;
-  transform:translateX(100%); transition:transform .22s cubic-bezier(.4,0,.2,1);
-}
-.lead-drawer.open .drawer-panel { transform:translateX(0); }
-.drawer-header {
-  padding:16px 20px; border-bottom:1px solid var(--border);
-  display:flex; justify-content:space-between; align-items:flex-start;
-  background:var(--navy);
-}
-.drawer-company { font-family:var(--font-title); font-size:1.4rem; letter-spacing:.05em; color:#fff; line-height:1.1; }
-.drawer-stage-badge { margin-top:5px; }
-.drawer-close {
-  background:rgba(255,255,255,.12); border:none; color:#fff;
-  width:30px; height:30px; border-radius:6px; cursor:pointer;
-  font-size:16px; display:flex; align-items:center; justify-content:center;
-  transition:background .15s; flex-shrink:0;
-}
-.drawer-close:hover { background:rgba(255,255,255,.25); }
-.drawer-tabs {
-  display:flex; border-bottom:1px solid var(--border);
-  background:#fff; overflow-x:auto; flex-shrink:0;
-}
-/* .dtab inherits crm-tab styles — add position:relative for indicator */
-.dtab {
-  padding:10px 16px; border:none; background:transparent;
-  color:var(--gray); font-size:13px; font-weight:500;
-  cursor:pointer; white-space:nowrap; position:relative;
-  transition:color 150ms, border-color 150ms;
-  font-family:var(--font-body);
-  border-bottom:2px solid transparent;
-  margin-bottom:-1px;
-}
-.dtab:hover:not(.active) { color:var(--dark); }
-.dtab.active { color:var(--blue); border-bottom-color:var(--blue); }
-.drawer-body { flex:1; overflow-y:auto; padding:20px; }
-
-/* ── DASHBOARD ──────────────────────────────── */
-.dash-grid { padding:20px; display:flex; flex-direction:column; gap:20px; overflow-y:auto; flex:1; }
-.dash-kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
-.dash-kpi-card {
-  background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-  padding:20px 22px; box-shadow:var(--shadow);
-  transition:box-shadow 200ms ease, transform 200ms ease;
-}
-.dash-kpi-card:hover { box-shadow:var(--shadow-hover); }
-.dkpi-val { font-family:var(--font-title); font-size:2rem; color:var(--navy); line-height:1; }
-.dkpi-lbl { font-size:12px; color:var(--text-muted); margin-top:5px; letter-spacing:.04em; }
-.dkpi-delta { font-size:12px; margin-top:6px; font-weight:600; }
-.dkpi-delta.up   { color:var(--success); }
-.dkpi-delta.down { color:var(--danger); }
-.dash-charts-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-.dash-chart-card {
-  background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-  padding:16px 18px; box-shadow:var(--shadow);
-}
-.dash-chart-title { font-family:var(--font-title); font-size:1rem; letter-spacing:.06em; color:var(--navy); margin-bottom:12px; }
-.dash-table-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; box-shadow:var(--shadow); overflow:auto; }
-
-/* ── MAPA ───────────────────────────────────── */
-.mapa-layout { display:flex; flex:1; overflow:hidden; }
-.mapa-sidebar { width:280px; background:#fff; border-right:1px solid var(--border); display:flex; flex-direction:column; gap:10px; padding:12px; }
-.mapa-search-wrap { flex-shrink:0; }
-
-/* ── CAMPAÑAS ───────────────────────────────── */
-.campanas-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:16px; padding:0 20px; }
-.campanas-charts-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:16px 20px 0; }
-.page-header-row { display:flex; justify-content:space-between; align-items:center; padding:16px 20px 0; }
-
-/* ── MODALS ─────────────────────────────────── */
-.crm-modal-overlay {
-  position:fixed; inset:0; z-index:400;
-  background:rgba(8,37,95,.45); display:flex; align-items:center; justify-content:center;
-  backdrop-filter:blur(6px);
-}
-.crm-modal {
-  background:#fff; border-radius:var(--radius-xl); width:100%; margin:20px;
-  box-shadow:0 20px 60px rgba(0,0,0,.25);
-  animation:modalIn .2s ease-out;
-}
-@keyframes modalIn { from{opacity:0;transform:scale(.96) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
-.crm-modal-header {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:18px 22px 16px; border-bottom:1px solid var(--border);
-}
-.crm-modal-title { font-family:var(--font-title); font-size:1.15rem; letter-spacing:.05em; color:var(--navy); }
-.crm-modal-close {
-  background:var(--surface3); border:none; color:var(--text-muted);
-  width:28px; height:28px; border-radius:6px; cursor:pointer;
-  font-size:14px; display:flex; align-items:center; justify-content:center; transition:all .15s;
-}
-.crm-modal-close:hover { background:var(--border); color:var(--text); }
-.crm-modal-body { padding:20px 22px; }
-.crm-modal-footer { padding:14px 22px 18px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
-
-/* ── FORM ELEMENTS ──────────────────────────── */
-.form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.fg { display:flex; flex-direction:column; gap:5px; }
-.fg.full { grid-column:1/-1; }
-.fg label { font-size:12px; font-weight:600; color:var(--text-muted); letter-spacing:.03em; }
-.crm-input {
-  height:36px; border:1px solid var(--border); border-radius:var(--radius);
-  padding:0 10px; font-family:var(--font-body); font-size:13px; color:var(--text);
-  background:#fff; outline:none; transition:border-color .15s, box-shadow .15s;
-}
-.crm-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(26,111,255,.1); }
-.crm-textarea {
-  border:1px solid var(--border); border-radius:var(--radius); padding:8px 10px;
-  font-family:var(--font-body); font-size:13px; color:var(--text); background:#fff;
-  outline:none; resize:vertical; min-height:80px; transition:border-color .15s;
-}
-.crm-textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(26,111,255,.1); }
-
-/* ── BUTTONS ────────────────────────────────── */
-.btn { display:inline-flex; align-items:center; gap:5px; padding:8px 16px; border:none; border-radius:var(--radius); font-family:var(--font-body); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
-.btn-primary { background:var(--blue); color:#fff; }
-.btn-primary:hover { background:#1557cc; }
-.btn-ghost { background:transparent; color:var(--text-muted); border:1px solid var(--border); }
-.btn-ghost:hover { background:var(--surface3); color:var(--text); }
-.btn-danger { background:#ef4444; color:#fff; }
-.btn-danger:hover { background:#dc2626; }
-.btn-sm { padding:5px 10px; font-size:12px; }
-
-/* ── ALERTS LIST ────────────────────────────── */
-.alert-item {
-  display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border);
-  transition:background .1s; cursor:default;
-}
-.alert-item.unread { background:rgba(26,111,255,.04); }
-.alert-item:hover { background:var(--surface3); }
-.alert-dot { width:8px; height:8px; border-radius:50%; background:var(--blue); margin-top:4px; flex-shrink:0; }
-.alert-item.unread .alert-dot { background:var(--blue); }
-.alert-item:not(.unread) .alert-dot { background:var(--border2); }
-.alert-msg { font-size:13px; color:var(--text); line-height:1.5; }
-.alert-time { font-size:11px; color:var(--text-faint); font-family:var(--font-mono); margin-top:3px; }
-
-/* ── HISTORIAL ──────────────────────────────── */
-.comm-item {
-  border:1px solid var(--border); border-radius:var(--radius-lg);
-  padding:12px 14px; margin-bottom:10px; background:#fff;
-  box-shadow:0 1px 4px rgba(0,0,0,.04);
-}
-.comm-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-.comm-type-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
-.comm-time { font-size:11px; color:var(--text-faint); font-family:var(--font-mono); }
-.comm-text { font-size:13px; color:var(--text); line-height:1.6; }
-.comm-meta { margin-top:6px; display:flex; gap:10px; flex-wrap:wrap; }
-.comm-meta-tag { font-size:11px; color:var(--text-muted); background:var(--surface3); padding:2px 8px; border-radius:8px; }
-
-/* ── CHAT ───────────────────────────────────── */
-.chat-wrap { display:flex; flex-direction:column; height:100%; }
-.chat-messages { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:8px; }
-.chat-msg { max-width:85%; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; }
-.chat-msg.mine { background:var(--blue); color:#fff; align-self:flex-end; border-bottom-right-radius:3px; }
-.chat-msg.other { background:var(--surface3); color:var(--text); align-self:flex-start; border-bottom-left-radius:3px; }
-.chat-msg-meta { font-size:10px; opacity:.7; margin-top:3px; }
-.chat-input-row { display:flex; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
-.chat-input { flex:1; height:36px; border:1px solid var(--border); border-radius:var(--radius); padding:0 10px; font-family:var(--font-body); font-size:13px; outline:none; }
-.chat-input:focus { border-color:var(--blue); }
-
-/* ── DOCS PER ROLE ──────────────────────────── */
-.buyer-role-section { margin-bottom:20px; }
-.buyer-role-title { font-family:var(--font-title); font-size:1rem; letter-spacing:.05em; color:var(--navy); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
-.doc-item { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; font-size:13px; }
-.doc-item-name { color:var(--text); }
-.doc-status-select { height:28px; border:1px solid var(--border); border-radius:6px; padding:0 6px; font-size:12px; outline:none; color:var(--text); }
-
-/* ── POSTVENTA ──────────────────────────────── */
-.pv-section { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; margin-bottom:14px; }
-.pv-section-title { font-family:var(--font-title); font-size:.95rem; letter-spacing:.05em; color:var(--navy); margin-bottom:12px; }
-.risk-indicator { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; }
-.risk-verde   { background:rgba(16,185,129,.15); color:#059669; }
-.risk-amarillo{ background:rgba(245,158,11,.15); color:#d97706; }
-.risk-rojo    { background:rgba(239,68,68,.15); color:#dc2626; }
-
-/* ── PROGRESS BAR ───────────────────────────── */
-.progress-bar { height:6px; background:var(--surface3); border-radius:3px; overflow:hidden; margin-top:4px; }
-.progress-fill { height:100%; background:linear-gradient(90deg,var(--blue),var(--cyan)); border-radius:3px; transition:width .5s ease; }
-
-/* ── CAMPANA CARD ───────────────────────────── */
-.campana-card {
-  background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-  padding:18px 20px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px;
-}
-
-/* ── MAPA LEAD ITEM ─────────────────────────── */
-.mapa-lead-item { padding:10px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .1s; }
-.mapa-lead-item:hover { background:var(--surface3); }
-
-</style>
-  <!-- HF TRANSFORMERS — lazy load, activa solo cuando se usa -->
+  <!-- HF TRANSFORMERS -->
   <script type="module" id="hf-core">
     import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.1";
     env.allowLocalModels = false;
@@ -640,374 +34,496 @@ h1,h2,h3,.headline {
       summary:    () => window.CRM_AI.get('summarization','Xenova/distilbart-cnn-6-6',{}),
       ner:        () => window.CRM_AI.get('ner','Xenova/bert-base-NER',{aggregation_strategy:'simple'})
     };
-    window.dispatchEvent(new CustomEvent('crm_ai_ready'));
-    console.log('[CRM] HuggingFace Transformers ready — window.CRM_AI disponible');
   </script>
-  <!-- WebLLM — Chat IA principal (WebGPU) -->
   <script type="module" id="webllm-core">
     import * as webllm from "https://esm.run/@mlc-ai/web-llm";
     window.CRM_LLM = {
       engine: null,
-      async init(cb) {
-        this.engine = await webllm.CreateMLCEngine('SmolLM2-360M-Instruct-q4f16_1-MLC', {initProgressCallback: cb});
-      },
+      async init(cb) { this.engine = await webllm.CreateMLCEngine('SmolLM2-360M-Instruct-q4f16_1-MLC',{initProgressCallback:cb}); },
       async chat(sys, msg) {
-        if (!this.engine) throw new Error('LLM no inicializado — llama CRM_LLM.init() primero');
-        const r = await this.engine.chat.completions.create({
-          messages:[{role:'system',content:sys},{role:'user',content:msg}]
-        });
+        if (!this.engine) throw new Error('LLM no inicializado');
+        const r = await this.engine.chat.completions.create({messages:[{role:'system',content:sys},{role:'user',content:msg}]});
         return r.choices[0].message.content;
       }
     };
-    window.dispatchEvent(new CustomEvent('crm_llm_ready'));
-    console.log('[CRM] WebLLM core ready — window.CRM_LLM disponible');
   </script>
-</head>
-<style>
-@keyframes bellRing {
-  0%,100%{transform:rotate(0)} 25%{transform:rotate(12deg)} 75%{transform:rotate(-12deg)}
+  <style>
+/* ── Page-level overrides for Pipeline CRM ── */
+.page { padding: 0; max-width: none; }
+
+/* Empty column drop zone */
+.o-drop-hint {
+  border: 2px dashed var(--border2); border-radius: var(--radius);
+  padding: 16px; text-align: center; color: var(--text-faint);
+  font-size: 12px; margin: 4px 0;
 }
-</style>
+
+/* View containers */
+.o-view { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.o-view.active { display: flex; }
+
+/* Dashboard grid */
+.o-dash-wrap { padding: 24px; overflow-y: auto; flex: 1; }
+.o-dash-kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+.o-kpi-card {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 18px 20px; transition: box-shadow .15s;
+}
+.o-kpi-card:hover { box-shadow: 0 4px 16px rgba(0,85,255,.08); }
+.o-kpi-val { font-family: var(--font-head); font-size: 2rem; color: var(--accent); line-height: 1; }
+.o-kpi-lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.o-kpi-delta { font-size: 11px; margin-top: 6px; font-weight: 600; }
+.o-kpi-delta.up   { color: #16a34a; }
+.o-kpi-delta.down { color: var(--danger); }
+.o-charts-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.o-chart-card {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+.o-chart-title { font-family: var(--font-head); font-size: .95rem; letter-spacing: .05em; color: var(--text); margin-bottom: 12px; }
+
+/* Map layout */
+.o-map-layout { display: flex; flex: 1; overflow: hidden; }
+.o-map-sidebar {
+  width: 260px; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; background: #fff;
+}
+.o-map-sidebar-head { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.o-map-list { flex: 1; overflow-y: auto; }
+.o-map-item { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
+.o-map-item:hover { background: var(--surface2); }
+#crm-map { flex: 1; }
+
+/* Campaign cards */
+.o-camp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 14px; padding: 20px 24px; }
+.o-camp-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; }
+.o-camp-name { font-family: var(--font-head); font-size: 1rem; letter-spacing: .04em; color: var(--text); margin-bottom: 4px; }
+.o-camp-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+.o-camp-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.o-camp-stat { text-align: center; background: var(--surface); border-radius: var(--radius); padding: 6px 4px; }
+.o-camp-stat-n { font-family: var(--font-head); font-size: 1.1rem; color: var(--accent); line-height: 1; }
+.o-camp-stat-l { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
+
+/* List view table wrapper */
+.o-list-wrap { flex: 1; overflow: auto; }
+.o-list-controls { display: flex; align-items: center; gap: 8px; padding: 10px 24px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.o-list-count { font-size: 12px; color: var(--text-muted); }
+  </style>
+</head>
 <body>
 <div id="header-placeholder"></div>
 
-<!-- ── CRM SHELL ─────────────────────────────────────────── -->
-<div class="crm-shell">
+<div class="page">
 
-  <!-- TOP NAV -->
-  <div class="crm-topnav" id="crm-topnav">
-    <div class="crm-topnav-left">
-      <span class="crm-brand">PIPELINE CRM</span>
-      <nav class="crm-nav">
-        <button class="crm-navbtn active" data-view="pipeline" onclick="setMainView('pipeline')">
-          <span class="crm-navbtn-icon">⬡</span> Pipeline
+  <!-- ── ODOO CONTROL PANEL ─────────────────────────────── -->
+  <div class="o-cp" id="crm-cp">
+    <div class="o-cp-top">
+      <div style="display:flex;align-items:center;gap:16px">
+        <!-- Breadcrumbs -->
+        <nav class="o-breadcrumbs">
+          <a href="/home.html">MetaTronix</a>
+          <span class="o-breadcrumbs-sep">›</span>
+          <span class="o-breadcrumbs-current" id="cp-breadcrumb">Pipeline CRM</span>
+        </nav>
+        <!-- View switcher -->
+        <div class="o-view-btns" id="view-switcher">
+          <button class="o-view-btn active" data-view="kanban" onclick="setMainView('kanban')" title="Vista Kanban">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Kanban
+          </button>
+          <button class="o-view-btn" data-view="list" onclick="setMainView('list')" title="Vista Lista">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            Lista
+          </button>
+          <button class="o-view-btn" data-view="dashboard" onclick="setMainView('dashboard')" title="Dashboard">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="11"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="18" width="7" height="3"/></svg>
+            Dashboard
+          </button>
+          <button class="o-view-btn" data-view="mapa" onclick="setMainView('mapa')" title="Mapa geográfico">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            Mapa
+          </button>
+          <button class="o-view-btn" data-view="campanas" onclick="setMainView('campanas')" title="Campañas">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Campañas
+          </button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <!-- Search -->
+        <div class="o-searchbar">
+          <span class="o-searchbar-icon">🔍</span>
+          <input type="text" id="global-search" placeholder="Buscar leads, empresas, contactos…" oninput="applyFilters()">
+          <button class="o-filter-btn" onclick="toggleFilters()" title="Filtros avanzados">Filtros ▾</button>
+        </div>
+        <!-- Create -->
+        <button class="btn btn-primary" onclick="openLeadForm()" style="white-space:nowrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo Lead
         </button>
-        <button class="crm-navbtn" data-view="dashboard" onclick="setMainView('dashboard')">
-          <span class="crm-navbtn-icon">◈</span> Dashboard
-        </button>
-        <button class="crm-navbtn" data-view="mapa" onclick="setMainView('mapa')">
-          <span class="crm-navbtn-icon">◉</span> Mapa
-        </button>
-        <button class="crm-navbtn" data-view="campanas" onclick="setMainView('campanas')">
-          <span class="crm-navbtn-icon">◆</span> Campañas
-        </button>
-      </nav>
+      </div>
     </div>
-    <div class="crm-topnav-right">
-      <input type="text" id="global-search" class="crm-search" placeholder="Buscar leads, empresas…" oninput="applyFilters()">
-      <button class="crm-alert-btn" onclick="toggleAlerts()" id="alert-bell" title="Alertas">
-        🔔 <span class="crm-alert-badge" id="alert-count" style="display:none">0</span>
-      </button>
-      <button class="btn btn-primary btn-sm" onclick="openLeadForm()">+ Nuevo Lead</button>
+
+    <!-- Filter bar (collapsible) -->
+    <div class="o-cp-bottom" id="filter-bar">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="filter-stage" class="form-select" style="height:30px;font-size:12px;padding:0 8px;min-width:150px" onchange="applyFilters()">
+          <option value="">Todas las etapas</option>
+          <option value="generacion">🌱 Generación</option>
+          <option value="primer_contacto">📞 Primer Contacto</option>
+          <option value="calificacion">🎯 Calificación</option>
+          <option value="propuesta">📋 Propuesta</option>
+          <option value="negociacion">🤝 Negociación</option>
+          <option value="cierre">🏆 Cierre</option>
+          <option value="postventa">⭐ Postventa</option>
+          <option value="retencion">🔄 Retención</option>
+          <option value="fidelizacion">💎 Fidelización</option>
+          <option value="cerrado_perdido">❌ Perdido</option>
+        </select>
+        <select id="filter-fuente" class="form-select" style="height:30px;font-size:12px;padding:0 8px;min-width:120px" onchange="applyFilters()">
+          <option value="">Todas las fuentes</option>
+          <option value="referido">Referido</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="google_ads">Google Ads</option>
+          <option value="web">Web</option>
+          <option value="evento">Evento</option>
+          <option value="cold_call">Cold Call</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="llamada">Llamada</option>
+          <option value="otro">Otro</option>
+        </select>
+        <select id="filter-conf" class="form-select" style="height:30px;font-size:12px;padding:0 8px;min-width:130px" onchange="applyFilters()">
+          <option value="">Toda la confianza</option>
+          <option value="acercamiento">⬜ Acercamiento</option>
+          <option value="confianza">🔵 Confianza</option>
+          <option value="plena">🟢 Confianza Plena</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="clearFilters()" style="height:30px;font-size:12px">✕ Limpiar</button>
+      </div>
+      <div id="cp-summary" style="font-size:12px;color:var(--text-muted)"></div>
     </div>
   </div>
 
-  <!-- ── VIEW: PIPELINE ─────────────────────────────── -->
-  <div class="crm-view active" id="view-pipeline">
+  <!-- ── STAT BUTTONS (Odoo smart buttons) ──────────────── -->
+  <div class="o-stat-bar">
+    <button class="o-stat" onclick="setMainView('kanban')" id="sb-total">
+      <span class="o-stat-icon">🎯</span>
+      <div><div class="o-stat-num" id="sb-n-total">—</div><div class="o-stat-lbl">Leads</div></div>
+    </button>
+    <div class="o-stat-sep"></div>
+    <button class="o-stat" onclick="filterByActive()">
+      <span class="o-stat-icon">🔥</span>
+      <div><div class="o-stat-num" id="sb-n-activos">—</div><div class="o-stat-lbl">Activos</div></div>
+    </button>
+    <button class="o-stat">
+      <span class="o-stat-icon">💰</span>
+      <div><div class="o-stat-num" id="sb-n-pipeline">—</div><div class="o-stat-lbl">Pipeline</div></div>
+    </button>
+    <button class="o-stat">
+      <span class="o-stat-icon">📈</span>
+      <div><div class="o-stat-num" id="sb-n-forecast">—</div><div class="o-stat-lbl">Forecast</div></div>
+    </button>
+    <div class="o-stat-sep"></div>
+    <button class="o-stat" onclick="filterWon()">
+      <span class="o-stat-icon">✅</span>
+      <div><div class="o-stat-num" id="sb-n-ganados">—</div><div class="o-stat-lbl">Ganados</div></div>
+    </button>
+    <button class="o-stat">
+      <span class="o-stat-icon" id="sb-icon-conv">📊</span>
+      <div><div class="o-stat-num" id="sb-n-conv">—</div><div class="o-stat-lbl">Conversión</div></div>
+    </button>
+  </div>
 
-    <!-- Subbar -->
-    <div class="pipeline-subbar">
-      <div class="pipeline-subbar-left">
-        <div class="view-toggle">
-          <button class="view-btn active" id="btn-kanban" onclick="setPipelineView('kanban')">▣ Kanban</button>
-          <button class="view-btn" id="btn-table"  onclick="setPipelineView('table')">≡ Lista</button>
-        </div>
-        <select id="filter-stage" class="crm-select" onchange="applyFilters()">
-          <option value="">Todas las etapas</option>
-          <option value="generacion">Generación</option>
-          <option value="primer_contacto">Primer Contacto</option>
-          <option value="calificacion">Calificación</option>
-          <option value="propuesta">Propuesta</option>
-          <option value="negociacion">Negociación</option>
-          <option value="cierre">Cierre</option>
-          <option value="postventa">Postventa</option>
-          <option value="retencion">Retención</option>
-          <option value="fidelizacion">Fidelización</option>
-          <option value="cerrado_perdido">Perdido</option>
-        </select>
-        <select id="filter-fuente" class="crm-select" onchange="applyFilters()">
-          <option value="">Todas las fuentes</option>
-          <option value="referido">Referido</option>
-          <option value="web">Web</option>
-          <option value="evento">Evento</option>
-          <option value="llamada">Llamada</option>
-          <option value="linkedin">LinkedIn</option>
-          <option value="google_ads">Google Ads</option>
-          <option value="whatsapp">WhatsApp</option>
-          <option value="cold_call">Cold Call</option>
-          <option value="otro">Otro</option>
-        </select>
-        <select id="filter-conf" class="crm-select" onchange="applyFilters()">
-          <option value="">Toda la confianza</option>
-          <option value="acercamiento">Acercamiento</option>
-          <option value="confianza">Confianza</option>
-          <option value="plena">Confianza Plena</option>
-        </select>
+  <!-- ── VIEWS ──────────────────────────────────────────── -->
+
+  <!-- KANBAN -->
+  <div class="o-view active" id="view-kanban">
+    <div class="o-kanban-wrap">
+      <div class="o-kanban" id="kanban-board"></div>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div class="o-view" id="view-list">
+    <div class="o-list-controls">
+      <span class="o-list-count" id="list-count">— registros</span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
       </div>
-      <div class="pipeline-subbar-right">
-        <span class="pipeline-total-badge" id="pipeline-total-badge">—</span>
-      </div>
     </div>
-
-    <!-- KPI STRIP -->
-    <div class="kpi-strip" id="kpi-strip">
-      <div class="kpi-chip"><span class="kpi-chip-val" id="ks-total">—</span><span class="kpi-chip-lbl">Total</span></div>
-      <div class="kpi-chip"><span class="kpi-chip-val" id="ks-activos" style="color:#1A6FFF">—</span><span class="kpi-chip-lbl">Activos</span></div>
-      <div class="kpi-chip"><span class="kpi-chip-val" id="ks-pipeline" style="color:#00C2E0">—</span><span class="kpi-chip-lbl">Pipeline</span></div>
-      <div class="kpi-chip"><span class="kpi-chip-val" id="ks-forecast" style="color:#00FF88">—</span><span class="kpi-chip-lbl">Forecast</span></div>
-      <div class="kpi-chip"><span class="kpi-chip-val" id="ks-conv" style="color:#f59e0b">—</span><span class="kpi-chip-lbl">Conversión</span></div>
-    </div>
-
-    <!-- KANBAN BOARD -->
-    <div class="kanban-wrap" id="pv-kanban">
-      <div class="kanban9" id="kanban-board"></div>
-    </div>
-
-    <!-- TABLE VIEW -->
-    <div class="table-wrap" id="pv-table" style="display:none">
+    <div class="o-list-wrap">
       <table class="crm-table">
         <thead>
           <tr>
-            <th onclick="sortTable('empresa')">Empresa ↕</th>
+            <th style="width:36px"><input type="checkbox" id="select-all" onclick="selectAll(this)"></th>
+            <th onclick="sortTable('empresa')" style="cursor:pointer">Empresa ↕</th>
             <th>Contacto</th>
-            <th onclick="sortTable('stage')">Etapa ↕</th>
+            <th onclick="sortTable('stage')" style="cursor:pointer">Etapa ↕</th>
             <th>Confianza</th>
-            <th onclick="sortTable('fuente')">Fuente ↕</th>
-            <th onclick="sortTable('valor_estimado')">Valor ↕</th>
-            <th onclick="sortTable('seguimiento')">Seguimiento ↕</th>
-            <th>Asignado</th>
+            <th onclick="sortTable('fuente')" style="cursor:pointer">Fuente ↕</th>
+            <th onclick="sortTable('valor_estimado')" style="cursor:pointer">Valor ↕</th>
+            <th onclick="sortTable('seguimiento')" style="cursor:pointer">Seguimiento ↕</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="leads-tbody">
-          <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8">Cargando…</td></tr>
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted)">Cargando…</td></tr>
         </tbody>
       </table>
     </div>
+  </div>
 
-  </div><!-- /view-pipeline -->
-
-  <!-- ── VIEW: DASHBOARD ──────────────────────────────── -->
-  <div class="crm-view" id="view-dashboard">
-    <div class="dash-grid">
-      <div class="dash-kpi-row" id="dash-kpi-row">
-        <div class="dash-kpi-card" id="dkpi-activos">
-          <div class="dkpi-val" id="dkpi-val-activos">—</div>
-          <div class="dkpi-lbl">Leads Activos</div>
-          <div class="dkpi-delta" id="dkpi-delta-activos"></div>
-        </div>
-        <div class="dash-kpi-card" id="dkpi-pipeline">
-          <div class="dkpi-val" id="dkpi-val-pipeline">—</div>
-          <div class="dkpi-lbl">Valor Pipeline</div>
-          <div class="dkpi-delta" id="dkpi-delta-pipeline"></div>
-        </div>
-        <div class="dash-kpi-card" id="dkpi-conv">
-          <div class="dkpi-val" id="dkpi-val-conv">—</div>
-          <div class="dkpi-lbl">Tasa Conversión</div>
-          <div class="dkpi-delta" id="dkpi-delta-conv"></div>
-        </div>
-        <div class="dash-kpi-card" id="dkpi-forecast">
-          <div class="dkpi-val" id="dkpi-val-forecast">—</div>
-          <div class="dkpi-lbl">Forecast Mes</div>
-          <div class="dkpi-delta" id="dkpi-delta-forecast"></div>
-        </div>
+  <!-- DASHBOARD -->
+  <div class="o-view" id="view-dashboard">
+    <div class="o-dash-wrap">
+      <div class="o-dash-kpi-row">
+        <div class="o-kpi-card"><div class="o-kpi-val" id="d-activos">—</div><div class="o-kpi-lbl">Leads Activos</div><div class="o-kpi-delta" id="d-activos-d"></div></div>
+        <div class="o-kpi-card"><div class="o-kpi-val" id="d-pipeline">—</div><div class="o-kpi-lbl">Valor Pipeline</div><div class="o-kpi-delta" id="d-pipeline-d"></div></div>
+        <div class="o-kpi-card"><div class="o-kpi-val" id="d-conv">—</div><div class="o-kpi-lbl">Tasa Conversión</div><div class="o-kpi-delta" id="d-conv-d"></div></div>
+        <div class="o-kpi-card"><div class="o-kpi-val" id="d-forecast">—</div><div class="o-kpi-lbl">Forecast Mes</div><div class="o-kpi-delta" id="d-forecast-d"></div></div>
       </div>
-      <div class="dash-charts-row">
-        <div class="dash-chart-card" style="grid-column:span 2">
-          <div class="dash-chart-title">Pipeline por Etapa</div>
-          <canvas id="chart-pipeline" height="180"></canvas>
-        </div>
-        <div class="dash-chart-card">
-          <div class="dash-chart-title">Leads por Fuente</div>
-          <canvas id="chart-fuente" height="180"></canvas>
-        </div>
-        <div class="dash-chart-card" style="grid-column:span 2">
-          <div class="dash-chart-title">Forecast Mensual</div>
-          <canvas id="chart-forecast" height="180"></canvas>
-        </div>
-        <div class="dash-chart-card">
-          <div class="dash-chart-title">Metas por Ejecutivo</div>
-          <div id="dash-metas" style="padding:8px"></div>
-        </div>
+      <div class="o-charts-grid">
+        <div class="o-chart-card"><div class="o-chart-title">Pipeline por Etapa</div><canvas id="chart-pipeline" height="200"></canvas></div>
+        <div class="o-chart-card"><div class="o-chart-title">Leads por Fuente</div><canvas id="chart-fuente" height="200"></canvas></div>
+        <div class="o-chart-card"><div class="o-chart-title">Forecast Mensual</div><canvas id="chart-forecast" height="200"></canvas></div>
       </div>
-      <div class="dash-table-card">
-        <div class="dash-chart-title">Ranking Ejecutivos</div>
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px">
+        <div class="o-chart-title">Ranking Ejecutivos</div>
         <table class="crm-table" style="font-size:12px">
-          <thead><tr><th>Ejecutivo</th><th>Activos</th><th>Ganados</th><th>Pipeline</th><th>Conv%</th></tr></thead>
-          <tbody id="ranking-tbody"></tbody>
+          <thead><tr><th>Ejecutivo</th><th>Leads</th><th>Ganados</th><th>Pipeline</th><th>Conv%</th></tr></thead>
+          <tbody id="ranking-tbody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Sin datos</td></tr></tbody>
         </table>
       </div>
     </div>
-  </div><!-- /view-dashboard -->
+  </div>
 
-  <!-- ── VIEW: MAPA ────────────────────────────────────── -->
-  <div class="crm-view" id="view-mapa">
-    <div class="mapa-layout">
-      <div class="mapa-sidebar">
-        <div class="mapa-search-wrap">
-          <input type="text" id="mapa-search" class="crm-select" style="width:100%" placeholder="Buscar ciudad o empresa…" oninput="filterMapLeads()">
+  <!-- MAPA -->
+  <div class="o-view" id="view-mapa">
+    <div class="o-map-layout">
+      <div class="o-map-sidebar">
+        <div class="o-map-sidebar-head">
+          <input type="text" class="form-input" style="font-size:12px;padding:6px 10px" placeholder="Filtrar por ciudad…" id="mapa-search" oninput="filterMapLeads()">
         </div>
-        <div id="mapa-list" style="overflow-y:auto;flex:1"></div>
+        <div class="o-map-list" id="mapa-list"></div>
       </div>
-      <div id="crm-map" style="flex:1;min-height:500px"></div>
+      <div id="crm-map"></div>
     </div>
   </div>
 
-  <!-- ── VIEW: CAMPAÑAS ─────────────────────────────────── -->
-  <div class="crm-view" id="view-campanas">
-    <div class="page-header-row">
-      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em;color:#1e293b;margin:0">CAMPAÑAS</h2>
+  <!-- CAMPAÑAS -->
+  <div class="o-view" id="view-campanas">
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <h3 style="margin:0;font-size:1.1rem">Campañas</h3>
       <button class="btn btn-primary btn-sm" onclick="openCampanaForm()">+ Nueva Campaña</button>
     </div>
-    <div class="campanas-kpis" id="campanas-kpis"></div>
-    <div class="campanas-charts-row">
-      <div class="dash-chart-card"><div class="dash-chart-title">Leads por Fuente</div><canvas id="chart-campana-fuente" height="200"></canvas></div>
-      <div class="dash-chart-card"><div class="dash-chart-title">Valor por Campaña</div><canvas id="chart-campana-valor" height="200"></canvas></div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:16px 24px;border-bottom:1px solid var(--border)">
+      <div class="o-chart-card"><div class="o-chart-title">Leads por Fuente</div><canvas id="chart-campana-fuente" height="180"></canvas></div>
+      <div class="o-chart-card"><div class="o-chart-title">Valor por Campaña</div><canvas id="chart-campana-valor" height="180"></canvas></div>
     </div>
-    <div id="campanas-cards" style="margin-top:20px"></div>
+    <div class="o-camp-grid" id="campanas-cards"></div>
   </div>
 
-</div><!-- /crm-shell -->
+</div><!-- /.page -->
 
 <!-- ══════════════════════════════════════════════════════ -->
-<!-- LEAD DRAWER (right panel)                              -->
+<!-- LEAD DRAWER                                            -->
 <!-- ══════════════════════════════════════════════════════ -->
-<div class="lead-drawer" id="lead-drawer">
-  <div class="drawer-overlay" onclick="closeDrawer()"></div>
-  <div class="drawer-panel">
-    <div class="drawer-header">
-      <div>
-        <div class="drawer-company" id="drawer-company">—</div>
-        <div class="drawer-stage-badge" id="drawer-stage-badge"></div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn btn-primary btn-sm" onclick="openLeadForm(currentLeadId)">✏ Editar</button>
-        <button class="drawer-close" onclick="closeDrawer()">✕</button>
+<div class="o-drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="o-drawer" id="lead-drawer">
+
+  <div class="o-drawer-head">
+    <div class="o-drawer-title-row">
+      <span class="o-drawer-title" id="drawer-company">—</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="openLeadForm(currentLeadId)">✏ Editar</button>
+        <button class="o-drawer-close" onclick="closeDrawer()">✕</button>
       </div>
     </div>
-    <div class="drawer-tabs">
-      <button class="dtab active" data-tab="info"      onclick="switchTab('info')">📋 Datos</button>
-      <button class="dtab"        data-tab="historial" onclick="switchTab('historial')">💬 Historial</button>
-      <button class="dtab"        data-tab="docs"      onclick="switchTab('docs')">📋 Adm. Venta</button>
-      <button class="dtab"        data-tab="chat"      onclick="switchTab('chat')">👥 Chat</button>
-      <button class="dtab"        data-tab="plan"      onclick="switchTab('plan')">📅 Plan</button>
-      <button class="dtab"        data-tab="postventa" onclick="switchTab('postventa')">⭐ Post-Venta</button>
-    </div>
-    <div class="drawer-body" id="drawer-body">
-      <div style="padding:40px;text-align:center;color:#94a3b8">Cargando…</div>
-    </div>
+    <!-- Stage bar -->
+    <div class="o-stage-bar" id="drawer-stage-bar"></div>
+  </div>
+
+  <!-- Smart buttons -->
+  <div class="o-smartbtns" id="drawer-smartbtns" style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface)"></div>
+
+  <!-- Tabs -->
+  <div class="o-drawer-tabs">
+    <button class="o-dtab active" data-tab="info"      onclick="switchTab('info')">📋 Datos</button>
+    <button class="o-dtab"        data-tab="historial" onclick="switchTab('historial')">💬 Historial</button>
+    <button class="o-dtab"        data-tab="docs"      onclick="switchTab('docs')">📁 Adm. Venta</button>
+    <button class="o-dtab"        data-tab="chat"      onclick="switchTab('chat')">👥 Chat</button>
+    <button class="o-dtab"        data-tab="plan"      onclick="switchTab('plan')">📅 Plan</button>
+    <button class="o-dtab"        data-tab="postventa" onclick="switchTab('postventa')">⭐ Post-Venta</button>
+  </div>
+
+  <div class="o-drawer-body" id="drawer-body">
+    <div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando…</div>
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
-<!-- MODAL: LEAD FORM                                       -->
+<!-- MODAL: LEAD FORM (Odoo-style)                          -->
 <!-- ══════════════════════════════════════════════════════ -->
-<div id="lead-modal" class="crm-modal-overlay" style="display:none">
-  <div class="crm-modal" style="max-width:680px">
-    <div class="crm-modal-header">
-      <span class="crm-modal-title" id="lead-modal-title">Nuevo Lead</span>
-      <button class="crm-modal-close" onclick="closeLeadForm()">✕</button>
+<div id="lead-modal" class="o-modal-overlay" style="display:none">
+  <div class="o-modal" style="max-width:720px">
+    <div class="o-modal-head">
+      <span class="o-modal-title" id="lead-modal-title">Nuevo Lead</span>
+      <button class="o-modal-close" onclick="closeLeadForm()">✕</button>
     </div>
-    <div class="crm-modal-body">
-      <div class="form-grid-2">
-        <div class="fg full"><label>Empresa / Organización *</label><input type="text" id="f-empresa" class="crm-input" placeholder="Nombre de la empresa"></div>
-        <div class="fg"><label>Nombre del Contacto</label><input type="text" id="f-contacto" class="crm-input" placeholder="Nombre Apellido"></div>
-        <div class="fg"><label>Cargo</label><input type="text" id="f-cargo" class="crm-input" placeholder="Director, Gerente…"></div>
-        <div class="fg"><label>Email</label><input type="email" id="f-email" class="crm-input" placeholder="correo@empresa.com"></div>
-        <div class="fg"><label>Teléfono</label><input type="text" id="f-telefono" class="crm-input" placeholder="+52 55 0000 0000"></div>
-        <div class="fg"><label>Etapa del Pipeline</label>
-          <select id="f-stage" class="crm-select">
-            <option value="generacion">🌱 Generación</option>
-            <option value="primer_contacto">📞 Primer Contacto</option>
-            <option value="calificacion">🎯 Calificación</option>
-            <option value="propuesta">📋 Propuesta</option>
-            <option value="negociacion">🤝 Negociación</option>
-            <option value="cierre">🏆 Cierre</option>
-            <option value="postventa">⭐ Postventa</option>
-            <option value="retencion">🔄 Retención</option>
-            <option value="fidelizacion">💎 Fidelización</option>
-            <option value="cerrado_perdido">❌ Perdido</option>
-          </select>
-        </div>
-        <div class="fg"><label>Nivel de Confianza</label>
-          <select id="f-confianza" class="crm-select">
-            <option value="acercamiento">⬜ Acercamiento</option>
-            <option value="confianza">🔵 Confianza</option>
-            <option value="plena">🟢 Confianza Plena</option>
-          </select>
-        </div>
-        <div class="fg"><label>Fuente</label>
-          <select id="f-fuente" class="crm-select">
-            <option value="referido">Referido</option>
-            <option value="web">Web</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="google_ads">Google Ads</option>
-            <option value="cold_call">Cold Call</option>
-            <option value="evento">Evento</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="llamada">Llamada</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="fg"><label>Campaña (opcional)</label><input type="text" id="f-campana" class="crm-input" list="campanas-list" placeholder="Nombre de campaña"></div>
-        <datalist id="campanas-list"></datalist>
-        <div class="fg"><label>Valor Estimado (MXN)</label><input type="number" id="f-valor" class="crm-input" placeholder="0.00" min="0" step="1000"></div>
-        <div class="fg"><label>Ciudad / Región</label><input type="text" id="f-ciudad" class="crm-input" placeholder="CDMX, Monterrey, Guadalajara…"></div>
-        <div class="fg"><label>Fecha de Seguimiento</label><input type="date" id="f-seguimiento" class="crm-input"></div>
-        <div class="fg"><label>Competidores en Zona</label><input type="text" id="f-competidores" class="crm-input" placeholder="SAP, Salesforce, HubSpot…"></div>
-        <div class="fg"><label>Vertical / Industria *</label>
-          <select id="f-vertical" class="crm-select">
-            <option value="">— Selecciona vertical —</option>
-            <option value="Retail">🛒 Retail</option>
-            <option value="Industrial">🏭 Industrial</option>
-            <option value="Farma">💊 Farma / Salud</option>
-            <option value="Gimnasios">🏋️ Gimnasios / Fitness</option>
-            <option value="FinTech">💳 FinTech / Bancos</option>
-            <option value="Gobierno">🏛️ Gobierno</option>
-            <option value="Educacion">🎓 Educación</option>
-            <option value="Logistica">🚚 Logística</option>
-            <option value="Corporativo">🏢 Corporativo</option>
-            <option value="Otro">📌 Otro</option>
-          </select>
-        </div>
-        <div class="fg"><label>Canal Primer Contacto</label>
-          <select id="f-canal" class="crm-select">
-            <option value="linkedin">LinkedIn</option>
-            <option value="whatsapp">WhatsApp Business</option>
-            <option value="email">Email</option>
-            <option value="llamada">Llamada</option>
-            <option value="evento">Evento</option>
-            <option value="referido">Referido</option>
-            <option value="web">Web / Formulario</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="fg"><label>Estado / Provincia</label>
-          <input type="text" id="f-estado" class="crm-input" placeholder="CDMX, NL, JAL…">
-        </div>
-        <div class="fg"><label>País</label>
-          <input type="text" id="f-pais" class="crm-input" placeholder="México" value="México">
-        </div>
-        <div class="fg full"><label>Notas</label><textarea id="f-notas" class="crm-textarea" placeholder="Contexto, próximos pasos, observaciones…"></textarea></div>
+    <div class="o-modal-body">
+      <!-- Stage selector (pipeline bar) -->
+      <div class="o-form-stage-row" id="form-stage-row">
+        <button class="o-form-stage active" data-stage="generacion" onclick="selectFormStage(this)">🌱 Generación</button>
+        <button class="o-form-stage" data-stage="primer_contacto" onclick="selectFormStage(this)">📞 1er Contacto</button>
+        <button class="o-form-stage" data-stage="calificacion" onclick="selectFormStage(this)">🎯 Calificación</button>
+        <button class="o-form-stage" data-stage="propuesta" onclick="selectFormStage(this)">📋 Propuesta</button>
+        <button class="o-form-stage" data-stage="negociacion" onclick="selectFormStage(this)">🤝 Negociación</button>
+        <button class="o-form-stage" data-stage="cierre" onclick="selectFormStage(this)">🏆 Cierre</button>
       </div>
+      <input type="hidden" id="f-stage" value="generacion">
 
-      <!-- AI Assignment Panel -->
-      <div id="ai-assign-panel" style="display:none;margin-top:16px;background:#F4F7FB;border:1px solid #E2E8F0;border-radius:8px;padding:14px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <span style="font-family:var(--font-title);font-size:1rem;letter-spacing:.05em;color:var(--navy)">✨ ASIGNACIÓN INTELIGENTE</span>
-          <span style="font-size:11px;color:#94a3b8">Calculando match semántico…</span>
-        </div>
-        <div id="ai-assign-results" style="font-size:13px;color:#64748b">
-          Ingresa empresa y vertical para ver sugerencias de asignación
+      <!-- Contact info -->
+      <div class="o-form-section">
+        <div class="o-form-section-title">Información del Prospecto</div>
+        <div class="o-form-row">
+          <div class="o-form-group span2">
+            <label class="o-form-label">Empresa / Organización *</label>
+            <input type="text" id="f-empresa" class="o-form-input" placeholder="Nombre de la empresa">
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Nombre del Contacto</label>
+            <input type="text" id="f-contacto" class="o-form-input" placeholder="Nombre Apellido">
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Cargo</label>
+            <input type="text" id="f-cargo" class="o-form-input" placeholder="Director, Gerente…">
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Email</label>
+            <input type="email" id="f-email" class="o-form-input" placeholder="correo@empresa.com">
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Teléfono</label>
+            <input type="text" id="f-telefono" class="o-form-input" placeholder="+52 55 0000 0000">
+          </div>
         </div>
       </div>
 
+      <!-- Sales info -->
+      <div class="o-form-section">
+        <div class="o-form-section-title">Datos Comerciales</div>
+        <div class="o-form-row">
+          <div class="o-form-group">
+            <label class="o-form-label">Nivel de Confianza</label>
+            <select id="f-confianza" class="o-form-select">
+              <option value="acercamiento">⬜ Acercamiento</option>
+              <option value="confianza">🔵 Confianza</option>
+              <option value="plena">🟢 Confianza Plena</option>
+            </select>
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Fuente</label>
+            <select id="f-fuente" class="o-form-select">
+              <option value="referido">Referido</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="google_ads">Google Ads</option>
+              <option value="web">Web / Formulario</option>
+              <option value="evento">Evento</option>
+              <option value="cold_call">Cold Call</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="llamada">Llamada</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Valor Estimado (MXN)</label>
+            <input type="number" id="f-valor" class="o-form-input" placeholder="0" min="0" step="1000">
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Vertical / Industria</label>
+            <select id="f-vertical" class="o-form-select">
+              <option value="">— Selecciona —</option>
+              <option value="Retail">🛒 Retail</option>
+              <option value="Industrial">🏭 Industrial</option>
+              <option value="Farma">💊 Farma / Salud</option>
+              <option value="FinTech">💳 FinTech</option>
+              <option value="Gobierno">🏛️ Gobierno</option>
+              <option value="Educacion">🎓 Educación</option>
+              <option value="Logistica">🚚 Logística</option>
+              <option value="Corporativo">🏢 Corporativo</option>
+              <option value="Otro">📌 Otro</option>
+            </select>
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Campaña</label>
+            <input type="text" id="f-campana" class="o-form-input" list="campanas-list" placeholder="Nombre de campaña">
+            <datalist id="campanas-list"></datalist>
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Canal Primer Contacto</label>
+            <select id="f-canal" class="o-form-select">
+              <option value="linkedin">LinkedIn</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">Email</option>
+              <option value="llamada">Llamada</option>
+              <option value="evento">Evento</option>
+              <option value="referido">Referido</option>
+              <option value="web">Web</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Location + schedule -->
+      <div class="o-form-section">
+        <div class="o-form-section-title">Ubicación y Seguimiento</div>
+        <div class="o-form-row">
+          <div class="o-form-group">
+            <label class="o-form-label">Ciudad</label>
+            <input type="text" id="f-ciudad" class="o-form-input" placeholder="CDMX, Monterrey…">
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Estado</label>
+            <input type="text" id="f-estado" class="o-form-input" placeholder="NL, CDMX, JAL…">
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">País</label>
+            <input type="text" id="f-pais" class="o-form-input" placeholder="México" value="México">
+          </div>
+          <div class="o-form-group">
+            <label class="o-form-label">Fecha de Seguimiento</label>
+            <input type="date" id="f-seguimiento" class="o-form-input">
+          </div>
+          <div class="o-form-group span2">
+            <label class="o-form-label">Competidores en Zona</label>
+            <input type="text" id="f-competidores" class="o-form-input" placeholder="SAP, Salesforce, HubSpot…">
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="o-form-section" style="margin-bottom:0">
+        <div class="o-form-section-title">Notas</div>
+        <textarea id="f-notas" class="o-form-textarea" placeholder="Contexto, próximos pasos, observaciones del prospecto…"></textarea>
+      </div>
+
+      <!-- AI Assignment -->
+      <div id="ai-assign-panel" style="display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">✨ Asignación Inteligente</span>
+        </div>
+        <div id="ai-assign-results" style="font-size:13px;color:var(--text-muted)">Selecciona empresa y vertical para ver sugerencias</div>
+      </div>
     </div>
-    <div class="crm-modal-footer">
+    <div class="o-modal-foot">
       <button class="btn btn-ghost" onclick="closeLeadForm()">Cancelar</button>
       <button class="btn btn-danger btn-sm" id="btn-delete-lead" style="display:none;margin-right:auto" onclick="deleteLeadConfirm()">🗑 Eliminar</button>
-      <button class="btn btn-secondary btn-sm" onclick="suggestAssignment()" title="Sugerir ejecutivo con IA">✨ Asignar IA</button>
-      <button class="btn btn-primary" id="btn-save-lead" onclick="saveLead()">Guardar Lead</button>
+      <button class="btn btn-ghost btn-sm" onclick="suggestAssignment()" title="Sugerir ejecutivo con IA">✨ Asignar IA</button>
+      <button class="btn btn-primary" id="btn-save-lead" onclick="saveLead()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar
+      </button>
     </div>
   </div>
 </div>
@@ -1015,18 +531,22 @@ h1,h2,h3,.headline {
 <!-- ══════════════════════════════════════════════════════ -->
 <!-- MODAL: PLAN DE SEGUIMIENTO                             -->
 <!-- ══════════════════════════════════════════════════════ -->
-<div id="plan-modal" class="crm-modal-overlay" style="display:none">
-  <div class="crm-modal" style="max-width:520px">
-    <div class="crm-modal-header">
-      <span class="crm-modal-title">📋 Plan de Seguimiento</span>
-      <button class="crm-modal-close" onclick="closePlanModal()">✕</button>
+<div id="plan-modal" class="o-modal-overlay" style="display:none">
+  <div class="o-modal" style="max-width:500px">
+    <div class="o-modal-head">
+      <span class="o-modal-title">📋 Plan de Seguimiento</span>
+      <button class="o-modal-close" onclick="closePlanModal()">✕</button>
     </div>
-    <div class="crm-modal-body">
-      <p style="font-size:13px;color:#64748b;margin:0 0 16px">Define el plan de contacto. Quedará <strong>pendiente de aprobación del administrador</strong>.</p>
-      <div class="form-grid-2">
-        <div class="fg"><label>Próximo Contacto *</label><input type="date" id="plan-fecha" class="crm-input"></div>
-        <div class="fg"><label>Canal *</label>
-          <select id="plan-canal" class="crm-select">
+    <div class="o-modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px">Define el plan de contacto. Quedará <strong>pendiente de aprobación</strong> del administrador.</p>
+      <div class="o-form-row">
+        <div class="o-form-group">
+          <label class="o-form-label">Próximo Contacto *</label>
+          <input type="date" id="plan-fecha" class="o-form-input">
+        </div>
+        <div class="o-form-group">
+          <label class="o-form-label">Canal *</label>
+          <select id="plan-canal" class="o-form-select">
             <option value="llamada">📞 Llamada</option>
             <option value="email">📧 Email</option>
             <option value="visita">🤝 Visita</option>
@@ -1034,13 +554,14 @@ h1,h2,h3,.headline {
             <option value="videollamada">📹 Videollamada</option>
           </select>
         </div>
-        <div class="fg full">
-          <label>Objetivo <span style="color:#94a3b8;font-size:11px">(máx. 200 chars)</span></label>
-          <textarea id="plan-objetivo" class="crm-textarea" maxlength="200" style="min-height:70px" placeholder="¿Qué quieres lograr?"></textarea>
-          <div style="text-align:right;font-size:11px;color:#94a3b8;margin-top:3px"><span id="plan-chars">0</span>/200</div>
+        <div class="o-form-group span2">
+          <label class="o-form-label">Objetivo <span style="font-size:10px;color:var(--text-faint)">(máx. 200 chars)</span></label>
+          <textarea id="plan-objetivo" class="o-form-textarea" maxlength="200" style="min-height:70px" placeholder="¿Qué quieres lograr?"></textarea>
+          <div style="text-align:right;font-size:10px;color:var(--text-faint)"><span id="plan-chars">0</span>/200</div>
         </div>
-        <div class="fg full"><label>Frecuencia</label>
-          <select id="plan-frecuencia" class="crm-select">
+        <div class="o-form-group span2">
+          <label class="o-form-label">Frecuencia</label>
+          <select id="plan-frecuencia" class="o-form-select">
             <option value="diario">Diario</option>
             <option value="cada_2_dias">Cada 2 días</option>
             <option value="semanal" selected>Semanal</option>
@@ -1050,7 +571,7 @@ h1,h2,h3,.headline {
         </div>
       </div>
     </div>
-    <div class="crm-modal-footer">
+    <div class="o-modal-foot">
       <button class="btn btn-ghost" onclick="closePlanModal()">Omitir</button>
       <button class="btn btn-primary" onclick="savePlan()">📋 Enviar Plan</button>
     </div>
@@ -1058,88 +579,48 @@ h1,h2,h3,.headline {
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
-<!-- MODAL: ALERT CENTER                                    -->
+<!-- MODAL: ALERTAS                                         -->
 <!-- ══════════════════════════════════════════════════════ -->
-<div id="alerts-modal" class="crm-modal-overlay" style="display:none" onclick="if(event.target===this)toggleAlerts()">
-  <div class="crm-modal" style="max-width:500px;max-height:80vh">
-    <div class="crm-modal-header">
-      <span class="crm-modal-title">🔔 Centro de Alertas</span>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn btn-ghost btn-sm" onclick="markAllAlertsRead()">Marcar todas leídas</button>
-        <button class="crm-modal-close" onclick="toggleAlerts()">✕</button>
+<div id="alerts-modal" class="o-modal-overlay" style="display:none" onclick="if(event.target===this)toggleAlerts()">
+  <div class="o-modal" style="max-width:480px;max-height:80vh">
+    <div class="o-modal-head">
+      <span class="o-modal-title">🔔 Centro de Alertas</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="markAllAlertsRead()">Marcar leídas</button>
+        <button class="o-modal-close" onclick="toggleAlerts()">✕</button>
       </div>
     </div>
-    <div id="alerts-list" style="overflow-y:auto;max-height:calc(80vh - 80px);padding:12px 0"></div>
+    <div id="alerts-list" style="overflow-y:auto;max-height:calc(80vh - 80px);padding:8px 0"></div>
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
-<!-- MODAL: CAMPAÑA FORM                                    -->
+<!-- MODAL: CAMPAÑA                                         -->
 <!-- ══════════════════════════════════════════════════════ -->
-<div id="campana-modal" class="crm-modal-overlay" style="display:none">
-  <div class="crm-modal" style="max-width:480px">
-    <div class="crm-modal-header">
-      <span class="crm-modal-title" id="campana-modal-title">Nueva Campaña</span>
-      <button class="crm-modal-close" onclick="closeCampanaForm()">✕</button>
+<div id="campana-modal" class="o-modal-overlay" style="display:none">
+  <div class="o-modal" style="max-width:480px">
+    <div class="o-modal-head">
+      <span class="o-modal-title" id="campana-modal-title">Nueva Campaña</span>
+      <button class="o-modal-close" onclick="closeCampanaForm()">✕</button>
     </div>
-    <div class="crm-modal-body">
-      <div class="form-grid-2">
-        <div class="fg full"><label>Nombre *</label><input type="text" id="camp-nombre" class="crm-input" placeholder="Q2 LinkedIn LATAM"></div>
-        <div class="fg"><label>Canal</label>
-          <select id="camp-canal" class="crm-select">
-            <option value="linkedin">LinkedIn</option>
-            <option value="google_ads">Google Ads</option>
-            <option value="email">Email</option>
-            <option value="evento">Evento</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="referido">Referido</option>
+    <div class="o-modal-body">
+      <div class="o-form-row">
+        <div class="o-form-group span2"><label class="o-form-label">Nombre *</label><input type="text" id="camp-nombre" class="o-form-input" placeholder="Q2 LinkedIn LATAM"></div>
+        <div class="o-form-group"><label class="o-form-label">Canal</label>
+          <select id="camp-canal" class="o-form-select">
+            <option value="linkedin">LinkedIn</option><option value="google_ads">Google Ads</option>
+            <option value="email">Email</option><option value="evento">Evento</option>
+            <option value="whatsapp">WhatsApp</option><option value="referido">Referido</option>
             <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="fg"><label>Región Objetivo</label><input type="text" id="camp-region" class="crm-input" placeholder="CDMX, LATAM…"></div>
-        <div class="fg"><label>Presupuesto ($)</label><input type="number" id="camp-budget" class="crm-input" placeholder="0"></div>
-        <div class="fg"><label>Meta Leads</label><input type="number" id="camp-meta" class="crm-input" placeholder="10"></div>
+          </select></div>
+        <div class="o-form-group"><label class="o-form-label">Región</label><input type="text" id="camp-region" class="o-form-input" placeholder="CDMX, LATAM…"></div>
+        <div class="o-form-group"><label class="o-form-label">Presupuesto ($)</label><input type="number" id="camp-budget" class="o-form-input" placeholder="0"></div>
+        <div class="o-form-group"><label class="o-form-label">Meta Leads</label><input type="number" id="camp-meta" class="o-form-input" placeholder="10"></div>
       </div>
     </div>
-    <div class="crm-modal-footer">
+    <div class="o-modal-foot">
       <button class="btn btn-ghost" onclick="closeCampanaForm()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveCampana()">Guardar Campaña</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════ -->
-<!-- MODAL: ROLE LOGIN                                      -->
-<!-- ══════════════════════════════════════════════════════ -->
-<div id="role-login-modal" class="crm-modal-overlay" style="display:none">
-  <div class="crm-modal" style="max-width:420px;padding:0;overflow:hidden">
-    <div style="background:var(--navy);padding:28px 32px 22px">
-      <div style="font-family:var(--font-title);font-size:1.8rem;letter-spacing:.1em;color:#fff;margin-bottom:6px">PIPELINE CRM</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.6)">MetaTronix — Sistema de Gestión Comercial</div>
-    </div>
-    <div style="padding:28px 32px 32px">
-      <div class="fg" style="margin-bottom:16px">
-        <label style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.04em">ROL / PERFIL</label>
-        <select id="login-role" class="crm-input crm-select" style="height:42px;font-size:14px;margin-top:6px">
-          <option value="">— Selecciona tu rol —</option>
-          <option value="admin">👔 Admin / Director Comercial</option>
-          <option value="ejecutivo">💼 Ejecutivo de Ventas</option>
-          <option value="operaciones">⚙️ Operaciones</option>
-          <option value="finanzas">💰 Administración / Finanzas</option>
-        </select>
-      </div>
-      <div class="fg" style="margin-bottom:20px">
-        <label style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.04em">PIN (4 dígitos)</label>
-        <input type="password" id="login-pin" class="crm-input" maxlength="4"
-          style="height:42px;font-size:22px;letter-spacing:8px;text-align:center;margin-top:6px"
-          placeholder="••••" oninput="this.value=this.value.replace(/\D/g,'')"
-          onkeydown="if(event.key==='Enter')doRoleLogin()">
-        <div style="font-size:11px;color:var(--text-faint);margin-top:6px">PIN por defecto: 1234 (cámbialo en configuración)</div>
-      </div>
-      <button class="btn-primary" style="width:100%;height:44px;font-size:15px;justify-content:center" onclick="doRoleLogin()">
-        Ingresar al Sistema →
-      </button>
-      <div id="login-error" style="color:#ef4444;font-size:13px;text-align:center;margin-top:10px;display:none"></div>
+      <button class="btn btn-primary" onclick="saveCampana()">Guardar</button>
     </div>
   </div>
 </div>
@@ -1167,6 +648,7 @@ h1,h2,h3,.headline {
 <script src="/assets/app.js"></script>
 <script src="/assets/agent.js"></script>
 <script>
+
 /* ════════════════════════════════════════════════════════
    MetaTronix CRM — Pipeline completo 9 etapas
    ════════════════════════════════════════════════════════ */
@@ -1742,8 +1224,11 @@ function getLeadConf(lead) {
 /* ── VIEW MANAGEMENT ────────────────────────────────────── */
 function setMainView(v) {
   currentMainView = v;
-  document.querySelectorAll('.crm-view').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.crm-navbtn').forEach(el => el.classList.toggle('active', el.dataset.view===v));
+  const names = {kanban:'Pipeline',list:'Lista',dashboard:'Dashboard',mapa:'Mapa',campanas:'Campañas'};
+  const bc = document.getElementById('cp-breadcrumb');
+  if (bc) bc.textContent = names[v] || v;
+  document.querySelectorAll('.o-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.o-view-btn').forEach(el => el.classList.toggle('active', el.dataset.view===v));
   const el = document.getElementById('view-'+v);
   if (el) el.classList.add('active');
   if (v==='dashboard') renderDashboard();
@@ -1801,12 +1286,12 @@ function updateKPIStrip() {
   const pipeline = activos.reduce((s,l)=>s+(parseFloat(l.valor_estimado)||0),0);
   const forecast = filtered.reduce((s,l)=>s+(parseFloat(l.valor_estimado)||0)*(STAGES[getLeadStage(l)]?.prob||0),0);
   const conv     = filtered.length ? Math.round((ganados.length/filtered.length)*100) : 0;
-  document.getElementById('ks-total').textContent   = filtered.length;
-  document.getElementById('ks-activos').textContent = activos.length;
-  document.getElementById('ks-pipeline').textContent= fmtMXN(pipeline);
-  document.getElementById('ks-forecast').textContent= fmtMXN(forecast);
-  document.getElementById('ks-conv').textContent    = conv+'%';
-  document.getElementById('pipeline-total-badge').textContent = `${filtered.length} leads · ${fmtMXN(pipeline)} pipeline`;
+  document.getElementById('sb-n-total').textContent   = filtered.length;
+  document.getElementById('sb-n-activos').textContent = activos.length;
+  document.getElementById('sb-n-pipeline').textContent= fmtMXN(pipeline);
+  document.getElementById('sb-n-forecast').textContent= fmtMXN(forecast);
+  document.getElementById('sb-n-conv').textContent    = conv+'%';
+  document.getElementById('cp-summary').textContent = `${filtered.length} leads · ${fmtMXN(pipeline)} pipeline`;
 }
 
 /* ── KANBAN ─────────────────────────────────────────────── */
@@ -2110,9 +1595,10 @@ function openDrawer(leadId) {
   document.getElementById('drawer-stage-badge').innerHTML =
     `<span class="badge" style="background:${st.color}33;color:${st.color};font-size:12px">${st.icon||''} ${st.label||stage}</span>`;
   document.getElementById('lead-drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('visible');
   switchTab(currentDrawerTab);
 }
-function closeDrawer() { document.getElementById('lead-drawer').classList.remove('open'); currentLeadId=null; }
+function closeDrawer() { document.getElementById('lead-drawer').classList.remove('open'); document.getElementById('drawer-overlay').classList.remove('visible'); currentLeadId=null; }
 
 function switchTab(tab) {
   currentDrawerTab = tab;
@@ -2638,10 +2124,10 @@ function renderDashboard() {
   const forecast = leads.reduce((s,l)=>s+(parseFloat(l.valor_estimado)||0)*(STAGES[getLeadStage(l)]?.prob||0),0);
   const conv     = leads.length ? Math.round((ganados.length/leads.length)*100) : 0;
 
-  document.getElementById('dkpi-val-activos').textContent  = activos.length;
-  document.getElementById('dkpi-val-pipeline').textContent = fmtMXN(pipeline);
-  document.getElementById('dkpi-val-conv').textContent     = conv+'%';
-  document.getElementById('dkpi-val-forecast').textContent = fmtMXN(forecast);
+  document.getElementById('d-activos').textContent  = activos.length;
+  document.getElementById('d-pipeline').textContent = fmtMXN(pipeline);
+  document.getElementById('d-conv').textContent     = conv+'%';
+  document.getElementById('d-forecast').textContent = fmtMXN(forecast);
   ['activos','pipeline','conv','forecast'].forEach(k=>{
     const d = document.getElementById(`dkpi-delta-${k}`);
     if(d) { d.textContent='↑ vs mes anterior'; d.className='dkpi-delta up'; }
@@ -3561,6 +3047,108 @@ function openBiblioteca() {
 
 // Init
 init();
+
+
+function openDrawer(leadId) {
+  currentLeadId = leadId;
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (!lead) return;
+  const stage = getLeadStage(lead);
+  document.getElementById('drawer-company').textContent = lead.empresa;
+  // Stage bar
+  const stageBar = document.getElementById('drawer-stage-bar');
+  if (stageBar) {
+    const stageKeys = ['generacion','primer_contacto','calificacion','propuesta','negociacion','cierre','postventa','retencion','fidelizacion'];
+    stageBar.innerHTML = stageKeys.map(k => {
+      const st = STAGES[k]||{};
+      const isActive = k === stage;
+      const isClosed = k === 'cerrado_perdido';
+      return `<button class="o-stage-btn ${isActive?'active':''}" onclick="moveLeadStage('${leadId}','${k}');renderDrawerStageBar('${leadId}')" title="${st.label}">${st.icon} ${st.label}</button>`;
+    }).join('');
+  }
+  // Smart buttons
+  const smartEl = document.getElementById('drawer-smartbtns');
+  if (smartEl) {
+    const commsCount = LS.comms(leadId).length;
+    const chatCount  = LS.chat(leadId).length;
+    const docsCount  = Object.keys(LS.docs(leadId)).filter(k=>!k.includes('_file')).length;
+    const planCount  = LS.plans().filter(p=>p.lead_id===leadId).length;
+    smartEl.innerHTML = [
+      [commsCount, 'Actividades', '💬', "switchTab('historial')"],
+      [chatCount,  'Mensajes',    '👥', "switchTab('chat')"],
+      [docsCount,  'Documentos',  '📁', "switchTab('docs')"],
+      [planCount,  'Planes',      '📅', "switchTab('plan')"],
+    ].map(([n,l,ico,fn])=>`<button class="o-smartbtn" onclick="${fn}">
+      <span class="o-smartbtn-num">${n}</span>
+      <span class="o-smartbtn-lbl">${ico} ${l}</span>
+    </button>`).join('');
+  }
+  document.getElementById('lead-drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('visible');
+  switchTab(currentDrawerTab);
+}
+
+function renderDrawerStageBar(leadId) {
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (!lead) return;
+  const stage = getLeadStage(lead);
+  const stageBar = document.getElementById('drawer-stage-bar');
+  if (!stageBar) return;
+  const keys = ['generacion','primer_contacto','calificacion','propuesta','negociacion','cierre','postventa','retencion','fidelizacion'];
+  stageBar.innerHTML = keys.map(k => {
+    const st = STAGES[k]||{};
+    return `<button class="o-stage-btn ${k===stage?'active':''}" onclick="moveLeadStage('${leadId}','${k}');renderDrawerStageBar('${leadId}')">${st.icon} ${st.label}</button>`;
+  }).join('');
+}
+
+function selectFormStage(btn) {
+  document.querySelectorAll('.o-form-stage').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('f-stage').value = btn.dataset.stage;
+}
+
+function clearFilters() {
+  ['filter-stage','filter-fuente','filter-conf'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  const gs = document.getElementById('global-search'); if(gs) gs.value='';
+  applyFilters();
+}
+
+function filterByActive() {
+  const el = document.getElementById('filter-stage');
+  if (el) { el.value = ''; applyFilters(); }
+}
+
+function filterWon() {
+  const el = document.getElementById('filter-stage');
+  if (el) { el.value = 'cierre'; applyFilters(); }
+}
+
+function exportCSV() {
+  const leads = getFilteredLeads();
+  const headers = ['Empresa','Contacto','Cargo','Email','Teléfono','Etapa','Fuente','Valor','Seguimiento'];
+  const rows = leads.map(l => [
+    l.empresa, l.contacto_nombre, l.cargo, l.contacto_email,
+    l.contacto_telefono, getLeadStage(l), l.fuente,
+    l.valor_estimado, l.seguimiento
+  ].map(v=>(v||'').toString().replace(/,/g,'|')));
+  const csv = [headers, ...rows].map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'leads-mtx-' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+  notify('CSV descargado ✓','success');
+}
+
+function selectAll(cb) {
+  document.querySelectorAll('tbody input[type=checkbox]').forEach(c=>c.checked=cb.checked);
+}
+
+function toggleFilters() {
+  const fb = document.getElementById('filter-bar');
+  if (fb) { fb.style.display = fb.style.display==='none'?'flex':'none'; }
+}
 
 </script>
 </body>
