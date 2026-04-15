@@ -169,12 +169,15 @@ h1,h2,h3,.headline {
 }
 
 /* ── CRM SHELL ──────────────────────────────── */
-.crm-shell { display:flex; flex-direction:column; min-height:100vh; padding-top:56px; }
+/* body already has padding-left:var(--sidebar-w) from app.js renderHeader */
+.crm-shell { display:flex; flex-direction:column; min-height:100vh; padding-top:52px; }
 
 /* ── TOP NAV ────────────────────────────────── */
+/* Starts after sidebar — left:var(--sidebar-w,224px) */
 .crm-topnav {
-  position:fixed; top:0; left:0; right:0; z-index:200;
-  height:56px; background:var(--navy); border-bottom:1px solid rgba(255,255,255,.1);
+  position:fixed; top:0;
+  left:var(--sidebar-w, 224px); right:0; z-index:150;
+  height:52px; background:var(--navy); border-bottom:1px solid rgba(255,255,255,.1);
   display:flex; align-items:center; justify-content:space-between; padding:0 20px;
   box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
@@ -1667,12 +1670,18 @@ async function saveLead() {
   btn.disabled = false; btn.textContent = 'Guardar Lead';
   if (error) { notify('Error: '+error.message,'error'); return; }
 
-  // confianza stored in LS (no DB column)
-  const confVal = document.getElementById('f-confianza').value;
+  // Store confianza + B5 extras in localStorage (no DB columns yet)
+  const confVal  = document.getElementById('f-confianza')?.value || 'acercamiento';
   const targetId = editingLeadId || newLeadId;
   if (targetId) {
     const pv = LS.pv(targetId) || {};
-    LS.setPV(targetId, { ...pv, confianza_nivel: confVal });
+    LS.setPV(targetId, { ...pv,
+      confianza_nivel:       confVal,
+      vertical:              document.getElementById('f-vertical')?.value  || null,
+      canal_primer_contacto: document.getElementById('f-canal')?.value     || null,
+      estado:                document.getElementById('f-estado')?.value    || null,
+      pais:                  document.getElementById('f-pais')?.value      || 'México',
+    });
   }
 
   notify(editingLeadId ? 'Lead actualizado ✓':'Lead registrado ✓','success');
@@ -2056,6 +2065,12 @@ function openLeadForm(leadId=null) {
     document.getElementById('f-ciudad').value     = l.ciudad||'';
     document.getElementById('f-competidores').value= l.competidores_zona||'';
     document.getElementById('f-confianza').value  = getLeadConf(l)||'acercamiento';
+    // B5 new fields
+    const pv = LS.pv(l.id) || {};
+    setVal('f-vertical', pv.vertical || l.vertical || '');
+    setVal('f-canal',    pv.canal_primer_contacto || l.canal_primer_contacto || 'otro');
+    setVal('f-estado',   pv.estado || l.estado || '');
+    setVal('f-pais',     pv.pais   || l.pais   || 'México');
   } else {
     ['f-empresa','f-contacto','f-cargo','f-email','f-telefono','f-valor','f-seguimiento','f-notas','f-campana','f-ciudad','f-competidores'].forEach(id=>{
       const el = document.getElementById(id); if(el) el.value='';
@@ -2063,7 +2078,13 @@ function openLeadForm(leadId=null) {
     document.getElementById('f-stage').value    = 'generacion';
     document.getElementById('f-fuente').value   = 'otro';
     document.getElementById('f-confianza').value= 'acercamiento';
+    // B5 new fields reset
+    setVal('f-vertical',''); setVal('f-canal','otro');
+    setVal('f-estado','');   setVal('f-pais','México');
   }
+  // AI panel visibility
+  const aiPanel = document.getElementById('ai-assign-panel');
+  if (aiPanel) aiPanel.style.display = leadId ? 'block' : 'none';
   document.getElementById('lead-modal').style.display = 'flex';
 }
 function closeLeadForm() { document.getElementById('lead-modal').style.display = 'none'; editingLeadId=null; }
@@ -2100,6 +2121,10 @@ function switchTab(tab) {
   body.innerHTML = (renderers[tab]||renderers.info)();
   if (tab==='historial') attachCommForm(lead.id);
   if (tab==='chat') attachChatForm(lead.id);
+  // B8: draw canvas when docs tab opens
+  if (tab==='docs') {
+    setTimeout(() => drawProcessCanvas(getLeadStage(lead)), 50);
+  }
 }
 
 /* TAB: INFO */
@@ -2988,52 +3013,7 @@ function formatDate(s) { if(!s) return '—'; try { return new Date(s).toLocaleS
    BLOQUE 5 — ALTA INTELIGENTE + ASIGNACIÓN IA
    ══════════════════════════════════════════════════════════ */
 
-// Extend openLeadForm to populate new fields
-const _origOpenLeadForm = openLeadForm;
-function openLeadForm(leadId=null) {
-  _origOpenLeadForm(leadId);
-  // New fields
-  if (leadId) {
-    const l = allLeads.find(x=>x.id===leadId);
-    if (l) {
-      setVal('f-vertical', l.vertical || '');
-      setVal('f-canal', l.canal_primer_contacto || 'otro');
-      setVal('f-estado', l.estado || '');
-      setVal('f-pais', l.pais || 'México');
-    }
-  } else {
-    setVal('f-vertical',''); setVal('f-canal','otro');
-    setVal('f-estado',''); setVal('f-pais','México');
-  }
-  // Show AI panel if editing
-  const panel = document.getElementById('ai-assign-panel');
-  if (panel) panel.style.display = leadId ? 'block' : 'none';
-}
-
 function setVal(id, v) { const el=document.getElementById(id); if(el) el.value=v; }
-
-// Extend saveLead to include new fields
-const _origSaveLead = saveLead;
-async function saveLead() {
-  // Inject extra fields into payload before original save
-  const extras = {
-    vertical:             document.getElementById('f-vertical')?.value || null,
-    canal_primer_contacto:document.getElementById('f-canal')?.value    || null,
-    estado:               document.getElementById('f-estado')?.value   || null,
-    pais:                 document.getElementById('f-pais')?.value     || 'México',
-  };
-  // Patch: we'll store these in LS since DB may not have these columns yet
-  window._pendingLeadExtras = extras;
-  await _origSaveLead();
-}
-
-// Called after save to persist extras
-function persistLeadExtras(leadId) {
-  if (!window._pendingLeadExtras || !leadId) return;
-  const pv = LS.pv(leadId) || {};
-  LS.setPV(leadId, { ...pv, ...window._pendingLeadExtras });
-  window._pendingLeadExtras = null;
-}
 
 async function suggestAssignment() {
   const empresa  = document.getElementById('f-empresa')?.value?.trim();
@@ -3490,18 +3470,6 @@ function drawProcessCanvas(currentStage) {
       canvas.dataset.currentColor = st.color;
     }
   });
-}
-
-// Override switchTab to draw canvas when docs tab opens
-const _origSwitchTab = switchTab;
-function switchTab(tab) {
-  _origSwitchTab(tab);
-  if (tab === 'docs') {
-    setTimeout(() => {
-      const lead = allLeads.find(l=>l.id===currentLeadId);
-      if (lead) drawProcessCanvas(getLeadStage(lead));
-    }, 50);
-  }
 }
 
 function handleDocUpload(evt, leadId) {
