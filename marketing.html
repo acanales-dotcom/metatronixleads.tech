@@ -929,6 +929,9 @@ async function init() {
     Notiflix.Notify.init({ position:'right-bottom', timeout:3000, fontSize:'13px' });
   }
 
+  // Load HuggingFace token from Supabase portal_settings
+  await loadHFToken();
+
   // Load leads from Supabase for Larry
   const { data } = await getDB().from('leads').select('*').order('updated_at',{ascending:false}).limit(20);
   allLeads = data || [];
@@ -942,6 +945,23 @@ async function init() {
 
   // Load Larry leads
   loadLarryLeads();
+}
+
+async function loadHFToken() {
+  try {
+    const { data } = await getDB()
+      .from('portal_settings')
+      .select('value')
+      .eq('key', 'hf_api_token')
+      .single();
+    if (data?.value) {
+      _hfTokenShared = data.value;
+      // Pre-fill any visible token fields
+      document.querySelectorAll('[id="media-hf-token"]').forEach(el => {
+        el.value = data.value;
+      });
+    }
+  } catch (_) { /* token not in DB yet */ }
 }
 
 function escHtml(s) {
