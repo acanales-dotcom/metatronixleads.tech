@@ -241,113 +241,7 @@
 .flywheel-num { font-family:var(--font-head); font-size:1.8rem; color:var(--blue); line-height:1; }
 .flywheel-label { font-size:11px; color:var(--text-muted); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
 .flywheel-arrow { display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--cyan); }
-/* ── Media IA shared buttons ────────────────────────── */
-.media-ia-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 6px; cursor: pointer;
-  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
-  background: var(--ia-bg, rgba(0,194,224,.08));
-  color: var(--ia-color, #00C2E0);
-  border: 1px solid var(--ia-color, #00C2E0);
-  transition: all .15s; position: relative; white-space: nowrap;
-}
-.media-ia-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
-.media-ia-btn.active { box-shadow: 0 0 12px rgba(255,255,255,.1); }
-.media-gpu-chip {
-  font-size: 9px; background: #EF4444; color: #fff;
-  padding: 1px 5px; border-radius: 8px; font-weight: 700;
-  letter-spacing: .03em;
-}
-/* Mutual exclusivity warning strip */
-.ia-exclusive-bar {
-  display: none; margin: 0 24px;
-  padding: 7px 14px; border-radius: 6px;
-  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
-  font-size: 11px; font-family: 'Inter', sans-serif; color: #F59E0B;
-  align-items: center; gap: 8px;
-}
-.ia-exclusive-bar.show { display: flex; }
-
-/* ── Video IA Panel ──────────────────────────────────── */
-.video-panel {
-  display: none; margin: 0 24px 16px;
-  background: linear-gradient(135deg, #0A0E1A 0%, #0D1629 50%, #0A1628 100%);
-  border: 1px solid rgba(0,194,224,.25); border-radius: 12px;
-  overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.5);
-}
-.video-panel.open { display: block; animation: slideDown .2s ease; }
-.video-panel-header {
-  padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid rgba(0,194,224,.15);
-  background: rgba(0,194,224,.04);
-}
-.video-panel-title { display: flex; align-items: center; gap: 10px; }
-.video-panel-title span:first-child { font-size: 22px; }
-.video-panel-name { font-size: 14px; font-weight: 700; color: #E8EDF8; font-family: 'Inter', sans-serif; }
-.video-panel-model { font-size: 10px; color: #00C2E0; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
-.gpu-req-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
-  font-family: 'Inter', sans-serif; white-space: nowrap;
-}
-.gpu-req-badge.ok    { background: rgba(16,185,129,.15); color: #10B981; border: 1px solid rgba(16,185,129,.3); }
-.gpu-req-badge.warn  { background: rgba(245,158,11,.12); color: #F59E0B; border: 1px solid rgba(245,158,11,.25); }
-.gpu-req-badge.error { background: rgba(239,68,68,.12); color: #EF4444; border: 1px solid rgba(239,68,68,.25); }
-.video-panel-body { padding: 18px 20px; }
-.video-panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.video-field { display: flex; flex-direction: column; gap: 5px; }
-.video-field.full { grid-column: 1/-1; }
-.video-field label { font-size: 10px; font-weight: 700; color: #7E8FA8; letter-spacing: .07em; text-transform: uppercase; font-family: 'Inter', sans-serif; }
-.video-field textarea, .video-field input, .video-field select {
-  background: rgba(255,255,255,.05); color: #E8EDF8;
-  border: 1px solid rgba(255,255,255,.12); border-radius: 6px;
-  padding: 8px 11px; font-size: 13px; outline: none; font-family: 'Inter', sans-serif;
-  transition: border-color .12s;
-}
-.video-field textarea:focus, .video-field input:focus, .video-field select:focus {
-  border-color: #00C2E0; box-shadow: 0 0 0 2px rgba(0,194,224,.1);
-}
-.video-field select option { background: #0D1629; }
-.video-field textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
-.video-generate-btn {
-  width: 100%; padding: 12px; margin-top: 14px;
-  background: linear-gradient(135deg, #00C2E0, #0891B2);
-  color: #fff; border: none; border-radius: 8px;
-  font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700;
-  cursor: pointer; transition: all .15s; display: flex; align-items: center;
-  justify-content: center; gap: 8px;
-}
-.video-generate-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,194,224,.3); }
-.video-generate-btn:disabled { background: #2A334E; color: #4A5568; cursor: not-allowed; transform: none; filter: none; }
-.video-output-area {
-  margin-top: 14px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.07);
-  border-radius: 8px; padding: 14px; display: none; min-height: 200px;
-}
-.video-output-area.show { display: block; animation: fadeIn .2s ease; }
-.video-output-area video { width: 100%; border-radius: 6px; max-height: 400px; }
-.video-progress-bar { height: 4px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
-.video-progress-fill { height: 100%; background: linear-gradient(90deg,#00C2E0,#14B8A6); border-radius: 2px; transition: width .5s ease; }
-.video-how-to {
-  background: rgba(0,194,224,.05); border: 1px solid rgba(0,194,224,.1);
-  border-radius: 8px; padding: 14px; margin-top: 12px; font-size: 12px;
-  color: #7E8FA8; font-family: 'Inter', sans-serif; line-height: 1.7;
-}
-.video-how-to strong { color: #00C2E0; }
-.video-how-to a { color: #00C2E0; }
-.video-tab-row { display: flex; gap: 4px; margin-bottom: 14px; }
-.video-tab {
-  padding: 5px 14px; font-size: 11px; font-weight: 600; border-radius: 6px;
-  cursor: pointer; background: rgba(255,255,255,.06); color: #7E8FA8;
-  border: 1px solid rgba(255,255,255,.08); transition: all .1s; font-family: 'Inter', sans-serif;
-}
-.video-tab.active { background: rgba(0,194,224,.15); color: #00C2E0; border-color: rgba(0,194,224,.3); }
-.video-tab:hover:not(.active) { color: #E8EDF8; }
-@keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-.generating-shimmer {
-  background: linear-gradient(90deg,rgba(0,194,224,.05) 25%,rgba(0,194,224,.15) 50%,rgba(0,194,224,.05) 75%);
-  background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite;
-}
+/* ── Video IA Panel removed — now an agent ── */
   </style>
 </head>
 <body>
@@ -370,21 +264,6 @@
         <button class="btn btn-primary btn-sm" onclick="initLLM()">
           ⚡ Activar LLM
         </button>
-        <!-- Video IA button -->
-        <button class="media-ia-btn" id="video-llm-btn" onclick="toggleVideoPanel()"
-          style="--ia-color:#00C2E0;--ia-bg:rgba(0,194,224,.08)">
-          <span>🎬</span>
-          <span>Video IA</span>
-          <span class="media-gpu-chip">GPU</span>
-        </button>
-        <!-- Image IA button -->
-        <button class="media-ia-btn" id="image-llm-btn" onclick="toggleImagePanel()"
-          style="--ia-color:#A78BFA;--ia-bg:rgba(167,139,250,.08)">
-          <span>🖼</span>
-          <span>Imagen IA</span>
-          <span class="media-gpu-chip" style="background:#7C3AED">GPU</span>
-        </button>
-        <span id="active-ia-label" style="display:none;font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;font-family:'JetBrains Mono',monospace"></span>
         <span id="gpu-badge" style="display:none;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(0,194,224,.1);color:#00C2E0;border:1px solid rgba(0,194,224,.2)"></span>
       </div>
     </div>
@@ -433,417 +312,6 @@
     </div>
   </div>
 
-  <!-- ══ VIDEO IA PANEL ══════════════════════════════════════ -->
-  <div class="video-panel" id="video-panel">
-    <div class="video-panel-header">
-      <div class="video-panel-title">
-        <span>🎬</span>
-        <div>
-          <div class="video-panel-name">Generador de Video IA — Wan2.1-T2V</div>
-          <div class="video-panel-model">Wan-AI/Wan2.1-T2V-1.3B · Text-to-Video</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div id="gpu-status-badge" class="gpu-req-badge warn">
-          ⚡ Detectando GPU…
-        </div>
-        <button style="background:rgba(255,255,255,.08);border:none;color:#7E8FA8;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center" onclick="toggleVideoPanel()">✕</button>
-      </div>
-    </div>
-
-    <div class="video-panel-body">
-      <!-- Mode tabs -->
-      <div class="video-tab-row">
-        <button class="video-tab active" data-vtab="api" onclick="switchVideoTab('api',this)">🌐 API HuggingFace</button>
-        <button class="video-tab" data-vtab="local" onclick="switchVideoTab('local',this)">🖥 Servidor Local</button>
-        <button class="video-tab" data-vtab="space" onclick="switchVideoTab('space',this)">🚀 HF Space (Gratis)</button>
-      </div>
-
-      <!-- API Tab -->
-      <div id="vtab-api">
-        <div class="video-panel-grid">
-          <div class="video-field full">
-            <label>Prompt (descripción del video en inglés)</label>
-            <textarea id="video-prompt" placeholder="A professional sales team celebrating a deal close in a modern office, cinematic lighting, 4K quality, smooth camera movement..."></textarea>
-          </div>
-          <div class="video-field">
-            <label>Negative Prompt (qué evitar)</label>
-            <input id="video-neg-prompt" placeholder="blurry, low quality, watermark, text" value="blurry, low quality, distorted, watermark">
-          </div>
-          <div class="video-field">
-            <label>Número de frames</label>
-            <select id="video-frames">
-              <option value="16">16 frames (~0.5s)</option>
-              <option value="24">24 frames (~1s)</option>
-              <option value="48" selected>48 frames (~2s)</option>
-              <option value="81">81 frames (~3s)</option>
-            </select>
-          </div>
-          <div class="video-field">
-            <label>Resolución</label>
-            <select id="video-res">
-              <option value="480p">480×832 (vertical)</option>
-              <option value="720p" selected>720×1280 (HD vertical)</option>
-              <option value="landscape">832×480 (horizontal)</option>
-            </select>
-          </div>
-          <div class="video-field">
-            <label>Guidance Scale (adherencia al prompt)</label>
-            <input type="range" id="video-guidance" min="1" max="12" value="6" step="0.5"
-              oninput="document.getElementById('guidance-val').textContent=this.value"
-              style="accent-color:#00C2E0;background:transparent;border:none;padding:8px 0">
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:#4A5568;margin-top:-4px">
-              <span>Creativo</span><span id="guidance-val" style="color:#00C2E0;font-weight:700">6</span><span>Preciso</span>
-            </div>
-          </div>
-          <div class="video-field">
-            <label>HuggingFace Token (para API)</label>
-            <input type="password" id="video-hf-token" placeholder="hf_xxxxxxxxxxxxxxxxxx"
-              style="font-family:'JetBrains Mono',monospace">
-            <div style="font-size:10px;color:#4A5568;margin-top:3px">
-              Obtén tu token gratuito en <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#00C2E0">huggingface.co/settings/tokens</a>
-            </div>
-          </div>
-        </div>
-        <button class="video-generate-btn" id="video-gen-btn" onclick="generateVideo()">
-          <span>🎬</span>
-          <span id="video-gen-text">Generar Video con IA</span>
-        </button>
-      </div>
-
-      <!-- Local Server Tab -->
-      <div id="vtab-local" style="display:none">
-        <div class="video-how-to">
-          <strong>🖥 Modo Servidor Local — Wan2.1-T2V-1.3B en tu GPU</strong><br><br>
-          Requiere: <strong>GPU NVIDIA RTX 3060 o superior (8GB+ VRAM)</strong> · Python 3.10+ · CUDA 12.1+<br><br>
-          <strong>Instalación (una sola vez):</strong><br>
-          <code style="background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px;font-size:11px;color:#00C2E0">pip install torch torchvision diffusers transformers accelerate</code><br><br>
-          <code style="background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px;font-size:11px;color:#00C2E0">pip install flask flask-cors huggingface_hub</code><br><br>
-          <strong>Servidor (wan_server.py):</strong>
-          <pre style="background:rgba(0,0,0,.3);padding:10px;border-radius:6px;font-size:10px;color:#E8EDF8;overflow-x:auto;margin:8px 0;border:1px solid rgba(255,255,255,.07)">from flask import Flask, request, jsonify
-from flask_cors import CORS
-import torch
-from diffusers import AutoencoderKLWan, WanPipeline
-from diffusers.schedulers.scheduling_unipc_multistep import UniPCMultistepScheduler
-
-app = Flask(__name__)
-CORS(app)
-
-pipe = WanPipeline.from_pretrained(
-    "Wan-AI/Wan2.1-T2V-1.3B", torch_dtype=torch.float16
-).to("cuda")
-
-@app.route("/generate", methods=["POST"])
-def generate():
-    data = request.json
-    output = pipe(
-        prompt=data.get("prompt",""),
-        negative_prompt=data.get("negative_prompt",""),
-        num_frames=data.get("num_frames", 48),
-        guidance_scale=data.get("guidance_scale", 6)
-    ).frames[0]
-    # Save and return base64
-    import tempfile, base64
-    from diffusers.utils import export_to_video
-    tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-    export_to_video(output, tmp.name, fps=16)
-    return jsonify({"video": base64.b64encode(open(tmp.name,"rb").read()).decode()})
-
-app.run(host="0.0.0.0", port=7860)</pre>
-          <strong>Ejecutar:</strong> <code style="background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px;font-size:11px;color:#00C2E0">python wan_server.py</code><br><br>
-          Luego conecta desde aquí:
-        </div>
-        <div class="video-panel-grid" style="margin-top:12px">
-          <div class="video-field full">
-            <label>Prompt</label>
-            <textarea id="video-prompt-local" placeholder="Describe el video en inglés..."></textarea>
-          </div>
-          <div class="video-field">
-            <label>URL del servidor local</label>
-            <input id="video-local-url" value="http://localhost:7860/generate">
-          </div>
-          <div class="video-field">
-            <label>Frames</label>
-            <select id="video-frames-local">
-              <option value="24">24 (~1s)</option>
-              <option value="48" selected>48 (~2s)</option>
-              <option value="81">81 (~3s)</option>
-            </select>
-          </div>
-        </div>
-        <button class="video-generate-btn" onclick="generateVideoLocal()">
-          🖥 Generar con Servidor Local
-        </button>
-      </div>
-
-      <!-- HF Space Tab -->
-      <div id="vtab-space" style="display:none">
-        <div class="video-how-to">
-          <strong>🚀 HuggingFace Space — Sin GPU propia, sin instalación</strong><br><br>
-          La forma más sencilla. Abre el Space oficial de Wan2.1 directamente en tu navegador.
-          Es gratuito pero puede tener cola de espera en horas pico.<br><br>
-          <strong>⚠️ Requisito:</strong> Cuenta gratuita en HuggingFace (huggingface.co)
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
-          <a href="https://huggingface.co/spaces/Wan-AI/Wan2.1" target="_blank"
-            style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.2);border-radius:8px;text-decoration:none;transition:border-color .12s"
-            onmouseover="this.style.borderColor='rgba(255,193,7,.5)'" onmouseout="this.style.borderColor='rgba(255,193,7,.2)'">
-            <span style="font-size:22px">🤗</span>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:#E8EDF8;font-family:'Inter',sans-serif">Space Oficial — Wan-AI/Wan2.1</div>
-              <div style="font-size:11px;color:#7E8FA8;font-family:'Inter',sans-serif">huggingface.co/spaces/Wan-AI/Wan2.1 · Gratuito · Sin GPU propia</div>
-            </div>
-            <span style="margin-left:auto;color:#F59E0B;font-size:12px;font-weight:600">ABRIR →</span>
-          </a>
-          <a href="https://huggingface.co/spaces/fffiloni/Wan2.1" target="_blank"
-            style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(0,194,224,.06);border:1px solid rgba(0,194,224,.15);border-radius:8px;text-decoration:none;transition:border-color .12s"
-            onmouseover="this.style.borderColor='rgba(0,194,224,.4)'" onmouseout="this.style.borderColor='rgba(0,194,224,.15)'">
-            <span style="font-size:22px">⚡</span>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:#E8EDF8;font-family:'Inter',sans-serif">Space Verificado — fffiloni/Wan2.1</div>
-              <div style="font-size:11px;color:#7E8FA8;font-family:'Inter',sans-serif">Versión comunitaria verificada · Alta disponibilidad</div>
-            </div>
-            <span style="margin-left:auto;color:#00C2E0;font-size:12px;font-weight:600">ABRIR →</span>
-          </a>
-          <div style="font-size:11px;color:#3D4A60;text-align:center;padding:8px 0;font-family:'Inter',sans-serif">
-            100+ Spaces disponibles en <a href="https://huggingface.co/models/Wan-AI/Wan2.1-T2V-1.3B" target="_blank" style="color:#00C2E0">HuggingFace</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Output Area -->
-      <div class="video-output-area" id="video-output">
-        <div id="video-progress-wrap" style="display:none">
-          <div style="font-size:12px;color:#7E8FA8;margin-bottom:8px;font-family:'Inter',sans-serif" id="video-status-text">Generando video…</div>
-          <div class="video-progress-bar"><div class="video-progress-fill" id="video-prog-fill" style="width:0%"></div></div>
-        </div>
-        <div id="video-result"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ MUTUAL EXCLUSIVITY WARNING ══════════════════════════ -->
-  <div class="ia-exclusive-bar" id="ia-exclusive-bar">
-    <span style="font-size:14px">⚠️</span>
-    <span id="ia-exclusive-msg">Solo se puede usar un generador a la vez. El anterior fue desactivado automáticamente.</span>
-    <button onclick="document.getElementById('ia-exclusive-bar').classList.remove('show')"
-      style="margin-left:auto;background:none;border:none;color:#F59E0B;cursor:pointer;font-size:14px">✕</button>
-  </div>
-
-  <!-- ══ IMAGE IA PANEL — FLUX.2-dev-NVFP4 ══════════════════ -->
-  <div class="video-panel" id="image-panel" style="border-color:rgba(167,139,250,.25)">
-    <div class="video-panel-header" style="border-color:rgba(167,139,250,.15)">
-      <div class="video-panel-title">
-        <span>🖼</span>
-        <div>
-          <div class="video-panel-name">Generador de Imagen IA — FLUX.2</div>
-          <div class="video-panel-model" style="color:#A78BFA">black-forest-labs/FLUX.2-dev-NVFP4 · Text-to-Image</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div id="img-gpu-status-badge" class="gpu-req-badge warn">⚡ Detectando GPU…</div>
-        <div style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;background:rgba(239,68,68,.15);color:#EF4444;border:1px solid rgba(239,68,68,.25);white-space:nowrap">
-          ⚠️ Uso individual — no compatible con Video IA activo
-        </div>
-        <button style="background:rgba(255,255,255,.08);border:none;color:#7E8FA8;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center" onclick="toggleImagePanel()">✕</button>
-      </div>
-    </div>
-
-    <div class="video-panel-body">
-      <div class="video-tab-row">
-        <button class="video-tab active" data-itab="api" onclick="switchImageTab('api',this)" style="--tab-active-bg:rgba(167,139,250,.15);--tab-active-color:#A78BFA">🌐 API HuggingFace</button>
-        <button class="video-tab" data-itab="local" onclick="switchImageTab('local',this)">🖥 Servidor Local</button>
-        <button class="video-tab" data-itab="space" onclick="switchImageTab('space',this)">🚀 HF Space (Gratis)</button>
-      </div>
-
-      <!-- API Tab -->
-      <div id="itab-api">
-        <div class="video-panel-grid">
-          <div class="video-field full">
-            <label>Prompt (descripción de la imagen)</label>
-            <textarea id="img-prompt" placeholder="A professional CEO shaking hands with a tech executive in a modern glass office, photorealistic, 8K, cinematic lighting, sharp focus..."></textarea>
-          </div>
-          <div class="video-field">
-            <label>Negative Prompt</label>
-            <input id="img-neg-prompt" value="blurry, low quality, distorted, watermark, text, ugly" placeholder="blurry, low quality...">
-          </div>
-          <div class="video-field">
-            <label>Resolución</label>
-            <select id="img-res">
-              <option value="512x512">512 × 512 (rápido)</option>
-              <option value="768x768">768 × 768</option>
-              <option value="1024x1024" selected>1024 × 1024 (recomendado)</option>
-              <option value="1280x720">1280 × 720 (landscape)</option>
-              <option value="720x1280">720 × 1280 (retrato)</option>
-              <option value="1024x576">1024 × 576 (widescreen)</option>
-            </select>
-          </div>
-          <div class="video-field">
-            <label>Guidance Scale (adherencia al prompt)</label>
-            <input type="range" id="img-guidance" min="1" max="15" value="3.5" step="0.5"
-              oninput="document.getElementById('img-guidance-val').textContent=this.value"
-              style="accent-color:#A78BFA;background:transparent;border:none;padding:8px 0">
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:#4A5568;margin-top:-4px">
-              <span>Creativo</span><span id="img-guidance-val" style="color:#A78BFA;font-weight:700">3.5</span><span>Preciso</span>
-            </div>
-          </div>
-          <div class="video-field">
-            <label>Pasos de inferencia</label>
-            <select id="img-steps">
-              <option value="20">20 — Rápido</option>
-              <option value="28" selected>28 — Recomendado</option>
-              <option value="40">40 — Alta calidad</option>
-              <option value="50">50 — Máxima calidad</option>
-            </select>
-          </div>
-          <div class="video-field">
-            <label>HuggingFace Token</label>
-            <input type="password" id="img-hf-token" placeholder="hf_xxxxxxxxxxxxxxxxxx"
-              style="font-family:'JetBrains Mono',monospace">
-            <div style="font-size:10px;color:#4A5568;margin-top:3px">
-              <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#A78BFA">huggingface.co/settings/tokens</a> — Token gratuito
-            </div>
-          </div>
-          <div class="video-field">
-            <label>Semilla (seed)</label>
-            <input type="number" id="img-seed" placeholder="Aleatoria" style="font-family:'JetBrains Mono',monospace">
-            <div style="font-size:10px;color:#4A5568;margin-top:3px">Deja vacío para resultado diferente cada vez</div>
-          </div>
-          <div class="video-field">
-            <label>Cantidad de imágenes</label>
-            <select id="img-count">
-              <option value="1" selected>1 imagen</option>
-              <option value="2">2 imágenes</option>
-              <option value="4">4 imágenes (grid)</option>
-            </select>
-          </div>
-        </div>
-        <button class="video-generate-btn" id="img-gen-btn" onclick="generateImage()"
-          style="background:linear-gradient(135deg,#7C3AED,#6D28D9)">
-          <span>🖼</span>
-          <span id="img-gen-text">Generar Imagen con FLUX.2</span>
-        </button>
-      </div>
-
-      <!-- Local Server Tab -->
-      <div id="itab-local" style="display:none">
-        <div class="video-how-to" style="border-color:rgba(167,139,250,.1);background:rgba(167,139,250,.04)">
-          <strong style="color:#A78BFA">🖥 FLUX.2-dev-NVFP4 en tu GPU local</strong><br><br>
-          Requiere: <strong>GPU NVIDIA RTX 4070+ con soporte NVFP4 (Ada Lovelace+)</strong><br>
-          Para RTX 3060/3070: usar <code style="background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;color:#A78BFA">FLUX.1-dev</code> estándar en su lugar<br><br>
-          <strong>Instalación:</strong><br>
-          <code style="background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px;font-size:10px;color:#A78BFA">pip install torch diffusers transformers accelerate optimum-quanto flask flask-cors</code><br><br>
-          <strong>Servidor (flux_server.py):</strong>
-          <pre style="background:rgba(0,0,0,.3);padding:10px;border-radius:6px;font-size:10px;color:#E8EDF8;overflow-x:auto;margin:8px 0;border:1px solid rgba(255,255,255,.07)">from flask import Flask, request, jsonify
-from flask_cors import CORS
-import torch, io, base64
-from diffusers import FluxPipeline
-
-app = Flask(__name__)
-CORS(app)
-
-pipe = FluxPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-dev",
-    torch_dtype=torch.bfloat16
-).to("cuda")
-
-@app.route("/generate", methods=["POST"])
-def generate():
-    data = request.json
-    w, h = map(int, data.get("resolution","1024x1024").split("x"))
-    images = pipe(
-        prompt=data["prompt"],
-        negative_prompt=data.get("negative_prompt",""),
-        height=h, width=w,
-        guidance_scale=float(data.get("guidance_scale", 3.5)),
-        num_inference_steps=int(data.get("num_steps", 28)),
-        num_images_per_prompt=int(data.get("count",1)),
-    ).images
-    imgs_b64 = []
-    for img in images:
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        imgs_b64.append(base64.b64encode(buf.getvalue()).decode())
-    return jsonify({"images": imgs_b64})
-
-app.run(host="0.0.0.0", port=7861)</pre>
-          <strong>Ejecutar:</strong> <code style="background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px;font-size:10px;color:#A78BFA">python flux_server.py</code>
-        </div>
-        <div class="video-panel-grid" style="margin-top:12px">
-          <div class="video-field full">
-            <label>Prompt</label>
-            <textarea id="img-prompt-local" placeholder="Describe la imagen..."></textarea>
-          </div>
-          <div class="video-field">
-            <label>URL del servidor local</label>
-            <input id="img-local-url" value="http://localhost:7861/generate">
-          </div>
-          <div class="video-field">
-            <label>Resolución</label>
-            <select id="img-res-local">
-              <option value="512x512">512 × 512</option>
-              <option value="1024x1024" selected>1024 × 1024</option>
-              <option value="1280x720">1280 × 720</option>
-            </select>
-          </div>
-        </div>
-        <button class="video-generate-btn" onclick="generateImageLocal()"
-          style="background:linear-gradient(135deg,#7C3AED,#6D28D9)">
-          🖥 Generar con Servidor Local
-        </button>
-      </div>
-
-      <!-- HF Space Tab -->
-      <div id="itab-space" style="display:none">
-        <div class="video-how-to" style="border-color:rgba(167,139,250,.1);background:rgba(167,139,250,.04)">
-          <strong style="color:#A78BFA">🚀 FLUX.2 en HuggingFace Space — Sin GPU propia</strong><br><br>
-          Accede a los mejores modelos de imagen IA sin instalar nada ni tener una GPU.
-          Solo necesitas cuenta gratuita en HuggingFace.
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
-          <a href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev" target="_blank"
-            style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;text-decoration:none;transition:border-color .12s"
-            onmouseover="this.style.borderColor='rgba(167,139,250,.5)'" onmouseout="this.style.borderColor='rgba(124,58,237,.2)'">
-            <span style="font-size:22px">🤗</span>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:#E8EDF8;font-family:'Inter',sans-serif">FLUX.1-dev Official Space</div>
-              <div style="font-size:11px;color:#7E8FA8;font-family:'Inter',sans-serif">black-forest-labs/FLUX.1-dev · Alta calidad · Gratuito</div>
-            </div>
-            <span style="margin-left:auto;color:#A78BFA;font-size:12px;font-weight:600">ABRIR →</span>
-          </a>
-          <a href="https://huggingface.co/spaces/multimodalart/FLUX.1" target="_blank"
-            style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.15);border-radius:8px;text-decoration:none;transition:border-color .12s"
-            onmouseover="this.style.borderColor='rgba(167,139,250,.4)'" onmouseout="this.style.borderColor='rgba(167,139,250,.15)'">
-            <span style="font-size:22px">⚡</span>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:#E8EDF8;font-family:'Inter',sans-serif">FLUX.1 by multimodalart</div>
-              <div style="font-size:11px;color:#7E8FA8;font-family:'Inter',sans-serif">Versión comunitaria optimizada · Alta disponibilidad</div>
-            </div>
-            <span style="margin-left:auto;color:#A78BFA;font-size:12px;font-weight:600">ABRIR →</span>
-          </a>
-          <a href="https://huggingface.co/spaces/Kwai-Kolors/Kolors-Virtual-Try-On" target="_blank"
-            style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(167,139,250,.04);border:1px solid rgba(167,139,250,.1);border-radius:8px;text-decoration:none"
-            onmouseover="this.style.borderColor='rgba(167,139,250,.35)'" onmouseout="this.style.borderColor='rgba(167,139,250,.1)'">
-            <span style="font-size:22px">🎨</span>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:#E8EDF8;font-family:'Inter',sans-serif">FLUX para Marketing / Producto</div>
-              <div style="font-size:11px;color:#7E8FA8;font-family:'Inter',sans-serif">Ideal para imágenes de productos y campañas</div>
-            </div>
-            <span style="margin-left:auto;color:#A78BFA;font-size:12px;font-weight:600">ABRIR →</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Output Area -->
-      <div class="video-output-area" id="img-output">
-        <div id="img-progress-wrap" style="display:none">
-          <div style="font-size:12px;color:#7E8FA8;margin-bottom:8px;font-family:'Inter',sans-serif" id="img-status-text">Generando imagen…</div>
-          <div class="video-progress-bar"><div class="video-progress-fill" id="img-prog-fill" style="width:0%;background:linear-gradient(90deg,#7C3AED,#A78BFA)"></div></div>
-        </div>
-        <div id="img-result" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
-      </div>
-    </div>
-  </div>
 
   <!-- Chris West Flywheel -->
   <div style="padding:14px 24px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1053,6 +521,36 @@ const AGENTS = [
     run: runAgentClio,
     hasForm: true,
   },
+  {
+    id: 'video',
+    icon: '🎬',
+    iconBg: 'linear-gradient(135deg,#0A0E1A,#0D1629)',
+    name: 'VIDEO IA — Wan2.1',
+    desc: 'Genera videos desde texto con Wan2.1-T2V-1.3B. Requiere GPU RTX 3060+ o token HuggingFace. Uso individual.',
+    models: ['Wan2.1-T2V-1.3B', 'HF Inference API', 'RTX 3060+'],
+    inputLabel: 'Prompt del video (en inglés para mejores resultados)',
+    inputPlaceholder: 'A professional sales team celebrating a deal in a modern office, cinematic lighting, 4K quality...',
+    outputTabs: ['Video MP4'],
+    run: runAgentVideo,
+    isMediaAgent: true,
+    mediaType: 'video',
+    accentColor: '#00C2E0',
+  },
+  {
+    id: 'image',
+    icon: '🖼',
+    iconBg: 'linear-gradient(135deg,#0D0719,#160B2B)',
+    name: 'IMAGEN IA — FLUX.2',
+    desc: 'Genera imágenes fotorrealistas con FLUX.2-dev-NVFP4. Requiere GPU RTX 4070+ o token HuggingFace. Uso individual.',
+    models: ['FLUX.2-dev-NVFP4', 'HF Inference API', 'RTX 4070+'],
+    inputLabel: 'Prompt de la imagen (en inglés para mejores resultados)',
+    inputPlaceholder: 'A CEO shaking hands with a tech executive in a modern glass office, photorealistic, 8K, sharp focus...',
+    outputTabs: ['Imagen PNG'],
+    run: runAgentImage,
+    isMediaAgent: true,
+    mediaType: 'image',
+    accentColor: '#A78BFA',
+  },
 ];
 
 /* ── RENDER AGENTS ──────────────────────────────────── */
@@ -1074,7 +572,7 @@ function renderAgents() {
         <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
       </div>
       <div class="agent-workspace" id="ws-${a.id}" style="display:none">
-        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : `
+        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isMediaAgent ? renderMediaAgentForm(a) : `
           <div class="agent-input-row">
             <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
             <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
@@ -1437,538 +935,276 @@ function escHtml(s) {
   const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML;
 }
 
+
 /* ═══════════════════════════════════════════════════════════
-   VIDEO IA — Wan2.1-T2V-1.3B
-   Text-to-Video via HuggingFace Inference API + Local Server
+   MEDIA AGENTS — Video IA (Wan2.1) + Imagen IA (FLUX.2)
+   Agentes 8 y 9 del grid de Marketing IA
+   Exclusividad mutua: solo uno puede ejecutar a la vez
    ═══════════════════════════════════════════════════════════ */
 
-let videoTabActive = 'api';
-let videoPanelOpen = false;
-let imagePanelOpen = false;
-let imageTabActive  = 'api';
+let _mediaRunning = null; // 'video' | 'image' | null
+let _hfTokenShared = ''; // shared between video and image
 
-/* ── MUTUAL EXCLUSIVITY ─────────────────────────────────────── */
-function showExclusiveWarning(closing, opening) {
-  const bar = document.getElementById('ia-exclusive-bar');
-  const msg = document.getElementById('ia-exclusive-msg');
-  if (bar && msg) {
-    msg.textContent = `⚠️ Solo se puede usar un generador a la vez. ${closing} fue desactivado automáticamente al abrir ${opening}.`;
-    bar.classList.add('show');
-    setTimeout(() => bar.classList.remove('show'), 5000);
-  }
-}
-
-function closeVideoPanel(silent = false) {
-  if (!videoPanelOpen) return;
-  videoPanelOpen = false;
-  const panel = document.getElementById('video-panel');
-  const btn   = document.getElementById('video-llm-btn');
-  if (panel) panel.classList.remove('open');
-  if (btn)   btn.classList.remove('active');
-}
-
-function closeImagePanel(silent = false) {
-  if (!imagePanelOpen) return;
-  imagePanelOpen = false;
-  const panel = document.getElementById('image-panel');
-  const btn   = document.getElementById('image-llm-btn');
-  if (panel) panel.classList.remove('open');
-  if (btn)   btn.classList.remove('active');
-}
-
-async function detectGPU(target = 'video') {
-  const badge    = document.getElementById(target === 'image' ? 'img-gpu-status-badge' : 'gpu-status-badge');
-  const topBadge = document.getElementById('gpu-badge');
-
-  if (!navigator.gpu) {
-    if (badge) { badge.className = 'gpu-req-badge warn'; badge.textContent = '⚠️ WebGPU no disponible — usar HF Space'; }
-    if (topBadge) { topBadge.textContent = '⚠️ Sin WebGPU'; topBadge.style.display = 'inline-flex'; }
-    return;
-  }
-  try {
-    const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-    if (!adapter) {
-      if (badge) { badge.className = 'gpu-req-badge error'; badge.textContent = '❌ GPU no detectada'; }
-      return;
-    }
-    const info = await adapter.requestAdapterInfo().catch(() => null);
-    const limits = adapter.limits;
-    const vram_gb = limits?.maxBufferSize ? (limits.maxBufferSize / (1024**3)).toFixed(1) : '?';
-    const gpuName = info?.device || info?.description || 'GPU Detectada';
-
-    // Check if GPU is likely RTX 3060 or better (>= 8GB VRAM)
-    const vramNum = parseFloat(vram_gb);
-    const isCompatible = isNaN(vramNum) ? true : vramNum >= 7.5;
-
-    if (badge) {
-      badge.className = `gpu-req-badge ${isCompatible ? 'ok' : 'warn'}`;
-      badge.textContent = isCompatible
-        ? `✅ GPU OK — ${gpuName} (${vram_gb}GB)`
-        : `⚠️ GPU ${gpuName} — Necesita RTX 3060+ (8GB VRAM)`;
-    }
-    if (topBadge) {
-      topBadge.textContent = `GPU: ${gpuName}`;
-      topBadge.style.display = 'inline-flex';
-      if (isCompatible) { topBadge.style.background = 'rgba(16,185,129,.1)'; topBadge.style.color = '#10B981'; }
-    }
-  } catch(e) {
-    if (badge) { badge.className = 'gpu-req-badge warn'; badge.textContent = '⚠️ Solo corre en GPU RTX 3060 o superior'; }
-  }
-}
-
-function toggleVideoPanel() {
-  if (videoPanelOpen) {
-    // Close video panel
-    closeVideoPanel();
-    document.getElementById('video-llm-btn')?.classList.remove('active');
-    updateActiveLabel();
-    return;
-  }
-  // Opening video — close image if active
-  if (imagePanelOpen) {
-    closeImagePanel();
-    showExclusiveWarning('Imagen IA (FLUX.2)', 'Video IA (Wan2.1)');
-  }
-  videoPanelOpen = true;
-  const panel = document.getElementById('video-panel');
-  const btn   = document.getElementById('video-llm-btn');
-  if (panel) { panel.classList.add('open'); }
-  if (btn)   { btn.classList.add('active'); }
-  updateActiveLabel('video');
-  detectGPU('video');
-}
-
-function toggleImagePanel() {
-  if (imagePanelOpen) {
-    closeImagePanel();
-    document.getElementById('image-llm-btn')?.classList.remove('active');
-    updateActiveLabel();
-    return;
-  }
-  // Opening image — close video if active
-  if (videoPanelOpen) {
-    closeVideoPanel();
-    showExclusiveWarning('Video IA (Wan2.1)', 'Imagen IA (FLUX.2)');
-  }
-  imagePanelOpen = true;
-  const panel = document.getElementById('image-panel');
-  const btn   = document.getElementById('image-llm-btn');
-  if (panel) { panel.classList.add('open'); }
-  if (btn)   { btn.classList.add('active'); }
-  updateActiveLabel('image');
-  detectGPU('image');
-}
-
-function updateActiveLabel(mode) {
-  const lbl = document.getElementById('active-ia-label');
-  if (!lbl) return;
-  if (!mode) { lbl.style.display = 'none'; return; }
-  lbl.style.display = 'inline-flex';
-  if (mode === 'video') {
-    lbl.style.background = 'rgba(0,194,224,.1)'; lbl.style.color = '#00C2E0';
-    lbl.style.border = '1px solid rgba(0,194,224,.25)'; lbl.textContent = '● Video IA activo';
-  } else {
-    lbl.style.background = 'rgba(167,139,250,.1)'; lbl.style.color = '#A78BFA';
-    lbl.style.border = '1px solid rgba(167,139,250,.25)'; lbl.textContent = '● Imagen IA activo';
-  }
-}
-
-function switchVideoTab(tab, btn) {
-  videoTabActive = tab;
-  document.querySelectorAll('.video-tab').forEach(b => b.classList.toggle('active', b.dataset.vtab === tab));
-  ['api','local','space'].forEach(t => {
-    const el = document.getElementById(`vtab-${t}`);
-    if (el) el.style.display = t === tab ? 'block' : 'none';
-  });
-}
-
-async function generateVideo() {
-  const prompt    = document.getElementById('video-prompt')?.value.trim();
-  const negPrompt = document.getElementById('video-neg-prompt')?.value.trim() || '';
-  const frames    = parseInt(document.getElementById('video-frames')?.value || '48');
-  const guidance  = parseFloat(document.getElementById('video-guidance')?.value || '6');
-  const token     = document.getElementById('video-hf-token')?.value.trim();
-  const resMode   = document.getElementById('video-res')?.value || '720p';
-
-  if (!prompt) { notify('Escribe un prompt para el video', 'warning'); return; }
-  if (!token)  { notify('Necesitas un HuggingFace token para usar la API', 'warning'); return; }
-
-  const resMap = { '480p':[480,832], '720p':[720,1280], 'landscape':[832,480] };
-  const [h, w] = resMap[resMode] || [720,1280];
-
-  setVideoGenerating(true);
-  showVideoProgress(0, 'Conectando con HuggingFace Inference API…');
-
-  try {
-    showVideoProgress(10, 'Enviando prompt al modelo Wan2.1-T2V-1.3B…');
-
-    // HuggingFace Inference API — text-to-video
-    const response = await fetch(
-      'https://api-inference.huggingface.co/models/Wan-AI/Wan2.1-T2V-1.3B',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'X-Wait-For-Model': 'true',
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            negative_prompt: negPrompt,
-            num_frames: frames,
-            guidance_scale: guidance,
-            height: h, width: w,
-            num_inference_steps: 30,
-          }
-        }),
-        signal: AbortSignal.timeout(300000), // 5 min timeout
-      }
-    );
-
-    showVideoProgress(50, 'Modelo procesando — puede tomar 1-3 minutos…');
-
-    if (!response.ok) {
-      const errText = await response.text().catch(()=>'');
-      const errJson = JSON.parse(errText || '{}');
-      if (response.status === 503) {
-        throw new Error('Modelo cargando en HuggingFace. Intenta en 30-60 segundos o usa un HF Space.');
-      }
-      if (response.status === 401) {
-        throw new Error('Token inválido. Ve a huggingface.co/settings/tokens para obtener uno.');
-      }
-      throw new Error(errJson.error || `Error ${response.status}: ${response.statusText}`);
-    }
-
-    showVideoProgress(85, 'Video generado, descargando…');
-    const blob = await response.blob();
-    const url  = URL.createObjectURL(blob);
-
-    showVideoProgress(100, '✅ ¡Video listo!');
-    renderVideoResult(url, prompt);
-    notify('🎬 Video generado con éxito', 'success');
-
-  } catch(e) {
-    setVideoGenerating(false);
-    const output = document.getElementById('video-output');
-    if (output) {
-      output.className = 'video-output-area show';
-      output.innerHTML = `
-        <div style="padding:16px;font-family:'Inter',sans-serif">
-          <div style="font-size:13px;font-weight:700;color:#EF4444;margin-bottom:8px">❌ Error al generar video</div>
-          <div style="font-size:12px;color:#7E8FA8;margin-bottom:12px">${escH(e.message)}</div>
-          <div style="font-size:11px;color:#4A5568">
-            <strong style="color:#00C2E0">Alternativas:</strong><br>
-            • Usa la pestaña "🚀 HF Space" para generar sin token<br>
-            • Verifica que tu token tenga permisos de "read" en HuggingFace<br>
-            • El modelo puede estar cargando — espera 1 min y reintenta<br>
-            • Para uso intensivo: instala el servidor local (pestaña "🖥 Servidor Local")
-          </div>
-        </div>`;
-    }
-    return;
-  }
-  setVideoGenerating(false);
-}
-
-async function generateVideoLocal() {
-  const prompt = document.getElementById('video-prompt-local')?.value.trim();
-  const url    = document.getElementById('video-local-url')?.value.trim() || 'http://localhost:7860/generate';
-  const frames = parseInt(document.getElementById('video-frames-local')?.value || '48');
-
-  if (!prompt) { notify('Escribe un prompt', 'warning'); return; }
-
-  setVideoGenerating(true, 'video-gen-btn');
-  showVideoProgress(0, 'Conectando con servidor local…');
-
-  try {
-    showVideoProgress(20, 'Generando video en tu GPU local…');
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, num_frames: frames, guidance_scale: 6 }),
-      signal: AbortSignal.timeout(300000),
-    });
-    if (!res.ok) throw new Error(`Error ${res.status} en servidor local`);
-    showVideoProgress(90, 'Descargando video…');
-    const data = await res.json();
-    const vidUrl = data.video
-      ? 'data:video/mp4;base64,' + data.video
-      : data.url || null;
-    if (!vidUrl) throw new Error('El servidor no devolvió video');
-    showVideoProgress(100, '✅ ¡Video listo!');
-    renderVideoResult(vidUrl, prompt);
-    notify('🎬 Video generado en tu GPU', 'success');
-  } catch(e) {
-    setVideoGenerating(false);
-    const output = document.getElementById('video-output');
-    if (output) {
-      output.className = 'video-output-area show';
-      output.innerHTML = `<div style="padding:16px;font-size:12px;color:#7E8FA8;font-family:'Inter',sans-serif">
-        ❌ ${escH(e.message)}<br><br>
-        Asegúrate de que el servidor local esté corriendo en ${url}
-      </div>`;
-    }
-  }
-  setVideoGenerating(false);
-}
-
-function setVideoGenerating(busy, btnId = 'video-gen-btn') {
-  const btn = document.getElementById(btnId) || document.getElementById('video-gen-btn');
-  const txt = document.getElementById('video-gen-text');
-  if (btn) { btn.disabled = busy; }
-  if (txt) { txt.textContent = busy ? '⏳ Generando video…' : 'Generar Video con IA'; }
-  const wrap = document.getElementById('video-progress-wrap');
-  if (!busy && wrap) { setTimeout(() => { if (wrap) wrap.style.display = 'none'; }, 2000); }
-}
-
-function showVideoProgress(pct, msg) {
-  const output = document.getElementById('video-output');
-  const wrap   = document.getElementById('video-progress-wrap');
-  const fill   = document.getElementById('video-prog-fill');
-  const status = document.getElementById('video-status-text');
-  if (output) output.className = 'video-output-area show';
-  if (wrap)   wrap.style.display = 'block';
-  if (fill)   fill.style.width = pct + '%';
-  if (status) status.textContent = msg;
-  // Clear previous result during generation
-  const result = document.getElementById('video-result');
-  if (result && pct < 100) result.innerHTML = `<div class="generating-shimmer" style="height:180px;border-radius:6px;margin-top:8px"></div>`;
-}
-
-function renderVideoResult(url, prompt) {
-  const result = document.getElementById('video-result');
-  if (!result) return;
-  result.innerHTML = `
-    <div style="margin-top:10px">
-      <video controls autoplay loop style="width:100%;border-radius:6px;max-height:400px;background:#000">
-        <source src="${url}" type="video/mp4">
-        Tu browser no soporta video HTML5.
-      </video>
-      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <a href="${url}" download="wan21-metatronix-${Date.now()}.mp4"
-          style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:rgba(0,194,224,.12);color:#00C2E0;border:1px solid rgba(0,194,224,.2);border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;font-family:'Inter',sans-serif">
-          ⬇ Descargar MP4
-        </a>
-        <span style="font-size:11px;color:#4A5568;font-family:'Inter',sans-serif;flex:1">
-          "${prompt.slice(0,60)}${prompt.length>60?'…':''}"
-        </span>
+function renderMediaAgentForm(a) {
+  const isVideo = a.mediaType === 'video';
+  const color   = a.accentColor || '#00C2E0';
+  const steps   = isVideo ? `
+    <div class="agent-input-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:${color};letter-spacing:.05em">FRAMES</label>
+        <select id="media-${a.id}-frames" class="crm-select" style="margin-top:4px;font-size:11px;height:30px">
+          <option value="24">24 (~1s)</option>
+          <option value="48" selected>48 (~2s)</option>
+          <option value="81">81 (~3s)</option>
+        </select>
       </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:${color};letter-spacing:.05em">RESOLUCIÓN</label>
+        <select id="media-${a.id}-res" class="crm-select" style="margin-top:4px;font-size:11px;height:30px">
+          <option value="480x832">480×832 (vertical)</option>
+          <option value="720x1280" selected>720×1280 (HD)</option>
+          <option value="832x480">832×480 (landscape)</option>
+        </select>
+      </div>
+    </div>` : `
+    <div class="agent-input-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:${color};letter-spacing:.05em">RESOLUCIÓN</label>
+        <select id="media-${a.id}-res" class="crm-select" style="margin-top:4px;font-size:11px;height:30px">
+          <option value="512x512">512×512 (rápido)</option>
+          <option value="1024x1024" selected>1024×1024</option>
+          <option value="1280x720">1280×720 (landscape)</option>
+          <option value="720x1280">720×1280 (retrato)</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:${color};letter-spacing:.05em">CANTIDAD</label>
+        <select id="media-${a.id}-count" class="crm-select" style="margin-top:4px;font-size:11px;height:30px">
+          <option value="1" selected>1 imagen</option>
+          <option value="2">2 imágenes</option>
+          <option value="4">4 imágenes</option>
+        </select>
+      </div>
+    </div>`;
+  return `
+    <div style="background:rgba(0,0,0,.15);border-radius:6px;padding:8px 10px;margin-bottom:8px;border:1px solid rgba(255,255,255,.06)">
+      <div style="font-size:9px;font-weight:700;color:#EF4444;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">
+        ⚠️ Uso individual — desactiva el otro generador media si está corriendo
+      </div>
+      <div style="font-size:10px;color:${color};font-weight:600">
+        ${isVideo ? 'GPU RTX 3060+ / HF Token' : 'GPU RTX 4070+ (NVFP4) / HF Token'}
+        &nbsp;·&nbsp;
+        <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:${color}">Obtener token gratis →</a>
+      </div>
+    </div>
+    <div class="agent-input-row">
+      <label style="font-size:10px;font-weight:700;color:${color};letter-spacing:.05em">PROMPT (inglés)</label>
+      <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"
+        style="border-color:${color}33;font-size:12px"></textarea>
+    </div>
+    <div class="agent-input-row">
+      <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em">NEGATIVE PROMPT (opcional)</label>
+      <input id="media-${a.id}-neg" class="crm-input" style="font-size:11px;height:30px"
+        placeholder="blurry, low quality, watermark" value="blurry, low quality, distorted, watermark">
+    </div>
+    ${steps}
+    <div class="agent-input-row">
+      <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em">
+        HUGGINGFACE TOKEN
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#4A5568"> — o usa HF Space si no tienes</span>
+      </label>
+      <input type="password" id="media-hf-token" class="crm-input"
+        style="font-size:11px;height:30px;font-family:monospace"
+        placeholder="hf_xxxxxxxxxxxxxxxxxx"
+        oninput="_hfTokenShared=this.value;document.querySelectorAll('[id=media-hf-token]').forEach(el=>el.value=this.value)"
+        value="${_hfTokenShared}">
+    </div>
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+      <a href="${isVideo ? 'https://huggingface.co/spaces/Wan-AI/Wan2.1' : 'https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev'}"
+        target="_blank"
+        style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:5px;
+               background:rgba(255,255,255,.06);color:#7E8FA8;border:1px solid rgba(255,255,255,.1);
+               text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+        🚀 Usar HF Space (gratis)
+      </a>
     </div>`;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   IMAGE IA — FLUX.2-dev-NVFP4
-   Text-to-Image via HuggingFace Inference API + Local Server
-   ═══════════════════════════════════════════════════════════ */
-
-function switchImageTab(tab, btn) {
-  imageTabActive = tab;
-  document.querySelectorAll('[data-itab]').forEach(b => b.classList.toggle('active', b.dataset.itab === tab));
-  ['api','local','space'].forEach(t => {
-    const el = document.getElementById(`itab-${t}`);
-    if (el) el.style.display = t === tab ? 'block' : 'none';
-  });
-}
-
-async function generateImage() {
-  const prompt    = document.getElementById('img-prompt')?.value.trim();
-  const negPrompt = document.getElementById('img-neg-prompt')?.value.trim() || '';
-  const resolution= document.getElementById('img-res')?.value || '1024x1024';
-  const guidance  = parseFloat(document.getElementById('img-guidance')?.value || '3.5');
-  const steps     = parseInt(document.getElementById('img-steps')?.value || '28');
-  const token     = document.getElementById('img-hf-token')?.value.trim();
-  const seedRaw   = document.getElementById('img-seed')?.value.trim();
-  const count     = parseInt(document.getElementById('img-count')?.value || '1');
-
-  if (!prompt) { notify('Escribe un prompt para la imagen', 'warning'); return; }
-  if (!token)  { notify('Necesitas un HuggingFace token para usar la API', 'warning'); return; }
-
-  const [w, h] = resolution.split('x').map(Number);
-
-  setImgGenerating(true);
-  showImgProgress(0, 'Conectando con HuggingFace FLUX.2-dev-NVFP4…');
-
-  try {
-    showImgProgress(15, 'Enviando prompt al modelo FLUX.2…');
-
-    const body = {
-      inputs: prompt,
-      parameters: {
-        negative_prompt: negPrompt,
-        height: h, width: w,
-        guidance_scale: guidance,
-        num_inference_steps: steps,
-        num_images_per_prompt: count,
-      }
-    };
-    if (seedRaw) body.parameters.seed = parseInt(seedRaw);
-
-    const response = await fetch(
-      'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'X-Wait-For-Model': 'true',
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(180000), // 3 min
-      }
-    );
-
-    showImgProgress(60, 'Modelo generando imagen…');
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '{}');
-      let errJson = {};
-      try { errJson = JSON.parse(errText); } catch {}
-      if (response.status === 503) {
-        throw new Error('Modelo cargando. Espera 30-60 segundos e intenta de nuevo, o usa un HF Space.');
-      }
-      if (response.status === 401) {
-        throw new Error('Token inválido o sin permisos. Verifica en huggingface.co/settings/tokens');
-      }
-      if (response.status === 422) {
-        throw new Error('Parámetros inválidos: ' + (errJson.error || errText.slice(0,120)));
-      }
-      throw new Error(errJson.error || errJson.message || `Error ${response.status}: ${response.statusText}`);
-    }
-
-    showImgProgress(85, 'Imagen lista, procesando…');
-    const blob = await response.blob();
-    const url  = URL.createObjectURL(blob);
-
-    showImgProgress(100, '✅ ¡Imagen generada!');
-    renderImageResult([url], prompt, resolution);
-    notify('🖼 Imagen generada con FLUX.2 ✓', 'success');
-
-  } catch(e) {
-    setImgGenerating(false);
-    const output = document.getElementById('img-output');
-    if (output) {
-      output.className = 'video-output-area show';
-      output.innerHTML = `
-        <div style="padding:16px;font-family:'Inter',sans-serif">
-          <div style="font-size:13px;font-weight:700;color:#EF4444;margin-bottom:8px">❌ Error al generar imagen</div>
-          <div style="font-size:12px;color:#7E8FA8;margin-bottom:12px">${escH(e.message)}</div>
-          <div style="font-size:11px;color:#4A5568">
-            <strong style="color:#A78BFA">Alternativas:</strong><br>
-            • Usa la pestaña "🚀 HF Space" para generar sin token<br>
-            • Verifica permisos del token en HuggingFace<br>
-            • El modelo puede estar cargando — espera 1 minuto
-          </div>
-        </div>`;
-    }
+async function runAgentVideo(id, output) {
+  // Mutual exclusivity check
+  if (_mediaRunning === 'image') {
+    output.innerHTML = `<div style="padding:12px;font-size:12px;color:#F59E0B;font-family:'Inter',sans-serif;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:6px">
+      ⚠️ <strong>Imagen IA está corriendo.</strong> Detén la generación de imagen antes de usar Video IA.<br>
+      <span style="font-size:11px;color:#7E8FA8">Solo se puede usar un generador de media a la vez.</span>
+    </div>`;
     return;
   }
-  setImgGenerating(false);
-}
+  const prompt   = getInput('video');
+  const token    = document.getElementById('media-hf-token')?.value.trim() || _hfTokenShared;
+  const negPrompt= document.getElementById('media-video-neg')?.value.trim() || 'blurry, low quality';
+  const frames   = parseInt(document.getElementById('media-video-frames')?.value || '48');
+  const res      = (document.getElementById('media-video-res')?.value || '720x1280').split('x');
+  const [w, h]   = res.map(Number);
 
-async function generateImageLocal() {
-  const prompt     = document.getElementById('img-prompt-local')?.value.trim();
-  const serverUrl  = document.getElementById('img-local-url')?.value.trim() || 'http://localhost:7861/generate';
-  const resolution = document.getElementById('img-res-local')?.value || '1024x1024';
+  if (!prompt) { output.innerHTML = '<div style="color:var(--danger);font-size:12px">Escribe un prompt para el video</div>'; return; }
+  if (!token)  { output.innerHTML = `<div style="font-size:12px;color:#F59E0B;padding:10px;background:rgba(245,158,11,.08);border-radius:6px">
+    Necesitas un <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#00C2E0">token de HuggingFace</a> para generar video.<br>
+    O usa el botón "🚀 Usar HF Space (gratis)" arriba.
+  </div>`; return; }
 
-  if (!prompt) { notify('Escribe un prompt', 'warning'); return; }
+  _mediaRunning = 'video';
+  output.innerHTML = `<div style="font-size:12px;color:#00C2E0;font-family:'Inter',sans-serif;padding:8px 0">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div class="agent-spinner"></div> Enviando a HuggingFace Wan2.1-T2V…
+    </div>
+    <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
+      <div id="vid-fill" style="height:100%;background:linear-gradient(90deg,#00C2E0,#14B8A6);border-radius:2px;width:15%;transition:width .5s"></div>
+    </div>
+  </div>`;
 
-  setImgGenerating(true);
-  showImgProgress(0, 'Conectando con servidor local FLUX…');
+  const setP = (pct, msg) => {
+    const f = document.getElementById('vid-fill');
+    if (f) f.style.width = pct + '%';
+    output.querySelector('div > div:first-child').textContent = msg;
+  };
 
   try {
-    showImgProgress(25, 'Generando imagen en tu GPU local…');
-    const res = await fetch(serverUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, resolution, guidance_scale: 3.5, num_steps: 28, count: 1 }),
-      signal: AbortSignal.timeout(180000),
-    });
-    if (!res.ok) throw new Error(`Error ${res.status} en servidor local`);
-    showImgProgress(90, 'Recibiendo imagen…');
-    const data = await res.json();
-    const imgs  = data.images || (data.image ? [data.image] : []);
-    if (!imgs.length) throw new Error('El servidor no devolvió imágenes');
-    const urls = imgs.map(b64 => `data:image/png;base64,${b64}`);
-    showImgProgress(100, '✅ ¡Imagen lista!');
-    renderImageResult(urls, prompt, resolution);
-    notify('🖼 Imagen generada en tu GPU local ✓', 'success');
-  } catch(e) {
-    setImgGenerating(false);
-    const output = document.getElementById('img-output');
-    if (output) {
-      output.className = 'video-output-area show';
-      output.innerHTML = `<div style="padding:16px;font-size:12px;color:#7E8FA8;font-family:'Inter',sans-serif">
-        ❌ ${escH(e.message)}<br><br>Verifica que el servidor esté corriendo en ${serverUrl}</div>`;
+    setP(20, '📡 Conectando con api-inference.huggingface.co…');
+    const resp = await fetch(
+      'https://api-inference.huggingface.co/models/Wan-AI/Wan2.1-T2V-1.3B',
+      { method:'POST',
+        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json','X-Wait-For-Model':'true'},
+        body: JSON.stringify({ inputs: prompt, parameters: { negative_prompt: negPrompt, num_frames: frames, height: h, width: w, guidance_scale: 6 } }),
+        signal: AbortSignal.timeout(300000) }
+    );
+    setP(60, '🎬 Modelo procesando video (1-3 min)…');
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({}));
+      if (resp.status===503) throw new Error('Modelo cargando en HuggingFace. Espera 60s e intenta de nuevo.');
+      if (resp.status===401) throw new Error('Token inválido. Verifica en huggingface.co/settings/tokens');
+      throw new Error(e.error || `Error ${resp.status}`);
     }
-  }
-  setImgGenerating(false);
-}
-
-function setImgGenerating(busy) {
-  const btn = document.getElementById('img-gen-btn');
-  const txt = document.getElementById('img-gen-text');
-  if (btn) btn.disabled = busy;
-  if (txt) txt.textContent = busy ? '⏳ Generando imagen…' : 'Generar Imagen con FLUX.2';
-  const wrap = document.getElementById('img-progress-wrap');
-  if (!busy && wrap) { setTimeout(() => { if (wrap) wrap.style.display = 'none'; }, 2000); }
-}
-
-function showImgProgress(pct, msg) {
-  const output = document.getElementById('img-output');
-  const wrap   = document.getElementById('img-progress-wrap');
-  const fill   = document.getElementById('img-prog-fill');
-  const status = document.getElementById('img-status-text');
-  const result = document.getElementById('img-result');
-  if (output) output.className = 'video-output-area show';
-  if (wrap)   wrap.style.display = 'block';
-  if (fill)   fill.style.width = pct + '%';
-  if (status) status.textContent = msg;
-  if (result && pct < 100) {
-    result.innerHTML = `<div class="generating-shimmer" style="height:200px;width:200px;border-radius:8px;border:1px solid rgba(167,139,250,.2)"></div>`.repeat(1);
-  }
-}
-
-function renderImageResult(urls, prompt, resolution) {
-  const result = document.getElementById('img-result');
-  if (!result) return;
-  result.innerHTML = urls.map((url, i) => `
-    <div style="flex:1;min-width:200px;position:relative">
-      <img src="${url}" alt="${escH(prompt)}"
-        style="width:100%;border-radius:8px;display:block;border:1px solid rgba(167,139,250,.2)"
-        onerror="this.style.display='none'">
-      <div style="margin-top:7px;display:flex;gap:6px">
-        <a href="${url}" download="flux2-metatronix-${Date.now()}-${i+1}.png"
-          style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 10px;background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.2);border-radius:6px;text-decoration:none;font-size:11px;font-weight:600;font-family:'Inter',sans-serif">
-          ⬇ PNG ${resolution}
-        </a>
-        <button onclick="copyImgToClipboard('${url}')"
-          style="padding:6px 10px;background:rgba(255,255,255,.06);color:#7E8FA8;border:1px solid rgba(255,255,255,.1);border-radius:6px;cursor:pointer;font-size:11px;font-family:'Inter',sans-serif">
-          📋 Copiar
-        </button>
-      </div>
-    </div>`).join('');
-  result.style.display = 'flex';
-}
-
-async function copyImgToClipboard(url) {
-  try {
-    const res  = await fetch(url);
-    const blob = await res.blob();
-    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
-    notify('Imagen copiada al portapapeles ✓', 'success');
+    setP(90, '⬇ Descargando video…');
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    setP(100, '✅ Video listo');
+    output.innerHTML = `
+      <div style="margin-top:6px">
+        <video controls autoplay loop style="width:100%;border-radius:8px;max-height:360px;background:#000;border:1px solid rgba(0,194,224,.2)">
+          <source src="${url}" type="video/mp4">
+        </video>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <a href="${url}" download="wan21-metatronix-${Date.now()}.mp4"
+            style="padding:6px 14px;background:rgba(0,194,224,.12);color:#00C2E0;border:1px solid rgba(0,194,224,.25);border-radius:6px;text-decoration:none;font-size:11px;font-weight:700;font-family:'Inter',sans-serif">
+            ⬇ Descargar MP4
+          </a>
+          <span style="font-size:10px;color:#4A5568;align-self:center;font-family:'JetBrains Mono',monospace">${frames} frames · ${w}×${h}</span>
+        </div>
+      </div>`;
+    if (typeof Notiflix!=='undefined') Notiflix.Notify.success('🎬 Video generado ✓');
   } catch(e) {
-    notify('No se pudo copiar — descárgala manualmente', 'warning');
+    output.innerHTML = `
+      <div style="padding:12px;font-size:12px;font-family:'Inter',sans-serif">
+        <div style="color:#EF4444;font-weight:700;margin-bottom:6px">❌ ${escHtml(e.message)}</div>
+        <div style="color:#4A5568;font-size:11px">
+          • Sin token → usa <a href="https://huggingface.co/spaces/Wan-AI/Wan2.1" target="_blank" style="color:#00C2E0">HF Space</a><br>
+          • El modelo puede estar cargando — espera 1 min<br>
+          • Para uso local instala wan_server.py con Flask + Diffusers
+        </div>
+      </div>`;
+  } finally {
+    _mediaRunning = null;
   }
 }
+
+async function runAgentImage(id, output) {
+  // Mutual exclusivity check
+  if (_mediaRunning === 'video') {
+    output.innerHTML = `<div style="padding:12px;font-size:12px;color:#F59E0B;font-family:'Inter',sans-serif;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:6px">
+      ⚠️ <strong>Video IA está corriendo.</strong> Detén la generación de video antes de usar Imagen IA.<br>
+      <span style="font-size:11px;color:#7E8FA8">Solo se puede usar un generador de media a la vez.</span>
+    </div>`;
+    return;
+  }
+  const prompt   = getInput('image');
+  const token    = document.getElementById('media-hf-token')?.value.trim() || _hfTokenShared;
+  const negPrompt= document.getElementById('media-image-neg')?.value.trim() || 'blurry, low quality';
+  const res      = (document.getElementById('media-image-res')?.value || '1024x1024').split('x');
+  const count    = parseInt(document.getElementById('media-image-count')?.value || '1');
+  const [w, h]   = res.map(Number);
+
+  if (!prompt) { output.innerHTML = '<div style="color:var(--danger);font-size:12px">Escribe un prompt para la imagen</div>'; return; }
+  if (!token)  { output.innerHTML = `<div style="font-size:12px;color:#F59E0B;padding:10px;background:rgba(245,158,11,.08);border-radius:6px">
+    Necesitas un <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#A78BFA">token de HuggingFace</a> para generar imágenes.
+  </div>`; return; }
+
+  _mediaRunning = 'image';
+  output.innerHTML = `<div style="font-size:12px;color:#A78BFA;font-family:'Inter',sans-serif;padding:8px 0">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div class="agent-spinner" style="border-top-color:#A78BFA"></div> Enviando a HuggingFace FLUX.2…
+    </div>
+    <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
+      <div id="img-fill" style="height:100%;background:linear-gradient(90deg,#7C3AED,#A78BFA);border-radius:2px;width:15%;transition:width .5s"></div>
+    </div>
+  </div>`;
+
+  const setP = (pct, msg) => {
+    const f = document.getElementById('img-fill');
+    if (f) f.style.width = pct + '%';
+    const d = output.querySelector('div > div:first-child');
+    if (d) d.textContent = msg;
+  };
+
+  try {
+    setP(20, '📡 Conectando con FLUX.2-dev-NVFP4…');
+    const body = {
+      inputs: prompt,
+      parameters: { negative_prompt: negPrompt, height: h, width: w, guidance_scale: 3.5, num_inference_steps: 28, num_images_per_prompt: count }
+    };
+    const resp = await fetch(
+      'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev',
+      { method:'POST',
+        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json','X-Wait-For-Model':'true'},
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(180000) }
+    );
+    setP(65, '🖼 Modelo generando imagen…');
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({}));
+      if (resp.status===503) throw new Error('Modelo cargando. Espera 30-60 segundos.');
+      if (resp.status===401) throw new Error('Token inválido. Verifica en huggingface.co/settings/tokens');
+      throw new Error(e.error || `Error ${resp.status}`);
+    }
+    setP(90, '⬇ Procesando imagen…');
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    setP(100, '✅ Imagen lista');
+    output.innerHTML = `
+      <div style="margin-top:6px">
+        <img src="${url}" style="width:100%;border-radius:8px;display:block;max-height:400px;object-fit:contain;border:1px solid rgba(167,139,250,.2)">
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <a href="${url}" download="flux2-metatronix-${Date.now()}.png"
+            style="padding:6px 14px;background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.25);border-radius:6px;text-decoration:none;font-size:11px;font-weight:700;font-family:'Inter',sans-serif">
+            ⬇ Descargar PNG
+          </a>
+          <span style="font-size:10px;color:#4A5568;align-self:center;font-family:'JetBrains Mono',monospace">${w}×${h} · ${count} img</span>
+        </div>
+      </div>`;
+    if (typeof Notiflix!=='undefined') Notiflix.Notify.success('🖼 Imagen generada ✓');
+  } catch(e) {
+    output.innerHTML = `
+      <div style="padding:12px;font-size:12px;font-family:'Inter',sans-serif">
+        <div style="color:#EF4444;font-weight:700;margin-bottom:6px">❌ ${escHtml(e.message)}</div>
+        <div style="color:#4A5568;font-size:11px">
+          • Sin token → usa <a href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev" target="_blank" style="color:#A78BFA">HF Space</a><br>
+          • El modelo puede estar cargando — espera 1 min
+        </div>
+      </div>`;
+  } finally {
+    _mediaRunning = null;
+  }
+}
+
 
 init();
 </script>
-
-<script src="/assets/agent.js"></script>
-<!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js"></script>
-<!-- TEAM CHAT -->
-<script src="/assets/teamchat.js"></script>
-</body>
-</html>
