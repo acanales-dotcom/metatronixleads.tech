@@ -181,6 +181,18 @@ h1,h2,h3,.headline {
 .crm-brand { font-family:var(--font-title); font-size:1.15rem; letter-spacing:.14em; color:#fff; margin-right:28px; }
 .crm-topnav-left { display:flex; align-items:center; gap:0; }
 .crm-topnav-right { display:flex; align-items:center; gap:12px; }
+/* Role badge in header */
+.role-badge {
+  display:inline-flex; align-items:center; gap:5px; padding:4px 10px;
+  border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.04em;
+  background:rgba(255,255,255,.15); color:#fff; cursor:pointer;
+  transition:background .15s; border:1px solid rgba(255,255,255,.2);
+}
+.role-badge:hover { background:rgba(255,255,255,.25); }
+.role-badge.role-admin     { border-color:var(--cyan); color:var(--cyan); }
+.role-badge.role-ejecutivo { border-color:#a78bfa; color:#a78bfa; }
+.role-badge.role-operaciones{ border-color:#fb923c; color:#fb923c; }
+.role-badge.role-finanzas  { border-color:#34d399; color:#34d399; }
 .crm-nav { display:flex; gap:2px; }
 .crm-navbtn {
   display:flex; align-items:center; gap:6px; padding:7px 14px;
@@ -257,51 +269,121 @@ h1,h2,h3,.headline {
 
 /* ── KANBAN ─────────────────────────────────── */
 .kanban-wrap { flex:1; overflow-x:auto; overflow-y:hidden; padding:16px 20px 0; }
+/* ── KANBAN BOARD ───────────────────────────── */
 .kanban9 {
-  display:flex; gap:12px; min-height:calc(100vh - 200px);
-  min-width:max-content; padding-bottom:20px; align-items:flex-start;
+  display:flex; gap:10px; min-height:calc(100vh - 196px);
+  min-width:max-content; padding:0 20px 24px; align-items:flex-start;
 }
+
+/* Column */
 .kb-col {
-  width:210px; flex-shrink:0; background:var(--surface2);
-  border:1px solid var(--border); border-radius:var(--radius-lg);
-  display:flex; flex-direction:column; max-height:calc(100vh - 220px);
+  width:240px; flex-shrink:0;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  display:flex; flex-direction:column;
+  max-height:calc(100vh - 196px);
+  overflow:hidden;
+  box-shadow:0 1px 4px rgba(8,37,95,.06);
 }
+
+/* Column header — Navy background, Bebas Neue */
 .kb-col-header {
-  padding:10px 12px 8px; border-bottom:1px solid var(--border);
-  display:flex; justify-content:space-between; align-items:center;
-  border-radius:var(--radius-lg) var(--radius-lg) 0 0; flex-shrink:0;
+  padding:10px 14px;
+  background:var(--navy);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  flex-shrink:0;
+  display:flex; flex-direction:column; gap:4px;
 }
 .kb-col-title {
-  font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-  display:flex; align-items:center; gap:5px;
+  font-family:var(--font-title);
+  font-size:1.05rem; letter-spacing:.08em;
+  color:#fff; display:flex; align-items:center; gap:6px;
+}
+.kb-col-meta {
+  display:flex; justify-content:space-between; align-items:center;
 }
 .kb-col-count {
-  font-size:11px; color:var(--text-faint); background:var(--surface3);
+  font-size:11px; color:rgba(255,255,255,.55);
+  background:rgba(255,255,255,.12);
   border-radius:10px; padding:1px 7px; font-family:var(--font-mono);
 }
-.kb-col-total { font-size:10px; color:var(--text-faint); padding:3px 12px 6px; font-family:var(--font-mono); flex-shrink:0; }
-.kb-cards {
-  flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;
-  min-height:80px;
+.kb-col-total {
+  font-size:11px; color:var(--cyan);
+  font-family:var(--font-mono); font-weight:600;
 }
-.kb-cards.drag-over { background:rgba(26,111,255,.06); border-radius:0 0 var(--radius-lg) var(--radius-lg); }
+
+/* Cards container — independent vertical scroll */
+.kb-cards {
+  flex:1; overflow-y:auto; padding:8px;
+  display:flex; flex-direction:column; gap:6px;
+  min-height:60px; scrollbar-width:thin;
+}
+.kb-cards::-webkit-scrollbar { width:4px; }
+.kb-cards::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+.kb-cards.drag-over { background:rgba(26,111,255,.06); }
 
 /* Kanban card */
 .kb-card {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius); padding:10px 11px; cursor:grab;
-  transition:border-color .15s, box-shadow .15s, transform .1s;
-  user-select:none; position:relative;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:11px 12px;
+  cursor:grab;
+  transition:border-color 150ms, box-shadow 150ms, transform 100ms;
+  user-select:none;
+  position:relative;
 }
-.kb-card:hover { border-color:var(--blue); box-shadow:var(--shadow-hover); transform:translateY(-1px); }
-.kb-card.sortable-ghost { opacity:.4; }
-.kb-card.sortable-chosen { box-shadow:0 8px 24px rgba(26,111,255,.25); }
-.kb-card-company { font-weight:600; font-size:13px; color:var(--dark); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.kb-card-contact { font-size:11px; color:var(--text-muted); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.kb-card-footer { display:flex; justify-content:space-between; align-items:center; gap:4px; flex-wrap:wrap; }
-.kb-card-valor { font-size:11px; color:var(--blue); font-family:var(--font-mono); font-weight:600; }
-.kb-card-days { font-size:10px; color:var(--text-faint); background:var(--surface3); padding:1px 6px; border-radius:8px; font-family:var(--font-mono); }
-.kb-card-sent { font-size:13px; }
+.kb-card:hover {
+  border-color:var(--blue);
+  box-shadow:0 4px 16px rgba(8,37,95,.14);
+  transform:translateY(-1px);
+}
+.kb-card:active { cursor:grabbing; }
+.kb-card.sortable-ghost  { opacity:.35; border-style:dashed; }
+.kb-card.sortable-chosen { box-shadow:0 8px 24px rgba(26,111,255,.3); transform:rotate(.5deg); }
+
+/* Card inner elements */
+.kb-card-name {
+  font-family:var(--font-body); font-size:13px; font-weight:600;
+  color:var(--dark); margin-bottom:1px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.kb-card-company {
+  font-size:11px; color:var(--text-muted);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  margin-bottom:6px;
+}
+.kb-card-valor {
+  font-family:var(--font-title); font-size:1.1rem;
+  color:var(--navy); line-height:1; margin-bottom:6px;
+  display:block;
+}
+.kb-card-badges { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px; }
+.kb-card-footer {
+  display:flex; justify-content:space-between; align-items:center;
+  gap:4px; margin-top:2px;
+}
+.kb-card-days {
+  font-size:10px; color:var(--text-faint);
+  background:var(--surface3); padding:2px 6px;
+  border-radius:8px; font-family:var(--font-mono);
+}
+.kb-card-avatar {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--navy); color:#fff;
+  font-size:9px; font-weight:700; display:flex;
+  align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.kb-card-unread {
+  position:absolute; top:8px; right:8px;
+  background:#ef4444; color:#fff;
+  border-radius:10px; font-size:10px; font-weight:700;
+  padding:1px 5px; min-width:16px; text-align:center;
+  line-height:1.4;
+}
+.sent-emoji { font-size:12px; line-height:1; }
 
 /* ── BADGES ─────────────────────────────────── */
 .badge {
@@ -974,6 +1056,41 @@ h1,h2,h3,.headline {
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- MODAL: ROLE LOGIN                                      -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="role-login-modal" class="crm-modal-overlay" style="display:none">
+  <div class="crm-modal" style="max-width:420px;padding:0;overflow:hidden">
+    <div style="background:var(--navy);padding:28px 32px 22px">
+      <div style="font-family:var(--font-title);font-size:1.8rem;letter-spacing:.1em;color:#fff;margin-bottom:6px">PIPELINE CRM</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.6)">MetaTronix — Sistema de Gestión Comercial</div>
+    </div>
+    <div style="padding:28px 32px 32px">
+      <div class="fg" style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.04em">ROL / PERFIL</label>
+        <select id="login-role" class="crm-input crm-select" style="height:42px;font-size:14px;margin-top:6px">
+          <option value="">— Selecciona tu rol —</option>
+          <option value="admin">👔 Admin / Director Comercial</option>
+          <option value="ejecutivo">💼 Ejecutivo de Ventas</option>
+          <option value="operaciones">⚙️ Operaciones</option>
+          <option value="finanzas">💰 Administración / Finanzas</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-bottom:20px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.04em">PIN (4 dígitos)</label>
+        <input type="password" id="login-pin" class="crm-input" maxlength="4"
+          style="height:42px;font-size:22px;letter-spacing:8px;text-align:center;margin-top:6px"
+          placeholder="••••" oninput="this.value=this.value.replace(/\D/g,'')"
+          onkeydown="if(event.key==='Enter')doRoleLogin()">
+        <div style="font-size:11px;color:var(--text-faint);margin-top:6px">PIN por defecto: 1234 (cámbialo en configuración)</div>
+      </div>
+      <button class="btn-primary" style="width:100%;height:44px;font-size:15px;justify-content:center" onclick="doRoleLogin()">
+        Ingresar al Sistema →
+      </button>
+      <div id="login-error" style="color:#ef4444;font-size:13px;text-align:center;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+</div>
 
 <!-- CHART.JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -1097,6 +1214,145 @@ const LS = {
   pv:       (id) => LS.get(`mtx_pv_${id}`, null),
   setPV:    (id,d) => LS.set(`mtx_pv_${id}`,d),
 };
+
+/* ══════════════════════════════════════════════════════════
+   SISTEMA DE ROLES — 4 roles con permisos diferenciados
+   ══════════════════════════════════════════════════════════ */
+const ROLES_DEF = {
+  admin: {
+    label:'Admin / Director', icon:'👔',
+    perms:['pipeline','dashboard','mapa','campanas','leads_all','aprobaciones','usuarios'],
+  },
+  ejecutivo: {
+    label:'Ejecutivo de Ventas', icon:'💼',
+    perms:['pipeline','leads_own','historial','chat','alertas_own'],
+  },
+  operaciones: {
+    label:'Operaciones', icon:'⚙️',
+    perms:['leads_cierre_postventa','checklist','notificaciones_cierre'],
+  },
+  finanzas: {
+    label:'Adm. / Finanzas', icon:'💰',
+    perms:['docs_financiero','kpis_valor','facturacion'],
+  },
+};
+
+// Default PINs (SHA-like via simple hash — production: use proper auth)
+const DEFAULT_PINS = { admin:'1234', ejecutivo:'1234', operaciones:'1234', finanzas:'1234' };
+
+let crmRole = null; // active role this session
+
+function getRoleFromSession() {
+  try { return JSON.parse(sessionStorage.getItem('crm_role') || 'null'); } catch { return null; }
+}
+
+function setRoleSession(roleKey) {
+  crmRole = roleKey;
+  sessionStorage.setItem('crm_role', JSON.stringify(roleKey));
+}
+
+function hasPermission(perm) {
+  if (!crmRole) return false;
+  const perms = ROLES_DEF[crmRole]?.perms || [];
+  return perms.includes(perm) || perms.includes('leads_all');
+}
+
+function showLoginModal() {
+  document.getElementById('role-login-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('login-role')?.focus(), 100);
+}
+
+function doRoleLogin() {
+  const role    = document.getElementById('login-role')?.value;
+  const pin     = document.getElementById('login-pin')?.value;
+  const errEl   = document.getElementById('login-error');
+
+  if (!role) { showLoginError('Selecciona un rol'); return; }
+  if (!pin || pin.length !== 4) { showLoginError('Ingresa un PIN de 4 dígitos'); return; }
+
+  // Check stored PIN or use default
+  const storedPin = localStorage.getItem(`crm_pin_${role}`) || DEFAULT_PINS[role];
+  if (pin !== storedPin) { showLoginError('PIN incorrecto'); return; }
+
+  setRoleSession(role);
+  document.getElementById('role-login-modal').style.display = 'none';
+  errEl.style.display = 'none';
+  applyRoleUI();
+  renderCurrentView();
+  notify(`Bienvenido · ${ROLES_DEF[role]?.label}`, 'success');
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.style.display = 'block';
+  const input = document.getElementById('login-pin');
+  if (input) { input.style.borderColor='#ef4444'; setTimeout(()=>input.style.borderColor='',1500); }
+}
+
+function applyRoleUI() {
+  if (!crmRole) return;
+  const role = ROLES_DEF[crmRole];
+
+  // Role badge in topnav
+  const topright = document.querySelector('.crm-topnav-right');
+  if (topright) {
+    let badge = document.getElementById('role-badge-el');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.id = 'role-badge-el';
+      badge.onclick = () => {
+        if (confirm('¿Cerrar sesión de rol?')) {
+          sessionStorage.removeItem('crm_role');
+          crmRole = null;
+          badge.remove();
+          showLoginModal();
+        }
+      };
+      topright.prepend(badge);
+    }
+    badge.className = `role-badge role-${crmRole}`;
+    badge.textContent = `${role.icon} ${role.label}`;
+    badge.title = 'Clic para cerrar sesión de rol';
+  }
+
+  // Show/hide nav buttons by permissions
+  const navMap = {
+    dashboard: 'leads_all',
+    mapa:      'leads_all',
+    campanas:  'campanas',
+  };
+  document.querySelectorAll('.crm-navbtn').forEach(btn => {
+    const view = btn.dataset.view;
+    const requiredPerm = navMap[view];
+    if (requiredPerm && !hasPermission(requiredPerm)) {
+      btn.style.display = 'none';
+    } else {
+      btn.style.display = '';
+    }
+  });
+
+  // Operaciones: default view = pipeline filtered to cierre/postventa
+  if (crmRole === 'operaciones') {
+    const stageFilter = document.getElementById('filter-stage');
+    if (stageFilter) { stageFilter.value = 'cierre'; applyFilters(); }
+  }
+}
+
+function filterLeadsByRole(leads) {
+  if (!crmRole) return leads;
+  switch(crmRole) {
+    case 'admin':
+      return leads; // sees all
+    case 'ejecutivo':
+      return leads.filter(l => !l.asignado_a || l.asignado_a === currentUser?.id || l.user_id === currentUser?.id);
+    case 'operaciones':
+      return leads.filter(l => ['cierre','postventa','retencion'].includes(getLeadStage(l)));
+    case 'finanzas':
+      return leads; // sees all but with limited actions
+    default:
+      return leads;
+  }
+}
 
 /* ── SCHEMA MIGRATION (Twenty CRM standard) ─────────────── */
 function migrateLeadSchema(raw) {
@@ -1228,17 +1484,95 @@ async function init() {
   currentUser = await requireAuth();
   if (!currentUser) return;
   document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'leads');
-  // Init Notiflix if available
+
+  // Init Notiflix
   if (typeof Notiflix !== 'undefined') {
     Notiflix.Notify.init({ position:'right-bottom', timeout:3500, fontSize:'13px', width:'320px',
       success:{ background:'#10b981' }, failure:{ background:'#ef4444' }, warning:{ background:'#f59e0b' } });
   }
+
+  // Role system — restore session or show login
+  const savedRole = getRoleFromSession();
+  if (savedRole && ROLES_DEF[savedRole]) {
+    crmRole = savedRole;
+    applyRoleUI();
+  } else {
+    showLoginModal();
+  }
+
   await loadLeads();
-  // Run schema migration after leads loaded
+  // Seed test data on first load
+  seedTestData();
+  // Run schema migration
   runSchemaMigration();
   updateAlertBell();
   populateCampanaDatalist();
   checkStaleLeads();
+}
+
+/* ── TEST DATA SEED ─────────────────────────────────────── */
+async function seedTestData() {
+  const KEY = 'mtx_test_seeded_v2';
+  if (localStorage.getItem(KEY)) return; // already seeded
+
+  const db = getDB();
+  const testLeads = [
+    {
+      user_id: currentUser.id, empresa:'Liverpool Corporativo', contacto_nombre:'Ing. Carlos Mendoza',
+      cargo:'Director de Tecnología', contacto_email:'cmendoza@liverpool.com.mx',
+      contacto_telefono:'+52 55 1234 5678', status:'contactado',
+      fuente:'linkedin', campana:'Q2 Retail MX', ciudad:'Ciudad de México',
+      valor_estimado:850000, notas:'Interesado en Metaview Systems para sus 135 tiendas. Presentación agendada para el viernes.',
+      seguimiento: new Date(Date.now()+3*86400000).toISOString().split('T')[0],
+      updated_at: new Date().toISOString(),
+    },
+    {
+      user_id: currentUser.id, empresa:'FEMSA Digital', contacto_nombre:'Lic. Ana García',
+      cargo:'VP de Operaciones', contacto_email:'agarcia@femsa.com',
+      contacto_telefono:'+52 81 9876 5432', status:'en_negociacion',
+      fuente:'referido', campana:'Q2 Retail MX', ciudad:'Monterrey',
+      valor_estimado:2400000, notas:'Negociando contrato anual para integración de QuantumTron en supply chain.',
+      seguimiento: new Date(Date.now()+1*86400000).toISOString().split('T')[0],
+      updated_at: new Date(Date.now()-2*86400000).toISOString(),
+    },
+    {
+      user_id: currentUser.id, empresa:'Banorte Innovation Lab', contacto_nombre:'Dr. Roberto Vega',
+      cargo:'Chief Data Officer', contacto_email:'rvega@banorte.com',
+      contacto_telefono:'+52 55 8765 4321', status:'propuesta_enviada',
+      fuente:'evento', campana:'FinTech LATAM 2025', ciudad:'Ciudad de México',
+      valor_estimado:5200000, notas:'Propuesta enviada para NeuroTron Lab — automatización de procesos con IA. Decisión en 2 semanas.',
+      seguimiento: new Date(Date.now()+7*86400000).toISOString().split('T')[0],
+      updated_at: new Date(Date.now()-5*86400000).toISOString(),
+    },
+  ];
+
+  let inserted = 0;
+  for (const lead of testLeads) {
+    const { data, error } = await db.from('leads').insert(lead).select('id').single();
+    if (!error && data) {
+      // Set pipeline stages for test leads
+      const stageMap = {
+        contactado:'primer_contacto', en_negociacion:'negociacion', propuesta_enviada:'propuesta'
+      };
+      LS.setStage(data.id, stageMap[lead.status] || 'generacion');
+      // Set confianza levels
+      const confMap = ['acercamiento','confianza','plena'];
+      LS.setPV(data.id, { confianza_nivel: confMap[inserted % 3] });
+      // Add a test communication
+      LS.addComm(data.id, {
+        id:'tc'+Date.now()+inserted, tipo:'llamada',
+        fecha: new Date(Date.now()-inserted*86400000).toISOString(),
+        resumen:`Primera llamada de presentación. ${lead.notas?.slice(0,80)||''}`,
+        respuesta:'positiva', sentiment:'pos',
+      });
+      inserted++;
+    }
+  }
+  if (inserted > 0) {
+    localStorage.setItem(KEY, '1');
+    console.log(`[CRM] ${inserted} leads de prueba creados en Supabase`);
+    await loadLeads(); // refresh
+  }
 }
 
 /* ── SUPABASE CRUD ──────────────────────────────────────── */
@@ -1372,7 +1706,9 @@ function getFilteredLeads() {
   const fuente= document.getElementById('filter-fuente')?.value || '';
   const conf  = document.getElementById('filter-conf')?.value   || '';
   const q     = (document.getElementById('global-search')?.value || '').toLowerCase();
-  return allLeads.filter(l => {
+  // Apply role-based filtering first
+  const rolFiltered = filterLeadsByRole(allLeads);
+  return rolFiltered.filter(l => {
     const s = getLeadStage(l);
     if (stage  && s !== stage) return false;
     if (fuente && l.fuente !== fuente) return false;
@@ -1413,55 +1749,105 @@ function renderKanban(leads) {
   const board = document.getElementById('kanban-board');
   if (!board) return;
 
+  // Destroy previous SortableJS instances
+  board.querySelectorAll('.kb-cards').forEach(col => {
+    const inst = Sortable.get?.(col);
+    if (inst) inst.destroy();
+  });
+
   board.innerHTML = Object.entries(STAGES).map(([key, st]) => {
     const cards = leads.filter(l => getLeadStage(l) === key);
     const total = cards.reduce((s,l)=>s+(parseFloat(l.valor_estimado)||0),0);
-    const headerColor = st.color;
     return `
     <div class="kb-col" data-stage="${key}">
-      <div class="kb-col-header" style="border-top:3px solid ${headerColor}">
-        <span class="kb-col-title" style="color:${headerColor}">${st.icon} ${st.label}</span>
-        <span class="kb-col-count">${cards.length}</span>
+      <div class="kb-col-header">
+        <div class="kb-col-title">${st.icon} ${st.label}</div>
+        <div class="kb-col-meta">
+          <span class="kb-col-count">${cards.length} lead${cards.length!==1?'s':''}</span>
+          ${total>0 ? `<span class="kb-col-total">${fmtMXN(total)}</span>` : '<span></span>'}
+        </div>
       </div>
-      ${total>0 ? `<div class="kb-col-total">${fmtMXN(total)}</div>` : ''}
       <div class="kb-cards" id="col-${key}" data-stage="${key}">
         ${cards.map(l => kanbanCard(l)).join('')}
+        ${cards.length===0 ? `<div style="color:rgba(255,255,255,.0);text-align:center;padding:20px;font-size:12px;border:2px dashed var(--border);border-radius:6px;margin:4px">Arrastrar aquí</div>` : ''}
       </div>
     </div>`;
   }).join('');
 
-  // SortableJS on each column
+  // SortableJS — independent scroll per column
   if (typeof Sortable !== 'undefined') {
     document.querySelectorAll('.kb-cards').forEach(col => {
       Sortable.create(col, {
-        group: 'leads',
-        animation: 150,
-        ghostClass: 'sortable-ghost',
+        group:       'leads',
+        animation:   180,
+        easing:      'cubic-bezier(.4,0,.2,1)',
+        ghostClass:  'sortable-ghost',
         chosenClass: 'sortable-chosen',
+        dragClass:   'sortable-drag',
+        scroll:      true,
+        scrollSensitivity: 60,
         onAdd(evt) {
-          const leadId = evt.item.dataset.id;
-          const newStage = evt.to.dataset.stage;
+          const leadId  = evt.item.dataset.id;
+          const newStage= evt.to.dataset.stage;
           moveLeadStage(leadId, newStage);
-        }
+        },
+        onStart() { document.body.style.cursor='grabbing'; },
+        onEnd()   { document.body.style.cursor=''; },
       });
     });
   }
 }
 
 function kanbanCard(l) {
-  const conf  = getLeadConf(l);
-  const stage = getLeadStage(l);
-  const daysInStage = getDaysInStage(l.id, l.updated_at);
-  const sentDot = getSentimentDot(l.id);
-  const confBadge = conf ? `<span class="badge badge-conf-${conf}">${CONF_LABELS[conf]||conf}</span>` : '';
-  const valStr = l.valor_estimado ? `<span class="kb-card-valor">${fmtMXN(l.valor_estimado)}</span>` : '';
-  const daysStr = `<span class="kb-card-days">${daysInStage}d</span>`;
+  const conf    = getLeadConf(l);
+  const days    = getDaysInStage(l.id, l.updated_at);
+  const unread  = getUnreadChatCount(l.id);
+  const sent    = getSentimentEmoji(l.id);
+  const initials= getInitials(l.contacto_nombre || l.empresa);
+
+  // Confidence badge (exact spec: gray/blue/green)
+  const confMap = {
+    acercamiento: ['badge-gray', 'Acercamiento'],
+    confianza:    ['badge-blue', 'Confianza'],
+    plena:        ['badge-green', 'Confianza Plena'],
+  };
+  const [confCls, confLbl] = conf ? (confMap[conf] || ['badge-gray','—']) : ['',''];
+  const confBadge = conf ? `<span class="badge ${confCls}" style="font-size:10px;padding:1px 6px">${confLbl}</span>` : '';
+
+  // Days badge: warn if > 7
+  const daysCls = days > 7 ? 'color:#ef4444;font-weight:700' : '';
+
   return `<div class="kb-card" data-id="${l.id}" onclick="openDrawer('${l.id}')">
+    ${unread > 0 ? `<span class="kb-card-unread">${unread}</span>` : ''}
+    <div class="kb-card-name" title="${escHtml(l.contacto_nombre||'')}">${escHtml(l.contacto_nombre||'Sin contacto')}</div>
     <div class="kb-card-company" title="${escHtml(l.empresa)}">${escHtml(l.empresa)}</div>
-    <div class="kb-card-contact">${escHtml(l.contacto_nombre||'—')}</div>
-    <div style="margin:5px 0 3px">${confBadge}</div>
-    <div class="kb-card-footer">${valStr}${daysStr}<span class="kb-card-sent">${sentDot}</span></div>
+    ${l.valor_estimado ? `<span class="kb-card-valor">${fmtMXN(l.valor_estimado)}</span>` : ''}
+    <div class="kb-card-badges">${confBadge}</div>
+    <div class="kb-card-footer">
+      <span class="kb-card-days" style="${daysCls}">${days}d</span>
+      <span class="sent-emoji" title="Sentimiento IA">${sent}</span>
+      <span class="kb-card-avatar" title="${escHtml(l.contacto_nombre||l.empresa)}">${initials}</span>
+    </div>
   </div>`;
+}
+
+/* helpers for card */
+function getUnreadChatCount(leadId) {
+  const msgs = LS.chat(leadId);
+  const lastSeen = parseInt(localStorage.getItem(`mtx_chat_seen_${leadId}`)||'0');
+  return msgs.filter(m => m.user_id !== currentUser?.id && new Date(m.fecha).getTime() > lastSeen).length;
+}
+
+function getSentimentEmoji(leadId) {
+  const comms = LS.comms(leadId);
+  if (!comms.length) return '⚪';
+  const last = comms[0].sentiment;
+  return last==='pos'?'🟢':last==='neg'?'🔴':'🟡';
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).slice(0,2).map(w=>w[0].toUpperCase()).join('');
 }
 
 async function moveLeadStage(leadId, newStage) {
@@ -1484,24 +1870,74 @@ async function moveLeadStage(leadId, newStage) {
 }
 
 function onLeadCierre(lead) {
-  const msg = `🏆 Lead CERRADO: "${lead.empresa}" · ${fmtMXN(lead.valor_estimado)} · Ejecutivo: ${currentUser.profile?.full_name||currentUser.email}`;
+  const ejecutivo = currentUser?.profile?.full_name || currentUser?.email || 'Ejecutivo';
+  const valor = fmtMXN(lead.valor_estimado);
+  const msg = `🏆 CIERRE: "${lead.empresa}" · ${valor} · por ${ejecutivo}`;
+
   LS.addAlert({ type:'lead_closed', message:msg });
-  notify('🏆 ¡Lead cerrado!','success');
-  // SweetAlert2 checklist
+
+  // Notiflix toasts para cada área involucrada
+  if (typeof Notiflix !== 'undefined') {
+    setTimeout(()=> Notiflix.Notify.success('🏆 ¡Lead cerrado exitosamente!'),   100);
+    setTimeout(()=> Notiflix.Notify.info('📋 Operaciones: preparar contrato'),   600);
+    setTimeout(()=> Notiflix.Notify.info('💰 Administración: generar factura'),  1200);
+    setTimeout(()=> Notiflix.Notify.info('🚀 Logística: coordinar implementación'), 1800);
+    setTimeout(()=> Notiflix.Notify.warning('👔 Director: notificación de cierre'), 2400);
+  }
+
+  // SweetAlert2 — checklist completo por área
   if (typeof Swal !== 'undefined') {
     Swal.fire({
-      title:'🏆 Lead Cerrado',
-      html:`<p style="margin-bottom:16px;color:#64748b">Inicia el proceso de entrega para <strong>${escHtml(lead.empresa)}</strong></p>
-      <div style="text-align:left;font-size:14px">
-        <label style="display:flex;align-items:center;gap:8px;margin:6px 0"><input type="checkbox"> Operaciones: Agendar kickoff de implementación</label>
-        <label style="display:flex;align-items:center;gap:8px;margin:6px 0"><input type="checkbox"> Finanzas: Emitir factura y confirmar términos de pago</label>
-        <label style="display:flex;align-items:center;gap:8px;margin:6px 0"><input type="checkbox"> Admin: Firmar contrato operativo</label>
-        <label style="display:flex;align-items:center;gap:8px;margin:6px 0"><input type="checkbox"> Director: Asignar responsable de entrega</label>
-        <label style="display:flex;align-items:center;gap:8px;margin:6px 0"><input type="checkbox"> CRM: Registrar entregables comprometidos</label>
-      </div>`,
-      icon:'success', confirmButtonText:'Entendido', confirmButtonColor:'#1A6FFF',
+      title: '🏆 ¡Lead Cerrado!',
+      width: 560,
+      html: `
+        <div style="text-align:left">
+          <div style="background:linear-gradient(135deg,#08255F,#1A6FFF);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:18px">
+            <div style="font-size:18px;font-weight:700">${escHtml(lead.empresa)}</div>
+            <div style="font-size:13px;opacity:.85;margin-top:3px">${valor} · ${ejecutivo}</div>
+          </div>
+          <p style="font-size:13px;color:#64748b;margin-bottom:14px">Checklist de proceso de entrega — marca las acciones completadas:</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${[
+              ['ops',  '⚙️ Operaciones', 'Agendar kickoff de implementación con el cliente'],
+              ['log',  '🚚 Logística',    'Coordinar entrega de servicios / onboarding técnico'],
+              ['adm',  '💼 Administración','Emitir contrato de servicio y obtener firma'],
+              ['fin',  '🧾 Finanzas',     'Generar factura y confirmar términos de pago'],
+              ['dir',  '👔 Director',      'Notificar cierre y asignar responsable de cuenta'],
+              ['crm',  '📊 CRM',           'Registrar entregables y mover a etapa Postventa'],
+            ].map(([id,area,task]) => `
+              <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;cursor:pointer;transition:background .1s" onmouseover="this.style.background='#F4F7FB'" onmouseout="this.style.background=''">
+                <input type="checkbox" id="chk-${id}" style="margin-top:2px;accent-color:#1A6FFF;width:15px;height:15px">
+                <div>
+                  <div style="font-weight:600;font-size:13px;color:#1E293B">${area}</div>
+                  <div style="font-size:12px;color:#64748b;margin-top:1px">${task}</div>
+                </div>
+              </label>`).join('')}
+          </div>
+        </div>`,
+      showCancelButton: true,
+      confirmButtonText: '✓ Confirmar cierre',
+      cancelButtonText:  'Editar después',
+      confirmButtonColor:'#1A6FFF',
+      cancelButtonColor: '#94a3b8',
+      preConfirm: () => {
+        const checked = ['ops','log','adm','fin','dir','crm']
+          .filter(id => document.getElementById(`chk-${id}`)?.checked)
+          .map(id => ({ ops:'Operaciones',log:'Logística',adm:'Administración',fin:'Finanzas',dir:'Director',crm:'CRM'}[id]));
+        return { completadas: checked, pendientes: 6 - checked.length };
+      }
+    }).then(result => {
+      if (result.isConfirmed && result.value) {
+        const { completadas, pendientes } = result.value;
+        if (pendientes > 0) notify(`${pendientes} tarea(s) pendiente(s) de entregar`, 'warning');
+        else notify('Todas las tareas de cierre completadas ✓', 'success');
+        // Store checklist in postventa
+        const pv = LS.pv(lead.id) || {};
+        LS.setPV(lead.id, { ...pv, cierre_checklist: completadas, cierre_fecha: new Date().toISOString() });
+      }
     });
   }
+
   // Init postventa record
   if (!LS.pv(lead.id)?.postventa_inicio) {
     const pv = LS.pv(lead.id) || {};
