@@ -551,6 +551,20 @@ const AGENTS = [
     mediaType: 'image',
     accentColor: '#A78BFA',
   },
+  {
+    id: 'editor',
+    icon: '🎞',
+    iconBg: 'linear-gradient(135deg,#0A1628,#0D2040)',
+    name: 'EDITOR DE VIDEO IA',
+    desc: 'Crea videos animados profesionales con Canvas + IA. 6 templates MetaTronix. Exporta WebM. Inspirado en Remotion — 100% browser, sin instalación.',
+    models: ['Canvas API', 'MediaRecorder', 'CRM_LLM', 'Sin GPU requerida'],
+    inputLabel: null,
+    inputPlaceholder: null,
+    outputTabs: ['Video WebM'],
+    run: runAgentEditor,
+    isEditorAgent: true,
+    accentColor: '#F59E0B',
+  },
 ];
 
 /* ── RENDER AGENTS ──────────────────────────────────── */
@@ -572,7 +586,7 @@ function renderAgents() {
         <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
       </div>
       <div class="agent-workspace" id="ws-${a.id}" style="display:none">
-        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isMediaAgent ? renderMediaAgentForm(a) : `
+        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : `
           <div class="agent-input-row">
             <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
             <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
@@ -1205,6 +1219,545 @@ async function runAgentImage(id, output) {
   }
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   AGENTE 10 — EDITOR DE VIDEO IA
+   Canvas API + MediaRecorder + CRM_LLM
+   Arquitectura similar a Remotion (composiciones, frames, FPS)
+   pero 100% browser-native, sin npm, sin build step.
+   ═══════════════════════════════════════════════════════════ */
+
+const VIDEO_TEMPLATES = {
+  pitch: {
+    id:'pitch', label:'🎯 Pitch Comercial', w:1080, h:1920, fps:30, duration:8,
+    desc:'Video de ventas vertical con propuesta de valor y CTA',
+    fields:['titulo','subtitulo','cta','empresa'],
+    defaults:{ titulo:'Transforma tu empresa con IA', subtitulo:'MetaTronix — El CRM que sí vas a usar', cta:'Agenda tu demo gratuita', empresa:'MetaTronix' }
+  },
+  pipeline: {
+    id:'pipeline', label:'📊 Reporte de Pipeline', w:1920, h:1080, fps:30, duration:6,
+    desc:'Video animado con métricas del pipeline (horizontal)',
+    fields:['titulo','metrica1','metrica2','metrica3'],
+    defaults:{ titulo:'Reporte Q2 2026', metrica1:'$12.1M Pipeline', metrica2:'85% Win Rate', metrica3:'42 Deals Activos' }
+  },
+  reel: {
+    id:'reel', label:'📱 Reel Social', w:1080, h:1920, fps:30, duration:5,
+    desc:'Reel animado para Instagram / TikTok / LinkedIn',
+    fields:['hook','punto1','punto2','punto3','cta'],
+    defaults:{ hook:'¿Sigues usando hojas de Excel?', punto1:'Pipeline en tiempo real', punto2:'IA que analiza tus leads', punto3:'Cierra más en menos tiempo', cta:'Pruébalo gratis →' }
+  },
+  intro: {
+    id:'intro', label:'🏢 Intro Corporativo', w:1920, h:1080, fps:30, duration:5,
+    desc:'Logo reveal animado con tagline de la empresa',
+    fields:['empresa','tagline','color'],
+    defaults:{ empresa:'METATRONIX', tagline:'CRM + Inteligencia Artificial para LATAM', color:'#00C2E0' }
+  },
+  cierre: {
+    id:'cierre', label:'🏆 Anuncio de Cierre', w:1080, h:1080, fps:30, duration:6,
+    desc:'Celebración animada de deal ganado (cuadrado 1:1)',
+    fields:['empresa','valor','producto','ejecutivo'],
+    defaults:{ empresa:'RetailMax México', valor:'$3,800,000 MXN', producto:'Metaview Systems', ejecutivo:'Equipo MetaTronix' }
+  },
+  propuesta: {
+    id:'propuesta', label:'📋 Slide de Propuesta', w:1920, h:1080, fps:30, duration:7,
+    desc:'Slide animado con 3 beneficios clave y CTA',
+    fields:['titulo','b1','b2','b3','cliente'],
+    defaults:{ titulo:'Por qué MetaTronix', b1:'Implementación en 1 semana', b2:'IA nativa sin costo extra', b3:'Soporte 24/7 en español', cliente:'Para tu equipo' }
+  },
+};
+
+let _editorRecorder   = null;
+let _editorChunks     = [];
+let _editorRendering  = false;
+let _editorAnimFrame  = null;
+let _editorTemplate   = 'pitch';
+let _editorCanvas     = null;
+let _editorPreviewAF  = null;
+
+function renderEditorForm(a) {
+  const tplOpts = Object.values(VIDEO_TEMPLATES).map(t =>
+    `<option value="${t.id}">${t.label}</option>`).join('');
+  return `
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;color:#F59E0B;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">PLANTILLA</div>
+      <select id="editor-tpl" class="crm-select" style="font-size:12px"
+        onchange="switchEditorTemplate(this.value)">${tplOpts}</select>
+      <div id="editor-tpl-desc" style="font-size:10px;color:#7E8FA8;margin-top:4px;font-family:'Inter',sans-serif"></div>
+    </div>
+    <div id="editor-fields" style="display:flex;flex-direction:column;gap:7px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">COLOR ACENTO</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap" id="color-swatches">
+          ${['#00C2E0','#1A6FFF','#10B981','#F59E0B','#EF4444','#A78BFA','#F97316','#ffffff'].map(c=>
+            `<div onclick="selectEditorColor('${c}')" data-color="${c}"
+              style="width:20px;height:20px;border-radius:50%;background:${c};cursor:pointer;border:2px solid transparent;transition:border-color .1s"
+              title="${c}"></div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">DURACIÓN</div>
+        <select id="editor-duration" class="crm-select" style="font-size:11px;height:30px">
+          <option value="3">3 segundos</option>
+          <option value="5">5 segundos</option>
+          <option value="6" selected>6 segundos</option>
+          <option value="8">8 segundos</option>
+          <option value="10">10 segundos</option>
+          <option value="15">15 segundos</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="event.stopPropagation();previewEditorVideo()"
+      style="width:100%;padding:7px;margin-top:8px;background:rgba(245,158,11,.1);color:#F59E0B;border:1px solid rgba(245,158,11,.25);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;font-family:'Inter',sans-serif">
+      👁 Vista Previa
+    </button>
+    <div id="editor-preview-wrap" style="display:none;margin-top:8px;text-align:center">
+      <canvas id="editor-canvas" style="width:100%;max-height:220px;object-fit:contain;border-radius:6px;border:1px solid rgba(245,158,11,.2)"></canvas>
+    </div>`;
+}
+
+let _editorColor = '#00C2E0';
+
+function selectEditorColor(c) {
+  _editorColor = c;
+  document.querySelectorAll('[data-color]').forEach(el => {
+    el.style.borderColor = el.dataset.color === c ? '#fff' : 'transparent';
+  });
+}
+
+function switchEditorTemplate(tplId) {
+  _editorTemplate = tplId;
+  const tpl = VIDEO_TEMPLATES[tplId];
+  if (!tpl) return;
+  const desc = document.getElementById('editor-tpl-desc');
+  if (desc) desc.textContent = tpl.desc + ` · ${tpl.w}×${tpl.h} · ${tpl.fps}fps`;
+  const dsel = document.getElementById('editor-duration');
+  if (dsel) dsel.value = tpl.duration;
+  // Build fields
+  const fieldsEl = document.getElementById('editor-fields');
+  if (!fieldsEl) return;
+  fieldsEl.innerHTML = tpl.fields.map(f => {
+    const label = { titulo:'Título', subtitulo:'Subtítulo', cta:'CTA / Llamada a acción',
+      empresa:'Empresa', metrica1:'Métrica 1', metrica2:'Métrica 2', metrica3:'Métrica 3',
+      hook:'Hook (primera línea)', punto1:'Punto 1', punto2:'Punto 2', punto3:'Punto 3',
+      tagline:'Tagline', color:'Color principal', valor:'Valor del deal', producto:'Producto',
+      ejecutivo:'Ejecutivo', b1:'Beneficio 1', b2:'Beneficio 2', b3:'Beneficio 3',
+      cliente:'Para quién' }[f] || f;
+    const val = tpl.defaults[f] || '';
+    const isArea = ['subtitulo','tagline','b1','b2','b3'].includes(f);
+    return `<div>
+      <div style="font-size:10px;font-weight:700;color:#F59E0B;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px">${label}</div>
+      ${isArea
+        ? `<textarea id="edf-${f}" class="crm-textarea" style="min-height:48px;font-size:12px;resize:none">${val}</textarea>`
+        : `<input id="edf-${f}" class="crm-input" style="font-size:12px;height:32px" value="${val}">`}
+    </div>`;
+  }).join('');
+}
+
+function getEditorData() {
+  const tpl = VIDEO_TEMPLATES[_editorTemplate];
+  const data = { color: _editorColor, template: _editorTemplate,
+    duration: parseInt(document.getElementById('editor-duration')?.value || '6') };
+  tpl?.fields.forEach(f => {
+    const el = document.getElementById(`edf-${f}`);
+    data[f] = el?.value || tpl.defaults[f] || '';
+  });
+  return data;
+}
+
+/* ── Canvas drawing engine ──────────────────────────────── */
+function drawFrame(ctx, t, data, w, h) {
+  const tpl = data.template;
+  const c   = data.color || '#00C2E0';
+  // Background
+  const bg = ctx.createLinearGradient(0,0,0,h);
+  bg.addColorStop(0, '#0C0F17');
+  bg.addColorStop(1, '#08255F');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,w,h);
+
+  const ease = x => x < 0.5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2;
+  const fadeIn = (start, dur) => Math.min(1, Math.max(0, ease((t-start)/dur)));
+
+  if (tpl === 'pitch' || tpl === 'reel') {
+    // Animated accent line
+    const lineH = h * 0.004;
+    ctx.fillStyle = c;
+    ctx.fillRect(0, h*0.5, w * fadeIn(0, 0.5), lineH);
+
+    // Decorative circles
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(w*0.85, h*0.15, w*0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w*0.1, h*0.9, w*0.25, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    const isReel = tpl === 'reel';
+    if (isReel) {
+      // Hook line
+      const hook_a = fadeIn(0.1, 0.5);
+      ctx.globalAlpha = hook_a;
+      ctx.fillStyle = c;
+      ctx.font = `bold ${h*0.04}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(data.hook || '', w/2, h*0.25);
+      ctx.globalAlpha = 1;
+      // Points
+      const pts = [data.punto1, data.punto2, data.punto3].filter(Boolean);
+      pts.forEach((pt, i) => {
+        const a = fadeIn(0.3+i*0.2, 0.4);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#E8EDF8';
+        ctx.font = `600 ${h*0.033}px Inter, sans-serif`;
+        ctx.fillText('→ ' + pt, w/2, h*(0.42+i*0.09));
+      });
+      ctx.globalAlpha = 1;
+      // CTA
+      const cta_a = fadeIn(0.85, 0.15);
+      if (cta_a > 0) {
+        ctx.globalAlpha = cta_a;
+        ctx.fillStyle = c;
+        ctx.font = `bold ${h*0.035}px Inter, sans-serif`;
+        ctx.fillText(data.cta || '', w/2, h*0.82);
+        ctx.globalAlpha = 1;
+      }
+    } else {
+      // Pitch: title
+      const t_a = fadeIn(0.1, 0.5);
+      ctx.globalAlpha = t_a;
+      ctx.fillStyle = '#E8EDF8';
+      ctx.font = `bold ${h*0.045}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      wrapText(ctx, data.titulo||'', w/2, h*0.38, w*0.85, h*0.055);
+      // Subtitle
+      ctx.globalAlpha = fadeIn(0.4, 0.4);
+      ctx.fillStyle = '#7E8FA8';
+      ctx.font = `${h*0.03}px Inter, sans-serif`;
+      wrapText(ctx, data.subtitulo||'', w/2, h*0.58, w*0.8, h*0.04);
+      // CTA button
+      const btn_a = fadeIn(0.7, 0.3);
+      if (btn_a > 0) {
+        ctx.globalAlpha = btn_a;
+        const bw=w*0.7, bh=h*0.065, bx=w/2-bw/2, by=h*0.75;
+        ctx.fillStyle = c;
+        roundRect(ctx, bx, by, bw, bh, bh/2);
+        ctx.fillStyle = '#000';
+        ctx.font = `bold ${h*0.032}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(data.cta||'', w/2, by+bh*0.64);
+      }
+      ctx.globalAlpha = 1;
+    }
+    // Logo bottom
+    ctx.globalAlpha = fadeIn(0.1,0.5)*0.6;
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${h*0.022}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(data.empresa||'MetaTronix', w/2, h*0.93);
+    ctx.globalAlpha = 1;
+
+  } else if (tpl === 'pipeline') {
+    // Horizontal metrics
+    ctx.fillStyle = '#E8EDF8';
+    ctx.font = `bold ${h*0.07}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = fadeIn(0,0.3);
+    ctx.fillText(data.titulo||'', w/2, h*0.2);
+    ctx.globalAlpha = 1;
+    const metrics = [data.metrica1, data.metrica2, data.metrica3].filter(Boolean);
+    metrics.forEach((m,i) => {
+      const a = fadeIn(0.2+i*0.2, 0.4);
+      const x = w*(0.2 + i*0.3);
+      ctx.globalAlpha = a;
+      // Card
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      roundRect(ctx, x-w*0.12, h*0.3, w*0.24, h*0.4, 12);
+      ctx.fillStyle = c;
+      ctx.fillRect(x-w*0.12, h*0.3, w*0.03, h*0.4);
+      // Value
+      ctx.fillStyle = c;
+      ctx.font = `bold ${h*0.08}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(m.split(' ')[0], x, h*0.53);
+      ctx.fillStyle = '#7E8FA8';
+      ctx.font = `${h*0.04}px Inter, sans-serif`;
+      ctx.fillText(m.split(' ').slice(1).join(' '), x, h*0.65);
+    });
+    ctx.globalAlpha = 1;
+
+  } else if (tpl === 'intro') {
+    // Logo reveal
+    const scale = 0.5 + 0.5 * fadeIn(0.1, 0.6);
+    ctx.save();
+    ctx.translate(w/2, h/2);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = c;
+    ctx.font = `bold ${h*0.18}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = fadeIn(0.1, 0.5);
+    ctx.fillText(data.empresa||'MTX', 0, -h*0.08);
+    ctx.fillStyle = '#E8EDF8';
+    ctx.font = `300 ${h*0.06}px Inter, sans-serif`;
+    ctx.globalAlpha = fadeIn(0.5, 0.4);
+    ctx.fillText(data.tagline||'', 0, h*0.09);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    // Animated underline
+    ctx.fillStyle = c;
+    const uw = w * fadeIn(0.5, 0.4) * 0.4;
+    ctx.fillRect(w/2-uw/2, h/2+h*0.04, uw, 3);
+
+  } else if (tpl === 'cierre') {
+    // Celebración
+    const burst = fadeIn(0, 0.3);
+    // Confetti effect (deterministic)
+    ctx.save();
+    for (let i=0; i<40; i++) {
+      const px = (Math.sin(i*137.508)*0.5+0.5)*w;
+      const py = (Math.cos(i*97.3)*0.5+0.5)*h;
+      const size = 8+i%8;
+      const colors2 = [c,'#10B981','#F59E0B','#EF4444','#A78BFA'];
+      ctx.fillStyle = colors2[i%5];
+      ctx.globalAlpha = burst * (0.4+Math.sin(i)*0.3);
+      ctx.fillRect(px, py*Math.min(1,burst*2), size, size*0.4);
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    // Trophy emoji
+    ctx.font = `${h*0.2}px serif`;
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = fadeIn(0.2, 0.4);
+    ctx.fillText('🏆', w/2, h*0.3);
+    ctx.fillStyle = c;
+    ctx.font = `bold ${h*0.07}px Inter, sans-serif`;
+    ctx.globalAlpha = fadeIn(0.3, 0.4);
+    ctx.fillText('¡DEAL CERRADO!', w/2, h*0.46);
+    ctx.fillStyle = '#E8EDF8';
+    ctx.font = `bold ${h*0.055}px Inter, sans-serif`;
+    ctx.globalAlpha = fadeIn(0.45, 0.3);
+    ctx.fillText(data.empresa||'', w/2, h*0.56);
+    ctx.fillStyle = '#10B981';
+    ctx.font = `bold ${h*0.065}px Inter, sans-serif`;
+    ctx.globalAlpha = fadeIn(0.5, 0.3);
+    ctx.fillText(data.valor||'', w/2, h*0.67);
+    ctx.fillStyle = '#7E8FA8';
+    ctx.font = `${h*0.038}px Inter, sans-serif`;
+    ctx.globalAlpha = fadeIn(0.6, 0.3);
+    ctx.fillText(data.producto||'', w/2, h*0.76);
+    ctx.fillStyle = '#E8EDF8';
+    ctx.font = `600 ${h*0.032}px Inter, sans-serif`;
+    ctx.globalAlpha = fadeIn(0.7, 0.3);
+    ctx.fillText(data.ejecutivo||'', w/2, h*0.86);
+    ctx.globalAlpha = 1;
+
+  } else if (tpl === 'propuesta') {
+    // Benefits slide
+    ctx.fillStyle = '#E8EDF8';
+    ctx.font = `bold ${h*0.08}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = fadeIn(0, 0.3);
+    ctx.fillText(data.titulo||'', w/2, h*0.18);
+    ctx.globalAlpha = 1;
+    const benefits = [
+      [data.b1,'✓'],
+      [data.b2,'✓'],
+      [data.b3,'✓'],
+    ].filter(b=>b[0]);
+    benefits.forEach(([b,icon],i) => {
+      const a = fadeIn(0.2+i*0.2, 0.35);
+      ctx.globalAlpha = a;
+      const y = h*(0.35+i*0.18);
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      roundRect(ctx, w*0.05, y-h*0.06, w*0.9, h*0.14, 10);
+      ctx.fillStyle = c;
+      ctx.font = `bold ${h*0.05}px Inter, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText(icon, w*0.1, y+h*0.025);
+      ctx.fillStyle = '#E8EDF8';
+      ctx.font = `600 ${h*0.042}px Inter, sans-serif`;
+      ctx.fillText(b||'', w*0.2, y+h*0.025);
+    });
+    ctx.globalAlpha = fadeIn(0.75, 0.25);
+    ctx.fillStyle = c;
+    ctx.font = `${h*0.035}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(data.cliente||'', w/2, h*0.88);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function wrapText(ctx, text, x, y, maxW, lineH) {
+  if (!text) return;
+  const words = text.split(' ');
+  let line = '';
+  let lines = [];
+  words.forEach(w => {
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
+    else line = test;
+  });
+  if (line) lines.push(line.trim());
+  const total = lines.length * lineH;
+  lines.forEach((l, i) => ctx.fillText(l, x, y - total/2 + i*lineH + lineH/2));
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath(); ctx.fill();
+}
+
+/* ── Preview ──────────────────────────────────────────── */
+function previewEditorVideo() {
+  const wrap = document.getElementById('editor-preview-wrap');
+  if (!wrap) return;
+  wrap.style.display = 'block';
+
+  const data     = getEditorData();
+  const tpl      = VIDEO_TEMPLATES[data.template];
+  const canvas   = document.getElementById('editor-canvas');
+  const ctx      = canvas.getContext('2d');
+  canvas.width   = tpl.w; canvas.height = tpl.h;
+  _editorCanvas  = canvas;
+
+  if (_editorPreviewAF) cancelAnimationFrame(_editorPreviewAF);
+  const dur = data.duration;
+  let start = null;
+
+  function loop(ts) {
+    if (!start) start = ts;
+    const t = Math.min(((ts-start)/1000)/dur, 1);
+    drawFrame(ctx, t, data, tpl.w, tpl.h);
+    if (t < 1) _editorPreviewAF = requestAnimationFrame(loop);
+    else { // loop
+      start = null;
+      _editorPreviewAF = requestAnimationFrame(loop);
+    }
+  }
+  _editorPreviewAF = requestAnimationFrame(loop);
+}
+
+/* ── Render & Export ──────────────────────────────────── */
+async function runAgentEditor(id, output) {
+  if (_editorRendering) {
+    output.innerHTML = '<div style="color:#F59E0B;font-size:12px">Ya hay un video renderizando. Espera a que termine.</div>';
+    return;
+  }
+
+  const data = getEditorData();
+  const tpl  = VIDEO_TEMPLATES[data.template];
+
+  // Show preview first if not shown
+  if (!document.getElementById('editor-preview-wrap')?.style.display || document.getElementById('editor-preview-wrap').style.display === 'none') {
+    previewEditorVideo();
+  }
+
+  // AI enhance content if LLM available
+  if (window.CRM_LLM?.engine && data.titulo) {
+    try {
+      output.innerHTML = '<div style="font-size:11px;color:#F59E0B;font-family:Inter,sans-serif;padding:6px 0"><div class="agent-spinner" style="border-top-color:#F59E0B;display:inline-block;margin-right:6px"></div>Optimizando copy con IA...</div>';
+      const enhanced = await window.CRM_LLM.chat(
+        'Eres un copywriter experto para MetaTronix. Mejora el texto dado haciéndolo más persuasivo y conciso. Responde SOLO con el texto mejorado, sin explicaciones.',
+        `Mejora este texto para un video de marketing: "${data.titulo}". Máximo 6 palabras.`
+      );
+      if (enhanced && enhanced.length < 60) data.titulo = enhanced.trim().replace(/^["']|["']$/g,'');
+    } catch(e) { /* fallback to original */ }
+  }
+
+  _editorRendering = true;
+  const canvas = document.createElement('canvas');
+  canvas.width = tpl.w; canvas.height = tpl.h;
+  const ctx    = canvas.getContext('2d');
+  const dur    = data.duration * 1000;
+  const fps    = tpl.fps;
+  const stream = canvas.captureStream(fps);
+
+  // Use best available codec
+  const mimeTypes = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  const mimeType = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+
+  _editorChunks  = [];
+  _editorRecorder= new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4000000 });
+  _editorRecorder.ondataavailable = e => { if(e.data.size>0) _editorChunks.push(e.data); };
+  _editorRecorder.onstop = () => {
+    const blob = new Blob(_editorChunks, {type:'video/webm'});
+    const url  = URL.createObjectURL(blob);
+    const sizeMB = (blob.size/1024/1024).toFixed(1);
+    _editorRendering = false;
+    output.innerHTML = `
+      <div style="padding:4px 0">
+        <div style="font-size:11px;font-weight:700;color:#10B981;margin-bottom:8px;font-family:Inter,sans-serif">✅ Video renderizado (${sizeMB}MB)</div>
+        <video controls autoplay loop src="${url}"
+          style="width:100%;border-radius:8px;max-height:300px;background:#000;border:1px solid rgba(245,158,11,.25)">
+        </video>
+        <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
+          <a href="${url}" download="mtx-${data.template}-${Date.now()}.webm"
+            style="padding:7px 14px;background:rgba(245,158,11,.12);color:#F59E0B;border:1px solid rgba(245,158,11,.25);border-radius:6px;text-decoration:none;font-size:11px;font-weight:700;font-family:Inter,sans-serif;display:inline-flex;align-items:center;gap:4px">
+            ⬇ Descargar WebM
+          </a>
+          <span style="font-size:10px;color:#4A5568;align-self:center;font-family:monospace">${tpl.w}×${tpl.h} · ${data.duration}s · ${fps}fps</span>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:#3D4A60;font-family:Inter,sans-serif">
+          💡 Para convertir WebM a MP4: usa <a href="https://cloudconvert.com/webm-to-mp4" target="_blank" style="color:#F59E0B">cloudconvert.com</a> (gratis)
+        </div>
+      </div>`;
+    if (typeof Notiflix!=='undefined') Notiflix.Notify.success('🎞 Video generado ✓');
+  };
+
+  _editorRecorder.start();
+
+  // Render frames
+  const startTime = performance.now();
+  let lastFrame = -1;
+
+  function renderFrames() {
+    const elapsed = performance.now() - startTime;
+    const t       = Math.min(elapsed / dur, 1.0);
+    const frame   = Math.floor(t * fps * data.duration);
+
+    if (frame !== lastFrame) {
+      lastFrame = frame;
+      drawFrame(ctx, t, data, tpl.w, tpl.h);
+    }
+
+    // Progress in output
+    const pct = Math.round(t * 100);
+    output.innerHTML = `<div style="font-family:Inter,sans-serif;padding:4px 0">
+      <div style="font-size:11px;color:#F59E0B;margin-bottom:6px">🎬 Renderizando ${tpl.label}… ${pct}%</div>
+      <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#F59E0B,#EF4444);border-radius:2px;transition:width .1s"></div>
+      </div>
+      <div style="font-size:10px;color:#4A5568;margin-top:4px">${tpl.w}×${tpl.h} · ${fps}fps · ${data.duration}s</div>
+    </div>`;
+
+    if (elapsed < dur) {
+      _editorAnimFrame = requestAnimationFrame(renderFrames);
+    } else {
+      // Render final frame
+      drawFrame(ctx, 1, data, tpl.w, tpl.h);
+      _editorRecorder.stop();
+    }
+  }
+
+  requestAnimationFrame(renderFrames);
+}
+
+/* Init editor form on first render */
+setTimeout(() => {
+  const tplEl = document.getElementById('editor-tpl');
+  if (tplEl) switchEditorTemplate('pitch');
+  selectEditorColor('#00C2E0');
+}, 500);
 
 init();
 </script>
