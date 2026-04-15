@@ -3284,8 +3284,394 @@ function copyEmailDraft(leadId) {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   GAP 1 — TASK AUTOMATION
+   Al mover un lead de etapa → se crean tareas automáticas
+   Inspirado en: HubSpot Task Automation + Zoho Blueprint
+   ═══════════════════════════════════════════════════════════ */
+
+const TASK_TEMPLATES = {
+  generacion:      [ { texto:'Investigar empresa en LinkedIn', dias:1, tipo:'investigacion' },
+                     { texto:'Preparar pitch personalizado',  dias:2, tipo:'preparacion'  } ],
+  primer_contacto: [ { texto:'Enviar email de presentación',  dias:0, tipo:'email'        },
+                     { texto:'Conectar en LinkedIn',          dias:1, tipo:'linkedin'      } ],
+  calificacion:    [ { texto:'Agendar llamada de calificación', dias:1, tipo:'llamada'    },
+                     { texto:'Completar BANT del prospecto',  dias:3, tipo:'analisis'     } ],
+  propuesta:       [ { texto:'Preparar propuesta personalizada', dias:2, tipo:'propuesta' },
+                     { texto:'Validar presupuesto con decisor', dias:3, tipo:'seguimiento'} ],
+  negociacion:     [ { texto:'Enviar contrato / términos',    dias:1, tipo:'contrato'     },
+                     { texto:'Llamada de cierre programada',  dias:2, tipo:'llamada'      } ],
+  cierre:          [ { texto:'Firmar contrato',               dias:0, tipo:'contrato'     },
+                     { texto:'Enviar factura al área de finanzas', dias:1, tipo:'admin'   },
+                     { texto:'Agendar kickoff de implementación', dias:3, tipo:'operaciones'} ],
+  postventa:       [ { texto:'Llamada de bienvenida al cliente', dias:1, tipo:'llamada'   },
+                     { texto:'NPS inicial — encuesta en 7 días', dias:7, tipo:'nps'       } ],
+  retencion:       [ { texto:'Revisión de satisfacción mensual', dias:30, tipo:'revision' },
+                     { texto:'Identificar oportunidades upsell',  dias:15, tipo:'upsell'  } ],
+  fidelizacion:    [ { texto:'Programa de referidos — presentar', dias:7, tipo:'referidos'},
+                     { texto:'Co-marketing: caso de éxito',        dias:14, tipo:'contenido'} ],
+};
+
+const TASKS_KEY = 'mtx_tasks_v2';
+
+function getTasks() { try { return JSON.parse(localStorage.getItem(TASKS_KEY)||'[]'); } catch { return []; } }
+function saveTasks(tasks) { localStorage.setItem(TASKS_KEY, JSON.stringify(tasks)); }
+
+function createAutoTasks(leadId, newStage) {
+  const lead      = allLeads.find(l=>l.id===leadId);
+  const templates = TASK_TEMPLATES[newStage];
+  if (!templates || !lead) return;
+
+  const tasks = getTasks();
+  const now   = Date.now();
+  templates.forEach(t => {
+    const dueDate = new Date(now + t.dias * 86400000);
+    tasks.unshift({
+      id:       'task_'+now+'_'+Math.random().toString(36).slice(2,7),
+      lead_id:  leadId,
+      empresa:  lead.empresa,
+      texto:    t.texto,
+      tipo:     t.tipo,
+      due_date: dueDate.toISOString().split('T')[0],
+      stage:    newStage,
+      done:     false,
+      created:  new Date().toISOString(),
+      user_id:  currentUser?.id,
+    });
+  });
+  saveTasks(tasks);
+
+  // Notify
+  notify(`✅ ${templates.length} tarea${templates.length>1?'s':''} creada${templates.length>1?'s':''} para ${STAGES[newStage]?.label}`, 'success');
+  updateTaskBadge();
+}
+
+function updateTaskBadge() {
+  const pending = getTasks().filter(t => !t.done && t.user_id === currentUser?.id);
+  const badge   = document.getElementById('task-badge');
+  if (badge) {
+    badge.textContent = pending.length;
+    badge.style.display = pending.length > 0 ? 'inline' : 'none';
+  }
+}
+
+function getMyTasks() {
+  return getTasks().filter(t => !t.done && (!t.user_id || t.user_id === currentUser?.id))
+    .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
+}
+
+function completeTask(taskId) {
+  const tasks = getTasks();
+  const t     = tasks.find(x=>x.id===taskId);
+  if (t) { t.done = true; t.completed_at = new Date().toISOString(); }
+  saveTasks(tasks);
+  renderTasksPanel();
+  updateTaskBadge();
+}
+
+function renderTasksPanel() {
+  const el = document.getElementById('tasks-panel-content');
+  if (!el) return;
+  const myTasks = getMyTasks();
+  if (!myTasks.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">✅ Sin tareas pendientes — ¡excelente!</div>';
+    return;
+  }
+  const today = new Date(); today.setHours(0,0,0,0);
+  el.innerHTML = myTasks.map(t => {
+    const due    = new Date(t.due_date); due.setHours(0,0,0,0);
+    const isOver = due < today;
+    const isToday= due.getTime() === today.getTime();
+    const daysLeft = Math.round((due - today) / 86400000);
+    const typeIcons = { email:'📧', llamada:'📞', linkedin:'💼', propuesta:'📋', contrato:'📄', analisis:'🔍', preparacion:'✍️', operaciones:'⚙️', admin:'💼', nps:'⭐', revision:'🔄', upsell:'🚀', referidos:'🤝', contenido:'✍️', investigacion:'🔎' };
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);${isOver?'background:#FEF2F2':''}">
+      <input type="checkbox" style="margin-top:2px;accent-color:var(--accent)" onchange="completeTask('${t.id}')">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <span>${typeIcons[t.tipo]||'📌'}</span>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">${escHtml(t.texto)}</span>
+        </div>
+        <div style="font-size:11px;color:#94a3b8">${escHtml(t.empresa)} · ${isOver?'<span style="color:#ef4444">Vencida hace '+Math.abs(daysLeft)+' día(s)</span>':isToday?'<span style="color:#d97706;font-weight:700">Vence HOY</span>':'Vence en '+daysLeft+' día(s)'}</div>
+      </div>
+      <a href="/leads.html" style="font-size:11px;color:var(--accent);text-decoration:none;white-space:nowrap">Ver lead →</a>
+    </div>`;
+  }).join('');
+}
+
+function toggleTasksPanel() {
+  let panel = document.getElementById('tasks-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'tasks-panel';
+    panel.style.cssText = `position:fixed;bottom:120px;right:20px;width:380px;max-height:500px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,30,80,.16);z-index:8998;overflow:hidden;display:flex;flex-direction:column;`;
+    panel.innerHTML = `
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:var(--font-head);font-size:.95rem;letter-spacing:.05em;color:var(--navy)">✅ MIS TAREAS</span>
+        <button style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px" onclick="document.getElementById('tasks-panel').remove()">✕</button>
+      </div>
+      <div id="tasks-panel-content" style="overflow-y:auto;flex:1"></div>`;
+    document.body.appendChild(panel);
+  } else {
+    panel.remove(); return;
+  }
+  renderTasksPanel();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GAP 2 — BLUEPRINT PROCESS (Stage Gates)
+   Inspirado en: Zoho Blueprint — valida requisitos antes de avanzar
+   ═══════════════════════════════════════════════════════════ */
+
+const STAGE_GATES = {
+  propuesta:   { required: ['contacto_nombre','contacto_email','valor_estimado'], message: 'Para mover a Propuesta necesitas: contacto, email y valor estimado.' },
+  negociacion: { requiredComms: 1, message: 'Para Negociación necesitas al menos 1 interacción registrada en el historial.' },
+  cierre:      { required: ['seguimiento'], requiredPlan: true, message: 'Para Cierre necesitas: fecha de seguimiento y un plan de acción aprobado.' },
+};
+
+function validateStageGate(lead, newStage) {
+  const gate = STAGE_GATES[newStage];
+  if (!gate) return { ok: true };
+
+  // Check required fields
+  if (gate.required) {
+    const missing = gate.required.filter(f => !lead[f]);
+    if (missing.length) return { ok: false, message: gate.message + `\n\nFaltan: ${missing.join(', ')}` };
+  }
+
+  // Check required communications
+  if (gate.requiredComms) {
+    const comms = LS.comms(lead.id).filter(c=>c.tipo!=='sistema');
+    if (comms.length < gate.requiredComms) return { ok: false, message: gate.message };
+  }
+
+  // Check plan
+  if (gate.requiredPlan) {
+    const plan = LS.plans().find(p=>p.lead_id===lead.id && p.status==='aprobado');
+    if (!plan) return { ok: false, message: gate.message + '\n\nEl plan de seguimiento debe estar aprobado.' };
+  }
+
+  return { ok: true };
+}
+
+/* Override moveLeadStage to validate gate + create tasks */
+const _origMoveLeadStage = moveLeadStage;
+window._gateOverrideActive = false; // prevent double-declaration
+async function moveLeadStage(leadId, newStage) {
+  const lead = allLeads.find(l=>l.id===leadId);
+
+  // Blueprint gate validation
+  if (lead && !window._gateOverrideActive) {
+    const gate = validateStageGate(lead, newStage);
+    if (!gate.ok) {
+      if (typeof Swal !== 'undefined') {
+        const r = await Swal.fire({
+          title: '⚠️ Requisito de etapa',
+          text: gate.message,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Forzar avance',
+          cancelButtonText: 'Completar requisitos',
+          confirmButtonColor: '#f59e0b',
+        });
+        if (!r.isConfirmed) { renderKanban(getFilteredLeads()); return; }
+      } else {
+        if (!confirm(`${gate.message}\n\n¿Forzar avance de todas formas?`)) { renderKanban(getFilteredLeads()); return; }
+      }
+    }
+  }
+
+  // Run original
+  await _origMoveLeadStage(leadId, newStage);
+
+  // Auto-create tasks for new stage
+  createAutoTasks(leadId, newStage);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GAP 3 — EMAIL SEQUENCES
+   Secuencias programadas con delays (1-a-1, como HubSpot)
+   ═══════════════════════════════════════════════════════════ */
+
+const SEQ_KEY = 'mtx_sequences_v2';
+
+function getSequences() { try { return JSON.parse(localStorage.getItem(SEQ_KEY)||'[]'); } catch { return []; } }
+function saveSequences(seqs) { localStorage.setItem(SEQ_KEY, JSON.stringify(seqs)); }
+
+const DEFAULT_SEQUENCES = {
+  nuevo_lead: {
+    name: 'Bienvenida a Nuevo Lead',
+    steps: [
+      { delay_days: 0,  tipo:'email',    asunto:'Gracias por tu interés en MetaTronix', body:'Hola {nombre},\n\nGracias por tu interés en {empresa}. Soy {mi_nombre} de MetaTronix.\n\nMe gustaría conocer más sobre tus necesidades y cómo podemos ayudarte.\n\n¿Tienes 15 minutos esta semana?\n\nSaludos,' },
+      { delay_days: 3,  tipo:'email',    asunto:'[Video] Cómo empresas como la tuya usan IA', body:'Hola {nombre},\n\nTe comparto este caso de éxito que creo que aplica directamente a {empresa_nombre}.\n\n¿Alguna pregunta después de verlo?\n\nSaludos,' },
+      { delay_days: 7,  tipo:'whatsapp', asunto:'Seguimiento WhatsApp', body:'Hola {nombre}! 👋 ¿Tuviste oportunidad de revisar la información que te envié? Me gustaría saber tu opinión.' },
+      { delay_days: 14, tipo:'email',    asunto:'Última propuesta — {empresa_nombre}', body:'Hola {nombre},\n\nEntiendo que debes estar muy ocupado. Quiero dejar esta puerta abierta.\n\nCuando estés listo para explorar cómo MetaTronix puede ayudar a {empresa_nombre}, aquí estaré.\n\nSaludos,' },
+    ]
+  },
+  post_propuesta: {
+    name: 'Seguimiento Post-Propuesta',
+    steps: [
+      { delay_days: 1,  tipo:'email',    asunto:'Re: Propuesta {empresa_nombre} — ¿Tienes preguntas?', body:'Hola {nombre},\n\nEspero que hayas tenido oportunidad de revisar la propuesta. ¿Tienes alguna pregunta o punto que quieras clarificar?\n\nEstoy disponible para una llamada en el momento que mejor te convenga.\n\nSaludos,' },
+      { delay_days: 4,  tipo:'llamada',  asunto:'Llamada de seguimiento de propuesta', body:'Llamar para verificar recepción de propuesta y resolver dudas.' },
+      { delay_days: 10, tipo:'email',    asunto:'¿Sigues evaluando opciones? — MetaTronix', body:'Hola {nombre},\n\nEntiendo que tomar esta decisión lleva tiempo. Solo quiero recordarte que ofrecemos implementación en 1 semana y soporte 24/7 en español.\n\n¿En qué punto está tu evaluación?\n\nSaludos,' },
+    ]
+  },
+};
+
+function enrollInSequence(leadId, sequenceKey) {
+  const lead = allLeads.find(l=>l.id===leadId);
+  const seq  = DEFAULT_SEQUENCES[sequenceKey];
+  if (!lead || !seq) return;
+
+  const seqs    = getSequences();
+  const enrollment = {
+    id:         'seq_'+Date.now(),
+    lead_id:    leadId,
+    empresa:    lead.empresa,
+    contacto:   lead.contacto_nombre,
+    email:      lead.contacto_email,
+    sequence:   sequenceKey,
+    seq_name:   seq.name,
+    started_at: new Date().toISOString(),
+    current_step: 0,
+    steps:      seq.steps.map((s, i) => ({
+      ...s, index: i,
+      scheduled_date: new Date(Date.now() + s.delay_days * 86400000).toISOString().split('T')[0],
+      status: 'pendiente',
+    })),
+    active: true,
+    user_id: currentUser?.id,
+  };
+  seqs.unshift(enrollment);
+  saveSequences(seqs);
+  notify(`📧 Secuencia "${seq.name}" iniciada para ${lead.empresa}`, 'success');
+}
+
+function getActiveSequences() {
+  return getSequences().filter(s => s.active && (!s.user_id || s.user_id === currentUser?.id));
+}
+
+function renderSequenceTab(leadId) {
+  const mySeqs = getSequences().filter(s=>s.lead_id===leadId);
+  const stateColor = {pendiente:'#94a3b8', enviado:'#16a34a', omitido:'#d97706'};
+  const typeIcons  = {email:'📧', whatsapp:'💬', llamada:'📞'};
+
+  return `
+  <div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-primary btn-sm" onclick="enrollInSequence('${leadId}','nuevo_lead');switchTab('secuencias')">▶ Iniciar: Bienvenida Nuevo Lead</button>
+    <button class="btn btn-ghost btn-sm"   onclick="enrollInSequence('${leadId}','post_propuesta');switchTab('secuencias')">▶ Iniciar: Post-Propuesta</button>
+  </div>
+  ${!mySeqs.length
+    ? '<div style="color:#94a3b8;text-align:center;padding:20px;font-size:13px">Sin secuencias activas. Inicia una arriba.</div>'
+    : mySeqs.map(s=>`
+      <div style="border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden">
+        <div style="padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600;font-size:13px;color:var(--navy)">${escHtml(s.seq_name)}</span>
+          <span style="font-size:11px;color:${s.active?'#16a34a':'#94a3b8'};font-weight:700">${s.active?'▶ Activa':'Finalizada'}</span>
+        </div>
+        ${s.steps.map((step,i)=>`
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:${step.status==='enviado'?'#F0FDF4':'#fff'}">
+            <div style="font-size:16px">${typeIcons[step.tipo]||'📌'}</div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600;color:var(--text)">${escHtml(step.asunto)}</div>
+              <div style="font-size:11px;color:#94a3b8;margin-top:2px">Día ${step.delay_days} · ${step.scheduled_date}</div>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center">
+              <span style="font-size:11px;color:${stateColor[step.status]||'#94a3b8'};font-weight:700;text-transform:uppercase">${step.status}</span>
+              ${step.status==='pendiente' ? `<button class="btn btn-ghost btn-sm" onclick="markStepDone('${s.id}',${i})" style="font-size:10px;padding:2px 7px">✓</button>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>`).join('')}`;
+}
+
+function markStepDone(seqId, stepIndex) {
+  const seqs = getSequences();
+  const s    = seqs.find(x=>x.id===seqId);
+  if (!s) return;
+  s.steps[stepIndex].status = 'enviado';
+  s.steps[stepIndex].sent_at = new Date().toISOString();
+  // Auto-advance
+  const nextPending = s.steps.findIndex((st,i) => i > stepIndex && st.status==='pendiente');
+  if (nextPending === -1) { s.active = false; s.completed_at = new Date().toISOString(); }
+  saveSequences(seqs);
+  const lead = allLeads.find(l=>l.id===s.lead_id);
+  if (lead) switchTab('secuencias');
+  notify('Paso marcado como enviado ✓','success');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GAP 5 — EMAIL TRACKING (pixel + link tracker)
+   ═══════════════════════════════════════════════════════════ */
+
+const TRACK_KEY = 'mtx_email_opens_v2';
+
+function recordEmailOpen(leadId, emailId) {
+  const opens = JSON.parse(localStorage.getItem(TRACK_KEY)||'{}');
+  if (!opens[leadId]) opens[leadId] = [];
+  opens[leadId].push({ emailId, opened_at: new Date().toISOString(), type: 'open' });
+  localStorage.setItem(TRACK_KEY, JSON.stringify(opens));
+  updateTrackingBadge(leadId);
+}
+
+function getEmailOpens(leadId) {
+  const opens = JSON.parse(localStorage.getItem(TRACK_KEY)||'{}');
+  return opens[leadId] || [];
+}
+
+function updateTrackingBadge(leadId) {
+  const opens = getEmailOpens(leadId).length;
+  // Will show in lead info tab
+}
+
+/* Add "Secuencias" tab to drawer */
+const _origSwitchTab = switchTab;
+function switchTab(tab) {
+  // Extend renderers to include secuencias
+  if (tab === 'secuencias') {
+    currentDrawerTab = tab;
+    document.querySelectorAll('.dtab').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+    const lead = allLeads.find(l=>l.id===currentLeadId);
+    const body = document.getElementById('drawer-body');
+    if (lead && body) body.innerHTML = renderSequenceTab(lead.id);
+    return;
+  }
+  _origSwitchTab(tab);
+}
+
+/* ── Update openDrawer to add Secuencias tab ─────────── */
+const _origOpenDrawer2 = openDrawer;
+function openDrawer(leadId) {
+  _origOpenDrawer2(leadId);
+  // Add secuencias tab if not already there
+  const tabs = document.querySelector('.o-drawer-tabs');
+  if (tabs && !tabs.querySelector('[data-tab="secuencias"]')) {
+    const btn = document.createElement('button');
+    btn.className = 'o-dtab';
+    btn.dataset.tab = 'secuencias';
+    btn.textContent = '📧 Secuencias';
+    btn.onclick = () => switchTab('secuencias');
+    tabs.appendChild(btn);
+  }
+  // Add task button near the task badge area
+  updateTaskBadge();
+}
+
+/* ── Patch stat buttons to include tasks ─────────────── */
+function init_taskUI() {
+  const cpRight = document.querySelector('.o-cp-top > div:last-child');
+  if (cpRight && !document.getElementById('task-badge-btn')) {
+    const btn = document.createElement('button');
+    btn.id = 'task-badge-btn';
+    btn.className = 'btn btn-ghost btn-sm';
+    btn.style.position = 'relative';
+    btn.onclick = toggleTasksPanel;
+    btn.innerHTML = `✅ Tareas <span id="task-badge" style="display:none;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:4px">0</span>`;
+    cpRight.prepend(btn);
+  }
+}
+
 // Init
 init();
+setTimeout(init_taskUI, 1500);
 
 
 function openDrawer(leadId) {

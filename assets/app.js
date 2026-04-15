@@ -455,6 +455,10 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">📣</span>
         <span class="nav-label">Marketing IA</span>
       </a>
+      <a href="/captureform.html" class="sidebar-nav-link ${activePage==='captureform'?'active':''}" target="_blank" title="Formulario de captura para compartir con prospectos">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">Formulario Web</span>
+      </a>
 
       <div class="sidebar-divider"></div>
 
