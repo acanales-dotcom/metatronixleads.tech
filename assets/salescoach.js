@@ -316,7 +316,7 @@
           <div class="metafollow-name">${ALEX_NAME}</div>
           <div class="metafollow-status"><div class="metafollow-status-dot"></div><span id="mf-status-text">Analizando leads…</span></div>
         </div>
-        <button class="metafollow-close" onclick="document.getElementById('metafollow-panel').classList.remove('open');document.getElementById('metafollow-btn').classList.remove('open')">✕</button>
+        <button class="mf-close" onclick="closeMetaFollow()">✕</button>
       </div>
       <div class="metafollow-tabs">
         <button class="metafollow-tab active" data-tab="insights" onclick="metafollowTab('insights',this)">💡 Insights</button>
@@ -343,18 +343,33 @@
 
   /* ── Panel control ───────────────────────────────────────── */
   function togglePanel() {
+    isOpen ? closeMetaFollow() : openMetaFollow();
+  }
+
+  function openMetaFollow() {
     const panel = document.getElementById('metafollow-panel');
     const btn   = document.getElementById('metafollow-btn');
     if (!panel || !btn) return;
-    isOpen = !isOpen;
-    panel.classList.toggle('open', isOpen);
-    btn.classList.toggle('open', isOpen);
-    if (isOpen) runAnalysis();
+    isOpen = true;
+    panel.classList.add('open');
+    btn.classList.add('open');
+    runAnalysis();
   }
+
+  function closeMetaFollow() {
+    const panel = document.getElementById('metafollow-panel');
+    const btn   = document.getElementById('metafollow-btn');
+    if (!panel || !btn) return;
+    isOpen = false;
+    panel.classList.remove('open');
+    btn.classList.remove('open');
+  }
+  // Expose close globally so the inline onclick can reach it
+  window.closeMetaFollow = closeMetaFollow;
 
   window.metafollowTab = function(tab, btnEl) {
     ['insights','stats','chat'].forEach(t => {
-      const el = document.getElementById(`alex-tab-${t}`);
+      const el = document.getElementById(`mf-tab-${t}`);
       if (el) el.style.display = t === tab ? (t === 'chat' ? 'flex' : 'block') : 'none';
     });
     document.querySelectorAll('.mf-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
