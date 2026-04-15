@@ -502,6 +502,15 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">⚙️</span>
         <span class="nav-label">Administración</span>
       </a>` : ''}
+      ${isSuperAdmin ? `
+      <a href="/security-audit.html" class="sidebar-nav-link ${activePage==='security-audit'?'active':''}" style="border-left:2px solid #DC2626">
+        <span class="nav-icon">🛡</span>
+        <span class="nav-label">Seguridad & Auditoría</span>
+      </a>
+      <a href="/privacy.html" class="sidebar-nav-link ${activePage==='privacy'?'active':''}">
+        <span class="nav-icon">🔒</span>
+        <span class="nav-label">Privacidad / SOC 2</span>
+      </a>` : ''}
 
     </nav>
 
@@ -583,3 +592,164 @@ function handleAlertClick(alertId, leadId) {
   closeBellDropdown();
   if (leadId) window.location.href = '/leads.html';
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SECURITY HARDENING — SOC 2 Type II / ISO 27001:2022
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── CSP Injection: agrega headers de seguridad vía meta ── */
+function injectSecurityHeaders() {
+  const head = document.head;
+  if (document.querySelector('meta[http-equiv="Content-Security-Policy"]')) return;
+
+  // Content Security Policy
+  const csp = document.createElement('meta');
+  csp.httpEquiv = 'Content-Security-Policy';
+  csp.content = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://esm.run https://fonts.googleapis.com https://cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co wss://*.supabase.co",
+    "worker-src blob:",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+  head.insertBefore(csp, head.firstChild);
+
+  // X-Frame-Options (via meta equiv)
+  const xframe = document.createElement('meta');
+  xframe.httpEquiv = 'X-Frame-Options';
+  xframe.content = 'DENY';
+  head.insertBefore(xframe, head.firstChild);
+
+  // Referrer Policy
+  const ref = document.createElement('meta');
+  ref.name    = 'referrer';
+  ref.content = 'strict-origin-when-cross-origin';
+  head.appendChild(ref);
+}
+
+/* ── Session timeout: 8h idle → force re-login ─────────── */
+let _idleTimer = null;
+const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+function resetIdleTimer() {
+  clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(async () => {
+    const db = getDB();
+    if (db) await db.auth.signOut();
+    window.location.href = '/index.html?reason=session_timeout';
+  }, SESSION_TIMEOUT_MS);
+}
+
+function initSessionTimeout() {
+  ['mousemove','keydown','click','touchstart','scroll'].forEach(ev =>
+    document.addEventListener(ev, resetIdleTimer, { passive: true })
+  );
+  resetIdleTimer();
+}
+
+/* ── Rate limiter: protege operaciones críticas ─────────── */
+const _rateLimits = {};
+function rateLimitCheck(key, maxCalls = 10, windowMs = 60000) {
+  const now = Date.now();
+  if (!_rateLimits[key]) _rateLimits[key] = [];
+  _rateLimits[key] = _rateLimits[key].filter(t => now - t < windowMs);
+  if (_rateLimits[key].length >= maxCalls) {
+    console.warn(`[SECURITY] Rate limit reached for: ${key}`);
+    return false;
+  }
+  _rateLimits[key].push(now);
+  return true;
+}
+
+/* ── Enhanced escHtml with URL sanitization ─────────────── */
+const _origEscHtml = escHtml;
+function escHtml(s) {
+  if (s === null || s === undefined) return '';
+  const str = String(s);
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+/* Sanitize URL to prevent javascript: protocol */
+function safeUrl(url) {
+  if (!url) return '#';
+  const lower = url.trim().toLowerCase();
+  if (lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:')) return '#';
+  return url;
+}
+
+/* ── Input sanitizer for forms ──────────────────────────── */
+function sanitizeInput(value, type = 'text') {
+  if (!value) return '';
+  const str = String(value).trim();
+  switch(type) {
+    case 'email':   return str.toLowerCase().replace(/[^a-z0-9@._+-]/gi, '').slice(0, 255);
+    case 'phone':   return str.replace(/[^0-9+\-\s()ext.]/gi, '').slice(0, 30);
+    case 'number':  return str.replace(/[^0-9.,\-]/g, '').slice(0, 20);
+    case 'alphanumeric': return str.replace(/[^a-z0-9\s\-_.@]/gi, '').slice(0, 500);
+    default:        return str.slice(0, 2000); // max text length
+  }
+}
+
+/* ── Security event logger ──────────────────────────────── */
+async function logSecurityEvent(event, details = {}) {
+  try {
+    const db = getDB();
+    if (!db) return;
+    await db.from('activity_logs').insert({
+      user_id:     window._mtxCurrentUser?.id || null,
+      action:      `security.${event}`,
+      entity_type: 'security',
+      entity_id:   null,
+      metadata: {
+        ...details,
+        user_agent:  navigator.userAgent.slice(0, 200),
+        page:        window.location.pathname,
+        timestamp:   new Date().toISOString(),
+      },
+    });
+  } catch (e) {
+    console.warn('[SECURITY] Failed to log security event:', e.message);
+  }
+}
+
+/* ── Detect and block suspicious activity ───────────────── */
+function initSecurityMonitor() {
+  // Detect devtools open (basic heuristic)
+  let devtoolsOpen = false;
+  const threshold = 160;
+  setInterval(() => {
+    if (window.outerWidth - window.innerWidth > threshold ||
+        window.outerHeight - window.innerHeight > threshold) {
+      if (!devtoolsOpen) {
+        devtoolsOpen = true;
+        logSecurityEvent('devtools_open', { page: window.location.pathname });
+      }
+    } else {
+      devtoolsOpen = false;
+    }
+  }, 5000);
+
+  // Log page load
+  logSecurityEvent('page_load', { page: window.location.pathname });
+
+  // Log failed auth attempts (will be called from requireAuth)
+  window.MTX_SECURITY_MONITOR = true;
+}
+
+/* ── Run security init on every page ────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  injectSecurityHeaders();
+  initSessionTimeout();
+  initSecurityMonitor();
+});

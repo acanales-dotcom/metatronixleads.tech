@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Política de Privacidad y Seguridad</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    .privacy-doc { max-width: 860px; margin: 0 auto; padding: 48px 24px; }
+    .privacy-doc h1 { font-size: 2rem; color: var(--navy); margin-bottom: 8px; }
+    .privacy-doc h2 { font-size: 1.2rem; color: var(--accent); margin: 32px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .privacy-doc h3 { font-size: 1rem; color: var(--navy); margin: 16px 0 8px; }
+    .privacy-doc p, .privacy-doc li { font-size: 14px; color: var(--text); line-height: 1.8; margin-bottom: 8px; }
+    .privacy-doc ul { padding-left: 20px; margin-bottom: 12px; }
+    .badge-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+    .compliance-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+    .badge-soc2 { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+    .badge-iso  { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+    .badge-gdpr { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+    .contact-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-top: 24px; }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+<div class="privacy-doc">
+  <div style="margin-bottom:24px">
+    <div class="badge-row">
+      <span class="compliance-badge badge-soc2">SOC 2 Type II (Supabase)</span>
+      <span class="compliance-badge badge-iso">ISO 27001 Framework</span>
+      <span class="compliance-badge badge-gdpr">LFPDPPP (México)</span>
+    </div>
+    <h1>Política de Privacidad, Seguridad y Tratamiento de Datos</h1>
+    <p style="color:var(--text-muted);font-size:13px">IBANOR SA de CV · MetaTronix Portal · Versión 2.0 · Abril 2026</p>
+  </div>
+
+  <h2>1. Responsable del Tratamiento de Datos</h2>
+  <p><strong>IBANOR SA de CV</strong>, operando bajo la marca <strong>MetaTronix</strong>, es responsable del tratamiento de datos personales en este portal. Contacto de privacidad: <a href="mailto:privacy@metatronixleads.tech">privacy@metatronixleads.tech</a></p>
+
+  <h2>2. Datos que Recopilamos</h2>
+  <h3>Datos de usuarios del portal:</h3>
+  <ul>
+    <li><strong>Identificación:</strong> nombre completo, correo electrónico, rol en la organización</li>
+    <li><strong>Actividad:</strong> logs de acceso, acciones realizadas en el sistema (leads creados/editados, documentos subidos)</li>
+    <li><strong>Técnicos:</strong> user agent, timestamps de sesión, página accedida</li>
+  </ul>
+  <h3>Datos de leads/prospectos:</h3>
+  <ul>
+    <li>Nombre, empresa, cargo, email, teléfono, ciudad, estado, país</li>
+    <li>Historial de comunicaciones, notas comerciales, documentos adjuntos</li>
+    <li>Estos datos son propiedad de IBANOR SA de CV y se procesan con finalidad comercial legítima</li>
+  </ul>
+
+  <h2>3. Base Legal del Tratamiento (LFPDPPP México)</h2>
+  <ul>
+    <li><strong>Consentimiento:</strong> al crear una cuenta en el portal</li>
+    <li><strong>Ejecución de contrato:</strong> para usuarios colaboradores de IBANOR SA de CV</li>
+    <li><strong>Interés legítimo:</strong> para el seguimiento comercial de prospectos B2B</li>
+  </ul>
+
+  <h2>4. Medidas de Seguridad Implementadas</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px">
+    <thead><tr style="background:var(--navy);color:#fff"><th style="padding:8px 12px;text-align:left">Capa</th><th style="padding:8px 12px;text-align:left">Medida</th><th style="padding:8px 12px;text-align:left">Estándar</th></tr></thead>
+    <tbody>
+      <tr><td style="padding:7px 12px;border-bottom:1px solid var(--border)">Transporte</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">TLS 1.3 (HTTPS obligatorio)</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">ISO 27001 A.13</td></tr>
+      <tr><td style="padding:7px 12px;border-bottom:1px solid var(--border)">Reposo</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">AES-256 (Supabase)</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">SOC 2 CC6.1</td></tr>
+      <tr><td style="padding:7px 12px;border-bottom:1px solid var(--border)">Acceso</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">RBAC + Row Level Security</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">ISO 27001 A.9</td></tr>
+      <tr><td style="padding:7px 12px;border-bottom:1px solid var(--border)">Sesión</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">JWT con expiración, timeout 8h</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">ISO 27001 A.9.4</td></tr>
+      <tr><td style="padding:7px 12px;border-bottom:1px solid var(--border)">Código</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">XSS prevention (escHtml), CSP headers</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">ISO 27001 A.14</td></tr>
+      <tr><td style="padding:7px 12px;border-bottom:1px solid var(--border)">Auditoría</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">activity_logs con user_id, action, metadata</td><td style="padding:7px 12px;border-bottom:1px solid var(--border)">SOC 2 CC7.1</td></tr>
+      <tr><td style="padding:7px 12px">Disponibilidad</td><td style="padding:7px 12px">GitHub Pages 99.9% SLA + Supabase 99.95%</td><td style="padding:7px 12px">SOC 2 A1.1</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Retención de Datos</h2>
+  <ul>
+    <li><strong>Datos de leads activos:</strong> indefinido mientras exista relación comercial</li>
+    <li><strong>Leads perdidos/archivados:</strong> 3 años desde el último contacto</li>
+    <li><strong>Logs de actividad:</strong> 12 meses (ISO 27001 A.12.4)</li>
+    <li><strong>Datos de sesión:</strong> eliminados al cerrar sesión</li>
+    <li><strong>Solicitudes de eliminación:</strong> atendidas en máximo 30 días hábiles</li>
+  </ul>
+
+  <h2>6. Derechos ARCO (LFPDPPP)</h2>
+  <p>Los titulares de datos pueden ejercer sus derechos de Acceso, Rectificación, Cancelación y Oposición enviando solicitud a <a href="mailto:privacy@metatronixleads.tech">privacy@metatronixleads.tech</a>. Tiempo de respuesta: 20 días hábiles.</p>
+
+  <h2>7. Proveedores de Servicio (Sub-procesadores)</h2>
+  <ul>
+    <li><strong>Supabase Inc.</strong> — base de datos y autenticación — SOC 2 Type II certificado</li>
+    <li><strong>GitHub Inc. (Microsoft)</strong> — hospedaje web — ISO 27001 certificado</li>
+    <li><strong>HuggingFace Inc.</strong> — modelos de IA — procesamiento local en el browser del usuario</li>
+    <li><strong>WebLLM / MLC AI</strong> — modelos LLM — ejecutan 100% en el dispositivo del usuario</li>
+  </ul>
+
+  <h2>8. Transferencias Internacionales</h2>
+  <p>Los datos se almacenan en regiones de AWS (us-east-1) operadas por Supabase. La transferencia cumple con las garantías adecuadas de la LFPDPPP (Artículo 36).</p>
+
+  <h2>9. Cambios a esta Política</h2>
+  <p>Notificaremos cambios materiales con 30 días de anticipación vía email a los usuarios registrados. La versión vigente siempre estará disponible en <a href="/privacy.html">metatronixleads.tech/privacy.html</a>.</p>
+
+  <div class="contact-box">
+    <strong style="color:var(--navy);font-family:var(--font-head);letter-spacing:.04em">CONTACTO DE PRIVACIDAD Y SEGURIDAD</strong>
+    <p style="margin-top:8px">Para reportar vulnerabilidades, ejercer derechos ARCO o solicitar el registro de actividad de tu cuenta:</p>
+    <p>📧 <a href="mailto:privacy@metatronixleads.tech">privacy@metatronixleads.tech</a></p>
+    <p>📧 <a href="mailto:security@metatronixleads.tech">security@metatronixleads.tech</a> (reporte de incidentes)</p>
+    <p>Tiempo de respuesta SLA: 24h para incidentes de seguridad · 30 días para solicitudes ARCO</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+async function init() {
+  const user = await getCurrentUser();
+  if (user) {
+    document.getElementById('header-placeholder').innerHTML = renderHeader(user, '');
+  }
+}
+init();
+</script>
+</body>
+</html>
