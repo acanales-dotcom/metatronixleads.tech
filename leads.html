@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaTronix — Mis Leads</title>
+  <title>MetaTronix — Pipeline CRM v3.0</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
   <!-- GOOGLE FONTS -->
@@ -1540,14 +1543,21 @@ async function init() {
       success:{ background:'#10b981' }, failure:{ background:'#ef4444' }, warning:{ background:'#f59e0b' } });
   }
 
-  // Role system — restore session or show login
+  // Role system — auto-detect from Supabase profile, no blocking modal
   const savedRole = getRoleFromSession();
   if (savedRole && ROLES_DEF[savedRole]) {
     crmRole = savedRole;
-    applyRoleUI();
   } else {
-    showLoginModal();
+    // Map Supabase role → CRM role automatically
+    const supaRole = currentUser?.profile?.role || 'user';
+    const roleMap = {
+      'super_admin':'admin', 'admin':'admin', 'admin_restringido':'admin',
+      'user':'ejecutivo',
+    };
+    crmRole = roleMap[supaRole] || 'ejecutivo';
+    setRoleSession(crmRole);
   }
+  applyRoleUI();
 
   await loadLeads();
   // Seed test data on first load
