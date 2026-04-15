@@ -241,6 +241,33 @@
 .flywheel-num { font-family:var(--font-head); font-size:1.8rem; color:var(--blue); line-height:1; }
 .flywheel-label { font-size:11px; color:var(--text-muted); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
 .flywheel-arrow { display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--cyan); }
+/* ── Media IA shared buttons ────────────────────────── */
+.media-ia-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  background: var(--ia-bg, rgba(0,194,224,.08));
+  color: var(--ia-color, #00C2E0);
+  border: 1px solid var(--ia-color, #00C2E0);
+  transition: all .15s; position: relative; white-space: nowrap;
+}
+.media-ia-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.media-ia-btn.active { box-shadow: 0 0 12px rgba(255,255,255,.1); }
+.media-gpu-chip {
+  font-size: 9px; background: #EF4444; color: #fff;
+  padding: 1px 5px; border-radius: 8px; font-weight: 700;
+  letter-spacing: .03em;
+}
+/* Mutual exclusivity warning strip */
+.ia-exclusive-bar {
+  display: none; margin: 0 24px;
+  padding: 7px 14px; border-radius: 6px;
+  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
+  font-size: 11px; font-family: 'Inter', sans-serif; color: #F59E0B;
+  align-items: center; gap: 8px;
+}
+.ia-exclusive-bar.show { display: flex; }
+
 /* ── Video IA Panel ──────────────────────────────────── */
 .video-panel {
   display: none; margin: 0 24px 16px;
@@ -343,12 +370,21 @@
         <button class="btn btn-primary btn-sm" onclick="initLLM()">
           ⚡ Activar LLM
         </button>
-        <button class="btn btn-sm" id="video-llm-btn" onclick="toggleVideoPanel()"
-          style="background:linear-gradient(135deg,#1A1A2E,#16213E);color:#00C2E0;border:1px solid #00C2E0;display:flex;align-items:center;gap:6px;position:relative">
+        <!-- Video IA button -->
+        <button class="media-ia-btn" id="video-llm-btn" onclick="toggleVideoPanel()"
+          style="--ia-color:#00C2E0;--ia-bg:rgba(0,194,224,.08)">
           <span>🎬</span>
           <span>Video IA</span>
-          <span style="font-size:9px;background:#EF4444;color:#fff;padding:1px 5px;border-radius:8px;font-weight:700;letter-spacing:.03em">GPU</span>
+          <span class="media-gpu-chip">GPU</span>
         </button>
+        <!-- Image IA button -->
+        <button class="media-ia-btn" id="image-llm-btn" onclick="toggleImagePanel()"
+          style="--ia-color:#A78BFA;--ia-bg:rgba(167,139,250,.08)">
+          <span>🖼</span>
+          <span>Imagen IA</span>
+          <span class="media-gpu-chip" style="background:#7C3AED">GPU</span>
+        </button>
+        <span id="active-ia-label" style="display:none;font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;font-family:'JetBrains Mono',monospace"></span>
         <span id="gpu-badge" style="display:none;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(0,194,224,.1);color:#00C2E0;border:1px solid rgba(0,194,224,.2)"></span>
       </div>
     </div>
@@ -582,6 +618,229 @@ app.run(host="0.0.0.0", port=7860)</pre>
           <div class="video-progress-bar"><div class="video-progress-fill" id="video-prog-fill" style="width:0%"></div></div>
         </div>
         <div id="video-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MUTUAL EXCLUSIVITY WARNING ══════════════════════════ -->
+  <div class="ia-exclusive-bar" id="ia-exclusive-bar">
+    <span style="font-size:14px">⚠️</span>
+    <span id="ia-exclusive-msg">Solo se puede usar un generador a la vez. El anterior fue desactivado automáticamente.</span>
+    <button onclick="document.getElementById('ia-exclusive-bar').classList.remove('show')"
+      style="margin-left:auto;background:none;border:none;color:#F59E0B;cursor:pointer;font-size:14px">✕</button>
+  </div>
+
+  <!-- ══ IMAGE IA PANEL — FLUX.2-dev-NVFP4 ══════════════════ -->
+  <div class="video-panel" id="image-panel" style="border-color:rgba(167,139,250,.25)">
+    <div class="video-panel-header" style="border-color:rgba(167,139,250,.15)">
+      <div class="video-panel-title">
+        <span>🖼</span>
+        <div>
+          <div class="video-panel-name">Generador de Imagen IA — FLUX.2</div>
+          <div class="video-panel-model" style="color:#A78BFA">black-forest-labs/FLUX.2-dev-NVFP4 · Text-to-Image</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="img-gpu-status-badge" class="gpu-req-badge warn">⚡ Detectando GPU…</div>
+        <div style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;background:rgba(239,68,68,.15);color:#EF4444;border:1px solid rgba(239,68,68,.25);white-space:nowrap">
+          ⚠️ Uso individual — no compatible con Video IA activo
+        </div>
+        <button style="background:rgba(255,255,255,.08);border:none;color:#7E8FA8;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center" onclick="toggleImagePanel()">✕</button>
+      </div>
+    </div>
+
+    <div class="video-panel-body">
+      <div class="video-tab-row">
+        <button class="video-tab active" data-itab="api" onclick="switchImageTab('api',this)" style="--tab-active-bg:rgba(167,139,250,.15);--tab-active-color:#A78BFA">🌐 API HuggingFace</button>
+        <button class="video-tab" data-itab="local" onclick="switchImageTab('local',this)">🖥 Servidor Local</button>
+        <button class="video-tab" data-itab="space" onclick="switchImageTab('space',this)">🚀 HF Space (Gratis)</button>
+      </div>
+
+      <!-- API Tab -->
+      <div id="itab-api">
+        <div class="video-panel-grid">
+          <div class="video-field full">
+            <label>Prompt (descripción de la imagen)</label>
+            <textarea id="img-prompt" placeholder="A professional CEO shaking hands with a tech executive in a modern glass office, photorealistic, 8K, cinematic lighting, sharp focus..."></textarea>
+          </div>
+          <div class="video-field">
+            <label>Negative Prompt</label>
+            <input id="img-neg-prompt" value="blurry, low quality, distorted, watermark, text, ugly" placeholder="blurry, low quality...">
+          </div>
+          <div class="video-field">
+            <label>Resolución</label>
+            <select id="img-res">
+              <option value="512x512">512 × 512 (rápido)</option>
+              <option value="768x768">768 × 768</option>
+              <option value="1024x1024" selected>1024 × 1024 (recomendado)</option>
+              <option value="1280x720">1280 × 720 (landscape)</option>
+              <option value="720x1280">720 × 1280 (retrato)</option>
+              <option value="1024x576">1024 × 576 (widescreen)</option>
+            </select>
+          </div>
+          <div class="video-field">
+            <label>Guidance Scale (adherencia al prompt)</label>
+            <input type="range" id="img-guidance" min="1" max="15" value="3.5" step="0.5"
+              oninput="document.getElementById('img-guidance-val').textContent=this.value"
+              style="accent-color:#A78BFA;background:transparent;border:none;padding:8px 0">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#4A5568;margin-top:-4px">
+              <span>Creativo</span><span id="img-guidance-val" style="color:#A78BFA;font-weight:700">3.5</span><span>Preciso</span>
+            </div>
+          </div>
+          <div class="video-field">
+            <label>Pasos de inferencia</label>
+            <select id="img-steps">
+              <option value="20">20 — Rápido</option>
+              <option value="28" selected>28 — Recomendado</option>
+              <option value="40">40 — Alta calidad</option>
+              <option value="50">50 — Máxima calidad</option>
+            </select>
+          </div>
+          <div class="video-field">
+            <label>HuggingFace Token</label>
+            <input type="password" id="img-hf-token" placeholder="hf_xxxxxxxxxxxxxxxxxx"
+              style="font-family:'JetBrains Mono',monospace">
+            <div style="font-size:10px;color:#4A5568;margin-top:3px">
+              <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#A78BFA">huggingface.co/settings/tokens</a> — Token gratuito
+            </div>
+          </div>
+          <div class="video-field">
+            <label>Semilla (seed)</label>
+            <input type="number" id="img-seed" placeholder="Aleatoria" style="font-family:'JetBrains Mono',monospace">
+            <div style="font-size:10px;color:#4A5568;margin-top:3px">Deja vacío para resultado diferente cada vez</div>
+          </div>
+          <div class="video-field">
+            <label>Cantidad de imágenes</label>
+            <select id="img-count">
+              <option value="1" selected>1 imagen</option>
+              <option value="2">2 imágenes</option>
+              <option value="4">4 imágenes (grid)</option>
+            </select>
+          </div>
+        </div>
+        <button class="video-generate-btn" id="img-gen-btn" onclick="generateImage()"
+          style="background:linear-gradient(135deg,#7C3AED,#6D28D9)">
+          <span>🖼</span>
+          <span id="img-gen-text">Generar Imagen con FLUX.2</span>
+        </button>
+      </div>
+
+      <!-- Local Server Tab -->
+      <div id="itab-local" style="display:none">
+        <div class="video-how-to" style="border-color:rgba(167,139,250,.1);background:rgba(167,139,250,.04)">
+          <strong style="color:#A78BFA">🖥 FLUX.2-dev-NVFP4 en tu GPU local</strong><br><br>
+          Requiere: <strong>GPU NVIDIA RTX 4070+ con soporte NVFP4 (Ada Lovelace+)</strong><br>
+          Para RTX 3060/3070: usar <code style="background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;color:#A78BFA">FLUX.1-dev</code> estándar en su lugar<br><br>
+          <strong>Instalación:</strong><br>
+          <code style="background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px;font-size:10px;color:#A78BFA">pip install torch diffusers transformers accelerate optimum-quanto flask flask-cors</code><br><br>
+          <strong>Servidor (flux_server.py):</strong>
+          <pre style="background:rgba(0,0,0,.3);padding:10px;border-radius:6px;font-size:10px;color:#E8EDF8;overflow-x:auto;margin:8px 0;border:1px solid rgba(255,255,255,.07)">from flask import Flask, request, jsonify
+from flask_cors import CORS
+import torch, io, base64
+from diffusers import FluxPipeline
+
+app = Flask(__name__)
+CORS(app)
+
+pipe = FluxPipeline.from_pretrained(
+    "black-forest-labs/FLUX.1-dev",
+    torch_dtype=torch.bfloat16
+).to("cuda")
+
+@app.route("/generate", methods=["POST"])
+def generate():
+    data = request.json
+    w, h = map(int, data.get("resolution","1024x1024").split("x"))
+    images = pipe(
+        prompt=data["prompt"],
+        negative_prompt=data.get("negative_prompt",""),
+        height=h, width=w,
+        guidance_scale=float(data.get("guidance_scale", 3.5)),
+        num_inference_steps=int(data.get("num_steps", 28)),
+        num_images_per_prompt=int(data.get("count",1)),
+    ).images
+    imgs_b64 = []
+    for img in images:
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        imgs_b64.append(base64.b64encode(buf.getvalue()).decode())
+    return jsonify({"images": imgs_b64})
+
+app.run(host="0.0.0.0", port=7861)</pre>
+          <strong>Ejecutar:</strong> <code style="background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px;font-size:10px;color:#A78BFA">python flux_server.py</code>
+        </div>
+        <div class="video-panel-grid" style="margin-top:12px">
+          <div class="video-field full">
+            <label>Prompt</label>
+            <textarea id="img-prompt-local" placeholder="Describe la imagen..."></textarea>
+          </div>
+          <div class="video-field">
+            <label>URL del servidor local</label>
+            <input id="img-local-url" value="http://localhost:7861/generate">
+          </div>
+          <div class="video-field">
+            <label>Resolución</label>
+            <select id="img-res-local">
+              <option value="512x512">512 × 512</option>
+              <option value="1024x1024" selected>1024 × 1024</option>
+              <option value="1280x720">1280 × 720</option>
+            </select>
+          </div>
+        </div>
+        <button class="video-generate-btn" onclick="generateImageLocal()"
+          style="background:linear-gradient(135deg,#7C3AED,#6D28D9)">
+          🖥 Generar con Servidor Local
+        </button>
+      </div>
+
+      <!-- HF Space Tab -->
+      <div id="itab-space" style="display:none">
+        <div class="video-how-to" style="border-color:rgba(167,139,250,.1);background:rgba(167,139,250,.04)">
+          <strong style="color:#A78BFA">🚀 FLUX.2 en HuggingFace Space — Sin GPU propia</strong><br><br>
+          Accede a los mejores modelos de imagen IA sin instalar nada ni tener una GPU.
+          Solo necesitas cuenta gratuita en HuggingFace.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <a href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev" target="_blank"
+            style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;text-decoration:none;transition:border-color .12s"
+            onmouseover="this.style.borderColor='rgba(167,139,250,.5)'" onmouseout="this.style.borderColor='rgba(124,58,237,.2)'">
+            <span style="font-size:22px">🤗</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#E8EDF8;font-family:'Inter',sans-serif">FLUX.1-dev Official Space</div>
+              <div style="font-size:11px;color:#7E8FA8;font-family:'Inter',sans-serif">black-forest-labs/FLUX.1-dev · Alta calidad · Gratuito</div>
+            </div>
+            <span style="margin-left:auto;color:#A78BFA;font-size:12px;font-weight:600">ABRIR →</span>
+          </a>
+          <a href="https://huggingface.co/spaces/multimodalart/FLUX.1" target="_blank"
+            style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.15);border-radius:8px;text-decoration:none;transition:border-color .12s"
+            onmouseover="this.style.borderColor='rgba(167,139,250,.4)'" onmouseout="this.style.borderColor='rgba(167,139,250,.15)'">
+            <span style="font-size:22px">⚡</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#E8EDF8;font-family:'Inter',sans-serif">FLUX.1 by multimodalart</div>
+              <div style="font-size:11px;color:#7E8FA8;font-family:'Inter',sans-serif">Versión comunitaria optimizada · Alta disponibilidad</div>
+            </div>
+            <span style="margin-left:auto;color:#A78BFA;font-size:12px;font-weight:600">ABRIR →</span>
+          </a>
+          <a href="https://huggingface.co/spaces/Kwai-Kolors/Kolors-Virtual-Try-On" target="_blank"
+            style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(167,139,250,.04);border:1px solid rgba(167,139,250,.1);border-radius:8px;text-decoration:none"
+            onmouseover="this.style.borderColor='rgba(167,139,250,.35)'" onmouseout="this.style.borderColor='rgba(167,139,250,.1)'">
+            <span style="font-size:22px">🎨</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#E8EDF8;font-family:'Inter',sans-serif">FLUX para Marketing / Producto</div>
+              <div style="font-size:11px;color:#7E8FA8;font-family:'Inter',sans-serif">Ideal para imágenes de productos y campañas</div>
+            </div>
+            <span style="margin-left:auto;color:#A78BFA;font-size:12px;font-weight:600">ABRIR →</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Output Area -->
+      <div class="video-output-area" id="img-output">
+        <div id="img-progress-wrap" style="display:none">
+          <div style="font-size:12px;color:#7E8FA8;margin-bottom:8px;font-family:'Inter',sans-serif" id="img-status-text">Generando imagen…</div>
+          <div class="video-progress-bar"><div class="video-progress-fill" id="img-prog-fill" style="width:0%;background:linear-gradient(90deg,#7C3AED,#A78BFA)"></div></div>
+        </div>
+        <div id="img-result" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
       </div>
     </div>
   </div>
@@ -1185,9 +1444,40 @@ function escHtml(s) {
 
 let videoTabActive = 'api';
 let videoPanelOpen = false;
+let imagePanelOpen = false;
+let imageTabActive  = 'api';
 
-async function detectGPU() {
-  const badge = document.getElementById('gpu-status-badge');
+/* ── MUTUAL EXCLUSIVITY ─────────────────────────────────────── */
+function showExclusiveWarning(closing, opening) {
+  const bar = document.getElementById('ia-exclusive-bar');
+  const msg = document.getElementById('ia-exclusive-msg');
+  if (bar && msg) {
+    msg.textContent = `⚠️ Solo se puede usar un generador a la vez. ${closing} fue desactivado automáticamente al abrir ${opening}.`;
+    bar.classList.add('show');
+    setTimeout(() => bar.classList.remove('show'), 5000);
+  }
+}
+
+function closeVideoPanel(silent = false) {
+  if (!videoPanelOpen) return;
+  videoPanelOpen = false;
+  const panel = document.getElementById('video-panel');
+  const btn   = document.getElementById('video-llm-btn');
+  if (panel) panel.classList.remove('open');
+  if (btn)   btn.classList.remove('active');
+}
+
+function closeImagePanel(silent = false) {
+  if (!imagePanelOpen) return;
+  imagePanelOpen = false;
+  const panel = document.getElementById('image-panel');
+  const btn   = document.getElementById('image-llm-btn');
+  if (panel) panel.classList.remove('open');
+  if (btn)   btn.classList.remove('active');
+}
+
+async function detectGPU(target = 'video') {
+  const badge    = document.getElementById(target === 'image' ? 'img-gpu-status-badge' : 'gpu-status-badge');
   const topBadge = document.getElementById('gpu-badge');
 
   if (!navigator.gpu) {
@@ -1227,11 +1517,59 @@ async function detectGPU() {
 }
 
 function toggleVideoPanel() {
-  videoPanelOpen = !videoPanelOpen;
+  if (videoPanelOpen) {
+    // Close video panel
+    closeVideoPanel();
+    document.getElementById('video-llm-btn')?.classList.remove('active');
+    updateActiveLabel();
+    return;
+  }
+  // Opening video — close image if active
+  if (imagePanelOpen) {
+    closeImagePanel();
+    showExclusiveWarning('Imagen IA (FLUX.2)', 'Video IA (Wan2.1)');
+  }
+  videoPanelOpen = true;
   const panel = document.getElementById('video-panel');
-  if (panel) {
-    panel.classList.toggle('open', videoPanelOpen);
-    if (videoPanelOpen) { detectGPU(); }
+  const btn   = document.getElementById('video-llm-btn');
+  if (panel) { panel.classList.add('open'); }
+  if (btn)   { btn.classList.add('active'); }
+  updateActiveLabel('video');
+  detectGPU('video');
+}
+
+function toggleImagePanel() {
+  if (imagePanelOpen) {
+    closeImagePanel();
+    document.getElementById('image-llm-btn')?.classList.remove('active');
+    updateActiveLabel();
+    return;
+  }
+  // Opening image — close video if active
+  if (videoPanelOpen) {
+    closeVideoPanel();
+    showExclusiveWarning('Video IA (Wan2.1)', 'Imagen IA (FLUX.2)');
+  }
+  imagePanelOpen = true;
+  const panel = document.getElementById('image-panel');
+  const btn   = document.getElementById('image-llm-btn');
+  if (panel) { panel.classList.add('open'); }
+  if (btn)   { btn.classList.add('active'); }
+  updateActiveLabel('image');
+  detectGPU('image');
+}
+
+function updateActiveLabel(mode) {
+  const lbl = document.getElementById('active-ia-label');
+  if (!lbl) return;
+  if (!mode) { lbl.style.display = 'none'; return; }
+  lbl.style.display = 'inline-flex';
+  if (mode === 'video') {
+    lbl.style.background = 'rgba(0,194,224,.1)'; lbl.style.color = '#00C2E0';
+    lbl.style.border = '1px solid rgba(0,194,224,.25)'; lbl.textContent = '● Video IA activo';
+  } else {
+    lbl.style.background = 'rgba(167,139,250,.1)'; lbl.style.color = '#A78BFA';
+    lbl.style.border = '1px solid rgba(167,139,250,.25)'; lbl.textContent = '● Imagen IA activo';
   }
 }
 
@@ -1417,6 +1755,211 @@ function renderVideoResult(url, prompt) {
         </span>
       </div>
     </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   IMAGE IA — FLUX.2-dev-NVFP4
+   Text-to-Image via HuggingFace Inference API + Local Server
+   ═══════════════════════════════════════════════════════════ */
+
+function switchImageTab(tab, btn) {
+  imageTabActive = tab;
+  document.querySelectorAll('[data-itab]').forEach(b => b.classList.toggle('active', b.dataset.itab === tab));
+  ['api','local','space'].forEach(t => {
+    const el = document.getElementById(`itab-${t}`);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+}
+
+async function generateImage() {
+  const prompt    = document.getElementById('img-prompt')?.value.trim();
+  const negPrompt = document.getElementById('img-neg-prompt')?.value.trim() || '';
+  const resolution= document.getElementById('img-res')?.value || '1024x1024';
+  const guidance  = parseFloat(document.getElementById('img-guidance')?.value || '3.5');
+  const steps     = parseInt(document.getElementById('img-steps')?.value || '28');
+  const token     = document.getElementById('img-hf-token')?.value.trim();
+  const seedRaw   = document.getElementById('img-seed')?.value.trim();
+  const count     = parseInt(document.getElementById('img-count')?.value || '1');
+
+  if (!prompt) { notify('Escribe un prompt para la imagen', 'warning'); return; }
+  if (!token)  { notify('Necesitas un HuggingFace token para usar la API', 'warning'); return; }
+
+  const [w, h] = resolution.split('x').map(Number);
+
+  setImgGenerating(true);
+  showImgProgress(0, 'Conectando con HuggingFace FLUX.2-dev-NVFP4…');
+
+  try {
+    showImgProgress(15, 'Enviando prompt al modelo FLUX.2…');
+
+    const body = {
+      inputs: prompt,
+      parameters: {
+        negative_prompt: negPrompt,
+        height: h, width: w,
+        guidance_scale: guidance,
+        num_inference_steps: steps,
+        num_images_per_prompt: count,
+      }
+    };
+    if (seedRaw) body.parameters.seed = parseInt(seedRaw);
+
+    const response = await fetch(
+      'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-Wait-For-Model': 'true',
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(180000), // 3 min
+      }
+    );
+
+    showImgProgress(60, 'Modelo generando imagen…');
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '{}');
+      let errJson = {};
+      try { errJson = JSON.parse(errText); } catch {}
+      if (response.status === 503) {
+        throw new Error('Modelo cargando. Espera 30-60 segundos e intenta de nuevo, o usa un HF Space.');
+      }
+      if (response.status === 401) {
+        throw new Error('Token inválido o sin permisos. Verifica en huggingface.co/settings/tokens');
+      }
+      if (response.status === 422) {
+        throw new Error('Parámetros inválidos: ' + (errJson.error || errText.slice(0,120)));
+      }
+      throw new Error(errJson.error || errJson.message || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    showImgProgress(85, 'Imagen lista, procesando…');
+    const blob = await response.blob();
+    const url  = URL.createObjectURL(blob);
+
+    showImgProgress(100, '✅ ¡Imagen generada!');
+    renderImageResult([url], prompt, resolution);
+    notify('🖼 Imagen generada con FLUX.2 ✓', 'success');
+
+  } catch(e) {
+    setImgGenerating(false);
+    const output = document.getElementById('img-output');
+    if (output) {
+      output.className = 'video-output-area show';
+      output.innerHTML = `
+        <div style="padding:16px;font-family:'Inter',sans-serif">
+          <div style="font-size:13px;font-weight:700;color:#EF4444;margin-bottom:8px">❌ Error al generar imagen</div>
+          <div style="font-size:12px;color:#7E8FA8;margin-bottom:12px">${escH(e.message)}</div>
+          <div style="font-size:11px;color:#4A5568">
+            <strong style="color:#A78BFA">Alternativas:</strong><br>
+            • Usa la pestaña "🚀 HF Space" para generar sin token<br>
+            • Verifica permisos del token en HuggingFace<br>
+            • El modelo puede estar cargando — espera 1 minuto
+          </div>
+        </div>`;
+    }
+    return;
+  }
+  setImgGenerating(false);
+}
+
+async function generateImageLocal() {
+  const prompt     = document.getElementById('img-prompt-local')?.value.trim();
+  const serverUrl  = document.getElementById('img-local-url')?.value.trim() || 'http://localhost:7861/generate';
+  const resolution = document.getElementById('img-res-local')?.value || '1024x1024';
+
+  if (!prompt) { notify('Escribe un prompt', 'warning'); return; }
+
+  setImgGenerating(true);
+  showImgProgress(0, 'Conectando con servidor local FLUX…');
+
+  try {
+    showImgProgress(25, 'Generando imagen en tu GPU local…');
+    const res = await fetch(serverUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, resolution, guidance_scale: 3.5, num_steps: 28, count: 1 }),
+      signal: AbortSignal.timeout(180000),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status} en servidor local`);
+    showImgProgress(90, 'Recibiendo imagen…');
+    const data = await res.json();
+    const imgs  = data.images || (data.image ? [data.image] : []);
+    if (!imgs.length) throw new Error('El servidor no devolvió imágenes');
+    const urls = imgs.map(b64 => `data:image/png;base64,${b64}`);
+    showImgProgress(100, '✅ ¡Imagen lista!');
+    renderImageResult(urls, prompt, resolution);
+    notify('🖼 Imagen generada en tu GPU local ✓', 'success');
+  } catch(e) {
+    setImgGenerating(false);
+    const output = document.getElementById('img-output');
+    if (output) {
+      output.className = 'video-output-area show';
+      output.innerHTML = `<div style="padding:16px;font-size:12px;color:#7E8FA8;font-family:'Inter',sans-serif">
+        ❌ ${escH(e.message)}<br><br>Verifica que el servidor esté corriendo en ${serverUrl}</div>`;
+    }
+  }
+  setImgGenerating(false);
+}
+
+function setImgGenerating(busy) {
+  const btn = document.getElementById('img-gen-btn');
+  const txt = document.getElementById('img-gen-text');
+  if (btn) btn.disabled = busy;
+  if (txt) txt.textContent = busy ? '⏳ Generando imagen…' : 'Generar Imagen con FLUX.2';
+  const wrap = document.getElementById('img-progress-wrap');
+  if (!busy && wrap) { setTimeout(() => { if (wrap) wrap.style.display = 'none'; }, 2000); }
+}
+
+function showImgProgress(pct, msg) {
+  const output = document.getElementById('img-output');
+  const wrap   = document.getElementById('img-progress-wrap');
+  const fill   = document.getElementById('img-prog-fill');
+  const status = document.getElementById('img-status-text');
+  const result = document.getElementById('img-result');
+  if (output) output.className = 'video-output-area show';
+  if (wrap)   wrap.style.display = 'block';
+  if (fill)   fill.style.width = pct + '%';
+  if (status) status.textContent = msg;
+  if (result && pct < 100) {
+    result.innerHTML = `<div class="generating-shimmer" style="height:200px;width:200px;border-radius:8px;border:1px solid rgba(167,139,250,.2)"></div>`.repeat(1);
+  }
+}
+
+function renderImageResult(urls, prompt, resolution) {
+  const result = document.getElementById('img-result');
+  if (!result) return;
+  result.innerHTML = urls.map((url, i) => `
+    <div style="flex:1;min-width:200px;position:relative">
+      <img src="${url}" alt="${escH(prompt)}"
+        style="width:100%;border-radius:8px;display:block;border:1px solid rgba(167,139,250,.2)"
+        onerror="this.style.display='none'">
+      <div style="margin-top:7px;display:flex;gap:6px">
+        <a href="${url}" download="flux2-metatronix-${Date.now()}-${i+1}.png"
+          style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 10px;background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.2);border-radius:6px;text-decoration:none;font-size:11px;font-weight:600;font-family:'Inter',sans-serif">
+          ⬇ PNG ${resolution}
+        </a>
+        <button onclick="copyImgToClipboard('${url}')"
+          style="padding:6px 10px;background:rgba(255,255,255,.06);color:#7E8FA8;border:1px solid rgba(255,255,255,.1);border-radius:6px;cursor:pointer;font-size:11px;font-family:'Inter',sans-serif">
+          📋 Copiar
+        </button>
+      </div>
+    </div>`).join('');
+  result.style.display = 'flex';
+}
+
+async function copyImgToClipboard(url) {
+  try {
+    const res  = await fetch(url);
+    const blob = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+    notify('Imagen copiada al portapapeles ✓', 'success');
+  } catch(e) {
+    notify('No se pudo copiar — descárgala manualmente', 'warning');
+  }
 }
 
 init();
