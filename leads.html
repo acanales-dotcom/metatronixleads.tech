@@ -6,6 +6,18 @@
   <title>MetaTronix — Mis Leads</title>
   <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
+  <!-- GOOGLE FONTS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <!-- TABULAS -->
+  <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator_midnight.min.css">
+  <!-- MAPAS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <!-- ALERTAS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-3.2.7.min.css">
   <style>
     .lead-status-nuevo            { color: var(--info);    background: var(--info-dim); }
     .lead-status-contactado       { color: var(--warning); background: var(--warning-dim); }
@@ -76,6 +88,46 @@
       .kpi-user-forecast { padding: 16px 0 0; grid-column: 1/-1; }
     }
   </style>
+  <!-- HF TRANSFORMERS — lazy load, activa solo cuando se usa -->
+  <script type="module" id="hf-core">
+    import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.1";
+    env.allowLocalModels = false;
+    window.HFPipeline = pipeline;
+    window.CRM_AI = {
+      _p: {},
+      async get(task, model, opts={}) {
+        if (!this._p[task]) this._p[task] = await pipeline(task, model, {device:'webgpu', dtype:'q4', ...opts});
+        return this._p[task];
+      },
+      sentiment:  () => window.CRM_AI.get('sentiment-analysis','Xenova/distilbert-base-multilingual-cased-sentiments-student'),
+      embeddings: () => window.CRM_AI.get('feature-extraction','Xenova/all-MiniLM-L6-v2'),
+      whisper:    () => window.CRM_AI.get('automatic-speech-recognition','Xenova/whisper-tiny',{chunk_length_s:30}),
+      zeroShot:   () => window.CRM_AI.get('zero-shot-classification','Xenova/mobilebert-uncased-mnli',{}),
+      summary:    () => window.CRM_AI.get('summarization','Xenova/distilbart-cnn-6-6',{}),
+      ner:        () => window.CRM_AI.get('ner','Xenova/bert-base-NER',{aggregation_strategy:'simple'})
+    };
+    window.dispatchEvent(new CustomEvent('crm_ai_ready'));
+    console.log('[CRM] HuggingFace Transformers ready — window.CRM_AI disponible');
+  </script>
+  <!-- WebLLM — Chat IA principal (WebGPU) -->
+  <script type="module" id="webllm-core">
+    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+    window.CRM_LLM = {
+      engine: null,
+      async init(cb) {
+        this.engine = await webllm.CreateMLCEngine('SmolLM2-360M-Instruct-q4f16_1-MLC', {initProgressCallback: cb});
+      },
+      async chat(sys, msg) {
+        if (!this.engine) throw new Error('LLM no inicializado — llama CRM_LLM.init() primero');
+        const r = await this.engine.chat.completions.create({
+          messages:[{role:'system',content:sys},{role:'user',content:msg}]
+        });
+        return r.choices[0].message.content;
+      }
+    };
+    window.dispatchEvent(new CustomEvent('crm_llm_ready'));
+    console.log('[CRM] WebLLM core ready — window.CRM_LLM disponible');
+  </script>
 </head>
 <body>
 <div id="header-placeholder"></div>
@@ -326,10 +378,54 @@
   </div>
 </div>
 
+<!-- CHART.JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- TABULAS -->
+<script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
+<!-- MAPAS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<!-- KANBAN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<!-- ALERTAS / MODALES -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.12.2/dist/sweetalert2.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-aio-3.2.7.min.js"></script>
+<!-- PDF -->
+<script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/pdfmake.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/vfs_fonts.min.js"></script>
+<!-- TEMPLATES -->
+<script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+<!-- CORE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js"></script>
 <script src="/assets/agent.js"></script>
+<script>
+// ── Stack Verification ──────────────────────────────────────
+window.addEventListener('load', () => {
+  const libs = {
+    'Chart.js':    typeof Chart !== 'undefined'    ? Chart.version      : null,
+    'Tabulator':   typeof Tabulator !== 'undefined' ? Tabulator.version  : null,
+    'Leaflet':     typeof L !== 'undefined'         ? L.version          : null,
+    'SortableJS':  typeof Sortable !== 'undefined'  ? Sortable.version   : null,
+    'SweetAlert2': typeof Swal !== 'undefined'      ? Swal.version       : null,
+    'Notiflix':    typeof Notiflix !== 'undefined'  ? '3.2.7'            : null,
+    'pdfmake':     typeof pdfMake !== 'undefined'   ? '0.2.10'           : null,
+    'Handlebars':  typeof Handlebars !== 'undefined'? Handlebars.VERSION : null,
+  };
+  const ok = [], fail = [];
+  Object.entries(libs).forEach(([k,v]) => v ? ok.push(`✅ ${k} v${v}`) : fail.push(`❌ ${k}`));
+  console.groupCollapsed('[CRM] Stack verification');
+  ok.forEach(m => console.log(m));
+  if (fail.length) fail.forEach(m => console.warn(m));
+  console.log('[CRM] window.CRM_AI:', window.CRM_AI ? '✅ disponible' : '⏳ cargando (ES module)');
+  console.log('[CRM] window.CRM_LLM:', window.CRM_LLM ? '✅ disponible' : '⏳ cargando (ES module)');
+  console.groupEnd();
+  if (typeof Notiflix !== 'undefined') {
+    Notiflix.Notify.init({ position: 'right-bottom', timeout: 3500, fontSize: '13px', width: '300px' });
+  }
+});
+</script>
 <script>
 let currentUser = null;
 let allLeads = [];
