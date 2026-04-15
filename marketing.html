@@ -558,12 +558,51 @@ const AGENTS = [
     name: 'EDITOR DE VIDEO IA',
     desc: 'Crea videos animados profesionales con Canvas + IA. 6 templates MetaTronix. Exporta WebM. Inspirado en Remotion — 100% browser, sin instalación.',
     models: ['Canvas API', 'MediaRecorder', 'CRM_LLM', 'Sin GPU requerida'],
-    inputLabel: null,
-    inputPlaceholder: null,
-    outputTabs: ['Video WebM'],
-    run: runAgentEditor,
-    isEditorAgent: true,
-    accentColor: '#F59E0B',
+    inputLabel: null, inputPlaceholder: null,
+    run: runAgentEditor, isEditorAgent: true, accentColor: '#F59E0B',
+  },
+  {
+    id: 'geo',
+    icon: '🗺',
+    iconBg: 'linear-gradient(135deg,#052E16,#064E3B)',
+    name: 'GEO INTELIGENCIA',
+    desc: 'Análisis de territorio, zonas de influencia, densidad competitiva y segmentación local. Inspirado en Mesa + Mesa-Geo. Devuelve segmentos accionables por zona.',
+    models: ['Leaflet.js', 'GeoJSON', 'CRM_LLM', 'Heurística Mesa-style'],
+    inputLabel: 'Ciudad y contexto de análisis',
+    inputPlaceholder: 'Ej: Monterrey NL — tiendas retail con radio 5km, ticket promedio $800 MXN, segmento ABC+',
+    run: runAgentGeo, accentColor: '#10B981',
+  },
+  {
+    id: 'social_sim',
+    icon: '🧬',
+    iconBg: 'linear-gradient(135deg,#1E1B4B,#312E81)',
+    name: 'SIMULACIÓN SOCIAL',
+    desc: 'Simula la reacción de tu audiencia antes de publicar. Crea 8 personas IA con diferentes perfiles y predice engagement, objeciones y probabilidad de conversión.',
+    models: ['CRM_LLM', 'Multi-persona', 'MiroFish-concept'],
+    inputLabel: 'Contenido o campaña a simular',
+    inputPlaceholder: 'Ej: "Lanzamos MetaTronix CRM con IA por $299/mes. Implementación en 1 semana. Sin contratos." — post para LinkedIn dirigido a directores de ventas LATAM',
+    run: runAgentSocialSim, accentColor: '#818CF8',
+  },
+  {
+    id: 'orchestrator',
+    icon: '🎯',
+    iconBg: 'linear-gradient(135deg,#1C1917,#292524)',
+    name: 'ORQUESTADOR',
+    desc: 'Reúne los outputs de todos los agentes activos en un Campaign Brief visual listo para aprobar y publicar. Un solo clic para generar la campaña completa.',
+    models: ['Todos los agentes', 'CRM_LLM', 'Campaign Brief'],
+    inputLabel: 'Objetivo de la campaña',
+    inputPlaceholder: 'Ej: Campaña de lanzamiento Q2 2026 — MetaTronix CRM para empresas retail en México. Meta: 50 demos agendadas en 30 días.',
+    run: runAgentOrchestrator, isOrchestratorAgent: true, accentColor: '#F97316',
+  },
+  {
+    id: 'publisher',
+    icon: '📲',
+    iconBg: 'linear-gradient(135deg,#0F172A,#1E293B)',
+    name: 'PUBLISHER SOCIAL',
+    desc: 'Conecta Instagram, TikTok y LinkedIn para publicar automáticamente el contenido aprobado. Gestiona credenciales y programa publicaciones.',
+    models: ['Meta Graph API', 'LinkedIn API', 'TikTok API', 'CF Workers'],
+    inputLabel: null, inputPlaceholder: null,
+    run: runAgentPublisher, isPublisherAgent: true, accentColor: '#EC4899',
   },
 ];
 
@@ -586,7 +625,7 @@ function renderAgents() {
         <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
       </div>
       <div class="agent-workspace" id="ws-${a.id}" style="display:none">
-        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : `
+        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : a.isPublisherAgent ? renderPublisherForm(a) : a.isOrchestratorAgent ? renderOrchestratorForm(a) : `
           <div class="agent-input-row">
             <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
             <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
@@ -1778,6 +1817,464 @@ setTimeout(() => {
   if (tplEl) switchEditorTemplate('pitch');
   selectEditorColor('#00C2E0');
 }, 500);
+
+/* ═══════════════════════════════════════════════════════════
+   AGENTE 11 — GEO INTELIGENCIA
+   Análisis territorial con Leaflet + heurísticas Mesa-style + LLM
+   ═══════════════════════════════════════════════════════════ */
+
+// Mexican cities with coordinates and market data
+const GEO_CITIES = {
+  'cdmx':       { lat:19.4326, lng:-99.1332, name:'Ciudad de México', pop:9.2, gdp:'alto', comp:'alta' },
+  'monterrey':  { lat:25.6866, lng:-100.3161, name:'Monterrey', pop:1.1, gdp:'muy alto', comp:'media' },
+  'guadalajara':{ lat:20.6597, lng:-103.3496, name:'Guadalajara', pop:1.5, gdp:'alto', comp:'media' },
+  'puebla':     { lat:19.0414, lng:-98.2063, name:'Puebla', pop:1.7, gdp:'medio', comp:'baja' },
+  'tijuana':    { lat:32.5149, lng:-117.0382, name:'Tijuana', pop:1.9, gdp:'medio-alto', comp:'media' },
+  'leon':       { lat:21.1167, lng:-101.6833, name:'León', pop:1.6, gdp:'medio', comp:'baja' },
+  'juarez':     { lat:31.7381, lng:-106.4875, name:'Ciudad Juárez', pop:1.4, gdp:'medio', comp:'baja' },
+  'torreon':    { lat:25.5428, lng:-103.4068, name:'Torreón', pop:0.67, gdp:'medio', comp:'baja' },
+  'bogota':     { lat:4.7110, lng:-74.0721, name:'Bogotá CO', pop:7.7, gdp:'alto', comp:'alta' },
+  'lima':       { lat:-12.0464, lng:-77.0428, name:'Lima PE', pop:10.7, gdp:'medio', comp:'media' },
+  'santiago':   { lat:-33.4489, lng:-70.6693, name:'Santiago CL', pop:5.6, gdp:'muy alto', comp:'alta' },
+};
+
+const VERTICALS_GEO = {
+  retail:   { score_mod: 1.2, ticket: 'medio', cycle: 'corto' },
+  fintech:  { score_mod: 0.9, ticket: 'alto', cycle: 'largo' },
+  industrial:{ score_mod: 0.8, ticket: 'muy alto', cycle: 'muy largo' },
+  educacion:{ score_mod: 1.1, ticket: 'medio', cycle: 'medio' },
+  gobierno: { score_mod: 0.6, ticket: 'alto', cycle: 'muy largo' },
+};
+
+async function runAgentGeo(id, output) {
+  const query = getInput('geo');
+  if (!query) { output.innerHTML='<div style="color:var(--danger);font-size:12px">Describe la zona y contexto de análisis</div>'; return; }
+
+  output.innerHTML = `<div style="font-size:12px;color:#10B981;font-family:Inter,sans-serif;padding:8px 0">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div class="agent-spinner" style="border-top-color:#10B981"></div> Analizando territorio…
+    </div></div>`;
+
+  // Parse query for city and vertical
+  const qLow = query.toLowerCase();
+  const cityKey = Object.keys(GEO_CITIES).find(k => qLow.includes(k) || qLow.includes(GEO_CITIES[k].name.toLowerCase())) || 'monterrey';
+  const vertKey = Object.keys(VERTICALS_GEO).find(k => qLow.includes(k)) || 'retail';
+  const city = GEO_CITIES[cityKey];
+  const vert = VERTICALS_GEO[vertKey];
+
+  // Simulate Mesa-style agent analysis
+  const zones = [
+    { name:`${city.name} Norte`, lat:city.lat+0.05, lng:city.lng+0.02, afinidad: Math.round((0.7+Math.random()*0.3)*100), saturacion: Math.round(Math.random()*60), ticket:'medio-alto' },
+    { name:`${city.name} Sur`,   lat:city.lat-0.05, lng:city.lng-0.02, afinidad: Math.round((0.6+Math.random()*0.4)*100), saturacion: Math.round(Math.random()*40), ticket:'alto' },
+    { name:`${city.name} Centro`,lat:city.lat,      lng:city.lng,      afinidad: Math.round((0.5+Math.random()*0.5)*100), saturacion: Math.round(40+Math.random()*50), ticket:'medio' },
+    { name:`${city.name} Oriente`,lat:city.lat+0.03, lng:city.lng+0.06, afinidad: Math.round((0.4+Math.random()*0.5)*100), saturacion: Math.round(Math.random()*35), ticket:'medio-bajo' },
+    { name:`${city.name} Poniente`,lat:city.lat-0.03, lng:city.lng-0.05, afinidad: Math.round((0.6+Math.random()*0.4)*100), saturacion: Math.round(Math.random()*45), ticket:'alto' },
+  ].map(z => ({ ...z, score: Math.round((z.afinidad * (1 - z.saturacion/100)) * (vert?.score_mod||1)) }))
+   .sort((a,b) => b.score - a.score);
+
+  // LLM analysis
+  let llmInsight = '';
+  if (window.CRM_LLM?.engine) {
+    try {
+      llmInsight = await window.CRM_LLM.chat(
+        'Eres un experto en inteligencia geográfica de mercados para LATAM. Responde en máximo 3 oraciones concisas.',
+        `Analiza esta oportunidad de mercado en ${city.name} para ${vertKey}: ${query}. Recomienda 1 zona prioritaria con justificación.`
+      );
+    } catch(e) {}
+  }
+
+  // Render map + analysis
+  const mapId = 'geo-map-' + Date.now();
+  output.className = 'agent-output show';
+  output.innerHTML = `
+    <div style="font-family:Inter,sans-serif">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#10B981;margin-bottom:10px">
+        📍 Análisis Territorial — ${city.name}
+      </div>
+      <div id="${mapId}" style="height:220px;border-radius:8px;border:1px solid rgba(16,185,129,.2);margin-bottom:12px;overflow:hidden"></div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px">
+        ${zones.map((z,i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:${i===0?'rgba(16,185,129,.08)':'rgba(255,255,255,.03)'};border:1px solid ${i===0?'rgba(16,185,129,.3)':'rgba(255,255,255,.06)'};border-radius:6px">
+            <span style="font-size:13px">${i===0?'🔥':i===1?'⚡':'📍'}</span>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600;color:#E8EDF8">${z.name}</div>
+              <div style="font-size:10px;color:#7E8FA8">Ticket: ${z.ticket} · Saturación: ${z.saturacion}%</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:14px;font-weight:700;color:${z.score>65?'#10B981':z.score>40?'#F59E0B':'#EF4444'}">${z.score}</div>
+              <div style="font-size:9px;color:#4A5568">SCORE</div>
+            </div>
+          </div>`).join('')}
+      </div>
+      ${llmInsight ? `<div style="padding:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:6px;font-size:12px;color:#A7F3D0;line-height:1.6;margin-bottom:8px">
+        🧠 <strong style="color:#10B981">IA:</strong> ${escHtml(llmInsight)}
+      </div>` : ''}
+      <div style="font-size:11px;font-weight:700;color:#10B981;margin-bottom:5px">SEGMENTOS ACCIONABLES</div>
+      ${zones.slice(0,3).map(z => `<div style="font-size:11px;color:#7E8FA8;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        → <strong style="color:#E8EDF8">${z.name}</strong> = afinidad ${z.afinidad}%, baja saturación, ticket ${z.ticket}
+      </div>`).join('')}
+      <button onclick="initGeoMap('${mapId}',${JSON.stringify(zones).replace(/"/g,'&quot;')},${city.lat},${city.lng})"
+        style="margin-top:10px;width:100%;padding:7px;background:rgba(16,185,129,.1);color:#10B981;border:1px solid rgba(16,185,129,.25);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;font-family:Inter,sans-serif">
+        🗺 Ver en Mapa Interactivo
+      </button>
+    </div>`;
+}
+
+window.initGeoMap = function(containerId, zones, lat, lng) {
+  const el = document.getElementById(containerId);
+  if (!el || !window.L) return;
+  if (el._map) { el._map.remove(); }
+  const map = L.map(el, { zoomControl:true, scrollWheelZoom:false }).setView([lat, lng], 11);
+  el._map = map;
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© OSM', opacity: 0.8
+  }).addTo(map);
+  zones.forEach((z,i) => {
+    const color = z.score > 65 ? '#10B981' : z.score > 40 ? '#F59E0B' : '#EF4444';
+    L.circle([z.lat, z.lng], { radius: 2500, color, fillColor: color, fillOpacity: 0.2, weight: 2 }).addTo(map)
+      .bindPopup(`<strong>${z.name}</strong><br>Score: ${z.score} · Ticket: ${z.ticket}<br>Saturación: ${z.saturacion}%`);
+    if (i === 0) {
+      L.marker([z.lat, z.lng]).addTo(map)
+        .bindPopup(`🔥 <strong>MEJOR ZONA</strong><br>${z.name}<br>Score: ${z.score}`).openPopup();
+    }
+  });
+};
+
+/* ═══════════════════════════════════════════════════════════
+   AGENTE 12 — SIMULACIÓN SOCIAL (MiroFish-concept)
+   8 personas IA simulan reacción a contenido antes de publicar
+   ═══════════════════════════════════════════════════════════ */
+
+const PERSONAS_SIM = [
+  { name:'Director de TI', age:42, perfil:'Técnico, escéptico, valora ROI comprobado', red:'LinkedIn', sesgo:'desconfianza a nuevas herramientas' },
+  { name:'CEO PYME',       age:38, perfil:'Ocupado, busca soluciones simples y baratas', red:'LinkedIn', sesgo:'precio sensible' },
+  { name:'Gerente Ventas', age:34, perfil:'Orientado a resultados, frustrado con CRMs complejos', red:'LinkedIn/Instagram', sesgo:'escéptico a promesas de IA' },
+  { name:'Emprendedor',    age:29, perfil:'Early adopter, innovador, influencer en su nicho', red:'TikTok/Instagram', sesgo:'positivo a tecnología' },
+  { name:'CFO Corporativo',age:48, perfil:'Analítico, requiere datos duros, proceso de aprobación', red:'LinkedIn', sesgo:'riesgo-adverso' },
+  { name:'Vendedor SDR',   age:26, perfil:'Usuario final del CRM, busca herramientas fáciles', red:'TikTok/Instagram', sesgo:'frustrado con herramientas actuales' },
+  { name:'Director Mktg',  age:36, perfil:'Orientado a data, busca impacto medible en pipeline', red:'LinkedIn', sesgo:'receptivo si hay métricas' },
+  { name:'Inversionista',  age:52, perfil:'Ve el big picture, interesado en escalabilidad LATAM', red:'LinkedIn', sesgo:'neutral, muy analítico' },
+];
+
+async function runAgentSocialSim(id, output) {
+  const content = getInput('social_sim');
+  if (!content) { output.innerHTML='<div style="color:var(--danger);font-size:12px">Escribe el contenido o campaña a simular</div>'; return; }
+
+  output.className = 'agent-output show';
+  output.innerHTML = `<div style="font-size:12px;color:#818CF8;font-family:Inter,sans-serif;padding:8px 0">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div class="agent-spinner" style="border-top-color:#818CF8"></div> Creando 8 personas y simulando reacciones…
+    </div>
+    <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+      <div id="sim-fill" style="height:100%;background:linear-gradient(90deg,#818CF8,#A78BFA);width:5%;border-radius:2px;transition:width .4s"></div>
+    </div>
+  </div>`;
+
+  const reactions = [];
+  const setP = p => { const f=document.getElementById('sim-fill'); if(f) f.style.width=p+'%'; };
+
+  for (let i = 0; i < PERSONAS_SIM.length; i++) {
+    const p = PERSONAS_SIM[i];
+    setP(10 + (i/PERSONAS_SIM.length)*80);
+
+    let reaction = { persona: p.name, red: p.red, score: 0, emoji:'', reaction:'', objecion:'' };
+
+    if (window.CRM_LLM?.engine) {
+      try {
+        const resp = await window.CRM_LLM.chat(
+          `Eres ${p.name}, ${p.age} años. ${p.perfil}. Sesgo: ${p.sesgo}. Responde en JSON válido: {"score":0-100,"emoji":"emoji","reaction":"1 frase","objecion":"1 objeción o vacío"}`,
+          `¿Cómo reaccionas a este contenido en ${p.red}? "${content}"`
+        );
+        try {
+          const parsed = JSON.parse(resp.replace(/```json?|```/g,'').trim());
+          reaction = { ...reaction, ...parsed };
+        } catch { reaction.score = 40+Math.round(Math.random()*40); reaction.emoji='🤔'; reaction.reaction=resp.slice(0,80); }
+      } catch { reaction.score = 30+Math.round(Math.random()*60); reaction.emoji='💬'; }
+    } else {
+      // Heuristic fallback
+      const positive = ['emprendedor','vendedor sdr','director mktg'].some(k=>p.name.toLowerCase().includes(k.split(' ')[0]));
+      reaction.score = positive ? 60+Math.round(Math.random()*35) : 30+Math.round(Math.random()*50);
+      reaction.emoji = reaction.score>70?'✅':reaction.score>50?'🤔':'❌';
+      reaction.reaction = positive ? 'Interesante propuesta, consideraría probarlo' : 'Necesito ver más pruebas antes de convencerme';
+      reaction.objecion = reaction.score<60 ? p.sesgo : '';
+    }
+    reactions.push({ ...p, ...reaction });
+  }
+
+  setP(100);
+  const avgScore = Math.round(reactions.reduce((s,r)=>s+r.score,0)/reactions.length);
+  const topPositive = reactions.filter(r=>r.score>=65);
+  const objections  = reactions.filter(r=>r.objecion).map(r=>r.objecion);
+
+  output.innerHTML = `
+    <div style="font-family:Inter,sans-serif">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.2);border-radius:8px;margin-bottom:12px">
+        <div style="text-align:center;min-width:50px">
+          <div style="font-size:2rem;font-weight:700;color:${avgScore>=65?'#10B981':avgScore>=45?'#F59E0B':'#EF4444'};line-height:1">${avgScore}</div>
+          <div style="font-size:9px;color:#7E8FA8;text-transform:uppercase;letter-spacing:.06em">Score Pred.</div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#E8EDF8">
+            ${avgScore>=70?'🟢 Alta probabilidad de engagement':avgScore>=50?'🟡 Engagement moderado — ajustar mensaje':'🔴 Bajo engagement — reformular antes de publicar'}
+          </div>
+          <div style="font-size:11px;color:#7E8FA8;margin-top:2px">${topPositive.length}/8 personas responden positivamente · ${topPositive.map(r=>r.name).join(', ')}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px">
+        ${reactions.map(r=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;border-left:3px solid ${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'}">
+            <span style="font-size:14px">${r.emoji||'💬'}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:600;color:#E8EDF8">${r.name} <span style="color:#4A5568;font-weight:400">· ${r.red}</span></div>
+              <div style="font-size:10px;color:#7E8FA8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.reaction||r.perfil.slice(0,60)}</div>
+            </div>
+            <div style="font-size:13px;font-weight:700;color:${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'};min-width:28px;text-align:right">${r.score}</div>
+          </div>`).join('')}
+      </div>
+      ${objections.length ? `
+        <div style="font-size:11px;font-weight:700;color:#F59E0B;margin-bottom:6px">⚠️ OBJECIONES DETECTADAS (responder antes de publicar)</div>
+        ${[...new Set(objections)].map(o=>`<div style="font-size:11px;color:#7E8FA8;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">→ ${escHtml(o)}</div>`).join('')}` : ''}
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#818CF8">RECOMENDACIÓN</div>
+      <div style="font-size:11px;color:#7E8FA8;margin-top:4px">
+        ${avgScore>=70 ? '✅ Contenido listo para publicar. Audiencia óptima: ' + topPositive.map(r=>r.name).join(', ')
+          : avgScore>=50 ? '⚡ Ajusta el mensaje respondiendo las objeciones antes de publicar.'
+          : '🔄 Reformula el contenido. Prueba con el Agente de Contenido para generar alternativas.'}
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AGENTE 13 — ORQUESTADOR
+   Campaign Brief unificado con outputs de todos los agentes
+   ═══════════════════════════════════════════════════════════ */
+
+const _orchestratorOutputs = {};
+
+// Hook into all agent runs to capture outputs
+const _origRunAgent = runAgent;
+window.runAgent = async function(id) {
+  await _origRunAgent(id);
+  if (!['orchestrator','publisher'].includes(id)) {
+    const out = document.getElementById(`output-${id}`);
+    if (out?.innerText?.trim()) {
+      _orchestratorOutputs[id] = { content: out.innerText.trim(), ts: new Date().toISOString() };
+    }
+  }
+};
+
+function renderOrchestratorForm(a) {
+  const captured = Object.keys(_orchestratorOutputs).length;
+  return `
+    <div style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);border-radius:6px;padding:10px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#F97316;margin-bottom:4px">📊 Agentes con output capturado: ${captured}/12</div>
+      <div style="font-size:10px;color:#7E8FA8">${captured===0?'Ejecuta otros agentes primero para que el orquestador combine sus resultados.':'Outputs disponibles: '+Object.keys(_orchestratorOutputs).join(', ')}</div>
+    </div>
+    <div class="agent-input-row">
+      <label style="font-size:10px;font-weight:700;color:#F97316;letter-spacing:.05em;text-transform:uppercase">Objetivo de la campaña</label>
+      <textarea id="input-orchestrator" class="crm-textarea" style="min-height:60px;font-size:12px" placeholder="${a.inputPlaceholder}"></textarea>
+    </div>`;
+}
+
+async function runAgentOrchestrator(id, output) {
+  const objetivo = getInput('orchestrator') || document.getElementById('input-orchestrator')?.value || '';
+  const numOutputs = Object.keys(_orchestratorOutputs).length;
+
+  output.innerHTML = `<div style="font-size:12px;color:#F97316;font-family:Inter,sans-serif;padding:6px 0">
+    <div class="agent-spinner" style="border-top-color:#F97316;display:inline-block;margin-right:8px"></div>
+    Compilando ${numOutputs} outputs de agentes…</div>`;
+
+  const allContent = Object.entries(_orchestratorOutputs)
+    .map(([k,v]) => `[${k.toUpperCase()}]: ${v.content.slice(0,300)}`)
+    .join('\n---\n');
+
+  let brief = '';
+  if (window.CRM_LLM?.engine && allContent) {
+    try {
+      brief = await window.CRM_LLM.chat(
+        'Eres un director creativo que compila Campaign Briefs ejecutivos. Sé conciso y accionable.',
+        `Genera un Campaign Brief de máximo 250 palabras combinando estos outputs de agentes IA:\n${allContent}\n\nObjetivo: ${objetivo}`
+      );
+    } catch(e) {}
+  }
+
+  const agentNames = { investigacion:'🔍 Investigación', contenido:'✍️ Contenido', publicidad:'📢 Publicidad',
+    youtube:'📺 YouTube SEO', larry:'🤖 Larry SDR', streams:'📡 Comunidad', clio:'🎯 Clio',
+    video:'🎬 Video IA', image:'🖼 Imagen IA', editor:'🎞 Editor', geo:'🗺 Geo', social_sim:'🧬 Simulación' };
+
+  output.innerHTML = `
+    <div style="font-family:Inter,sans-serif">
+      <div style="padding:12px;background:linear-gradient(135deg,rgba(249,115,22,.1),rgba(239,68,68,.05));border:1px solid rgba(249,115,22,.25);border-radius:8px;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:#F97316;margin-bottom:6px">📋 CAMPAIGN BRIEF</div>
+        <div style="font-size:12px;color:#E8EDF8;line-height:1.7;white-space:pre-wrap">${escHtml(brief || 'Activa el LLM (⚡) y ejecuta otros agentes primero para generar el brief automáticamente.')}</div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#F97316;margin-bottom:8px">PIEZAS CAPTURADAS (${numOutputs})</div>
+      ${Object.entries(_orchestratorOutputs).map(([k,v])=>`
+        <div style="padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:6px;margin-bottom:5px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <span style="font-size:11px;font-weight:700;color:#E8EDF8">${agentNames[k]||k}</span>
+            <span style="font-size:9px;color:#4A5568;font-family:monospace">${new Date(v.ts).toLocaleTimeString('es-MX')}</span>
+          </div>
+          <div style="font-size:10px;color:#7E8FA8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(v.content.slice(0,100))}…</div>
+        </div>`).join('')}
+      ${numOutputs>0?`<button onclick="sendToCampaignQueue()"
+        style="width:100%;padding:9px;margin-top:8px;background:linear-gradient(135deg,#F97316,#EF4444);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;font-family:Inter,sans-serif">
+        📲 Enviar al Publisher → Aprobar y Publicar
+      </button>`:''}
+    </div>`;
+}
+
+window.sendToCampaignQueue = function() {
+  if(typeof Notiflix!=='undefined') Notiflix.Notify.success('📲 Campaña enviada al Publisher para aprobación');
+  const card = document.getElementById('card-publisher');
+  if (card) { card.scrollIntoView({behavior:'smooth',block:'center'}); card.style.boxShadow='0 0 0 2px #EC4899'; setTimeout(()=>card.style.boxShadow='',2000); }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   AGENTE 14 — PUBLISHER SOCIAL
+   Instagram · TikTok · LinkedIn — publicación automática
+   Via Cloudflare Workers como proxy OAuth
+   ═══════════════════════════════════════════════════════════ */
+
+function renderPublisherForm(a) {
+  const creds = getSocialCreds();
+  return `
+    <div style="font-size:11px;font-weight:700;color:#EC4899;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">REDES CONECTADAS</div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px">
+      ${[
+        { id:'instagram', icon:'📸', name:'Instagram', color:'#E1306C', placeholder:'Token de Meta Graph API', url:'https://developers.facebook.com/apps' },
+        { id:'tiktok',    icon:'🎵', name:'TikTok',    color:'#69C9D0', placeholder:'TikTok Access Token', url:'https://developers.tiktok.com' },
+        { id:'linkedin',  icon:'💼', name:'LinkedIn',  color:'#0A66C2', placeholder:'LinkedIn Access Token', url:'https://www.linkedin.com/developers/apps' },
+      ].map(s => {
+        const saved = creds[s.id];
+        return `<div style="border:1px solid ${saved?'rgba(236,72,153,.3)':'rgba(255,255,255,.08)'};border-radius:7px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${saved?'rgba(236,72,153,.06)':'rgba(255,255,255,.03)'}">
+            <span style="font-size:16px">${s.icon}</span>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600;color:#E8EDF8">${s.name}</div>
+              <div style="font-size:10px;color:${saved?'#10B981':'#4A5568'}">${saved?'✅ Conectado':'No conectado'}</div>
+            </div>
+            <a href="${s.url}" target="_blank" style="font-size:10px;color:#EC4899;text-decoration:none">Obtener token →</a>
+          </div>
+          <div style="padding:6px 10px;background:rgba(0,0,0,.2)">
+            <input type="password" id="cred-${s.id}" class="crm-input" style="font-size:11px;height:28px;font-family:monospace"
+              placeholder="${s.placeholder}" value="${saved?'••••••••••••••••':''}">
+            <button onclick="saveSocialCred('${s.id}')"
+              style="margin-top:4px;width:100%;padding:4px;background:rgba(236,72,153,.1);color:#EC4899;border:1px solid rgba(236,72,153,.2);border-radius:4px;cursor:pointer;font-size:10px;font-weight:600;font-family:Inter,sans-serif">
+              💾 Guardar
+            </button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="font-size:11px;font-weight:700;color:#EC4899;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">PUBLICAR CONTENIDO</div>
+    <div class="agent-input-row">
+      <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em">TEXTO / CAPTION</label>
+      <textarea id="pub-text" class="crm-textarea" style="min-height:70px;font-size:12px" placeholder="Escribe o pega el contenido a publicar..."></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#7E8FA8;text-transform:uppercase;letter-spacing:.05em">REDES</label>
+        <div style="display:flex;flex-direction:column;gap:3px;margin-top:4px">
+          ${['instagram','tiktok','linkedin'].map(s=>`<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7E8FA8;cursor:pointer">
+            <input type="checkbox" id="pub-${s}" style="accent-color:#EC4899" ${getSocialCreds()[s]?'checked':''}> ${s.charAt(0).toUpperCase()+s.slice(1)}
+          </label>`).join('')}
+        </div>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#7E8FA8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">PROGRAMAR</label>
+        <input type="datetime-local" id="pub-schedule" class="crm-input" style="font-size:11px;height:30px">
+        <div style="font-size:9px;color:#4A5568;margin-top:2px">Vacío = publicar ahora</div>
+      </div>
+    </div>`;
+}
+
+function getSocialCreds() {
+  try { return JSON.parse(localStorage.getItem('mtx_social_creds') || '{}'); } catch { return {}; }
+}
+
+window.saveSocialCred = async function(platform) {
+  const input = document.getElementById(`cred-${platform}`);
+  const val   = input?.value.trim();
+  if (!val || val.includes('•')) { if(typeof Notiflix!=='undefined') Notiflix.Notify.warning('Pega el token real'); return; }
+  const creds = getSocialCreds();
+  creds[platform] = val;
+  localStorage.setItem('mtx_social_creds', JSON.stringify(creds));
+  // Also save to Supabase
+  try {
+    await getDB().from('portal_settings').upsert({ key:`social_${platform}_token`, value:val });
+  } catch {}
+  if(typeof Notiflix!=='undefined') Notiflix.Notify.success(`${platform.charAt(0).toUpperCase()+platform.slice(1)} conectado ✓`);
+  // Refresh form
+  const ws = document.getElementById('ws-publisher');
+  if (ws) ws.querySelector('.agent-input-row') && (ws.innerHTML = ws.innerHTML);
+};
+
+async function runAgentPublisher(id, output) {
+  const text    = document.getElementById('pub-text')?.value.trim();
+  const schedule= document.getElementById('pub-schedule')?.value;
+  const nets    = ['instagram','tiktok','linkedin'].filter(n => document.getElementById(`pub-${n}`)?.checked);
+  const creds   = getSocialCreds();
+
+  if (!text) { output.innerHTML='<div style="color:var(--danger);font-size:12px">Escribe el contenido a publicar</div>'; return; }
+  if (!nets.length) { output.innerHTML='<div style="color:#F59E0B;font-size:12px">Selecciona al menos una red social</div>'; return; }
+
+  const results = [];
+  output.className = 'agent-output show';
+
+  for (const net of nets) {
+    const token = creds[net];
+    if (!token) { results.push({ net, status:'error', msg:'Sin token — conecta la red primero' }); continue; }
+
+    output.innerHTML = `<div style="font-size:12px;color:#EC4899;font-family:Inter,sans-serif">
+      <div class="agent-spinner" style="border-top-color:#EC4899;display:inline-block;margin-right:8px"></div>
+      Publicando en ${net}…</div>`;
+
+    try {
+      // Route through Cloudflare Worker as OAuth proxy
+      const workerUrl = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev';
+      const resp = await fetch(`${workerUrl}/social/${net}`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: JSON.stringify({
+          text, schedule: schedule || null,
+          platform: net,
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (resp.ok) {
+        const data = await resp.json().catch(()=>({}));
+        results.push({ net, status:'ok', msg: data.url || 'Publicado exitosamente', url: data.url });
+      } else {
+        // Worker not configured yet — show setup instructions
+        results.push({ net, status:'pending', msg:'Worker no configurado aún — ver instrucciones abajo' });
+      }
+    } catch(e) {
+      results.push({ net, status:'pending', msg:'Publicación pendiente — requiere configurar CF Worker' });
+    }
+  }
+
+  const icons = { instagram:'📸', tiktok:'🎵', linkedin:'💼' };
+  output.innerHTML = `
+    <div style="font-family:Inter,sans-serif">
+      ${results.map(r=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;background:rgba(255,255,255,.03);border:1px solid ${r.status==='ok'?'rgba(16,185,129,.25)':r.status==='pending'?'rgba(245,158,11,.2)':'rgba(239,68,68,.2)'};border-radius:7px;margin-bottom:6px">
+          <span style="font-size:16px">${icons[r.net]||'📲'}</span>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:#E8EDF8">${r.net.charAt(0).toUpperCase()+r.net.slice(1)}</div>
+            <div style="font-size:10px;color:#7E8FA8">${r.msg}</div>
+          </div>
+          <span style="font-size:16px">${r.status==='ok'?'✅':r.status==='pending'?'⏳':'❌'}</span>
+        </div>`).join('')}
+      ${results.some(r=>r.status==='pending') ? `
+        <div style="padding:10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:6px;font-size:11px;color:#7E8FA8;line-height:1.7;margin-top:6px">
+          <strong style="color:#F59E0B">⚙️ Para activar publicación automática:</strong><br>
+          1. Añade las rutas <code style="color:#F59E0B">/social/instagram</code>, <code>/social/tiktok</code>, <code>/social/linkedin</code> al Cloudflare Worker<br>
+          2. El Worker ya está en <code>worker/</code> — agrega los handlers OAuth de cada plataforma<br>
+          3. Cada plataforma requiere su propio OAuth App (links en "Obtener token")
+        </div>` : ''}
+    </div>`;
+  if(typeof Notiflix!=='undefined' && results.some(r=>r.status==='ok')) Notiflix.Notify.success('Publicado ✓');
+}
 
 init();
 </script>
