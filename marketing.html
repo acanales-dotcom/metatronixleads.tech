@@ -36,7 +36,7 @@
     if (!window.CRM_LLM) {
       window.CRM_LLM = {
         engine: true,   // siempre "activo" — no requiere inicialización local
-        _workerUrl: (window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev'),
+        _workerUrl: (window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://metatronixleads.tech/api/claude'),
         async init(cb) {
           // Verifica conectividad con el Worker
           if (cb) cb({ progress: 0.2, text: 'Verificando conexión con Claude API...' });
@@ -2784,7 +2784,7 @@ async function runAgentPublisher(id, output) {
 
     try {
       // Route through Cloudflare Worker as OAuth proxy
-      const workerUrl = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev';
+      const workerUrl = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://metatronixleads.tech/api/claude';
       const resp = await fetch(`${workerUrl}/social/${net}`, {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
