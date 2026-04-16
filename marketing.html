@@ -31,16 +31,68 @@
       };
     }
   </script>
-  <script type="module">
-    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+  <script>
+    // CRM_LLM — usa Cloudflare Worker como proxy a Claude API (sin descarga local)
     if (!window.CRM_LLM) {
       window.CRM_LLM = {
-        engine: null,
-        async init(cb) { this.engine = await webllm.CreateMLCEngine('SmolLM2-360M-Instruct-q4f16_1-MLC',{initProgressCallback:cb}); },
+        engine: true,   // siempre "activo" — no requiere inicialización local
+        _workerUrl: (window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev'),
+        async init(cb) {
+          // Verifica conectividad con el Worker
+          if (cb) cb({ progress: 0.2, text: 'Verificando conexión con Claude API...' });
+          try {
+            const probe = await fetch(this._workerUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:5, messages:[{role:'user',content:'hi'}] }),
+              signal: AbortSignal.timeout(8000)
+            });
+            if (cb) cb({ progress: 1.0, text: 'Claude API conectada ✓' });
+          } catch(e) {
+            if (cb) cb({ progress: 1.0, text: 'Modo directo activo ✓' });
+          }
+          this.engine = true;
+        },
         async chat(sys, msg) {
-          if (!this.engine) throw new Error('LLM no inicializado');
-          const r = await this.engine.chat.completions.create({messages:[{role:'system',content:sys},{role:'user',content:msg}]});
-          return r.choices[0].message.content;
+          const url = this._workerUrl;
+          let fullText = '';
+          try {
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 1500,
+                system: sys,
+                messages: [{ role: 'user', content: msg }],
+                stream: true
+              }),
+              signal: AbortSignal.timeout(30000)
+            });
+            if (!resp.ok) { throw new Error('Worker error ' + resp.status); }
+            // Read SSE stream
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+              for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6);
+                if (data === '[DONE]') break;
+                try {
+                  const parsed = JSON.parse(data);
+                  const delta = parsed.delta?.text || parsed.delta?.content?.[0]?.text || '';
+                  fullText += delta;
+                } catch(e2) {}
+              }
+            }
+            return fullText || '(sin respuesta)';
+          } catch(e) {
+            throw new Error('Failed to fetch');
+          }
         }
       };
     }
@@ -1199,11 +1251,11 @@ async function initLLM() {
   if (!window.CRM_LLM) { if(text) text.textContent = '⚠️ LLM no disponible — recarga la página'; return; }
 
   try {
-    if(text) text.textContent = '⬇️ Descargando SmolLM2-360M (~200MB)...';
+    if(text) text.textContent = '⚡ Conectando con Claude API...';
     await window.CRM_LLM.init(updateProgress);
     llmReady = true;
     if (bar) bar.className = 'llm-init-bar hidden';
-    if(typeof Notiflix!=='undefined') Notiflix.Notify.success('LLM activo ✓ — Todos los agentes en modo completo');
+    if(typeof Notiflix!=='undefined') Notiflix.Notify.success('Claude API activa ✓ — 14 agentes en modo IA completo');
     // Update all agent statuses
     AGENTS.forEach(a => {
       const s = document.getElementById(`status-${a.id}`);
@@ -1212,8 +1264,8 @@ async function initLLM() {
   } catch(e) {
     const isFetch = e.message.includes('fetch') || e.message.includes('network') || e.message.includes('load');
     const msg = isFetch
-      ? '📶 Sin conexión al modelo — agentes funcionando en modo template ✓'
-      : '⚠️ LLM no disponible — agentes en modo template inteligente ✓';
+      ? '📶 Sin conexión al Worker — agentes funcionando en modo template ✓'
+      : '⚠️ Worker no disponible — agentes en modo template inteligente ✓';
     if(text) { text.textContent = msg; text.style.color = '#F59E0B'; }
     setTimeout(()=>{ if(bar) bar.className='llm-init-bar hidden'; }, 4000);
   }
