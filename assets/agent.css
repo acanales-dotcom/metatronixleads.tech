@@ -384,7 +384,9 @@
 #mtx-agent-input:focus {
   background: #161C2A;
   border-color: #0055ff;
+  color: #E8EDF8;
 }
+#mtx-agent-input:focus::placeholder { color: #5a7090; }
 #mtx-agent-input::placeholder { color: #a8b5c8; }
 #mtx-agent-send {
   width: 36px;
