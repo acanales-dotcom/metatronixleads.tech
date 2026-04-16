@@ -267,10 +267,10 @@
       .tchat-sidebar::-webkit-scrollbar { width: 3px; }
       .tchat-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); }
 
-      .tchat-sidebar-section { padding: 8px 10px 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #3D4A60; }
+      .tchat-sidebar-section { padding: 8px 10px 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #8BAFC8; }
       .tchat-room {
         display: flex; align-items: center; gap: 5px; padding: 7px 10px;
-        font-size: 11px; font-weight: 500; color: #4A5568; cursor: pointer;
+        font-size: 11px; font-weight: 500; color: #9AAFC0; cursor: pointer;
         transition: all .1s; position: relative; font-family: 'Inter', sans-serif;
       }
       .tchat-room:hover { color: #E8EDF8; background: rgba(255,255,255,.04); }
@@ -299,7 +299,7 @@
         font-family: 'JetBrains Mono', monospace;
       }
       .tchat-dm-name {
-        font-size: 11px; color: #5A6880; font-weight: 500;
+        font-size: 11px; color: #9AAFC0; font-weight: 500;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
       }
       .tchat-dm-user.active .tchat-dm-name { color: #00FF88; font-weight: 700; }
@@ -309,12 +309,12 @@
         font-family: 'JetBrains Mono', monospace; display: none;
       }
       .tchat-dm-badge.show { display: block; }
-      #tchat-dm-list-loading { padding: 8px 12px; font-size: 10px; color: #3D4A60; font-family: 'Inter',sans-serif; }
+      #tchat-dm-list-loading { padding: 8px 12px; font-size: 10px; color: #8BAFC8; font-family: 'Inter',sans-serif; }
 
       .tchat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
       .tchat-room-header { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.07); background: #141922; flex-shrink: 0; }
       .tchat-room-name { font-size: 12px; font-weight: 700; color: #E8EDF8; font-family: 'Inter', sans-serif; }
-      .tchat-room-desc { font-size: 10px; color: #4A5568; margin-top: 1px; font-family: 'Inter', sans-serif; }
+      .tchat-room-desc { font-size: 10px; color: #9AAFC0; margin-top: 1px; font-family: 'Inter', sans-serif; }
 
       .dm-privacy-bar {
         display: none; padding: 5px 12px; font-size: 10px;
@@ -345,8 +345,8 @@
 
       .tchat-msg-body { max-width: 76%; }
       .tchat-msg-header { display: flex; gap: 6px; align-items: baseline; margin-bottom: 3px; }
-      .tchat-msg-name { font-size: 11px; font-weight: 700; color: #7E8FA8; font-family: 'Inter', sans-serif; }
-      .tchat-msg-time { font-size: 9px; color: #3D4A60; font-family: 'JetBrains Mono', monospace; }
+      .tchat-msg-name { font-size: 11px; font-weight: 700; color: #B8C8DC; font-family: 'Inter', sans-serif; }
+      .tchat-msg-time { font-size: 9px; color: #8BAFC8; font-family: 'JetBrains Mono', monospace; }
       .tchat-msg.own .tchat-msg-header { flex-direction: row-reverse; }
 
       .tchat-bubble {
@@ -372,7 +372,7 @@
       }
       .tchat-input:focus { border-color: #00D4F0; }
       .tchat-input.dm-input:focus { border-color: #00FF88; }
-      .tchat-input::placeholder { color: #3D4A60; }
+      .tchat-input::placeholder { color: #8BAFC8; }
       .tchat-send {
         width: 32px; height: 32px; background: #00D4F0; color: #000;
         border: none; border-radius: 6px; cursor: pointer; font-size: 13px;
@@ -382,9 +382,9 @@
       .tchat-send:hover { background: #19DFFF; }
       .tchat-send.dm-send { background: #00FF88; }
       .tchat-send.dm-send:hover { background: #33FFAA; }
-      .tchat-hint { font-size: 9px; color: #3D4A60; margin-top: 4px; font-family: 'Inter', sans-serif; }
+      .tchat-hint { font-size: 9px; color: #8BAFC8; margin-top: 4px; font-family: 'Inter', sans-serif; }
 
-      .tchat-empty { padding: 24px; text-align: center; color: #3D4A60; font-size: 12px; font-family: 'Inter', sans-serif; }
+      .tchat-empty { padding: 24px; text-align: center; color: #8BAFC8; font-size: 12px; font-family: 'Inter', sans-serif; }
     `;
     document.head.appendChild(style);
   }
@@ -454,7 +454,7 @@
     const container = document.getElementById('tchat-dm-list');
     if (!container) return;
     if (!users.length) {
-      container.innerHTML = '<div id="tchat-dm-list-loading" style="padding:6px 12px;font-size:10px;color:#3D4A60;font-family:Inter,sans-serif">Sin usuarios</div>';
+      container.innerHTML = '<div id="tchat-dm-list-loading" style="padding:6px 12px;font-size:10px;color:#8BAFC8;font-family:Inter,sans-serif">Sin usuarios</div>';
       return;
     }
     container.innerHTML = users.map(u => {
@@ -549,7 +549,7 @@
       if (dm) {
         const otherUser = users.find(u => u.id === dmOtherId(roomId));
         const name = otherUser?.full_name || 'este usuario';
-        container.innerHTML = `<div class="tchat-empty">🔒 Inicio de tu conversación privada con <strong style="color:#00FF88">${escH(name)}</strong>.<br><span style="font-size:10px;color:#2D3A50;margin-top:4px;display:block">Solo tú y ${escH(name)} pueden ver estos mensajes.</span></div>`;
+        container.innerHTML = `<div class="tchat-empty">🔒 Inicio de tu conversación privada con <strong style="color:#00FF88">${escH(name)}</strong>.<br><span style="font-size:10px;color:#8BAFC8;margin-top:4px;display:block">Solo tú y ${escH(name)} pueden ver estos mensajes.</span></div>`;
       } else {
         const room = ROOMS.find(r => r.id === roomId);
         container.innerHTML = `<div class="tchat-empty">${room?.icon||'💬'} Sé el primero en escribir en ${room?.name||roomId}</div>`;
