@@ -1159,9 +1159,19 @@ async function doUpload() {
 }
 
 function toB64(file) {
-  return new Promise((res,rej) => {
+  return new Promise((res, rej) => {
     const r = new FileReader();
-    r.onload = e => res(btoa(String.fromCharCode(...new Uint8Array(e.target.result))));
+    r.onload = e => {
+      try {
+        const bytes = new Uint8Array(e.target.result);
+        let binary = '';
+        const CHUNK = 8192;
+        for (let i = 0; i < bytes.length; i += CHUNK) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+        }
+        res(btoa(binary));
+      } catch(err) { rej(err); }
+    };
     r.onerror = rej;
     r.readAsArrayBuffer(file);
   });

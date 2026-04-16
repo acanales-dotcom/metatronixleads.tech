@@ -184,7 +184,7 @@
       @keyframes alex-in { from{opacity:0;transform:translateY(12px) scale(.95)} to{opacity:1;transform:none} }
 
       #metafollow-btn {
-        position: fixed; bottom: 20px; left: 20px;
+        position: fixed; bottom: 12px; left: 76px;
         z-index: 9100; width: 80px; height: 80px;
         background: transparent; border: none; cursor: pointer;
         outline: none; padding: 0;
@@ -206,7 +206,7 @@
       #metafollow-badge.show { display: flex; }
 
       #metafollow-panel {
-        position: fixed; bottom: 108px; left: 20px;
+        position: fixed; bottom: 108px; left: 76px;
         z-index: 9099; width: 360px; height: 540px;
         max-height: calc(100vh - 120px);
         background: #141922; border: 1px solid rgba(0,212,240,.2);

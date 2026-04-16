@@ -66,6 +66,51 @@
   function saveMessages(roomId, msgs) {
     localStorage.setItem(storageKey(roomId), JSON.stringify(msgs.slice(-100)));
   }
+  /* ── Sync messages from Supabase (cross-user persistence) ── */
+  async function syncFromSupabase(roomId) {
+    if (!window.getDB || !currentUser) return;
+    try {
+      const isDm = isDM(roomId);
+      let q = window.getDB()
+        .from('activity_logs')
+        .select('id, user_id, metadata, created_at')
+        .eq('entity_type', 'chat')
+        .order('created_at', { ascending: true })
+        .limit(150);
+
+      if (isDm) {
+        const otherId = dmOtherId(roomId);
+        const myId    = currentUser.id;
+        q = q.eq('action', 'team_chat_dm').or(
+          `and(user_id.eq.${myId},metadata->>to_user.eq.${otherId}),and(user_id.eq.${otherId},metadata->>to_user.eq.${myId})`
+        );
+      } else {
+        q = q.eq('action', 'team_chat').filter('metadata->>room', 'eq', roomId);
+      }
+
+      const { data, error } = await q;
+      if (error || !data?.length) return;
+
+      const remote = data.map(row => ({
+        id:        row.metadata?.msg_id || 'sb_' + row.id,
+        room_id:   roomId,
+        user_id:   row.user_id,
+        user_name: row.metadata?.user_name || 'Usuario',
+        text:      row.metadata?.text || '',
+        ts:        row.created_at,
+        is_dm:     isDm,
+        ...(isDm ? { to_user: row.metadata?.to_user } : {}),
+      }));
+
+      const local  = loadMessages(roomId);
+      const seenIds = new Set(local.map(m => m.id));
+      const merged  = [...local, ...remote.filter(m => !seenIds.has(m.id))];
+      merged.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+      saveMessages(roomId, merged);
+      if (roomId === activeRoom && chatOpen) renderMessages(roomId);
+    } catch(e) { /* fail silently */ }
+  }
+
   function getUnread(roomId) {
     const msgs     = loadMessages(roomId);
     const lastRead = parseInt(localStorage.getItem(READ_KEY(roomId)) || '0');
@@ -111,9 +156,10 @@
           entity_type: 'chat',
           entity_id:   null,
           metadata:    {
-            room:     roomId,
-            text:     text.trim().slice(0,500),
-            msg_id:   msg.id,
+            room:      roomId,
+            text:      text.trim().slice(0,500),
+            msg_id:    msg.id,
+            user_name: currentUser.profile?.full_name || currentUser.email.split('@')[0],
             ...(isDm ? { to_user: msg.to_user } : {}),
           },
         });
@@ -176,7 +222,7 @@
     style.id = 'tchat-css';
     style.textContent = `
       #tchat-btn {
-        position: fixed; bottom: 108px; left: 20px;
+        position: fixed; bottom: 20px; left: 20px;
         z-index: 9050; width: 44px; height: 44px;
         background: #1C2236; border: 1px solid rgba(0,212,240,.25);
         border-radius: 50%; cursor: pointer; display: flex;
@@ -195,7 +241,7 @@
       #tchat-badge.show { display: flex; }
 
       #tchat-panel {
-        position: fixed; bottom: 162px; left: 20px;
+        position: fixed; bottom: 74px; left: 20px;
         z-index: 9049; width: 390px; height: 540px;
         max-height: calc(100vh - 170px);
         background: #141922; border: 1px solid rgba(255,255,255,.1);
@@ -438,7 +484,7 @@
     chatOpen = !chatOpen;
     const panel = document.getElementById('tchat-panel');
     if (panel) panel.classList.toggle('open', chatOpen);
-    if (chatOpen) { renderMessages(activeRoom); markRead(activeRoom); }
+    if (chatOpen) { renderMessages(activeRoom); markRead(activeRoom); syncFromSupabase(activeRoom); }
   }
 
   window.tchatSetRoom = function(roomId) {
@@ -480,6 +526,7 @@
 
     renderMessages(roomId);
     markRead(roomId);
+    syncFromSupabase(roomId);
   };
 
   window.tchatSend = function() {
