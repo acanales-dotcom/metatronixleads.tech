@@ -182,13 +182,13 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Dominio metatronixleads.tech responde HTTP 200</div>
   <div class="test-steps">1. GET https://metatronixleads.tech/ · 2. Verificar status 200</div>
   <div class="test-criteria">✓ HTTP 200 en ≤ 3s · TLS válido (HTTPS) · No redirect loop</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">DevOps</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">DevOps</td></tr>
 
 <tr><td class="test-id">MTX-INF-002</td><td>
   <div class="test-desc">Cloudflare Worker responde en /api/proxy</div>
   <div class="test-steps">1. POST claude-proxy.acanales-7d4.workers.dev · 2. Body: {model, messages} · 3. Verificar stream SSE</div>
   <div class="test-criteria">✓ HTTP 200 · Content-Type: text/event-stream · No CORS error</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">DevOps</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">DevOps</td></tr>
 
 <tr><td class="test-id">MTX-INF-003</td><td>
   <div class="test-desc">GitHub Pages build y deploy exitoso en push a main</div>
@@ -200,7 +200,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Supabase connection desde browser no falla</div>
   <div class="test-steps">1. Abrir cualquier página autenticada · 2. Verificar Network tab: requests a supabase.co · 3. Verificar 200 en /rest/v1/</div>
   <div class="test-criteria">✓ No 401/403 en requests iniciales · JWT en localStorage presente</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Backend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Backend</td></tr>
 
 <tr><td class="test-id">MTX-INF-005</td><td>
   <div class="test-desc">DNS TTL y propagación correcta en Neubox</div>
@@ -212,7 +212,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">CORS headers correctos en Worker para dominio de producción</div>
   <div class="test-steps">1. OPTIONS request a Worker URL · 2. Verificar headers Access-Control-Allow-*</div>
   <div class="test-criteria">✓ ACAO: metatronixleads.tech · ACAM: POST · ACAH: Content-Type,Authorization</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Backend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Backend</td></tr>
 
 <tr><td class="test-id">MTX-INF-007</td><td>
   <div class="test-desc">Cache busting activo en todos los assets JS</div>
@@ -224,7 +224,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Supabase RLS (Row Level Security) activo en todas las tablas</div>
   <div class="test-steps">1. Supabase Dashboard → Tables · 2. Verificar RLS enabled en leads, profiles, documents, etc.</div>
   <div class="test-criteria">✓ RLS activo en 10+ tablas · No tabla expuesta públicamente</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Backend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Backend</td></tr>
 </tbody></table></div>
 
 <!-- ═══════════════════════ MODULE: AUTH ═══════════════════════ -->
@@ -241,7 +241,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Login con credenciales válidas redirige a dashboard</div>
   <div class="test-steps">1. Ir a /home.html · 2. Ingresar email+password válidos · 3. Click Ingresar</div>
   <div class="test-criteria">✓ Redirect a dashboard.html · JWT almacenado en localStorage · No error visible</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-AUTH-002</td><td>
   <div class="test-desc">Login con credenciales inválidas muestra error legible</div>
@@ -253,7 +253,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Páginas protegidas redirigen a /home.html si no autenticado</div>
   <div class="test-steps">1. Cerrar sesión · 2. Ir a /dashboard.html directamente · 3. Verificar redirect</div>
   <div class="test-criteria">✓ Redirect a /home.html · No contenido visible sin auth</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-AUTH-004</td><td>
   <div class="test-desc">Logout limpia sesión y redirige a home</div>
@@ -288,13 +288,13 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Tabla de leads carga datos desde Supabase</div>
   <div class="test-steps">1. Ir a /leads.html · 2. Esperar carga · 3. Verificar registros visibles</div>
   <div class="test-criteria">✓ Filas visibles · Sin "undefined" · Paginación funcional</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-CRM-002</td><td>
   <div class="test-desc">Crear nuevo lead guarda en BD y aparece en tabla</div>
   <div class="test-steps">1. Click "Nuevo Lead" · 2. Llenar formulario · 3. Guardar · 4. Verificar en tabla</div>
   <div class="test-criteria">✓ INSERT exitoso (no error) · Lead visible en tabla inmediatamente</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-CRM-003</td><td>
   <div class="test-desc">Editar lead actualiza registro en BD</div>
@@ -342,19 +342,19 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Los 15 agentes renderizan cards en /marketing.html</div>
   <div class="test-steps">1. Ir a /marketing.html · 2. Verificar 15 cards visibles · 3. Verificar nombre, icono, descripción en cada una</div>
   <div class="test-criteria">✓ 15 cards · Sin "undefined" · Sin errores JS en consola</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-AGT-002</td><td>
   <div class="test-desc">Click en card abre workspace del agente (toggle)</div>
   <div class="test-steps">1. Click en card de Investigación · 2. Verificar workspace se expande · 3. Click de nuevo · 4. Verificar colapsa</div>
   <div class="test-criteria">✓ Workspace visible · Height > 0 tras click · Colapsa al segundo click</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-AGT-003</td><td>
   <div class="test-desc">REGRESSION: Escribir en textarea del workspace NO colapsa el agente</div>
   <div class="test-steps">1. Abrir workspace · 2. Click en textarea "Rol del agente" · 3. Escribir texto · 4. Verificar workspace permanece abierto</div>
   <div class="test-criteria">✓ Workspace stays open · No collapse on textarea click/type · Event.stopPropagation activo</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-AGT-004</td><td>
   <div class="test-desc">Campo "Rol del Agente" acepta input y persiste durante sesión</div>
@@ -366,7 +366,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Agente Investigación: ejecutar prompt devuelve respuesta streaming</div>
   <div class="test-steps">1. Abrir workspace Investigación · 2. Escribir rol + prompt · 3. Click Ejecutar · 4. Verificar respuesta en stream</div>
   <div class="test-criteria">✓ Tokens aparecen progresivamente · Sin timeout en 30s · Respuesta coherente</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-AGT-006</td><td>
   <div class="test-desc">Agente Clio (formulario custom): campos Role, Tone, Format renderizan correctamente</div>
@@ -402,7 +402,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">stopPropagation activo en todos los 15 agent-workspace divs</div>
   <div class="test-steps">1. Inspeccionar DOM: todos los .agent-workspace tienen onclick=stopPropagation · 2. Click en label, select, button dentro de workspace de 5 agentes aleatorios</div>
   <div class="test-criteria">✓ Ningún elemento dentro del workspace colapsa el agente</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-AGT-012</td><td>
   <div class="test-desc">Agent knowledge se carga correctamente en agent_knowledge table</div>
@@ -443,7 +443,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Select/dropdown dentro de workspace no colapsa el agente</div>
   <div class="test-steps">1. Abrir workspace con select (Clio, Larry, Editor) · 2. Click en select · 3. Seleccionar opción · 4. Verificar workspace abierto</div>
   <div class="test-criteria">✓ Workspace permanece abierto al interactuar con select</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-WRK-005</td><td>
   <div class="test-desc">Botón Limpiar / Reset workspace borra output y campos</div>
@@ -473,37 +473,37 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">TeamChat widget abre al click del ícono de chat</div>
   <div class="test-steps">1. Click en ícono de chat (bottom-right) · 2. Verificar panel abre · 3. Verificar canales listados</div>
   <div class="test-criteria">✓ Panel visible · Mínimo 3 canales · Sin errores JS</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-CHT-002</td><td>
   <div class="test-desc">Enviar mensaje en canal general aparece en historial</div>
   <div class="test-steps">1. Seleccionar #general · 2. Escribir mensaje · 3. Enter/Click Enviar · 4. Verificar mensaje en lista</div>
   <div class="test-criteria">✓ Mensaje visible · Nombre de usuario correcto · Timestamp presente</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-CHT-003</td><td>
   <div class="test-desc">Sección "Directos" aparece en sidebar del chat con lista de usuarios</div>
   <div class="test-steps">1. Abrir TeamChat · 2. Verificar sección "Directos" en sidebar · 3. Verificar usuarios listados</div>
   <div class="test-criteria">✓ Sección "Directos" visible · Usuarios cargados desde profiles · Avatares o iniciales visibles</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-CHT-004</td><td>
   <div class="test-desc">Click en usuario en sección Directos abre conversación privada</div>
   <div class="test-steps">1. Click en usuario en Directos · 2. Verificar header cambia a DM · 3. Verificar barra verde "Conversación privada"</div>
   <div class="test-criteria">✓ Room ID = dm:{userId} · Header verde/DM visible · Privacy bar visible</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-CHT-005</td><td>
   <div class="test-desc">Mensaje DM enviado solo visible para remitente y destinatario</div>
   <div class="test-steps">1. User A → DM a User B · 2. Login como User B · 3. Verificar DM recibido · 4. Login como User C · 5. Verificar NO ve el DM</div>
   <div class="test-criteria">✓ User C no ve el DM · DM key canónica ({sortedId1}_{sortedId2}) funcional</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-CHT-006</td><td>
   <div class="test-desc">DM storage key es canónica (sort de IDs): ambos lados usan mismo key</div>
   <div class="test-steps">1. User A envía DM a B · 2. Verificar localStorage key: mtx_team_chat_dm_{id_menor}_{id_mayor} · 3. User B abre DM y verifica misma key</div>
   <div class="test-criteria">✓ Key idéntica para A→B y B→A · IDs ordenados alfabéticamente</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-CHT-007</td><td>
   <div class="test-desc">Cross-tab sync: mensaje en pestaña A aparece en pestaña B (mismo canal)</div>
@@ -556,7 +556,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">REGRESSION: MetaFollow NO se superpone con ícono de chat</div>
   <div class="test-steps">1. Abrir cualquier página · 2. Verificar MetaFollow (bottom:20px) y Chat (bottom:108px) no se solapan · 3. Medir gap visual</div>
   <div class="test-criteria">✓ Gap ≥ 8px entre MetaFollow top y Chat bottom · Sin overlap</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-MFW-003</td><td>
   <div class="test-desc">Click en MetaFollow abre panel lateral de leads/seguimiento</div>
@@ -626,7 +626,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">/admin.html solo accesible para usuarios con role=admin</div>
   <div class="test-steps">1. Login como user no-admin · 2. Navegar a /admin.html · 3. Verificar redirect/block</div>
   <div class="test-criteria">✓ No-admin bloqueado · Redirect a /dashboard o error 403</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-ADM-002</td><td>
   <div class="test-desc">Portal settings guarda y carga correctamente desde Supabase</div>
@@ -662,19 +662,19 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">API key de Anthropic NO expuesta en frontend HTML/JS</div>
   <div class="test-steps">1. View-source de todas las páginas · 2. Buscar "sk-ant-" o "ANTHROPIC" · 3. Verificar no presente · 4. Verificar solo Worker tiene la key</div>
   <div class="test-criteria">✓ CERO ocurrencias de API key en HTML/JS del frontend</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Security</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Security</td></tr>
 
 <tr><td class="test-id">MTX-SEC-002</td><td>
   <div class="test-desc">Supabase service_role key NO expuesta en frontend</div>
   <div class="test-steps">1. Grep en todos los JS/HTML del repo · 2. Buscar "service_role" · 3. Solo anon key permitida en frontend</div>
   <div class="test-criteria">✓ Solo supabaseAnonKey en frontend · service_role key ausente</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Security</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Security</td></tr>
 
 <tr><td class="test-id">MTX-SEC-003</td><td>
   <div class="test-desc">Input de chat sanitizado contra XSS (no ejecuta scripts)</div>
   <div class="test-steps">1. Enviar mensaje: &lt;script&gt;alert('xss')&lt;/script&gt; · 2. Verificar no ejecuta · 3. Verificar sanitizado</div>
   <div class="test-criteria">✓ No alert() ejecutado · Texto mostrado como string literal</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Security</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Security</td></tr>
 
 <tr><td class="test-id">MTX-SEC-004</td><td>
   <div class="test-desc">Input de agentes IA sanitizado antes de enviar al Worker</div>
@@ -686,13 +686,13 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Supabase RLS previene acceso cross-user a datos sensibles</div>
   <div class="test-steps">1. User A crea lead · 2. Login como User B · 3. Intentar fetch directo del lead de A via API · 4. Verificar 403/empty</div>
   <div class="test-criteria">✓ User B no puede leer leads de User A · RLS activo y efectivo</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Backend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Backend</td></tr>
 
 <tr><td class="test-id">MTX-SEC-006</td><td>
   <div class="test-desc">GitHub Token no presente en código del repositorio público</div>
   <div class="test-steps">1. Grep en repo: "ghp_" · 2. Verificar no presente en ningún archivo commiteado</div>
   <div class="test-criteria">✓ CERO tokens GitHub en repo · .gitignore cubre .env files</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Security</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Security</td></tr>
 
 <tr><td class="test-id">MTX-SEC-007</td><td>
   <div class="test-desc">Content Security Policy (CSP) headers configurados</div>
@@ -803,19 +803,19 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">Flujo completo: Login → Dashboard → Crear Lead → Ver en Pipeline</div>
   <div class="test-steps">1. Login · 2. Dashboard carga · 3. Crear nuevo lead · 4. Ir a oportunidades · 5. Ver lead en pipeline</div>
   <div class="test-criteria">✓ Flujo completo sin errores · Lead aparece en pipeline · ≤ 2 min total</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA Lead</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead</td></tr>
 
 <tr><td class="test-id">MTX-E2E-002</td><td>
   <div class="test-desc">Flujo completo: Agente IA genera contenido → Se guarda → Accesible en Archivos</div>
   <div class="test-steps">1. Abrir agente Contenido · 2. Generar post de LinkedIn · 3. Guardar output · 4. Ir a /archivos.html · 5. Ver documento</div>
   <div class="test-criteria">✓ Contenido generado · Guardado en BD · Accesible en archivos</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA Lead</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead</td></tr>
 
 <tr><td class="test-id">MTX-E2E-003</td><td>
   <div class="test-desc">Flujo DM completo: User A envía DM → User B lo recibe → Responde → Thread completo</div>
   <div class="test-steps">1. Login A · 2. DM a B · 3. Login B · 4. Ver DM · 5. Responder · 6. Login A · 7. Ver respuesta</div>
   <div class="test-criteria">✓ Ambos lados del thread visibles · Orden cronológico · Sin mensajes perdidos</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA Lead</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead</td></tr>
 
 <tr><td class="test-id">MTX-E2E-004</td><td>
   <div class="test-desc">Flujo Orchestrator: planifica → sub-agentes ejecutan → resultado consolidado</div>
@@ -844,13 +844,13 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">BUG#1 FIXED: Workspace de agente NO colapsa al escribir en textarea</div>
   <div class="test-steps">1. Abrir cada uno de los 15 agentes · 2. Click en textarea · 3. Escribir 20+ chars · 4. Verificar workspace abierto</div>
   <div class="test-criteria">✓ 15/15 agentes: workspace permanece abierto durante typing · Fix: onclick=stopPropagation en .agent-workspace</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-REG-002</td><td>
   <div class="test-desc">BUG#2 FIXED: MetaFollow NO se superpone con botón de Chat</div>
   <div class="test-steps">1. Abrir página en 1920x1080 · 2. Abrir en 375x667 · 3. Verificar posiciones en ambos viewports</div>
   <div class="test-criteria">✓ MetaFollow: bottom:20px · Chat: bottom:108px · Gap ≥ 8px visible</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA</td></tr>
 
 <tr><td class="test-id">MTX-REG-003</td><td>
   <div class="test-desc">BUG#3 FIXED: Cache de JS actualizado con ?v=3 (salescoach + teamchat)</div>
@@ -862,7 +862,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-desc">BUG#4 FIXED: DM storage key canónica (sort de IDs) — no duplica conversaciones</div>
   <div class="test-steps">1. User A (id="zzz") DM a User B (id="aaa") · 2. Verificar key: mtx_team_chat_dm_aaa_zzz · 3. User B abre DM con A · 4. Verificar misma key</div>
   <div class="test-criteria">✓ Key idéntica desde ambos lados · No se crean 2 conversaciones separadas</div>
-</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-REG-005</td><td>
   <div class="test-desc">BUG#5 FIXED: Cross-tab DM sync NO contamina a usuarios incorrectos</div>
