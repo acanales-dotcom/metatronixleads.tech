@@ -186,14 +186,16 @@
       #metafollow-btn {
         position: fixed; bottom: 20px; left: 20px;
         z-index: 9100; width: 80px; height: 80px;
-        background: transparent; border: none; cursor: pointer;
+        background: transparent; border: none; cursor: grab;
         outline: none; padding: 0;
         filter: drop-shadow(0 4px 14px rgba(0,212,240,.3));
         animation: alex-float 3.5s ease-in-out infinite;
         transition: filter .2s;
+        user-select: none; touch-action: none;
       }
       #metafollow-btn:hover { filter: drop-shadow(0 6px 20px rgba(0,212,240,.5)); }
       #metafollow-btn.has-alert { animation: alex-pulse 2s ease-in-out infinite; }
+      #metafollow-btn.dragging { cursor: grabbing; animation: none; filter: drop-shadow(0 8px 24px rgba(0,212,240,.7)); opacity:.9; }
 
       #metafollow-badge {
         position: absolute; top: 0px; right: 0px;
@@ -212,11 +214,11 @@
         background: #141922; border: 1px solid rgba(0,212,240,.2);
         border-radius: 14px; display: flex; flex-direction: column;
         overflow: hidden; box-shadow: 0 12px 48px rgba(0,0,0,.7), 0 0 0 1px rgba(0,212,240,.1);
-        transform: scale(.93) translateX(-10px); transform-origin: bottom left;
+        transform: scale(.93); transform-origin: bottom left;
         opacity: 0; pointer-events: none;
         transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s;
       }
-      #metafollow-panel.open { transform: scale(1) translateX(0); opacity: 1; pointer-events: all; }
+      #metafollow-panel.open { transform: scale(1); opacity: 1; pointer-events: all; }
 
       .mf-header {
         padding: 14px 16px; display: flex; align-items: center; gap: 12px;
@@ -232,13 +234,13 @@
       .mf-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,.07); flex-shrink: 0; }
       .mf-tab {
         flex: 1; padding: 8px 0; font-size: 11px; font-weight: 600;
-        color: rgba(255,255,255,.4); cursor: pointer; border-bottom: 2px solid transparent;
+        color: rgba(255,255,255,.75); cursor: pointer; border-bottom: 2px solid transparent;
         margin-bottom: -1px; transition: all .1s; background: none; border-top: none;
         border-left: none; border-right: none; font-family: 'Inter', sans-serif;
         letter-spacing: .02em; text-transform: uppercase;
       }
       .mf-tab.active { color: #00D4F0; border-bottom-color: #00D4F0; }
-      .mf-tab:hover:not(.active) { color: rgba(255,255,255,.7); }
+      .mf-tab:hover:not(.active) { color: #fff; }
 
       .mf-body { flex: 1; overflow-y: auto; padding: 12px; }
       .mf-body::-webkit-scrollbar { width: 3px; }
@@ -258,7 +260,7 @@
       .mf-insight-head { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
       .mf-insight-icon { font-size: 14px; }
       .mf-insight-title { font-size: 12px; font-weight: 700; color: #E8EDF8; font-family: 'Inter', sans-serif; }
-      .mf-insight-body { font-size: 11.5px; color: #7E8FA8; line-height: 1.6; font-family: 'Inter', sans-serif; }
+      .mf-insight-body { font-size: 11.5px; color: #B8C8DC; line-height: 1.6; font-family: 'Inter', sans-serif; }
       .mf-insight-action {
         display: inline-flex; align-items: center; gap: 4px;
         margin-top: 7px; padding: 4px 10px; background: rgba(0,212,240,.1);
@@ -272,7 +274,7 @@
       /* Stats tab */
       .mf-stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
       .mf-stat-row:last-child { border-bottom: none; }
-      .mf-stat-lbl { font-size: 12px; color: #7E8FA8; font-family: 'Inter', sans-serif; }
+      .mf-stat-lbl { font-size: 12px; color: #B8C8DC; font-family: 'Inter', sans-serif; }
       .mf-stat-val { font-size: 12px; font-weight: 700; color: #E8EDF8; font-family: 'JetBrains Mono', monospace; }
 
       /* Chat */
@@ -302,9 +304,9 @@
     // Button
     const btn = document.createElement('button');
     btn.id = 'metafollow-btn';
-    btn.title = 'MetaFollow — Sales Coach IA';
+    btn.title = 'MetaFollow — Sales Coach IA (arrastra para mover)';
     btn.innerHTML = alexSVG('metafollow-svg') + `<span id="metafollow-badge"></span>`;
-    btn.onclick = togglePanel;
+    // click handled inside makeDraggable (only fires when not dragging)
 
     // Panel
     const panel = document.createElement('div');
@@ -324,7 +326,7 @@
         <button class="metafollow-tab" data-tab="chat" onclick="metafollowTab('chat',this)">💬 Chat IA</button>
       </div>
       <div id="mf-tab-insights" class="metafollow-body" style="padding:10px">
-        <div id="mf-insights-list"><div style="text-align:center;padding:24px;color:#4A5568;font-size:13px">Analizando tus leads…</div></div>
+        <div id="mf-insights-list"><div style="text-align:center;padding:24px;color:#B8C8DC;font-size:13px">Analizando tus leads…</div></div>
       </div>
       <div id="mf-tab-stats" class="metafollow-body" style="display:none">
         <div id="mf-stats-body" style="padding:4px 0"></div>
@@ -339,6 +341,105 @@
 
     document.body.appendChild(btn);
     document.body.appendChild(panel);
+    makeDraggable(btn);
+  }
+
+  /* ── Draggable button ────────────────────────────────────── */
+  function makeDraggable(btn) {
+    const DRAG_THRESHOLD = 5; // px before we consider it a drag
+    const POS_KEY = 'mtx_metafollow_pos';
+
+    // Restore saved position
+    try {
+      const saved = JSON.parse(localStorage.getItem(POS_KEY));
+      if (saved && typeof saved.top === 'number' && typeof saved.left === 'number') {
+        btn.style.top    = clampY(saved.top)  + 'px';
+        btn.style.left   = clampX(saved.left) + 'px';
+        btn.style.bottom = 'auto';
+        btn.style.right  = 'auto';
+      }
+    } catch (_) {}
+
+    let startX, startY, startLeft, startTop, hasMoved = false, active = false;
+
+    btn.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      active   = true;
+      hasMoved = false;
+      const r  = btn.getBoundingClientRect();
+      startX   = e.clientX;
+      startY   = e.clientY;
+      startLeft = r.left;
+      startTop  = r.top;
+      btn.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    btn.addEventListener('pointermove', (e) => {
+      if (!active) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!hasMoved && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+        hasMoved = true;
+        btn.classList.add('dragging');
+        btn.style.bottom = 'auto';
+        btn.style.right  = 'auto';
+      }
+      if (!hasMoved) return;
+      btn.style.top  = clampY(startTop  + dy) + 'px';
+      btn.style.left = clampX(startLeft + dx) + 'px';
+      repositionPanel();
+    });
+
+    btn.addEventListener('pointerup', (e) => {
+      if (!active) return;
+      active = false;
+      btn.classList.remove('dragging');
+      if (hasMoved) {
+        // Persist position
+        const r = btn.getBoundingClientRect();
+        try { localStorage.setItem(POS_KEY, JSON.stringify({top: r.top, left: r.left})); } catch (_) {}
+        // Prevent click from toggling the panel after a drag
+        btn.addEventListener('click', stopOnce, true);
+      } else {
+        togglePanel();
+      }
+    });
+
+    function stopOnce(e) { e.stopImmediatePropagation(); e.preventDefault(); btn.removeEventListener('click', stopOnce, true); }
+
+    function clampX(x) { return Math.max(0, Math.min(window.innerWidth  - btn.offsetWidth,  x)); }
+    function clampY(y) { return Math.max(0, Math.min(window.innerHeight - btn.offsetHeight, y)); }
+  }
+
+  /* ── Reposition panel relative to current btn position ──── */
+  function repositionPanel() {
+    const btn   = document.getElementById('metafollow-btn');
+    const panel = document.getElementById('metafollow-panel');
+    if (!btn || !panel) return;
+
+    const bRect = btn.getBoundingClientRect();
+    const pW    = panel.offsetWidth  || 360;
+    const pH    = panel.offsetHeight || 540;
+    const gap   = 10;
+    const vp    = { w: window.innerWidth, h: window.innerHeight };
+
+    // Prefer right; fall back left
+    let left = bRect.right + gap;
+    if (left + pW > vp.w - 8) left = bRect.left - pW - gap;
+    left = Math.max(8, Math.min(vp.w - pW - 8, left));
+
+    // Align bottom of panel with bottom of btn; clamp within viewport
+    let top = bRect.bottom - pH;
+    if (top < 8) top = bRect.top;
+    top = Math.max(8, Math.min(vp.h - pH - 8, top));
+
+    panel.style.top    = top  + 'px';
+    panel.style.left   = left + 'px';
+    panel.style.bottom = 'auto';
+    panel.style.right  = 'auto';
+    // update transform-origin to animate from the btn side
+    panel.style.transformOrigin = left > bRect.left ? 'bottom left' : 'bottom right';
   }
 
   /* ── Panel control ───────────────────────────────────────── */
@@ -351,6 +452,7 @@
     const btn   = document.getElementById('metafollow-btn');
     if (!panel || !btn) return;
     isOpen = true;
+    repositionPanel();
     panel.classList.add('open');
     btn.classList.add('open');
     runAnalysis();
@@ -416,7 +518,7 @@
         ${escH(welcome)}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#3D4A60">Insights Personalizados</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#8BAFC8">Insights Personalizados</div>
         <button class="metafollow-refresh" onclick="lastAnalyzed=0;runAnalysis()">↻ Actualizar</button>
       </div>
       ${insights.map(i => `
@@ -432,7 +534,7 @@
 
   function renderStats() {
     const body = document.getElementById('mf-stats-body');
-    if (!body || !analysisCache) { body.innerHTML = '<div style="color:#4A5568;text-align:center;padding:20px;font-size:12px">Abre la pestaña Insights primero</div>'; return; }
+    if (!body || !analysisCache) { body.innerHTML = '<div style="color:#B8C8DC;text-align:center;padding:20px;font-size:12px">Abre la pestaña Insights primero</div>'; return; }
     const { myLeads, activos, ganados, stale, overdue, forecast, pipeline, winRate } = analysisCache;
 
     const rows = [
