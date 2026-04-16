@@ -226,21 +226,136 @@
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
-/* Flywheel diagram */
-.flywheel {
-  display:grid; grid-template-columns:repeat(4,1fr); gap:0;
-  border:1px solid var(--border); border-radius:10px; overflow:hidden;
-  margin:16px 24px;
+/* ── AGENT HQ — HUD videojuego ──────────────────────── */
+@keyframes hud-pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+@keyframes hud-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(400%)} }
+@keyframes hud-blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+@keyframes slot-glow { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,240,0)} 50%{box-shadow:0 0 12px 2px rgba(0,212,240,.25)} }
+
+.agent-hq {
+  margin: 10px 24px 0;
+  background: linear-gradient(180deg,#0A0E18 0%,#0C1020 100%);
+  border: 1px solid rgba(0,212,240,.22);
+  border-radius: 12px; overflow: hidden; position: relative;
 }
-.flywheel-step {
-  padding:14px 16px; border-right:1px solid var(--border);
-  background:#fff; text-align:center;
+/* scanline overlay */
+.agent-hq::before {
+  content:''; pointer-events:none;
+  position:absolute; inset:0; z-index:0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
 }
-.flywheel-step:last-child { border-right:none; }
-.flywheel-step:hover { background:var(--surface2); }
-.flywheel-num { font-family:var(--font-head); font-size:1.8rem; color:var(--blue); line-height:1; }
-.flywheel-label { font-size:11px; color:var(--text-muted); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
-.flywheel-arrow { display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--cyan); }
+/* moving scan beam */
+.hq-scanbeam {
+  position:absolute; left:0; right:0; height:40px;
+  background: linear-gradient(180deg,transparent,rgba(0,212,240,.04) 50%,transparent);
+  animation: hud-scan 4s linear infinite; pointer-events:none; z-index:0;
+}
+
+/* HQ header bar */
+.hq-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 16px; border-bottom:1px solid rgba(0,212,240,.15);
+  position:relative; z-index:1;
+  background: rgba(0,212,240,.04);
+}
+.hq-title {
+  font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+  color:#00D4F0; letter-spacing:.12em; text-transform:uppercase;
+  display:flex; align-items:center; gap:8px;
+}
+.hq-title-dot {
+  width:6px; height:6px; background:#00D4F0; border-radius:50%;
+  animation: hud-blink 1.4s ease-in-out infinite;
+}
+.hq-meta {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:rgba(0,212,240,.45); letter-spacing:.09em;
+}
+
+/* category label strip */
+.hq-row-label {
+  padding:4px 16px 2px;
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  color:rgba(0,212,240,.35); letter-spacing:.14em; text-transform:uppercase;
+  position:relative; z-index:1;
+  display:flex; align-items:center; gap:6px;
+}
+.hq-row-label::after {
+  content:''; flex:1; height:1px; background:rgba(0,212,240,.1);
+}
+
+/* agent slots grid */
+.hq-slots {
+  display:grid; grid-template-columns:repeat(7,1fr);
+  gap:5px; padding:6px 12px 10px; position:relative; z-index:1;
+}
+
+/* individual agent slot */
+.hq-slot {
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(0,212,240,.12);
+  border-radius:7px; padding:9px 7px 8px;
+  text-align:center; cursor:pointer; position:relative;
+  transition: all .18s; overflow:hidden;
+}
+.hq-slot::before {
+  content:''; position:absolute; inset:0; border-radius:7px;
+  background:linear-gradient(135deg,rgba(0,212,240,.06),transparent);
+  opacity:0; transition:opacity .18s;
+}
+.hq-slot:hover {
+  border-color:rgba(0,212,240,.5); background:rgba(0,212,240,.07);
+  transform:translateY(-2px);
+}
+.hq-slot:hover::before { opacity:1; }
+.hq-slot.active-slot {
+  border-color:rgba(0,212,240,.7); background:rgba(0,212,240,.1);
+  animation: slot-glow 1.8s ease-in-out infinite;
+}
+
+/* corner brackets decoration */
+.hq-slot::after {
+  content:''; position:absolute; top:3px; right:3px;
+  width:6px; height:6px;
+  border-top:1px solid rgba(0,212,240,.3);
+  border-right:1px solid rgba(0,212,240,.3);
+}
+.hq-slot-num {
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  color:rgba(0,212,240,.4); letter-spacing:.08em; margin-bottom:4px;
+}
+.hq-slot-icon { font-size:18px; line-height:1; margin-bottom:4px; display:block; }
+.hq-slot-name {
+  font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600;
+  color:#C8D8E8; letter-spacing:.04em; text-transform:uppercase;
+  line-height:1.2; min-height:18px;
+}
+.hq-slot-cat {
+  font-size:7.5px; color:rgba(0,212,240,.4); letter-spacing:.06em;
+  text-transform:uppercase; margin-top:3px;
+  font-family:'JetBrains Mono',monospace;
+}
+.hq-slot-status {
+  position:absolute; bottom:5px; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; gap:2px;
+}
+.hq-slot-dot {
+  width:4px; height:4px; border-radius:50%; background:#10B981;
+  animation: hud-pulse 2s ease-in-out infinite;
+}
+.hq-slot-dot.orange { background:#F59E0B; animation-delay:.3s; }
+
+/* corner bracket top-left decoration on hq-slot */
+.hq-slot-tl {
+  position:absolute; top:3px; left:3px;
+  width:6px; height:6px;
+  border-top:1px solid rgba(0,212,240,.3);
+  border-left:1px solid rgba(0,212,240,.3);
+}
+
+/* Flywheel hidden (replaced by hq) */
+.flywheel { display:none; }
+.flywheel-step,.flywheel-num,.flywheel-label,.flywheel-arrow { display:none; }
 /* ── View toggle buttons ────────────────────────────── */
 .mkt-view-btn {
   padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 600;
@@ -322,46 +437,149 @@
   </div>
 
 
-  <!-- Chris West Flywheel -->
-  <div style="padding:14px 24px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-    <span style="font-family:var(--font-head);font-size:.9rem;letter-spacing:.06em;color:var(--navy)">FLYWHEEL DE CONVERSIÓN</span>
-    <span style="font-size:11px;color:var(--text-faint)">Modelo Chris West — 7 agentes coordinados</span>
-  </div>
-  <div class="flywheel">
-    <div class="flywheel-step">
-      <div style="font-size:20px;margin-bottom:4px">🔍</div>
-      <div class="flywheel-num">01</div>
-      <div class="flywheel-label">Investigación</div>
+  <!-- AGENT HQ — HUD videojuego — 14 agentes -->
+  <div class="agent-hq">
+    <div class="hq-scanbeam"></div>
+
+    <!-- Header -->
+    <div class="hq-header">
+      <div class="hq-title">
+        <span class="hq-title-dot"></span>
+        AGENT HQ — CUARTEL DE OPERACIONES
+      </div>
+      <div class="hq-meta">14 AGENTES ACTIVOS &nbsp;·&nbsp; SISTEMA EN LÍNEA &nbsp;·&nbsp; METATRONIX v2.0</div>
     </div>
-    <div class="flywheel-step">
-      <div style="font-size:20px;margin-bottom:4px">✍️</div>
-      <div class="flywheel-num">02</div>
-      <div class="flywheel-label">Contenido</div>
+
+    <!-- Row 1: Contenido & CRM -->
+    <div class="hq-row-label">FILA A — CONTENIDO · CRM · COMUNIDAD</div>
+    <div class="hq-slots">
+      <div class="hq-slot" onclick="toggleAgent('investigacion')" title="Investigación de Mercado">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">01</div>
+        <span class="hq-slot-icon">🔍</span>
+        <div class="hq-slot-name">Investigación</div>
+        <div class="hq-slot-cat">Mercado</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('contenido')" title="Agente Contenido">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">02</div>
+        <span class="hq-slot-icon">✍️</span>
+        <div class="hq-slot-name">Contenido</div>
+        <div class="hq-slot-cat">Copy</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('publicidad')" title="Agente Publicidad">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">03</div>
+        <span class="hq-slot-icon">📢</span>
+        <div class="hq-slot-name">Publicidad</div>
+        <div class="hq-slot-cat">Ads</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('youtube')" title="YouTube SEO">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">04</div>
+        <span class="hq-slot-icon">📺</span>
+        <div class="hq-slot-name">YouTube SEO</div>
+        <div class="hq-slot-cat">Video SEO</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('larry')" title="Larry AI SDR">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">05</div>
+        <span class="hq-slot-icon">🤖</span>
+        <div class="hq-slot-name">Larry SDR</div>
+        <div class="hq-slot-cat">CRM IA</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('streams')" title="Agente Comunidad">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">06</div>
+        <span class="hq-slot-icon">📡</span>
+        <div class="hq-slot-name">Comunidad</div>
+        <div class="hq-slot-cat">Lives</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('clio')" title="Clio Onboarding">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">07</div>
+        <span class="hq-slot-icon">🎯</span>
+        <div class="hq-slot-name">Clio</div>
+        <div class="hq-slot-cat">Onboarding</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
     </div>
-    <div class="flywheel-step">
-      <div style="font-size:20px;margin-bottom:4px">📢</div>
-      <div class="flywheel-num">03</div>
-      <div class="flywheel-label">Publicidad</div>
+
+    <!-- Row 2: Media & Inteligencia -->
+    <div class="hq-row-label">FILA B — MEDIA · INTELIGENCIA · PUBLICACIÓN</div>
+    <div class="hq-slots" style="padding-top:2px">
+      <div class="hq-slot" onclick="toggleAgent('video')" title="Video IA Wan2.1">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">08</div>
+        <span class="hq-slot-icon">🎬</span>
+        <div class="hq-slot-name">Video IA</div>
+        <div class="hq-slot-cat">Wan2.1</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot orange"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('image')" title="Imagen IA FLUX.2">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">09</div>
+        <span class="hq-slot-icon">🖼</span>
+        <div class="hq-slot-name">Imagen IA</div>
+        <div class="hq-slot-cat">FLUX.2</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot orange"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('editor')" title="Editor de Video IA">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">10</div>
+        <span class="hq-slot-icon">🎞</span>
+        <div class="hq-slot-name">Editor IA</div>
+        <div class="hq-slot-cat">Canvas</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('geo')" title="Geo Inteligencia">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">11</div>
+        <span class="hq-slot-icon">🗺</span>
+        <div class="hq-slot-name">Geo Intel</div>
+        <div class="hq-slot-cat">Territorio</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('social_sim')" title="Simulación Social">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">12</div>
+        <span class="hq-slot-icon">🧬</span>
+        <div class="hq-slot-name">Sim Social</div>
+        <div class="hq-slot-cat">32 Personas</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('orchestrator')" title="Orquestador">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">13</div>
+        <span class="hq-slot-icon">🎯</span>
+        <div class="hq-slot-name">Orquestador</div>
+        <div class="hq-slot-cat">Campaign</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('publisher')" title="Publisher Social">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">14</div>
+        <span class="hq-slot-icon">📲</span>
+        <div class="hq-slot-name">Publisher</div>
+        <div class="hq-slot-cat">IG · TT · LI</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
     </div>
-    <div class="flywheel-step">
-      <div style="font-size:20px;margin-bottom:4px">📺</div>
-      <div class="flywheel-num">04</div>
-      <div class="flywheel-label">YouTube SEO</div>
-    </div>
-    <div class="flywheel-step">
-      <div style="font-size:20px;margin-bottom:4px">🤖</div>
-      <div class="flywheel-num">05</div>
-      <div class="flywheel-label">Larry SDR</div>
-    </div>
-    <div class="flywheel-step">
-      <div style="font-size:20px;margin-bottom:4px">📡</div>
-      <div class="flywheel-num">06</div>
-      <div class="flywheel-label">Comunidad</div>
-    </div>
-    <div class="flywheel-step" style="border-right:none">
-      <div style="font-size:20px;margin-bottom:4px">🎯</div>
-      <div class="flywheel-num">07</div>
-      <div class="flywheel-label">Clio</div>
+
+    <!-- Footer bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 16px 7px;border-top:1px solid rgba(0,212,240,.1);position:relative;z-index:1">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(0,212,240,.3);letter-spacing:.1em">
+        ● VERDE = GPU LOCAL &nbsp;&nbsp; ● AMARILLO = REQUIERE TOKEN HF
+      </span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(0,212,240,.3);letter-spacing:.1em">
+        HAZ CLIC EN UN AGENTE PARA ACTIVARLO
+      </span>
     </div>
   </div>
 
@@ -396,7 +614,7 @@
 <script>
 /* ════════════════════════════════════════════════════════
    MetaTronix — Marketing IA
-   7 Agentes basados en Chris West — 100% sin APIs de pago
+   14 Agentes de Marketing IA — 100% sin APIs de pago
    Modelos: HuggingFace Xenova/ + WebLLM SmolLM2-360M
    ════════════════════════════════════════════════════════ */
 
@@ -678,8 +896,18 @@ function toggleAgent(id) {
   // Close all
   document.querySelectorAll('.agent-workspace').forEach(w=>w.style.display='none');
   document.querySelectorAll('.agent-card').forEach(c=>c.classList.remove('active'));
+  // Reset HQ slots
+  document.querySelectorAll('.hq-slot').forEach(s=>s.classList.remove('active-slot'));
   // Toggle current
-  if (!isOpen) { ws.style.display='block'; card.classList.add('active'); }
+  if (!isOpen) {
+    ws.style.display='block';
+    if(card) card.classList.add('active');
+    // Highlight corresponding HQ slot
+    const slot = document.querySelector(`.hq-slot[onclick*="'${id}'"]`);
+    if(slot) slot.classList.add('active-slot');
+    // Scroll to card if in grid view
+    if(card) card.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
 }
 
 function renderLarryCRM(a) {
@@ -982,8 +1210,12 @@ async function initLLM() {
       if (s) { s.textContent = '✓ IA Lista'; s.className = 'agent-status ready'; }
     });
   } catch(e) {
-    if(text) text.textContent = '❌ Error: '+e.message+' — Los agentes usarán templates inteligentes';
-    setTimeout(()=>{ if(bar) bar.className='llm-init-bar hidden'; }, 5000);
+    const isFetch = e.message.includes('fetch') || e.message.includes('network') || e.message.includes('load');
+    const msg = isFetch
+      ? '📶 Sin conexión al modelo — agentes funcionando en modo template ✓'
+      : '⚠️ LLM no disponible — agentes en modo template inteligente ✓';
+    if(text) { text.textContent = msg; text.style.color = '#F59E0B'; }
+    setTimeout(()=>{ if(bar) bar.className='llm-init-bar hidden'; }, 4000);
   }
 }
 
