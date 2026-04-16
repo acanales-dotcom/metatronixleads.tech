@@ -184,7 +184,7 @@
       @keyframes alex-in { from{opacity:0;transform:translateY(12px) scale(.95)} to{opacity:1;transform:none} }
 
       #metafollow-btn {
-        position: fixed; bottom: 12px; left: 76px;
+        position: fixed; bottom: 20px; left: 20px;
         z-index: 9100; width: 80px; height: 80px;
         background: transparent; border: none; cursor: pointer;
         outline: none; padding: 0;
@@ -206,17 +206,17 @@
       #metafollow-badge.show { display: flex; }
 
       #metafollow-panel {
-        position: fixed; bottom: 108px; left: 76px;
+        position: fixed; bottom: 20px; left: 108px;
         z-index: 9099; width: 360px; height: 540px;
-        max-height: calc(100vh - 120px);
+        max-height: calc(100vh - 40px);
         background: #141922; border: 1px solid rgba(0,212,240,.2);
         border-radius: 14px; display: flex; flex-direction: column;
         overflow: hidden; box-shadow: 0 12px 48px rgba(0,0,0,.7), 0 0 0 1px rgba(0,212,240,.1);
-        transform: scale(.93) translateY(14px); transform-origin: bottom left;
+        transform: scale(.93) translateX(-10px); transform-origin: bottom left;
         opacity: 0; pointer-events: none;
         transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s;
       }
-      #metafollow-panel.open { transform: scale(1) translateY(0); opacity: 1; pointer-events: all; }
+      #metafollow-panel.open { transform: scale(1) translateX(0); opacity: 1; pointer-events: all; }
 
       .mf-header {
         padding: 14px 16px; display: flex; align-items: center; gap: 12px;

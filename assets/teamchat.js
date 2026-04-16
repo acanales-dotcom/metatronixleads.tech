@@ -222,7 +222,7 @@
     style.id = 'tchat-css';
     style.textContent = `
       #tchat-btn {
-        position: fixed; bottom: 20px; left: 20px;
+        position: fixed; bottom: 108px; left: 20px;
         z-index: 9050; width: 44px; height: 44px;
         background: #1C2236; border: 1px solid rgba(0,212,240,.25);
         border-radius: 50%; cursor: pointer; display: flex;
@@ -241,7 +241,7 @@
       #tchat-badge.show { display: flex; }
 
       #tchat-panel {
-        position: fixed; bottom: 74px; left: 20px;
+        position: fixed; bottom: 162px; left: 20px;
         z-index: 9049; width: 390px; height: 540px;
         max-height: calc(100vh - 170px);
         background: #141922; border: 1px solid rgba(255,255,255,.1);
