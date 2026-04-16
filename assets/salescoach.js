@@ -346,31 +346,43 @@
 
   /* ── Draggable button ────────────────────────────────────── */
   function makeDraggable(btn) {
-    const DRAG_THRESHOLD = 5; // px before we consider it a drag
+    const DRAG_THRESHOLD = 4;
     const POS_KEY = 'mtx_metafollow_pos';
 
-    // Restore saved position
+    // Convert element to top/left coordinates (kill bottom/right from CSS)
+    function anchorTopLeft() {
+      const r = btn.getBoundingClientRect();
+      btn.style.bottom = 'auto';
+      btn.style.right  = 'auto';
+      btn.style.top    = clampY(r.top)  + 'px';
+      btn.style.left   = clampX(r.left) + 'px';
+    }
+
+    // Restore saved position on load
     try {
       const saved = JSON.parse(localStorage.getItem(POS_KEY));
-      if (saved && typeof saved.top === 'number' && typeof saved.left === 'number') {
-        btn.style.top    = clampY(saved.top)  + 'px';
-        btn.style.left   = clampX(saved.left) + 'px';
+      if (saved && typeof saved.top === 'number') {
         btn.style.bottom = 'auto';
         btn.style.right  = 'auto';
+        btn.style.top    = clampY(saved.top)  + 'px';
+        btn.style.left   = clampX(saved.left) + 'px';
       }
     } catch (_) {}
 
     let startX, startY, startLeft, startTop, hasMoved = false, active = false;
 
     btn.addEventListener('pointerdown', (e) => {
-      if (e.button !== undefined && e.button !== 0) return;
-      active   = true;
-      hasMoved = false;
-      const r  = btn.getBoundingClientRect();
-      startX   = e.clientX;
-      startY   = e.clientY;
-      startLeft = r.left;
-      startTop  = r.top;
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      // Immediately anchor to top/left so there's no bottom/top conflict
+      anchorTopLeft();
+      // Freeze the float animation during drag
+      btn.style.animation = 'none';
+      active    = true;
+      hasMoved  = false;
+      startX    = e.clientX;
+      startY    = e.clientY;
+      startLeft = parseFloat(btn.style.left);
+      startTop  = parseFloat(btn.style.top);
       btn.setPointerCapture(e.pointerId);
       e.preventDefault();
     });
@@ -379,37 +391,35 @@
       if (!active) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      if (!hasMoved && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
-        hasMoved = true;
-        btn.classList.add('dragging');
-        btn.style.bottom = 'auto';
-        btn.style.right  = 'auto';
-      }
-      if (!hasMoved) return;
+      if (!hasMoved && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+      hasMoved = true;
+      btn.classList.add('dragging');
       btn.style.top  = clampY(startTop  + dy) + 'px';
       btn.style.left = clampX(startLeft + dx) + 'px';
       repositionPanel();
+      e.preventDefault();
     });
 
-    btn.addEventListener('pointerup', (e) => {
+    btn.addEventListener('pointerup', () => {
       if (!active) return;
       active = false;
       btn.classList.remove('dragging');
+      btn.style.animation = ''; // restore float animation
       if (hasMoved) {
-        // Persist position
-        const r = btn.getBoundingClientRect();
-        try { localStorage.setItem(POS_KEY, JSON.stringify({top: r.top, left: r.left})); } catch (_) {}
-        // Prevent click from toggling the panel after a drag
-        btn.addEventListener('click', stopOnce, true);
+        try { localStorage.setItem(POS_KEY, JSON.stringify({top: parseFloat(btn.style.top), left: parseFloat(btn.style.left)})); } catch (_) {}
       } else {
         togglePanel();
       }
     });
 
-    function stopOnce(e) { e.stopImmediatePropagation(); e.preventDefault(); btn.removeEventListener('click', stopOnce, true); }
+    btn.addEventListener('pointercancel', () => {
+      active = false;
+      btn.classList.remove('dragging');
+      btn.style.animation = '';
+    });
 
-    function clampX(x) { return Math.max(0, Math.min(window.innerWidth  - btn.offsetWidth,  x)); }
-    function clampY(y) { return Math.max(0, Math.min(window.innerHeight - btn.offsetHeight, y)); }
+    function clampX(x) { return Math.max(0, Math.min(window.innerWidth  - (btn.offsetWidth  || 80), x)); }
+    function clampY(y) { return Math.max(0, Math.min(window.innerHeight - (btn.offsetHeight || 80), y)); }
   }
 
   /* ── Reposition panel relative to current btn position ──── */
