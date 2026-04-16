@@ -1112,7 +1112,9 @@ async function seedTestData() {
 /* ── SUPABASE CRUD ──────────────────────────────────────── */
 async function loadLeads() {
   const db = getDB();
-  const { data, error } = await db.from('leads').select('*').order('updated_at',{ascending:false});
+  // limit(500): previene timeout en tablas grandes; los últimos 500 actualizados cubren
+  // el 99% de los casos activos. Para datasets > 500 usar filtro por periodo en futuro.
+  const { data, error } = await db.from('leads').select('*').order('updated_at',{ascending:false}).limit(500);
   if (error) { notify('Error al cargar leads: '+error.message, 'error'); return; }
   allLeads = data || [];
   renderCurrentView();

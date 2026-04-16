@@ -383,7 +383,8 @@ async function loadDocs() {
   const { data, error } = await db
     .from('metatronix_docs')
     .select('id, title, description, category, file_name, file_type, file_size, uploaded_by, uploaded_by_name, visibility, created_at')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200); // previene timeout con catálogos grandes; 200 docs cubre uso normal
 
   if (error) { showToast('Error al cargar documentos', 'error'); return; }
   allDocs = data || [];
