@@ -1,7 +1,6 @@
 /* ============================================================
    MetaTronix — Team Chat Interno
-   Mensajería en tiempo real entre usuarios de la plataforma
-   Posición: sidebar bottom section / floating icon
+   Mensajería en tiempo real entre usuarios + DMs privados
    ============================================================ */
 (function () {
   'use strict';
@@ -13,7 +12,7 @@
   let subscription= null;
   let messages    = {};   // { roomId: [{...}] }
   let unreadMap   = {};   // { roomId: count }
-  let users       = [];
+  let users       = [];   // loaded from Supabase profiles
 
   const ROOMS = [
     { id:'general', name:'# General',  icon:'💬', desc:'Canal del equipo' },
@@ -22,33 +21,71 @@
     { id:'alerts',  name:'⚡ Alertas', icon:'⚡', desc:'Notificaciones del sistema', readonly:true },
   ];
   const CHAT_KEY = (room) => `mtx_team_chat_${room}`;
+  const DM_KEY   = (userId) => `mtx_team_chat_dm_${userId}`;
   const READ_KEY = (room) => `mtx_chat_read_${room}`;
+
+  /* ── DM helpers ─────────────────────────────────────────── */
+  function isDM(roomId)       { return typeof roomId === 'string' && roomId.startsWith('dm:'); }
+  function dmOtherId(roomId)  { return roomId.replace('dm:', ''); }
+  function dmRoomId(userId)   { return 'dm:' + userId; }
+  function dmStorageKey(roomId) {
+    // canonical: always sort the two user IDs so both sides share the same key
+    if (!currentUser) return CHAT_KEY(roomId);
+    const ids = [currentUser.id, dmOtherId(roomId)].sort();
+    return `mtx_team_chat_dm_${ids[0]}_${ids[1]}`;
+  }
 
   function escH(s) { if(!s)return''; const d=document.createElement('div');d.textContent=String(s);return d.innerHTML; }
   function fmtTime(iso) { try { return new Date(iso).toLocaleString('es-MX',{hour:'2-digit',minute:'2-digit',month:'short',day:'numeric'}); } catch { return ''; } }
   function getInitials(name) { if(!name)return'?'; return name.split(/\s+/).slice(0,2).map(w=>w[0]?.toUpperCase()||'').join(''); }
 
-  /* ── Load/save messages (localStorage + Supabase if available) ── */
+  /* ── Load users from Supabase ────────────────────────────── */
+  async function loadUsers() {
+    if (!window.getDB) return;
+    try {
+      const { data, error } = await window.getDB()
+        .from('profiles')
+        .select('id, full_name, role, avatar_url')
+        .order('full_name');
+      if (!error && data) {
+        users = data.filter(u => u.id !== currentUser?.id);
+        renderDMList();
+      }
+    } catch(e) { /* graceful fail */ }
+  }
+
+  window.tchatReloadUsers = loadUsers;
+
+  /* ── Load/save messages ──────────────────────────────────── */
+  function storageKey(roomId) {
+    return isDM(roomId) ? dmStorageKey(roomId) : CHAT_KEY(roomId);
+  }
   function loadMessages(roomId) {
-    try { return JSON.parse(localStorage.getItem(CHAT_KEY(roomId)) || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(storageKey(roomId)) || '[]'); } catch { return []; }
   }
   function saveMessages(roomId, msgs) {
-    localStorage.setItem(CHAT_KEY(roomId), JSON.stringify(msgs.slice(-100)));
+    localStorage.setItem(storageKey(roomId), JSON.stringify(msgs.slice(-100)));
   }
   function getUnread(roomId) {
-    const msgs    = loadMessages(roomId);
-    const lastRead= parseInt(localStorage.getItem(READ_KEY(roomId)) || '0');
+    const msgs     = loadMessages(roomId);
+    const lastRead = parseInt(localStorage.getItem(READ_KEY(roomId)) || '0');
     return msgs.filter(m => m.user_id !== currentUser?.id && new Date(m.ts).getTime() > lastRead).length;
   }
   function markRead(roomId) {
     localStorage.setItem(READ_KEY(roomId), Date.now().toString());
     updateTotalBadge();
+    updateDMUnread(roomId);
   }
-  function getTotalUnread() { return ROOMS.reduce((s,r) => s + getUnread(r.id), 0); }
+  function getTotalUnread() {
+    const chanUnread = ROOMS.reduce((s,r) => s + getUnread(r.id), 0);
+    const dmUnread   = users.reduce((s,u) => s + getUnread(dmRoomId(u.id)), 0);
+    return chanUnread + dmUnread;
+  }
 
   /* ── Send message ────────────────────────────────────────── */
   async function sendMessage(roomId, text) {
     if (!text.trim() || !currentUser) return;
+    const isDm = isDM(roomId);
     const msg = {
       id:        'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
       room_id:   roomId,
@@ -57,51 +94,65 @@
       user_email:currentUser.email,
       text:      text.trim(),
       ts:        new Date().toISOString(),
+      ...(isDm ? { is_dm: true, to_user: dmOtherId(roomId) } : {}),
     };
 
-    // Store locally immediately
     const msgs = loadMessages(roomId);
     msgs.push(msg);
     saveMessages(roomId, msgs);
     renderMessages(roomId);
 
-    // Try to persist to Supabase activity_logs as metadata
+    // Persist to Supabase activity_logs
     if (window.getDB) {
       try {
         await window.getDB().from('activity_logs').insert({
           user_id:     currentUser.id,
-          action:      'team_chat',
+          action:      isDm ? 'team_chat_dm' : 'team_chat',
           entity_type: 'chat',
           entity_id:   null,
-          metadata:    { room: roomId, text: text.trim().slice(0,500), msg_id: msg.id },
+          metadata:    {
+            room:     roomId,
+            text:     text.trim().slice(0,500),
+            msg_id:   msg.id,
+            ...(isDm ? { to_user: msg.to_user } : {}),
+          },
         });
       } catch(e) { /* localStorage is source of truth */ }
     }
 
-    // Broadcast to localStorage (other tabs can pick it up)
+    // Broadcast to other tabs
     try { localStorage.setItem('mtx_chat_last', JSON.stringify(msg)); } catch {}
   }
 
-  /* ── Listen for messages from other tabs ──────────────────── */
+  /* ── Cross-tab sync ──────────────────────────────────────── */
   function initCrossTabSync() {
     window.addEventListener('storage', e => {
       if (e.key === 'mtx_chat_last' && e.newValue) {
         try {
           const msg = JSON.parse(e.newValue);
           if (msg.user_id === currentUser?.id) return;
-          // Add to local store
+
+          // DM: only deliver to the intended recipient
+          if (msg.is_dm && msg.to_user !== currentUser?.id) return;
+
           const msgs = loadMessages(msg.room_id);
           if (!msgs.find(m => m.id === msg.id)) {
             msgs.push(msg);
             saveMessages(msg.room_id, msgs);
           }
+
           if (msg.room_id === activeRoom && chatOpen) {
             renderMessages(activeRoom);
           } else {
             updateTotalBadge();
-            if (typeof Notiflix !== 'undefined') {
+            if (msg.is_dm) {
+              updateDMUnread(msg.room_id);
+            } else {
               const room = ROOMS.find(r=>r.id===msg.room_id);
-              Notiflix.Notify.info(`💬 ${escH(msg.user_name)} en ${room?.name||msg.room_id}: "${escH(msg.text.slice(0,50))}"`);
+              const name = room?.name || msg.room_id;
+              if (typeof Notiflix !== 'undefined') {
+                Notiflix.Notify.info(`💬 ${escH(msg.user_name)} en ${name}: "${escH(msg.text.slice(0,50))}"`);
+              }
             }
           }
         } catch {}
@@ -109,7 +160,7 @@
     });
   }
 
-  /* ── Inject system messages ──────────────────────────────── */
+  /* ── System messages ─────────────────────────────────────── */
   function injectSystemMessage(roomId, text) {
     const msgs = loadMessages(roomId);
     const sysMsg = { id:'sys_'+Date.now(), room_id:roomId, user_id:'system', user_name:'Sistema', text, ts:new Date().toISOString(), is_system:true };
@@ -145,7 +196,7 @@
 
       #tchat-panel {
         position: fixed; bottom: 162px; left: 20px;
-        z-index: 9049; width: 380px; height: 520px;
+        z-index: 9049; width: 390px; height: 540px;
         max-height: calc(100vh - 170px);
         background: #141922; border: 1px solid rgba(255,255,255,.1);
         border-radius: 12px; display: none; flex-direction: column;
@@ -164,9 +215,12 @@
       .tchat-layout { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 
       .tchat-sidebar {
-        width: 130px; border-right: 1px solid rgba(255,255,255,.07);
+        width: 138px; border-right: 1px solid rgba(255,255,255,.07);
         display: flex; flex-direction: column; background: #0C0F17; overflow-y: auto;
       }
+      .tchat-sidebar::-webkit-scrollbar { width: 3px; }
+      .tchat-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); }
+
       .tchat-sidebar-section { padding: 8px 10px 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #3D4A60; }
       .tchat-room {
         display: flex; align-items: center; gap: 5px; padding: 7px 10px;
@@ -182,10 +236,46 @@
         font-family: 'JetBrains Mono', monospace;
       }
 
+      /* DM list */
+      .tchat-dm-user {
+        display: flex; align-items: center; gap: 7px; padding: 6px 10px;
+        cursor: pointer; transition: all .1s; position: relative;
+        font-family: 'Inter', sans-serif;
+      }
+      .tchat-dm-user:hover { background: rgba(255,255,255,.04); }
+      .tchat-dm-user.active { background: rgba(0,255,136,.07); border-left: 2px solid #00FF88; }
+      .tchat-dm-avatar {
+        width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+        background: linear-gradient(135deg,rgba(0,255,136,.2),rgba(0,212,240,.15));
+        border: 1px solid rgba(0,255,136,.25);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 9px; font-weight: 700; color: #00FF88;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .tchat-dm-name {
+        font-size: 11px; color: #5A6880; font-weight: 500;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+      }
+      .tchat-dm-user.active .tchat-dm-name { color: #00FF88; font-weight: 700; }
+      .tchat-dm-badge {
+        background: #EF4444; color: #fff; border-radius: 8px;
+        font-size: 9px; font-weight: 700; padding: 0 4px; min-width: 14px; text-align: center;
+        font-family: 'JetBrains Mono', monospace; display: none;
+      }
+      .tchat-dm-badge.show { display: block; }
+      #tchat-dm-list-loading { padding: 8px 12px; font-size: 10px; color: #3D4A60; font-family: 'Inter',sans-serif; }
+
       .tchat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
       .tchat-room-header { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.07); background: #141922; flex-shrink: 0; }
       .tchat-room-name { font-size: 12px; font-weight: 700; color: #E8EDF8; font-family: 'Inter', sans-serif; }
       .tchat-room-desc { font-size: 10px; color: #4A5568; margin-top: 1px; font-family: 'Inter', sans-serif; }
+
+      .dm-privacy-bar {
+        display: none; padding: 5px 12px; font-size: 10px;
+        background: rgba(0,255,136,.06); border-bottom: 1px solid rgba(0,255,136,.12);
+        color: #00FF88; font-family: 'Inter', sans-serif; flex-shrink: 0;
+      }
+      .dm-privacy-bar.show { display: block; }
 
       .tchat-messages { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
       .tchat-messages::-webkit-scrollbar { width: 3px; }
@@ -202,11 +292,17 @@
         justify-content: center; font-size: 10px; font-weight: 700; color: #00D4F0;
         font-family: 'JetBrains Mono', monospace;
       }
+      .tchat-avatar.dm-av {
+        background: linear-gradient(135deg,rgba(0,255,136,.15),rgba(0,212,240,.1));
+        border-color: rgba(0,255,136,.2); color: #00FF88;
+      }
+
       .tchat-msg-body { max-width: 76%; }
       .tchat-msg-header { display: flex; gap: 6px; align-items: baseline; margin-bottom: 3px; }
       .tchat-msg-name { font-size: 11px; font-weight: 700; color: #7E8FA8; font-family: 'Inter', sans-serif; }
       .tchat-msg-time { font-size: 9px; color: #3D4A60; font-family: 'JetBrains Mono', monospace; }
       .tchat-msg.own .tchat-msg-header { flex-direction: row-reverse; }
+
       .tchat-bubble {
         padding: 7px 11px; border-radius: 10px; font-size: 12px;
         line-height: 1.55; font-family: 'Inter', sans-serif;
@@ -215,6 +311,10 @@
       .tchat-msg:not(.own):not(.system) .tchat-bubble { background: #1C2236; color: #C8D4E8; border-radius: 3px 10px 10px 10px; }
       .tchat-msg.own .tchat-bubble { background: rgba(0,212,240,.12); color: #E8EDF8; border: 1px solid rgba(0,212,240,.2); border-radius: 10px 3px 10px 10px; }
       .tchat-msg.system .tchat-bubble { background: rgba(245,158,11,.08); color: #A06F00; border: 1px solid rgba(245,158,11,.15); font-size: 10px; border-radius: 6px; padding: 4px 10px; }
+
+      /* DM bubbles — green accent */
+      .tchat-msg.is-dm:not(.own) .tchat-bubble { background: rgba(0,255,136,.06); border: 1px solid rgba(0,255,136,.1); color: #C8D4E8; border-radius: 3px 10px 10px 10px; }
+      .tchat-msg.is-dm.own .tchat-bubble { background: rgba(0,255,136,.1); border: 1px solid rgba(0,255,136,.2); color: #E8EDF8; border-radius: 10px 3px 10px 10px; }
 
       .tchat-input-area { padding: 8px 10px; border-top: 1px solid rgba(255,255,255,.07); background: #0C0F17; flex-shrink: 0; }
       .tchat-input-row { display: flex; gap: 6px; }
@@ -225,6 +325,7 @@
         resize: none; min-height: 32px; max-height: 80px;
       }
       .tchat-input:focus { border-color: #00D4F0; }
+      .tchat-input.dm-input:focus { border-color: #00FF88; }
       .tchat-input::placeholder { color: #3D4A60; }
       .tchat-send {
         width: 32px; height: 32px; background: #00D4F0; color: #000;
@@ -233,6 +334,8 @@
         transition: background .1s; flex-shrink: 0;
       }
       .tchat-send:hover { background: #19DFFF; }
+      .tchat-send.dm-send { background: #00FF88; }
+      .tchat-send.dm-send:hover { background: #33FFAA; }
       .tchat-hint { font-size: 9px; color: #3D4A60; margin-top: 4px; font-family: 'Inter', sans-serif; }
 
       .tchat-empty { padding: 24px; text-align: center; color: #3D4A60; font-size: 12px; font-family: 'Inter', sans-serif; }
@@ -268,12 +371,17 @@
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${r.name.replace('#','').trim()}</span>
               <span class="tchat-room-unread" id="unread-${r.id}" style="display:none">0</span>
             </div>`).join('')}
+          <div class="tchat-sidebar-section" style="margin-top:4px">Directos</div>
+          <div id="tchat-dm-list">
+            <div id="tchat-dm-list-loading">Cargando…</div>
+          </div>
         </div>
         <div class="tchat-main">
           <div class="tchat-room-header">
             <div class="tchat-room-name" id="tchat-room-name"># general</div>
             <div class="tchat-room-desc" id="tchat-room-desc">Canal del equipo</div>
           </div>
+          <div class="dm-privacy-bar" id="tchat-dm-privacy-bar">🔒 Mensaje privado — solo visible para ti y este usuario</div>
           <div class="tchat-messages" id="tchat-messages">
             <div class="tchat-empty">Cargando mensajes…</div>
           </div>
@@ -282,7 +390,7 @@
               <textarea class="tchat-input" id="tchat-input" placeholder="Mensaje a #general…" rows="1"
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();tchatSend()}"
                 oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
-              <button class="tchat-send" onclick="tchatSend()" title="Enviar (Enter)">↑</button>
+              <button class="tchat-send" id="tchat-send-btn" onclick="tchatSend()" title="Enviar (Enter)">↑</button>
             </div>
             <div class="tchat-hint">Enter para enviar · Shift+Enter para nueva línea</div>
           </div>
@@ -295,6 +403,36 @@
     updateAllUnread();
   }
 
+  /* ── Render DM list ─────────────────────────────────────── */
+  function renderDMList() {
+    const container = document.getElementById('tchat-dm-list');
+    if (!container) return;
+    if (!users.length) {
+      container.innerHTML = '<div id="tchat-dm-list-loading" style="padding:6px 12px;font-size:10px;color:#3D4A60;font-family:Inter,sans-serif">Sin usuarios</div>';
+      return;
+    }
+    container.innerHTML = users.map(u => {
+      const rid     = dmRoomId(u.id);
+      const unread  = getUnread(rid);
+      const initials= getInitials(u.full_name || u.id);
+      const isActive= rid === activeRoom;
+      return `
+        <div class="tchat-dm-user ${isActive?'active':''}" data-room="${rid}" onclick="tchatSetRoom('${rid}')">
+          <div class="tchat-dm-avatar">${escH(initials)}</div>
+          <span class="tchat-dm-name">${escH(u.full_name || 'Usuario')}</span>
+          <span class="tchat-dm-badge ${unread>0?'show':''}" id="unread-${rid}">${unread||''}</span>
+        </div>`;
+    }).join('');
+  }
+
+  function updateDMUnread(roomId) {
+    if (!isDM(roomId)) return;
+    const count = getUnread(roomId);
+    const el    = document.getElementById(`unread-${roomId}`);
+    if (el) { el.textContent = count||''; el.classList.toggle('show', count > 0); }
+    updateTotalBadge();
+  }
+
   /* ── Panel control ───────────────────────────────────────── */
   function toggleChat() {
     chatOpen = !chatOpen;
@@ -305,15 +443,41 @@
 
   window.tchatSetRoom = function(roomId) {
     activeRoom = roomId;
+    const dm = isDM(roomId);
+    const otherUser = dm ? users.find(u => u.id === dmOtherId(roomId)) : null;
+
+    // Update sidebar active states
     document.querySelectorAll('.tchat-room').forEach(el => el.classList.toggle('active', el.dataset.room === roomId));
-    const room = ROOMS.find(r => r.id === roomId);
+    document.querySelectorAll('.tchat-dm-user').forEach(el => el.classList.toggle('active', el.dataset.room === roomId));
+
+    // Update header
     const nameEl = document.getElementById('tchat-room-name');
     const descEl = document.getElementById('tchat-room-desc');
-    if (nameEl && room) nameEl.textContent = room.name;
-    if (descEl && room) descEl.textContent = room.desc;
+    const privBar= document.getElementById('tchat-dm-privacy-bar');
+    const inputEl= document.getElementById('tchat-input');
+    const sendBtn= document.getElementById('tchat-send-btn');
+
+    if (dm) {
+      const name = otherUser?.full_name || dmOtherId(roomId);
+      if (nameEl) nameEl.textContent = '🔒 ' + name;
+      if (descEl) descEl.textContent = 'Conversación privada';
+      if (privBar) privBar.classList.add('show');
+      if (inputEl) { inputEl.placeholder = `Mensaje privado a ${name}…`; inputEl.classList.add('dm-input'); inputEl.classList.remove('ch-input'); }
+      if (sendBtn) { sendBtn.classList.add('dm-send'); }
+    } else {
+      const room = ROOMS.find(r => r.id === roomId);
+      if (nameEl && room) nameEl.textContent = room.name;
+      if (descEl && room) descEl.textContent = room.desc;
+      if (privBar) privBar.classList.remove('show');
+      if (inputEl) { inputEl.placeholder = `Mensaje a ${room?.name||roomId}…`; inputEl.classList.remove('dm-input'); }
+      if (sendBtn) { sendBtn.classList.remove('dm-send'); }
+    }
+
     // Readonly rooms
+    const room = ROOMS.find(r => r.id === roomId);
     const inputArea = document.getElementById('tchat-input-area');
-    if (inputArea) inputArea.style.display = room?.readonly ? 'none' : 'block';
+    if (inputArea) inputArea.style.display = (!dm && room?.readonly) ? 'none' : 'block';
+
     renderMessages(roomId);
     markRead(roomId);
   };
@@ -332,10 +496,17 @@
     const container = document.getElementById('tchat-messages');
     if (!container) return;
     const msgs = loadMessages(roomId);
+    const dm   = isDM(roomId);
 
     if (!msgs.length) {
-      const room = ROOMS.find(r => r.id === roomId);
-      container.innerHTML = `<div class="tchat-empty">${room?.icon||'💬'} Sé el primero en escribir en ${room?.name||roomId}</div>`;
+      if (dm) {
+        const otherUser = users.find(u => u.id === dmOtherId(roomId));
+        const name = otherUser?.full_name || 'este usuario';
+        container.innerHTML = `<div class="tchat-empty">🔒 Inicio de tu conversación privada con <strong style="color:#00FF88">${escH(name)}</strong>.<br><span style="font-size:10px;color:#2D3A50;margin-top:4px;display:block">Solo tú y ${escH(name)} pueden ver estos mensajes.</span></div>`;
+      } else {
+        const room = ROOMS.find(r => r.id === roomId);
+        container.innerHTML = `<div class="tchat-empty">${room?.icon||'💬'} Sé el primero en escribir en ${room?.name||roomId}</div>`;
+      }
       return;
     }
 
@@ -343,10 +514,11 @@
       const isMine   = m.user_id === currentUser?.id;
       const isSystem = m.is_system || m.user_id === 'system';
       const initials = getInitials(m.user_name);
+      const dmClass  = dm ? 'is-dm' : '';
       if (isSystem) return `<div class="tchat-msg system"><div class="tchat-bubble">${escH(m.text)}</div></div>`;
       return `
-        <div class="tchat-msg ${isMine?'own':''}">
-          ${!isMine ? `<div class="tchat-avatar">${escH(initials)}</div>` : ''}
+        <div class="tchat-msg ${isMine?'own':''} ${dmClass}">
+          ${!isMine ? `<div class="tchat-avatar ${dm?'dm-av':''}">${escH(initials)}</div>` : ''}
           <div class="tchat-msg-body">
             <div class="tchat-msg-header">
               <span class="tchat-msg-name">${escH(m.user_name)}</span>
@@ -366,6 +538,12 @@
       const el    = document.getElementById(`unread-${r.id}`);
       if (el) { el.textContent = count; el.style.display = count > 0 ? 'block' : 'none'; }
     });
+    users.forEach(u => {
+      const rid   = dmRoomId(u.id);
+      const count = getUnread(rid);
+      const el    = document.getElementById(`unread-${rid}`);
+      if (el) { el.textContent = count||''; el.classList.toggle('show', count > 0); }
+    });
     updateTotalBadge();
   }
 
@@ -375,9 +553,8 @@
     if (badge) { badge.textContent = total; badge.classList.toggle('show', total > 0); }
   }
 
-  /* ── System message: inject lead close notifications ──────── */
+  /* ── System events ───────────────────────────────────────── */
   function listenForSystemEvents() {
-    // Listen for lead closed events from the main app
     window.addEventListener('mtx_lead_closed', e => {
       injectSystemMessage('alerts', `🏆 Lead CERRADO: "${e.detail?.empresa}" · ${e.detail?.valor||''}`);
       updateTotalBadge();
@@ -408,8 +585,12 @@
     initCrossTabSync();
     listenForSystemEvents();
 
-    // Periodic unread check
+    // Load users for DMs (async, no blocking)
+    loadUsers();
+
+    // Periodic unread check + user refresh every 2 min
     setInterval(updateAllUnread, 30000);
+    setInterval(loadUsers, 120000);
   }
 
   window.teamChat = { sendMessage, injectSystemMessage };
