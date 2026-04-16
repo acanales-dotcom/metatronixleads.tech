@@ -629,7 +629,7 @@ function injectSecurityHeaders() {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co wss://*.supabase.co",
+    "connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://unpkg.com https://huggingface.co https://*.workers.dev https://api.anthropic.com wss://*.supabase.co",
     "worker-src blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",

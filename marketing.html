@@ -1335,7 +1335,6 @@ async function loadHFToken() {
 }
 
 function escHtml(s) {
-  if (typeof window.escHtml === 'function') return window.escHtml(s);
   const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML;
 }
 
