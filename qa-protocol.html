@@ -217,7 +217,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
 <tr><td class="test-id">MTX-INF-007</td><td>
   <div class="test-desc">Cache busting activo en todos los assets JS</div>
   <div class="test-steps">1. Ver source de marketing.html · 2. Verificar ?v= en salescoach.js y teamchat.js · 3. Repetir en las 10 páginas HTML</div>
-  <div class="test-criteria">✓ salescoach.js?v=3 · teamchat.js?v=3 en todas las páginas</div>
+  <div class="test-criteria">✓ salescoach.js?v=4 · teamchat.js?v=4 en todas las páginas</div>
 </td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
 
 <tr><td class="test-id">MTX-INF-008</td><td>
@@ -573,7 +573,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
 <tr><td class="test-id">MTX-MFW-005</td><td>
   <div class="test-desc">salescoach.js cargado con cache-bust ?v=3 en todas las páginas</div>
   <div class="test-steps">1. View-source de /dashboard.html · 2. Buscar salescoach.js · 3. Verificar ?v=3</div>
-  <div class="test-criteria">✓ salescoach.js?v=3 presente en 10 páginas HTML</div>
+  <div class="test-criteria">✓ salescoach.js?v=4 presente en 10 páginas HTML</div>
 </td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
 </tbody></table></div>
 
@@ -854,7 +854,7 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
 
 <tr><td class="test-id">MTX-REG-003</td><td>
   <div class="test-desc">BUG#3 FIXED: Cache de JS actualizado con ?v=3 (salescoach + teamchat)</div>
-  <div class="test-steps">1. Hard refresh en Chrome (Ctrl+Shift+R) · 2. Network tab · 3. Verificar salescoach.js?v=3 y teamchat.js?v=3 cargados</div>
+  <div class="test-steps">1. Hard refresh en Chrome (Ctrl+Shift+R) · 2. Network tab · 3. Verificar salescoach.js?v=4 y teamchat.js?v=4 cargados</div>
   <div class="test-criteria">✓ 200 OK para ambos archivos con ?v=3 · No 304 de versión vieja</div>
 </td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA</td></tr>
 

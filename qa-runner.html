@@ -102,14 +102,14 @@ const suites = [
   }},
   {id:'MTX-INF-007', name:'Cache-bust ?v=3 presente en marketing.html', run: async()=>{
     try{const r=await fetch(BASE_URL+'/marketing.html');const t=await r.text();
-    const sc=t.includes('salescoach.js?v=3');const tc=t.includes('teamchat.js?v=3');
-    if(sc&&tc)return pass('salescoach.js?v=3 ✓ · teamchat.js?v=3 ✓');
-    return fail('Falta: '+(sc?'':'salescoach.js?v=3 ')+(tc?'':'teamchat.js?v=3'));}
+    const sc=t.includes('salescoach.js?v=4');const tc=t.includes('teamchat.js?v=4');
+    if(sc&&tc)return pass('salescoach.js?v=4 ✓ · teamchat.js?v=4 ✓');
+    return fail('Falta: '+(sc?'':'salescoach.js?v=4 ')+(tc?'':'teamchat.js?v=4'));}
     catch(e){return fail(e.message);}
   }},
   {id:'MTX-INF-007b', name:'Cache-bust ?v=3 en dashboard.html', run: async()=>{
     try{const r=await fetch(BASE_URL+'/dashboard.html');const t=await r.text();
-    if(t.includes('salescoach.js?v=3'))return pass('salescoach.js?v=3 presente');
+    if(t.includes('salescoach.js?v=4'))return pass('salescoach.js?v=4 presente');
     return fail('salescoach.js sin ?v=3 en dashboard.html');}catch(e){return fail(e.message);}
   }},
   {id:'MTX-INF-007c', name:'10 páginas HTML tienen cache-bust ?v=3', run: async()=>{
@@ -172,7 +172,7 @@ const suites = [
     catch(e){return fail(e.message);}
   }},
   {id:'MTX-AGT-013', name:'teamchat.js contiene función isDM()', run: async()=>{
-    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=3');const t=await r.text();
+    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=4');const t=await r.text();
     const hasDM=t.includes('function isDM')||t.includes('isDM =');
     const hasDmRoom=t.includes('dmRoomId')||t.includes('dm:');
     if(hasDM&&hasDmRoom)return pass('isDM() + dmRoomId() presentes en teamchat.js');
@@ -180,14 +180,14 @@ const suites = [
     catch(e){return fail(e.message);}
   }},
   {id:'MTX-AGT-014', name:'teamchat.js contiene sección Directos (DM list)', run: async()=>{
-    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=3');const t=await r.text();
+    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=4');const t=await r.text();
     const hasDirect=t.includes('Directos')||t.includes('renderDMList');
     if(hasDirect)return pass('Sección Directos y renderDMList presentes');
     return fail('Sin sección Directos en teamchat.js');}
     catch(e){return fail(e.message);}
   }},
   {id:'MTX-AGT-015', name:'teamchat.js tiene storage key canónica (sort de IDs)', run: async()=>{
-    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=3');const t=await r.text();
+    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=4');const t=await r.text();
     const hasSort=t.includes('.sort()');
     const hasKey=t.includes('mtx_team_chat_dm');
     if(hasSort&&hasKey)return pass('.sort() + mtx_team_chat_dm key presentes');
@@ -219,7 +219,7 @@ const suites = [
     return fail('isDM falla: dm:abc='+t1+', general='+t2+', ventas='+t3+', dm:uuid='+t4);
   }},
   {id:'MTX-CHT-013', name:'teamchat.js tiene is_dm:true en sendMessage DMs', run: async()=>{
-    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=3');const t=await r.text();
+    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=4');const t=await r.text();
     const hasIsDM=t.includes('is_dm')||t.includes('is_dm:true')||t.includes("is_dm: true");
     const hasToUser=t.includes('to_user');
     if(hasIsDM&&hasToUser)return pass('is_dm + to_user fields en sendMessage');
@@ -230,7 +230,7 @@ const suites = [
 
 {id:'MFW', title:'METAFOLLOW', tests:[
   {id:'MTX-MFW-002b', name:'salescoach.js posición MetaFollow: bottom:20px', run: async()=>{
-    try{const r=await fetch(BASE_URL+'/assets/salescoach.js?v=3');const t=await r.text();
+    try{const r=await fetch(BASE_URL+'/assets/salescoach.js?v=4');const t=await r.text();
     const hasBottom20=t.includes('bottom: 20px')||t.includes('bottom:20px')||t.includes("bottom: '20px'")||t.includes('"bottom","20px"');
     if(hasBottom20)return pass('MetaFollow bottom:20px presente en salescoach.js');
     // Try to find actual bottom value
@@ -239,9 +239,9 @@ const suites = [
     return skip('No se pudo verificar posición exacta en salescoach.js');}
     catch(e){return fail(e.message);}
   }},
-  {id:'MTX-MFW-005b', name:'salescoach.js?v=3 cargado en leads.html', run: async()=>{
+  {id:'MTX-MFW-005b', name:'salescoach.js?v=4 cargado en leads.html', run: async()=>{
     try{const r=await fetch(BASE_URL+'/leads.html');const t=await r.text();
-    if(t.includes('salescoach.js?v=3'))return pass('salescoach.js?v=3 en leads.html');
+    if(t.includes('salescoach.js?v=4'))return pass('salescoach.js?v=4 en leads.html');
     if(t.includes('salescoach.js'))return fail('salescoach.js sin ?v=3 en leads.html');
     return fail('salescoach.js no encontrado en leads.html');}
     catch(e){return fail(e.message);}
@@ -255,18 +255,18 @@ const suites = [
     return pass('Sin sk-ant- en marketing.html');}catch(e){return fail(e.message);}
   }},
   {id:'MTX-SEC-001c', name:'API key Anthropic NO en salescoach.js', run: async()=>{
-    try{const r=await fetch(BASE_URL+'/assets/salescoach.js?v=3');const t=await r.text();
+    try{const r=await fetch(BASE_URL+'/assets/salescoach.js?v=4');const t=await r.text();
     if(t.includes('sk-ant-'))return fail('⚠ API KEY EXPUESTA en salescoach.js');
     return pass('Sin sk-ant- en salescoach.js');}catch(e){return fail(e.message);}
   }},
   {id:'MTX-SEC-001d', name:'API key Anthropic NO en teamchat.js', run: async()=>{
-    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=3');const t=await r.text();
+    try{const r=await fetch(BASE_URL+'/assets/teamchat.js?v=4');const t=await r.text();
     if(t.includes('sk-ant-'))return fail('⚠ API KEY EXPUESTA en teamchat.js');
     return pass('Sin sk-ant- en teamchat.js');}catch(e){return fail(e.message);}
   }},
   {id:'MTX-SEC-002b', name:'service_role key NO en ningún JS de frontend', run: async()=>{
     try{
-    const files=['/assets/salescoach.js?v=3','/assets/teamchat.js?v=3'];
+    const files=['/assets/salescoach.js?v=4','/assets/teamchat.js?v=4'];
     const found=[];
     for(const f of files){
       const r=await fetch(BASE_URL+f);const t=await r.text();
@@ -278,7 +278,7 @@ const suites = [
   }},
   {id:'MTX-SEC-006b', name:'GitHub token (ghp_) NO en archivos frontend', run: async()=>{
     try{
-    const files=['/marketing.html','/assets/salescoach.js?v=3','/assets/teamchat.js?v=3'];
+    const files=['/marketing.html','/assets/salescoach.js?v=4','/assets/teamchat.js?v=4'];
     const found=[];
     for(const f of files){
       const r=await fetch(BASE_URL+f);const t=await r.text();
@@ -320,7 +320,7 @@ const suites = [
     return fail('Demasiado lento: '+ms+'ms');}catch(e){return fail(e.message);}
   }},
   {id:'MTX-PERF-008', name:'Todos los assets JS existen (200 OK)', run: async()=>{
-    const assets=['/assets/salescoach.js?v=3','/assets/teamchat.js?v=3'];
+    const assets=['/assets/salescoach.js?v=4','/assets/teamchat.js?v=4'];
     const results=[];
     for(const a of assets){
       try{const r=await fetch(BASE_URL+a);results.push({a,ok:r.ok,s:r.status});}
@@ -343,7 +343,7 @@ const suites = [
     catch(e){return fail(e.message);}
   }},
   {id:'MTX-REG-002b', name:'REGRESSION: MetaFollow y Chat NO en misma posición CSS', run: async()=>{
-    try{const r=await fetch(BASE_URL+'/assets/salescoach.js?v=3');const t=await r.text();
+    try{const r=await fetch(BASE_URL+'/assets/salescoach.js?v=4');const t=await r.text();
     // Both shouldn't have same bottom value (old bug was both at bottom:16px)
     const mfMatch=t.match(/metafollow[^}]{0,200}bottom:\s*(\d+px)/is);
     const chatMatch=t.match(/(?:tchat|chat-btn)[^}]{0,200}bottom:\s*(\d+px)/is);
@@ -360,8 +360,8 @@ const suites = [
     const missing=[];
     for(const p of pages){
       const r=await fetch(BASE_URL+'/'+p+'.html');const t=await r.text();
-      if(!t.includes('salescoach.js?v=3'))missing.push(p+':salescoach');
-      if(!t.includes('teamchat.js?v=3'))missing.push(p+':teamchat');
+      if(!t.includes('salescoach.js?v=4'))missing.push(p+':salescoach');
+      if(!t.includes('teamchat.js?v=4'))missing.push(p+':teamchat');
     }
     if(missing.length===0)return pass('?v=3 presente en todas las páginas verificadas');
     return fail('Falta ?v=3: '+missing.join(', '));}
