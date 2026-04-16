@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
   <!-- ALERTAS CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-3.2.7.min.css">
   <!-- HF TRANSFORMERS -->
@@ -64,12 +65,70 @@
 .o-chart-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--t2); margin-bottom: 10px; }
 
 /* Map */
-.o-map-layout { display: flex; flex: 1; overflow: hidden; }
-.o-map-sidebar { width: 250px; border-right: 1px solid var(--b1); display: flex; flex-direction: column; background: var(--s1); }
-.o-map-sidebar-head { padding: 10px 12px; border-bottom: 1px solid var(--b1); }
-.o-map-list { flex: 1; overflow-y: auto; }
-.o-map-item { padding: 9px 12px; border-bottom: 1px solid var(--b0); cursor: pointer; transition: background .1s; }
-.o-map-item:hover { background: var(--s2); }
+.o-map-layout { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+.o-map-body { display:flex; flex:1; overflow:hidden; }
+
+/* ── Map Stats Bar ─────────────────────────────────── */
+.map-stats-bar {
+  display:flex; align-items:center; gap:0;
+  background:var(--bg); border-bottom:1px solid var(--b1);
+  padding:0; overflow-x:auto; flex-shrink:0;
+}
+.map-stat-item {
+  display:flex; flex-direction:column; align-items:center;
+  padding:8px 18px; border-right:1px solid var(--b1);
+  min-width:90px; cursor:default;
+}
+.map-stat-item:last-child { border-right:none; }
+.map-stat-val { font-size:17px; font-weight:800; color:var(--cyan); font-family:var(--font-mono); line-height:1; }
+.map-stat-lbl { font-size:9px; font-weight:700; color:var(--t3); letter-spacing:.07em; text-transform:uppercase; margin-top:2px; }
+
+/* ── Map Sidebar ───────────────────────────────────── */
+.o-map-sidebar {
+  width:240px; border-right:1px solid var(--b1);
+  display:flex; flex-direction:column; background:var(--s1); flex-shrink:0;
+}
+.o-map-sidebar-head { padding:10px 10px 8px; border-bottom:1px solid var(--b1); display:flex; flex-direction:column; gap:6px; }
+.map-filter-row { display:flex; gap:5px; }
+.map-filter-btn {
+  font-size:10px; font-weight:600; padding:3px 8px; border-radius:4px; cursor:pointer;
+  border:1px solid var(--b1); background:transparent; color:var(--t2);
+  transition:all .12s; font-family:var(--font-body);
+}
+.map-filter-btn.active { background:var(--cyan); color:#fff; border-color:var(--cyan); }
+.o-map-list { flex:1; overflow-y:auto; scrollbar-width:thin; }
+.mapa-lead-item {
+  padding:8px 10px; border-bottom:1px solid var(--b0); cursor:pointer;
+  transition:background .1s; display:flex; flex-direction:column; gap:2px;
+}
+.mapa-lead-item:hover { background:var(--s2); }
+.mapa-lead-empresa { font-weight:600; font-size:12px; color:var(--t1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mapa-lead-meta { font-size:10px; color:var(--t3); display:flex; justify-content:space-between; }
+.mapa-lead-val { font-size:10px; font-family:var(--font-mono); color:var(--cyan); }
+
+/* ── Geocoding progress ────────────────────────────── */
+.map-geocode-bar {
+  position:absolute; bottom:60px; left:50%; transform:translateX(-50%);
+  background:rgba(13,27,62,.9); color:#fff; border-radius:8px;
+  padding:8px 16px; font-size:12px; font-family:var(--font-mono);
+  backdrop-filter:blur(8px); z-index:1000; display:flex; align-items:center; gap:8px;
+  border:1px solid rgba(0,212,240,.3); white-space:nowrap;
+}
+.map-geocode-dot { width:7px; height:7px; background:var(--cyan); border-radius:50%; animation:pulse 1s infinite; }
+
+/* ── Map score legend ──────────────────────────────── */
+.map-legend {
+  position:absolute; bottom:8px; right:8px; z-index:500;
+  background:rgba(255,255,255,.95); border:1px solid var(--b1); border-radius:8px;
+  padding:8px 10px; font-size:10px; min-width:130px;
+  box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+.map-legend-title { font-weight:700; color:var(--navy); margin-bottom:5px; letter-spacing:.05em; text-transform:uppercase; }
+.map-legend-item { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+.map-legend-dot { width:10px; height:10px; border-radius:50%; border:1.5px solid rgba(0,0,0,.15); flex-shrink:0; }
+
+/* ── Map container ─────────────────────────────────── */
+#crm-map { flex:1; z-index:1; }
 
 /* Campaigns */
 .o-camp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; padding: 16px 24px; }
@@ -289,13 +348,44 @@
   <!-- MAPA -->
   <div class="o-view" id="view-mapa">
     <div class="o-map-layout">
-      <div class="o-map-sidebar">
-        <div class="o-map-sidebar-head">
-          <input type="text" class="form-input" style="font-size:12px;padding:6px 10px" placeholder="Filtrar por ciudad…" id="mapa-search" oninput="filterMapLeads()">
+
+      <!-- Stats bar -->
+      <div class="map-stats-bar" id="map-stats-bar">
+        <div class="map-stat-item"><div class="map-stat-val" id="mstat-total">0</div><div class="map-stat-lbl">En mapa</div></div>
+        <div class="map-stat-item"><div class="map-stat-val" id="mstat-ciudades">0</div><div class="map-stat-lbl">Ciudades</div></div>
+        <div class="map-stat-item"><div class="map-stat-val" id="mstat-valor">$0</div><div class="map-stat-lbl">Valor total</div></div>
+        <div class="map-stat-item"><div class="map-stat-val" id="mstat-geocoded">0%</div><div class="map-stat-lbl">Geocodificados</div></div>
+        <div class="map-stat-item" style="margin-left:auto;border-left:1px solid var(--b1);border-right:none">
+          <button onclick="geocodeAllLeads(true)" style="font-size:10px;font-weight:700;background:var(--cyan);color:#fff;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;font-family:var(--font-mono)">
+            🌐 Geocodificar
+          </button>
         </div>
-        <div class="o-map-list" id="mapa-list"></div>
       </div>
-      <div id="crm-map"></div>
+
+      <!-- Map body -->
+      <div class="o-map-body">
+        <div class="o-map-sidebar">
+          <div class="o-map-sidebar-head">
+            <input type="text" class="form-input" style="font-size:12px;padding:5px 9px" placeholder="Buscar empresa o ciudad…" id="mapa-search" oninput="filterMapLeads()">
+            <div class="map-filter-row" id="map-stage-filters">
+              <button class="map-filter-btn active" data-stage="all" onclick="setMapStageFilter('all',this)">Todos</button>
+              <button class="map-filter-btn" data-stage="hot" onclick="setMapStageFilter('hot',this)">🔥 Hot</button>
+              <button class="map-filter-btn" data-stage="active" onclick="setMapStageFilter('active',this)">⚡ Activos</button>
+            </div>
+          </div>
+          <div class="o-map-list" id="mapa-list"></div>
+        </div>
+
+        <!-- Map container (position:relative for overlay) -->
+        <div style="position:relative;flex:1;display:flex">
+          <div id="crm-map"></div>
+          <div id="map-geocode-overlay" style="display:none" class="map-geocode-bar">
+            <div class="map-geocode-dot"></div>
+            <span id="map-geocode-msg">Geocodificando…</span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -621,6 +711,7 @@
 <!-- MAPAS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 <!-- KANBAN -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <!-- ALERTAS / MODALES -->
@@ -2394,62 +2485,290 @@ function buildRankingTable(leads) {
 
 function destroyChart(key) { if(chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; } }
 
-/* ── MAP ────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   MAP ENGINE — Leaflet + Nominatim + MarkerCluster
+   Stack: Leaflet (mapa) · Nominatim/OSM (geocoding) · leaflet-control-geocoder
+   Geocoding: fetch a nominatim.openstreetmap.org con caché localStorage
+   ══════════════════════════════════════════════════════════ */
+
+const GEO_CACHE_KEY = 'mtx_geo_cache_v2';
+const GEO_RATE_MS   = 1100; // Nominatim ToS: max 1 req/sec
+let _geoCache       = null;
+let _mapStageFilter = 'all';
+
+function getGeoCache() {
+  if (!_geoCache) {
+    try { _geoCache = JSON.parse(localStorage.getItem(GEO_CACHE_KEY)||'{}'); }
+    catch { _geoCache = {}; }
+  }
+  return _geoCache;
+}
+function saveGeoCache() {
+  try { localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(_geoCache||{})); }
+  catch {}
+}
+
+// Seed con coordenadas conocidas LATAM para respuesta instantánea
+const GEO_SEED = {
+  'ciudad de mexico':[19.4326,-99.1332], 'cdmx':[19.4326,-99.1332],
+  'monterrey':[25.6866,-100.3161], 'guadalajara':[20.6597,-103.3496],
+  'puebla':[19.0414,-98.2063], 'queretaro':[20.5888,-100.3899],
+  'leon':[21.1221,-101.6830], 'tijuana':[32.5149,-117.0382],
+  'merida':[20.9674,-89.5926], 'cancun':[21.1619,-86.8515],
+  'san luis potosi':[22.1565,-100.9855], 'toluca':[19.2826,-99.6557],
+  'aguascalientes':[21.8853,-102.2916], 'saltillo':[25.4267,-101.0030],
+  'hermosillo':[29.0729,-110.9559], 'chihuahua':[28.6329,-106.0691],
+  'bogota':[4.7110,-74.0721], 'medellin':[6.2442,-75.5812],
+  'lima':[-12.0464,-77.0428], 'buenos aires':[-34.6037,-58.3816],
+  'santiago':[-33.4489,-70.6693], 'montevideo':[-34.9011,-56.1645],
+  'miami':[25.7617,-80.1918], 'new york':[40.7128,-74.0060],
+};
+
+async function geocodeCity(city) {
+  const key = city.toLowerCase().trim();
+  const cache = getGeoCache();
+  if (cache[key]) return cache[key];
+  if (GEO_SEED[key]) { cache[key]=GEO_SEED[key]; saveGeoCache(); return GEO_SEED[key]; }
+
+  // Try Nominatim (rate-limited by caller)
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1&accept-language=es`;
+    const res = await fetch(url, { headers:{'User-Agent':'MetaTronix CRM 1.0 (acanales@ibanormexico.com)'} });
+    const data = await res.json();
+    if (data?.length) {
+      const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+      cache[key] = coords;
+      saveGeoCache();
+      return coords;
+    }
+  } catch {}
+  cache[key] = null; // mark as "not found" to avoid retrying
+  saveGeoCache();
+  return null;
+}
+
+// Batch geocode all leads with ciudad field (respects rate limit)
+async function geocodeAllLeads(forceRefresh = false) {
+  const overlay = document.getElementById('map-geocode-overlay');
+  const msg = document.getElementById('map-geocode-msg');
+  const cities = [...new Set(allLeads.map(l=>(l.ciudad||'').trim()).filter(Boolean))];
+  if (!cities.length) { notify('Agrega campo "Ciudad" a los leads primero','info'); return; }
+
+  const cache = getGeoCache();
+  const toGeocode = forceRefresh
+    ? cities
+    : cities.filter(c => !(c.toLowerCase() in cache) || cache[c.toLowerCase()]===undefined);
+
+  if (!toGeocode.length) {
+    // Already all cached — just re-render
+    refreshMapMarkers();
+    return;
+  }
+
+  if (overlay) overlay.style.display = 'flex';
+  let done = 0;
+  for (const city of toGeocode) {
+    if (msg) msg.textContent = `Geocodificando: ${city} (${done+1}/${toGeocode.length})`;
+    await geocodeCity(city);
+    done++;
+    if (done < toGeocode.length) await new Promise(r=>setTimeout(r, GEO_RATE_MS));
+  }
+  if (overlay) overlay.style.display = 'none';
+  refreshMapMarkers();
+  updateMapStats();
+}
+
+function setMapStageFilter(filter, btn) {
+  _mapStageFilter = filter;
+  document.querySelectorAll('.map-filter-btn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  refreshMapMarkers();
+}
+
 function renderMap() {
   if (!window.L) { notify('Leaflet no disponible','error'); return; }
   setTimeout(() => {
+    // Init map instance
     if (!mapInstance) {
-      mapInstance = L.map('crm-map').setView([23.6345,-102.5528],5);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        { attribution:'© OpenStreetMap contributors' }).addTo(mapInstance);
-      if (window.L.markerClusterGroup) mapMarkers = L.markerClusterGroup();
-      else mapMarkers = L.layerGroup();
+      mapInstance = L.map('crm-map').setView([23.6345,-102.5528], 5);
+
+      // Dark-tinted tile layer for a more modern look
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Geocoding: <a href="https://nominatim.org">Nominatim</a>',
+        maxZoom: 18,
+      }).addTo(mapInstance);
+
+      // Marker cluster group
+      mapMarkers = window.L.markerClusterGroup
+        ? L.markerClusterGroup({ maxClusterRadius:50, spiderfyOnMaxZoom:true,
+            showCoverageOnHover:false, zoomToBoundsOnClick:true })
+        : L.layerGroup();
       mapMarkers.addTo(mapInstance);
+
+      // Geocoder control (Nominatim via leaflet-control-geocoder)
+      if (window.L.Control?.Geocoder) {
+        L.Control.geocoder({
+          defaultMarkGeocode: false,
+          geocoder: L.Control.Geocoder.nominatim(),
+          placeholder: 'Buscar dirección…',
+          position: 'topleft',
+        }).on('markgeocode', e => {
+          mapInstance.setView(e.geocode.center, 13);
+        }).addTo(mapInstance);
+      }
+
+      // Stage legend
+      addMapLegend();
     }
-    mapMarkers.clearLayers();
-    const CITY_COORDS = {
-      'cdmx':[19.4326,-99.1332],'ciudad de mexico':[19.4326,-99.1332],'monterrey':[25.6866,-100.3161],
-      'guadalajara':[20.6597,-103.3496],'puebla':[19.0414,-98.2063],'bogota':[4.7110,-74.0721],
-      'lima':[-12.0464,-77.0428],'buenos aires':[-34.6037,-58.3816],'santiago':[-33.4489,-70.6693],
-    };
-    allLeads.forEach(l => {
-      const city = (l.ciudad||'').toLowerCase().trim();
-      const coords = CITY_COORDS[city];
-      if (!coords) return;
-      const st = STAGES[getLeadStage(l)]||STAGES.generacion;
-      const icon = L.divIcon({ html:`<div style="background:${st.color};width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`, iconSize:[16,16], className:'' });
-      const marker = L.marker(coords, {icon});
-      marker.bindPopup(`<strong>${escHtml(l.empresa)}</strong><br><span style="color:${st.color}">${st.icon} ${st.label}</span><br>${l.contacto_nombre||''}<br>${l.valor_estimado?fmtMXN(l.valor_estimado):''}`);
-      marker.on('click', ()=>openDrawer(l.id));
-      mapMarkers.addLayer(marker);
-    });
-    renderMapList(allLeads);
-  }, 100);
+
+    // Seed cache with known coords and render
+    const cache = getGeoCache();
+    Object.entries(GEO_SEED).forEach(([k,v])=>{ if(!cache[k]) cache[k]=v; });
+    saveGeoCache();
+
+    refreshMapMarkers();
+    // Background geocode any missing cities
+    geocodeAllLeads(false);
+  }, 120);
 }
 
-function renderMapList(leads) {
+function refreshMapMarkers() {
+  if (!mapMarkers || !mapInstance) return;
+  mapMarkers.clearLayers();
+  const cache = getGeoCache();
+
+  const leadsWithCity = allLeads.filter(l => {
+    if (!l.ciudad) return false;
+    if (_mapStageFilter === 'hot') return (l.confianza_nivel||0) >= 70;
+    if (_mapStageFilter === 'active') return !['cerrado_ganado','cerrado_perdido'].includes(getLeadStage(l));
+    return true;
+  });
+
+  const q = (document.getElementById('mapa-search')?.value||'').toLowerCase();
+  const filtered = q ? leadsWithCity.filter(l=>
+    (l.empresa||'').toLowerCase().includes(q)||(l.ciudad||'').toLowerCase().includes(q)
+  ) : leadsWithCity;
+
+  let placed = 0;
+  filtered.forEach(l => {
+    const coords = cache[(l.ciudad||'').toLowerCase().trim()];
+    if (!coords) return;
+    placed++;
+
+    const stage = getLeadStage(l);
+    const st = STAGES[stage] || STAGES.generacion;
+    const score = l.confianza_nivel || 0;
+    const size = score >= 75 ? 22 : score >= 50 ? 17 : 13;
+    const ring = score >= 75 ? '3px solid rgba(255,255,255,.9)' : '2px solid rgba(255,255,255,.7)';
+
+    const icon = L.divIcon({
+      html: `<div style="
+        background:${st.color};
+        width:${size}px;height:${size}px;border-radius:50%;
+        border:${ring};
+        box-shadow:0 2px 8px rgba(0,0,0,.35),0 0 0 ${score>=75?'4px':'0'} ${st.color}44;
+        display:flex;align-items:center;justify-content:center;
+        font-size:${size>=20?'9px':'7px'};font-weight:800;color:rgba(255,255,255,.9);
+        font-family:var(--font-mono);
+      ">${score>=75?score:''}</div>`,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2],
+      className: '',
+    });
+
+    const popup = L.popup({ maxWidth:220, className:'mtx-popup' }).setContent(`
+      <div style="font-family:Inter,sans-serif;font-size:12px">
+        <div style="font-weight:700;font-size:13px;color:#0D1B3E;margin-bottom:4px">${escHtml(l.empresa)}</div>
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+          <span style="background:${st.color};color:#fff;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600">${st.icon} ${st.label}</span>
+          ${score>=70?`<span style="background:#EEF9F1;color:#16A34A;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600">🔥 ${score}</span>`:''}
+        </div>
+        ${l.contacto_nombre?`<div style="color:#6B829A;font-size:11px">👤 ${escHtml(l.contacto_nombre)}</div>`:''}
+        <div style="color:#6B829A;font-size:11px">📍 ${escHtml(l.ciudad||'')}${l.estado?', '+escHtml(l.estado):''}</div>
+        ${l.valor_estimado?`<div style="font-weight:700;color:#1A8FA8;font-family:monospace;margin-top:3px">${fmtMXN(l.valor_estimado)}</div>`:''}
+        <button onclick="openDrawer('${l.id}')" style="margin-top:6px;width:100%;padding:4px;background:#0D1B3E;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer">Ver lead →</button>
+      </div>`);
+
+    const marker = L.marker(coords, { icon }).bindPopup(popup);
+    mapMarkers.addLayer(marker);
+  });
+
+  renderMapList(filtered, cache);
+  updateMapStats(placed, filtered, cache);
+}
+
+function updateMapStats(placed, leads, cache) {
+  if (!leads) leads = allLeads.filter(l=>l.ciudad);
+  if (!cache) cache = getGeoCache();
+  const total = leads.length;
+  const geocoded = leads.filter(l=>cache[(l.ciudad||'').toLowerCase().trim()]).length;
+  const pct = total ? Math.round(geocoded/total*100) : 0;
+  const ciudades = new Set(leads.map(l=>(l.ciudad||'').toLowerCase().trim()).filter(Boolean)).size;
+  const valor = leads.reduce((s,l)=>s+(parseFloat(l.valor_estimado)||0),0);
+
+  const s = id => document.getElementById(id);
+  if (s('mstat-total'))    s('mstat-total').textContent    = placed ?? geocoded;
+  if (s('mstat-ciudades')) s('mstat-ciudades').textContent = ciudades;
+  if (s('mstat-valor'))    s('mstat-valor').textContent    = valor>=1e6 ? '$'+Math.round(valor/1e6)+'M' : valor>=1e3 ? '$'+Math.round(valor/1e3)+'K' : fmtMXN(valor);
+  if (s('mstat-geocoded')) s('mstat-geocoded').textContent = pct+'%';
+}
+
+function addMapLegend() {
+  const legend = L.control({ position:'bottomright' });
+  legend.onAdd = function() {
+    const div = L.DomUtil.create('div','map-legend');
+    div.innerHTML = `
+      <div class="map-legend-title">Pipeline</div>
+      ${Object.values(STAGES).slice(0,5).map(s=>`
+        <div class="map-legend-item">
+          <div class="map-legend-dot" style="background:${s.color}"></div>
+          <span style="font-size:10px;color:#374151">${s.icon} ${s.label}</span>
+        </div>`).join('')}
+      <div class="map-legend-title" style="margin-top:5px">Tamaño = Score</div>
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#1A8FA8;width:16px;height:16px;border-radius:50%"></div><span style="font-size:10px">Score ≥75 (grande)</span></div>
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#1A8FA8"></div><span style="font-size:10px">Score &lt;75 (pequeño)</span></div>
+    `;
+    return div;
+  };
+  legend.addTo(mapInstance);
+}
+
+function renderMapList(leads, cache) {
   const el = document.getElementById('mapa-list');
   if (!el) return;
-  const filtered = leads.filter(l=>l.ciudad);
-  el.innerHTML = filtered.length
-    ? filtered.map(l=>{
-        const st = STAGES[getLeadStage(l)]||STAGES.generacion;
-        return `<div class="mapa-lead-item" onclick="openDrawer('${l.id}')">
-          <div style="font-weight:600;font-size:13px">${escHtml(l.empresa)}</div>
-          <div style="font-size:11px;color:#64748b">${escHtml(l.ciudad||'')} · <span style="color:${st.color}">${st.icon} ${st.label}</span></div>
-          <div style="font-size:11px;color:#1A6FFF;font-family:monospace">${l.valor_estimado?fmtMXN(l.valor_estimado):''}</div>
-        </div>`;
-      }).join('')
-    : '<div style="padding:16px;color:#94a3b8;text-align:center;font-size:13px">Agrega campo "Ciudad" a los leads para verlos en el mapa</div>';
+  if (!cache) cache = getGeoCache();
+  const geoLeads = (leads||allLeads).filter(l => l.ciudad && cache[(l.ciudad||'').toLowerCase().trim()]);
+  const noGeo    = (leads||allLeads).filter(l => l.ciudad && !cache[(l.ciudad||'').toLowerCase().trim()]);
+
+  if (!geoLeads.length && !noGeo.length) {
+    el.innerHTML = `<div style="padding:20px 12px;color:var(--t3);text-align:center;font-size:12px">
+      <div style="font-size:24px;margin-bottom:8px">🗺</div>
+      Agrega el campo "Ciudad" a los leads para visualizarlos en el mapa
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = [
+    ...geoLeads.sort((a,b)=>(b.confianza_nivel||0)-(a.confianza_nivel||0)).map(l => {
+      const st = STAGES[getLeadStage(l)] || STAGES.generacion;
+      const score = l.confianza_nivel || 0;
+      return `<div class="mapa-lead-item" onclick="openDrawer('${l.id}')">
+        <div class="mapa-lead-empresa">${escHtml(l.empresa)}</div>
+        <div class="mapa-lead-meta">
+          <span style="color:${st.color}">${st.icon} ${escHtml(l.ciudad||'')}</span>
+          ${score>=70?`<span style="color:#16A34A;font-weight:700">🔥 ${score}</span>`:'<span style="color:var(--t3)">${score}</span>'}
+        </div>
+        <div class="mapa-lead-val">${l.valor_estimado?fmtMXN(l.valor_estimado):''}</div>
+      </div>`;
+    }),
+    noGeo.length ? `<div style="padding:8px 10px;font-size:10px;color:var(--t3);border-top:1px solid var(--b1);background:var(--bg)">
+      ⏳ ${noGeo.length} lead${noGeo.length!==1?'s':''} pendiente${noGeo.length!==1?'s':''} de geocodificar
+    </div>` : ''
+  ].join('');
 }
 
 function filterMapLeads() {
-  const q = document.getElementById('mapa-search')?.value.toLowerCase()||'';
-  const filtered = allLeads.filter(l=>
-    (l.empresa||'').toLowerCase().includes(q)||
-    (l.ciudad||'').toLowerCase().includes(q)
-  );
-  renderMapList(filtered);
+  refreshMapMarkers();
 }
 
 /* ── CAMPAÑAS ───────────────────────────────────────────── */
