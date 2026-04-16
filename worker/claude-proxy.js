@@ -28,6 +28,7 @@ function corsHeaders(origin) {
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
+    const url    = new URL(request.url);
 
     // Preflight CORS
     if (request.method === 'OPTIONS') {
@@ -39,7 +40,46 @@ export default {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // Verificar API key configurada
+    // ── Ruta /perplexity → proxy a Perplexity AI ──────────────────
+    if (url.pathname === '/perplexity') {
+      if (!env.PERPLEXITY_API_KEY) {
+        return new Response(
+          JSON.stringify({ error: 'PERPLEXITY_API_KEY no configurada en el Worker' }),
+          { status: 500, headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' } }
+        );
+      }
+      try {
+        const body = await request.json();
+        const pRes = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.PERPLEXITY_API_KEY}`,
+            'Content-Type':  'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+        if (!pRes.ok) {
+          const err = await pRes.text();
+          return new Response(
+            JSON.stringify({ error: `Perplexity error ${pRes.status}: ${err}` }),
+            { status: pRes.status, headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' } }
+          );
+        }
+        // Streaming or JSON — pass through as-is
+        const contentType = pRes.headers.get('content-type') || 'application/json';
+        return new Response(pRes.body, {
+          status: 200,
+          headers: { ...corsHeaders(origin), 'Content-Type': contentType, 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' },
+        });
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ error: err.message }),
+          { status: 500, headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // ── Ruta raíz / → proxy a Claude (Anthropic) ─────────────────
     if (!env.ANTHROPIC_API_KEY) {
       return new Response(
         JSON.stringify({ error: 'ANTHROPIC_API_KEY no configurada en el Worker' }),
@@ -59,7 +99,7 @@ export default {
           'content-type':      'application/json',
         },
         body: JSON.stringify({
-          model:      body.model      || 'claude-opus-4-6',
+          model:      body.model      || 'claude-haiku-4-5-20251001',
           max_tokens: body.max_tokens || 4096,
           system:     body.system     || `Eres un redactor experto de documentos empresariales para IBANOR SA de CV / MetaTronix. Genera documentos en español, estructurados y profesionales. Devuelve SOLO HTML semántico (h1-h3, p, ul, ol, table, strong, em). NO incluyas DOCTYPE, html, head, body ni style tags. Incluye fecha actual: ${new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' })}.`,
           messages:   body.messages,
@@ -75,7 +115,6 @@ export default {
         );
       }
 
-      // Pasar el stream SSE directo al cliente
       return new Response(claudeRes.body, {
         status: 200,
         headers: {

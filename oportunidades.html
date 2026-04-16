@@ -873,12 +873,10 @@ REGLAS:
 /* API CALL                                                       */
 /* ══════════════════════════════════════════════════════════════ */
 async function callIntelligence(query, systemPrompt, onChunk) {
-  const res = await fetch('https://api.perplexity.ai/chat/completions', {
+  const proxyUrl = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev';
+  const res = await fetch(proxyUrl + '/perplexity', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'sonar-pro',
       messages: [

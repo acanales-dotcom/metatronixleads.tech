@@ -521,7 +521,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     const contextMsgs = messages.slice(-HISTORY_LIMIT);
 
     try {
-      const res = await fetch(proxyUrl + '/v1/messages', {
+      const res = await fetch(proxyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -529,7 +529,7 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
           max_tokens: 1024,
           system:     buildSystemPrompt(),
           messages:   contextMsgs,
-          stream:     false
+          stream:     true
         })
       });
 
@@ -538,8 +538,30 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
         throw new Error(err.error?.message || 'Error ' + res.status);
       }
 
-      const data = await res.json();
-      const reply = data.content?.[0]?.text || 'Sin respuesta.';
+      // Leer stream SSE que devuelve el Worker
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer   = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // último fragmento incompleto
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const chunk = line.slice(6).trim();
+          if (chunk === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(chunk);
+            if (parsed.delta?.text) fullText += parsed.delta.text;
+          } catch {}
+        }
+      }
+
+      const reply = fullText.trim() || 'Sin respuesta.';
       messages.push({ role: 'assistant', content: reply });
       await saveConversation();
       return reply;
