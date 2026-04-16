@@ -941,7 +941,7 @@ function renderAgents() {
         ${a.models.map(m=>`<span class="model-tag">${m}</span>`).join('')}
         <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
       </div>
-      <div class="agent-workspace" id="ws-${a.id}" style="display:none">
+      <div class="agent-workspace" id="ws-${a.id}" style="display:none" onclick="event.stopPropagation()">
         ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : a.isPublisherAgent ? renderPublisherForm(a) : a.isOrchestratorAgent ? renderOrchestratorForm(a) : a.isSocialSimAgent ? renderSocialSimForm(a) : a.isMonitorAgent ? renderMonitorForm(a) : `
           <div class="agent-input-row">
             <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>

@@ -184,7 +184,7 @@
       @keyframes alex-in { from{opacity:0;transform:translateY(12px) scale(.95)} to{opacity:1;transform:none} }
 
       #metafollow-btn {
-        position: fixed; bottom: 16px; left: 20px;
+        position: fixed; bottom: 20px; left: 20px;
         z-index: 9100; width: 80px; height: 80px;
         background: transparent; border: none; cursor: pointer;
         outline: none; padding: 0;
