@@ -147,6 +147,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:24px 48p
   <a href="#infra">INFRAESTRUCTURA</a>
   <a href="#fixes">CORRECCIONES</a>
   <a href="#agents">15 AGENTES</a>
+  <a href="#metodologia">METODOLOGÍA</a>
   <a href="#protocol">PROTOCOLO QA</a>
   <a href="#regression">REGRESIONES</a>
   <a href="#security">SEGURIDAD</a>
@@ -336,6 +337,40 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:24px 48p
       <tr style="background:rgba(0,255,136,.03)"><td class="ag-id">15</td><td><div class="ag-name">📡 Monitor de Redes <span class="b-new">NUEVO</span></div><div class="ag-cat">ALERTAS · IA</div></td><td style="font-family:var(--mono);font-size:11px">claude-haiku-4-5</td><td><span class="b-pass">PASS</span></td><td class="ag-result">Métricas de monitoreo identificadas. Feed a Agente Contenido via sendToContenido() funcional.</td><td><span class="b-pass">stopProp ✅</span></td></tr>
     </tbody>
   </table>
+
+  <!-- METHODOLOGY anchor -->
+  <div id="metodologia"></div>
+  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div style="background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);padding:20px 22px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:12px">🔬 METODOLOGÍA — IA (Agentes 1-7, 10-15)</div>
+      <ul style="font-size:13px;color:var(--muted);line-height:2.2;padding-left:18px">
+        <li>Llamada directa a <code style="font-family:var(--mono);color:var(--accent)">CRM_LLM.chat(system, prompt)</code></li>
+        <li>Verificación de respuesta no vacía y coherente</li>
+        <li>Confirmación de streaming SSE <code style="font-family:var(--mono);font-size:11px">Content-Type: text/event-stream</code></li>
+        <li>Modelo: <code style="font-family:var(--mono);color:var(--accent)">claude-haiku-4-5-20251001</code></li>
+        <li>max_tokens: 30–120 por prueba · Ejecución secuencial</li>
+        <li style="color:var(--accent);font-weight:700">Resultado: 13/13 PASS — 100%</li>
+      </ul>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-left:3px solid #00BFFF;padding:20px 22px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:12px">🎬 METODOLOGÍA — MEDIA HF (Agentes 8-9)</div>
+      <ul style="font-size:13px;color:var(--muted);line-height:2.2;padding-left:18px">
+        <li>Verificación de definición: <code style="font-family:var(--mono);font-size:11px">runAgentVideo / runAgentImage</code></li>
+        <li>Confirmación de <code style="font-family:var(--mono);font-size:11px">HFPipeline</code> disponible en scope</li>
+        <li>UI renderizada correctamente en HQ slot</li>
+        <li>Requieren HF token de usuario + GPU dedicada</li>
+        <li style="color:#00BFFF;font-weight:700">Marcados N/A · Funcionales con token activo</li>
+      </ul>
+    </div>
+  </div>
+  <div style="margin-top:16px;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);padding:20px 22px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:12px">📋 METODOLOGÍA — PROTOCOLO PENTAGON (162 tests)</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:13px;color:var(--muted)">
+      <div><strong style="color:var(--text)">Tests Automáticos (71)</strong><br>Ejecutables en-browser vía qa-runner.html. Cubren HTTP checks, security scans, DOM assertions, cache-bust verification y lógica de DM canonical key.</div>
+      <div><strong style="color:var(--text)">Tests Manuales (91)</strong><br>Requieren interacción real con la UI: login flows, CRUD de leads, ejecución de agentes, DM threads, Lighthouse, memory leaks y flujos E2E completos.</div>
+      <div><strong style="color:var(--text)">Criterio de Aceptación</strong><br>Cada test tiene ID (MTX-XXX-NNN), steps numerados, criterio binario PASS/FAIL, severidad (CRITICAL/HIGH/MEDIUM/LOW), estado persistido en localStorage y export CSV.</div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════ PROTOCOLO QA ═══════════ -->
