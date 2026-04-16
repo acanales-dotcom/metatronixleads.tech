@@ -367,12 +367,12 @@
 }
 #mtx-agent-input {
   flex: 1;
-  background: #f1f4f8;
-  border: 1px solid transparent;
+  background: #1C2236;
+  border: 1px solid rgba(255,255,255,.1);
   border-radius: 10px;
   padding: 9px 12px;
   font-size: 13px;
-  color: #1a2233;
+  color: #E8EDF8;
   outline: none;
   resize: none;
   max-height: 100px;
