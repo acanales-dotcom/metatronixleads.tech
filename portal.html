@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetaTronix — Portal de Documentos</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0E1A;--bg2:#0D1220;--bg3:#111827;--card:#141B2D;--border:#1E2A3A;--accent:#00FF88;--text:#E8EDF5;--muted:#6B7A99;--mono:'JetBrains Mono',monospace;--red:#FF3B3B;--blue:#00BFFF;--orange:#FF8C00;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;min-height:100vh;}
+.top{background:var(--accent);padding:7px 40px;display:flex;justify-content:space-between;align-items:center;}
+.top span{font-family:var(--mono);font-size:11px;color:#000;font-weight:700;letter-spacing:1px;}
+header{background:var(--bg2);border-bottom:2px solid var(--accent);padding:36px 40px 28px;}
+.hdr-flex{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;}
+.hdr-logo{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--accent);letter-spacing:4px;margin-bottom:6px;}
+h1{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--text);letter-spacing:3px;line-height:1;}
+h1 span{color:var(--accent);}
+.hdr-sub{color:var(--muted);font-size:13px;margin-top:6px;font-family:var(--mono);}
+.hdr-stats{display:flex;gap:24px;text-align:center;}
+.hdr-stat-num{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);}
+.hdr-stat-label{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:1px;}
+
+/* SEARCH */
+.search-bar{background:var(--bg3);border-bottom:1px solid var(--border);padding:14px 40px;display:flex;gap:12px;align-items:center;}
+.search-input{flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 14px;}
+.search-input::placeholder{color:var(--muted);}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.filter-btn{background:var(--card);border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;padding:7px 16px;cursor:pointer;transition:all .15s;}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);}
+
+/* MAIN */
+main{padding:36px 40px;max-width:1300px;margin:0 auto;}
+
+/* CATEGORY */
+.cat{margin-bottom:48px;}
+.cat-hdr{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--border);}
+.cat-badge{font-family:'Bebas Neue',sans-serif;font-size:11px;padding:4px 14px;letter-spacing:2px;font-weight:700;}
+.cat-badge.venta{background:#00FF88;color:#000;}
+.cat-badge.interno{background:#FF3B3B;color:#fff;}
+.cat-badge.colab{background:#00BFFF;color:#000;}
+.cat-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;}
+.cat-desc{color:var(--muted);font-size:12px;font-family:var(--mono);margin-left:auto;}
+
+/* DOC GRID */
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.doc-card{background:var(--card);border:1px solid var(--border);padding:20px 22px;cursor:pointer;transition:all .15s;text-decoration:none;color:inherit;display:block;}
+.doc-card:hover{border-color:var(--accent);background:#141B2D;}
+.doc-card.venta:hover{border-color:var(--accent);}
+.doc-card.interno:hover{border-color:#FF3B3B;}
+.doc-card.colab:hover{border-color:#00BFFF;}
+.doc-icon{font-size:24px;margin-bottom:10px;}
+.doc-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+.doc-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+.doc-meta{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);}
+.doc-tag{font-family:var(--mono);font-size:9px;padding:2px 8px;letter-spacing:1px;}
+.doc-tag.venta{background:#00FF8815;color:#00FF88;border:1px solid #00FF8840;}
+.doc-tag.interno{background:#FF3B3B15;color:#FF3B3B;border:1px solid #FF3B3B40;}
+.doc-tag.colab{background:#00BFFF15;color:#00BFFF;border:1px solid #00BFFF40;}
+.doc-arrow{font-size:14px;color:var(--muted);}
+
+footer{background:var(--bg2);border-top:1px solid var(--border);padding:20px 40px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);}
+.ft-brand{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--accent);letter-spacing:3px;margin-bottom:6px;}
+
+@media(max-width:768px){main{padding:16px;}header{padding:24px 16px;}.search-bar{padding:12px 16px;}.doc-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="top">
+  <span>📁 METATRONIX — PORTAL DE DOCUMENTOS</span>
+  <span>metatronixleads.tech · Abril 2026</span>
+</div>
+
+<header>
+  <div class="hdr-flex">
+    <div>
+      <div class="hdr-logo">METATRONIX / IBANOR SA DE CV</div>
+      <h1>PORTAL DE <span>DOCUMENTOS</span></h1>
+      <div class="hdr-sub">Organizado por: Venta · Interno · Colaboradores</div>
+    </div>
+    <div class="hdr-stats">
+      <div><div class="hdr-stat-num" style="color:#00FF88">7</div><div class="hdr-stat-label">VENTA</div></div>
+      <div><div class="hdr-stat-num" style="color:#FF3B3B">5</div><div class="hdr-stat-label">INTERNO</div></div>
+      <div><div class="hdr-stat-num" style="color:#00BFFF">8</div><div class="hdr-stat-label">COLABORADORES</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="search-bar">
+  <input class="search-input" type="text" id="search" placeholder="🔍 Buscar documento...">
+  <button class="filter-btn active" onclick="filter('all',this)">TODOS</button>
+  <button class="filter-btn" onclick="filter('venta',this)" style="color:#00FF88">VENTA</button>
+  <button class="filter-btn" onclick="filter('interno',this)" style="color:#FF3B3B">INTERNO</button>
+  <button class="filter-btn" onclick="filter('colab',this)" style="color:#00BFFF">COLABORADORES</button>
+</div>
+
+<main>
+
+<!-- VENTA -->
+<div class="cat" data-cat="venta">
+  <div class="cat-hdr">
+    <span class="cat-badge venta">VENTA</span>
+    <span class="cat-title">DOCUMENTOS PARA CLIENTES Y PROSPECTOS</span>
+    <span class="cat-desc">Certificaciones · Propuestas · Demo</span>
+  </div>
+  <div class="doc-grid" id="grid-venta">
+    <a class="doc-card venta" href="venta-calidad.html" data-cat="venta">
+      <div class="doc-icon">✅</div>
+      <div class="doc-title">Certificación de Calidad</div>
+      <div class="doc-desc">Pruebas ejecutadas, 15 agentes IA verificados, infraestructura certificada. Todo en verde. Documento oficial para presentar a clientes.</div>
+      <div class="doc-meta"><span class="doc-tag venta">VENTA · CERTIFICACIÓN</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card venta" href="propuesta_retail.html" data-cat="venta">
+      <div class="doc-icon">🛒</div>
+      <div class="doc-title">Propuesta Retail</div>
+      <div class="doc-desc">Propuesta comercial personalizada para clientes del sector retail. Incluye módulos, precios y alcance de implementación.</div>
+      <div class="doc-meta"><span class="doc-tag venta">VENTA · PROPUESTA</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card venta" href="upload_assessment_b2c.html" data-cat="venta">
+      <div class="doc-icon">📋</div>
+      <div class="doc-title">Propuesta Assessment B2C</div>
+      <div class="doc-desc">Propuesta de assessment completo para empresas B2C. Diagnóstico de necesidades y propuesta de solución MetaTronix.</div>
+      <div class="doc-meta"><span class="doc-tag venta">VENTA · ASSESSMENT</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card venta" href="upload_b2c.html" data-cat="venta">
+      <div class="doc-icon">🤝</div>
+      <div class="doc-title">Propuesta B2C</div>
+      <div class="doc-desc">Propuesta estándar para clientes empresa-a-consumidor. Servicios, módulos y condiciones comerciales.</div>
+      <div class="doc-meta"><span class="doc-tag venta">VENTA · PROPUESTA</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card venta" href="upload_retail.html" data-cat="venta">
+      <div class="doc-icon">📤</div>
+      <div class="doc-title">Uploader Propuesta Retail</div>
+      <div class="doc-desc">Herramienta para subir y personalizar propuestas retail en formato interactivo para el cliente.</div>
+      <div class="doc-meta"><span class="doc-tag venta">VENTA · HERRAMIENTA</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card venta" href="captureform.html" data-cat="venta">
+      <div class="doc-icon">📅</div>
+      <div class="doc-title">Agenda tu Demo</div>
+      <div class="doc-desc">Formulario de captura para agendar demos con prospectos. Integrado con CRM MetaTronix para seguimiento automático.</div>
+      <div class="doc-meta"><span class="doc-tag venta">VENTA · CAPTACIÓN</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card venta" href="privacy.html" data-cat="venta">
+      <div class="doc-icon">🔒</div>
+      <div class="doc-title">Política de Privacidad</div>
+      <div class="doc-desc">Política de privacidad y seguridad de datos. Documento público para clientes y usuarios del portal.</div>
+      <div class="doc-meta"><span class="doc-tag venta">VENTA · LEGAL</span><span class="doc-arrow">→</span></div>
+    </a>
+  </div>
+</div>
+
+<!-- INTERNO -->
+<div class="cat" data-cat="interno">
+  <div class="cat-hdr">
+    <span class="cat-badge interno">INTERNO</span>
+    <span class="cat-title">DOCUMENTOS TÉCNICOS — SOLO EQUIPO MTX</span>
+    <span class="cat-desc">QA · Auditoría · Reportes técnicos · Admin</span>
+  </div>
+  <div class="doc-grid" id="grid-interno">
+    <a class="doc-card interno" href="test-report-complete.html" data-cat="interno">
+      <div class="doc-icon">📊</div>
+      <div class="doc-title">Informe Completo de Pruebas</div>
+      <div class="doc-desc">Reporte técnico completo: 2 sesiones, 8 bugs resueltos, 15 agentes, infraestructura, metodología, regresiones y seguridad.</div>
+      <div class="doc-meta"><span class="doc-tag interno">INTERNO · REPORTE</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card interno" href="qa-protocol.html" data-cat="interno">
+      <div class="doc-icon">📋</div>
+      <div class="doc-title">Protocolo QA — Nivel Pentágono</div>
+      <div class="doc-desc">162 casos de prueba en 15 módulos con severidad, criterios de aceptación, estado interactivo y exportación CSV.</div>
+      <div class="doc-meta"><span class="doc-tag interno">INTERNO · QA</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card interno" href="qa-runner.html" data-cat="interno">
+      <div class="doc-icon">▶️</div>
+      <div class="doc-title">QA Runner — Tests Automatizados</div>
+      <div class="doc-desc">71 pruebas automatizadas ejecutables en el browser. HTTP checks, seguridad, cache-bust, lógica DMs, regresiones.</div>
+      <div class="doc-meta"><span class="doc-tag interno">INTERNO · AUTOMATIZACIÓN</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card interno" href="security-audit.html" data-cat="interno">
+      <div class="doc-icon">🛡️</div>
+      <div class="doc-title">Centro de Auditoría y Seguridad</div>
+      <div class="doc-desc">Dashboard de auditoría de seguridad: API keys, CSP, RLS, tokens expuestos, XSS. Estado en tiempo real.</div>
+      <div class="doc-meta"><span class="doc-tag interno">INTERNO · SEGURIDAD</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card interno" href="admin.html" data-cat="interno">
+      <div class="doc-icon">⚙️</div>
+      <div class="doc-title">Panel de Administración</div>
+      <div class="doc-desc">Gestión de usuarios, configuración del portal, alertas del sistema y portal settings. Acceso solo para admin.</div>
+      <div class="doc-meta"><span class="doc-tag interno">INTERNO · ADMIN</span><span class="doc-arrow">→</span></div>
+    </a>
+  </div>
+</div>
+
+<!-- COLABORADORES -->
+<div class="cat" data-cat="colab">
+  <div class="cat-hdr">
+    <span class="cat-badge colab">COLABORADORES</span>
+    <span class="cat-title">PORTAL DE TRABAJO — EQUIPO DE VENTAS</span>
+    <span class="cat-desc">CRM · Agentes IA · Documentos · Pipeline</span>
+  </div>
+  <div class="doc-grid" id="grid-colab">
+    <a class="doc-card colab" href="dashboard.html" data-cat="colab">
+      <div class="doc-icon">🏠</div>
+      <div class="doc-title">Dashboard Principal</div>
+      <div class="doc-desc">Centro de operaciones. KPIs de ventas, actividad reciente, acceso rápido a todos los módulos del portal.</div>
+      <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · HOME</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card colab" href="marketing.html" data-cat="colab">
+      <div class="doc-icon">🤖</div>
+      <div class="doc-title">Agencia IA — 15 Agentes</div>
+      <div class="doc-desc">Los 15 agentes de inteligencia artificial: investigación, contenido, publicidad, YouTube, LinkedIn, streaming y más.</div>
+      <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · IA</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card colab" href="leads.html" data-cat="colab">
+      <div class="doc-icon">👥</div>
+      <div class="doc-title">CRM — Pipeline de Leads</div>
+      <div class="doc-desc">Gestión completa de prospectos: crear, editar, filtrar, buscar. Tabla con paginación y exportación.</div>
+      <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · CRM</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card colab" href="oportunidades.html" data-cat="colab">
+      <div class="doc-icon">🎯</div>
+      <div class="doc-title">Pipeline de Oportunidades</div>
+      <div class="doc-desc">Kanban de oportunidades comerciales. Arrastrar y soltar entre etapas. Seguimiento de valor y probabilidad de cierre.</div>
+      <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · PIPELINE</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card colab" href="generate.html" data-cat="colab">
+      <div class="doc-icon">✨</div>
+      <div class="doc-title">Generador de Documentos IA</div>
+      <div class="doc-desc">Genera propuestas, emails, contratos y documentos personalizados con IA. Se guardan automáticamente en Archivos.</div>
+      <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · GENERACIÓN</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card colab" href="archivos.html" data-cat="colab">
+      <div class="doc-icon">📁</div>
+      <div class="doc-title">Archivos Starke</div>
+      <div class="doc-desc">Repositorio de documentos de ventas Starke. Acceso rápido, descarga y visualización de materiales del equipo.</div>
+      <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · ARCHIVOS</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card colab" href="archivos-ibanor.html" data-cat="colab">
+      <div class="doc-icon">📂</div>
+      <div class="doc-title">Archivos IBANOR</div>
+      <div class="doc-desc">Repositorio de documentos internos IBANOR SA de CV. Materiales corporativos, plantillas y recursos del equipo.</div>
+      <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · ARCHIVOS</span><span class="doc-arrow">→</span></div>
+    </a>
+    <a class="doc-card colab" href="mtx-docs.html" data-cat="colab">
+      <div class="doc-icon">📖</div>
+      <div class="doc-title">Documentación Interna MTX</div>
+      <div class="doc-desc">Wiki interna, guías de uso, procedimientos y documentación técnica del portal MetaTronix para el equipo.</div>
+      <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · DOCS</span><span class="doc-arrow">→</span></div>
+    </a>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <div class="ft-brand">METATRONIX / IBANOR SA DE CV</div>
+  <div>Portal de Documentos · metatronixleads.tech · Abril 2026 · 20 documentos organizados en 3 categorías</div>
+</footer>
+
+<script>
+function filter(cat, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.cat').forEach(c => {
+    c.style.display = (cat === 'all' || c.dataset.cat === cat) ? '' : 'none';
+  });
+}
+document.getElementById('search').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('.doc-card').forEach(card => {
+    const text = card.textContent.toLowerCase();
+    card.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
+});
+</script>
+</body>
+</html>
