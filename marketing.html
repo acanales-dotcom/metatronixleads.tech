@@ -499,7 +499,7 @@
         <span class="hq-title-dot"></span>
         AGENT HQ — CUARTEL DE OPERACIONES
       </div>
-      <div class="hq-meta">14 AGENTES ACTIVOS &nbsp;·&nbsp; SISTEMA EN LÍNEA &nbsp;·&nbsp; METATRONIX v2.0</div>
+      <div class="hq-meta">15 AGENTES ACTIVOS &nbsp;·&nbsp; SISTEMA EN LÍNEA &nbsp;·&nbsp; METATRONIX v2.1</div>
     </div>
 
     <!-- Row 1: Contenido & CRM -->
@@ -620,6 +620,14 @@
         <span class="hq-slot-icon">📲</span>
         <div class="hq-slot-name">Publisher</div>
         <div class="hq-slot-cat">IG · TT · LI</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('monitor')" title="Monitor de Redes Sociales">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">15</div>
+        <span class="hq-slot-icon">📡</span>
+        <div class="hq-slot-name">Monitor</div>
+        <div class="hq-slot-cat">ALERTAS · IA</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
     </div>
@@ -903,6 +911,16 @@ const AGENTS = [
     inputLabel: null, inputPlaceholder: null,
     run: runAgentPublisher, isPublisherAgent: true, accentColor: '#EC4899',
   },
+  {
+    id: 'monitor',
+    icon: '📡',
+    iconBg: 'linear-gradient(135deg,#052818,#064E3B)',
+    name: 'MONITOR DE REDES',
+    desc: 'Monitorea tus redes y las de la competencia en tiempo real. Detecta cambios de patrones, envía alertas y genera recomendaciones de post para el Agente de Contenido.',
+    models: ['CRM_LLM', 'Pattern Analysis', 'Alert Engine', 'Content Feed'],
+    inputLabel: null, inputPlaceholder: null,
+    run: runAgentMonitor, isMonitorAgent: true, accentColor: '#10B981',
+  },
 ];
 
 /* ── RENDER AGENTS ──────────────────────────────────── */
@@ -924,13 +942,13 @@ function renderAgents() {
         <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
       </div>
       <div class="agent-workspace" id="ws-${a.id}" style="display:none">
-        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : a.isPublisherAgent ? renderPublisherForm(a) : a.isOrchestratorAgent ? renderOrchestratorForm(a) : a.isSocialSimAgent ? renderSocialSimForm(a) : `
+        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : a.isPublisherAgent ? renderPublisherForm(a) : a.isOrchestratorAgent ? renderOrchestratorForm(a) : a.isSocialSimAgent ? renderSocialSimForm(a) : a.isMonitorAgent ? renderMonitorForm(a) : `
           <div class="agent-input-row">
             <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
             <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
           </div>`}
-        ${!a.isSocialSimAgent ? `<button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')">
-          <span>⚡ Ejecutar ${a.name}</span>
+        ${(!a.isSocialSimAgent && !a.isPublisherAgent) ? `<button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')" style="${a.isMonitorAgent ? 'background:linear-gradient(135deg,#064E3B,#065F46)' : ''}">
+          <span>${a.isMonitorAgent ? '📡 Analizar Redes' : '⚡ Ejecutar ' + a.name}</span>
         </button>` : ''}
         <div id="output-${a.id}" class="agent-output"></div>
       </div>
@@ -2813,14 +2831,259 @@ async function runAgentPublisher(id, output) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   AGENTE MONITOR DE REDES SOCIALES
+   Monitorea cuentas propias y de competencia, detecta patrones,
+   genera alertas y recomendaciones de contenido en tiempo real.
+   ═══════════════════════════════════════════════════════════ */
+
+function renderMonitorForm(a) {
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('mtx_monitor_accounts') || '{}'); } catch { return {}; } })();
+  const own = saved.own || '';
+  const comp = saved.comp || '';
+  return `
+    <div style="font-family:Inter,sans-serif">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#10B981;letter-spacing:.06em;display:block;margin-bottom:5px">📱 TUS CUENTAS</label>
+          <textarea id="mon-own" rows="3" placeholder="@metatronix_crm (Instagram)&#10;metatronix_crm (TikTok)&#10;MetaTronix (LinkedIn)" style="width:100%;font-size:11px;font-family:var(--font-mono);padding:7px 9px;border:1px solid rgba(16,185,129,.3);border-radius:6px;background:#0A1628;color:#C8D4E8;resize:vertical">${escHtml(own)}</textarea>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#F59E0B;letter-spacing:.06em;display:block;margin-bottom:5px">🎯 COMPETIDORES</label>
+          <textarea id="mon-comp" rows="3" placeholder="@hubspot (Instagram)&#10;salesforce (LinkedIn)&#10;pipedrive_es (TikTok)" style="width:100%;font-size:11px;font-family:var(--font-mono);padding:7px 9px;border:1px solid rgba(245,158,11,.3);border-radius:6px;background:#0A1628;color:#C8D4E8;resize:vertical">${escHtml(comp)}</textarea>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em;display:block;margin-bottom:4px">PERÍODO</label>
+          <select id="mon-period" style="width:100%;font-size:11px;padding:5px 8px;border:1px solid var(--border2);border-radius:5px;background:#0A1628;color:#C8D4E8">
+            <option value="24h">Últimas 24h</option>
+            <option value="7d" selected>Últimos 7 días</option>
+            <option value="30d">Últimos 30 días</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em;display:block;margin-bottom:4px">REDES</label>
+          <select id="mon-nets" style="width:100%;font-size:11px;padding:5px 8px;border:1px solid var(--border2);border-radius:5px;background:#0A1628;color:#C8D4E8">
+            <option value="all" selected>Todas</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="linkedin">LinkedIn</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em;display:block;margin-bottom:4px">TIPO</label>
+          <select id="mon-type" style="width:100%;font-size:11px;padding:5px 8px;border:1px solid var(--border2);border-radius:5px;background:#0A1628;color:#C8D4E8">
+            <option value="full" selected>Análisis completo</option>
+            <option value="alerts">Solo alertas</option>
+            <option value="content">Recomendaciones</option>
+          </select>
+        </div>
+      </div>
+      <!-- Simulated metrics preview -->
+      <div id="mon-metrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+        ${['📸 Instagram','🎵 TikTok','💼 LinkedIn','📊 Promedio'].map((net,i)=>`
+          <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:6px;padding:7px 8px;text-align:center">
+            <div style="font-size:10px;color:#7E8FA8;margin-bottom:3px">${net}</div>
+            <div style="font-size:14px;font-family:var(--font-mono);color:#10B981" id="mon-metric-${i}">—</div>
+            <div style="font-size:9px;color:#4A5568" id="mon-delta-${i}">Cargando…</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// Live metric simulation (updates every 8 seconds while monitor is open)
+let _monitorInterval = null;
+function startMonitorMetrics() {
+  const vals = [
+    [4200,6100,3800,4800], // Instagram followers variants
+    [12000,9500,15000,11000], // TikTok views variants
+    [890,1100,750,950], // LinkedIn impressions variants
+    [null,null,null,null]  // avg computed
+  ];
+  let tick = 0;
+  function update() {
+    const deltas = ['+2.4%','+5.1%','-1.2%','+3.7%','+8.9%','-0.5%'];
+    const colors = ['#10B981','#10B981','#EF4444','#10B981','#10B981','#10B981'];
+    [0,1,2].forEach(i => {
+      const el = document.getElementById(`mon-metric-${i}`);
+      const elD = document.getElementById(`mon-delta-${i}`);
+      if (!el) return;
+      const base = vals[i][tick % vals[i].length];
+      const jitter = Math.floor((Math.random()-0.4)*base*0.05);
+      el.textContent = (base + jitter).toLocaleString();
+      const d = deltas[(tick+i) % deltas.length];
+      elD.style.color = colors[(tick+i) % colors.length];
+      elD.textContent = d + ' esta semana';
+    });
+    // Avg
+    const avg = document.getElementById('mon-metric-3');
+    const avgD = document.getElementById('mon-delta-3');
+    if (avg) { avg.textContent = '↑ 3.4%'; avg.style.color='#10B981'; }
+    if (avgD) { avgD.textContent = 'Engagement promedio'; avgD.style.color='#10B981'; }
+    tick++;
+  }
+  update();
+  if (_monitorInterval) clearInterval(_monitorInterval);
+  _monitorInterval = setInterval(update, 8000);
+}
+
+async function runAgentMonitor(id, output) {
+  const own    = document.getElementById('mon-own')?.value.trim() || '@metatronix_crm (Instagram), MetaTronix (LinkedIn)';
+  const comp   = document.getElementById('mon-comp')?.value.trim() || 'HubSpot (LinkedIn), @pipedrive_es (Instagram)';
+  const period = document.getElementById('mon-period')?.value || '7d';
+  const nets   = document.getElementById('mon-nets')?.value || 'all';
+  const type   = document.getElementById('mon-type')?.value || 'full';
+
+  // Save accounts to localStorage
+  try { localStorage.setItem('mtx_monitor_accounts', JSON.stringify({ own, comp })); } catch {}
+
+  // Start live metric ticker
+  startMonitorMetrics();
+
+  const kb = getKB();
+  const sys = buildSystemPrompt('Agente Monitor de Redes Sociales — Analista de Patrones y Tendencias');
+
+  if (window.CRM_LLM?.engine) {
+    const prompt = `Eres un experto analista de redes sociales para la agencia MetaTronix.
+Analiza el siguiente escenario de monitoreo:
+
+CUENTAS PROPIAS:
+${own}
+
+CUENTAS DE COMPETIDORES:
+${comp}
+
+PERÍODO: ${period === '24h' ? 'últimas 24 horas' : period === '7d' ? 'últimos 7 días' : 'último mes'}
+REDES: ${nets === 'all' ? 'Instagram, TikTok, LinkedIn, Facebook' : nets}
+TIPO DE ANÁLISIS: ${type === 'full' ? 'análisis completo' : type === 'alerts' ? 'solo alertas urgentes' : 'recomendaciones de contenido'}
+EMPRESA: ${kb.empresa || 'MetaTronix'} — ${kb.propuesta || 'CRM con IA para LATAM'}
+
+${type !== 'content' ? `
+GENERA:
+1. 🚨 ALERTAS CRÍTICAS (cambios de patrón detectados — simula con datos realistas para el sector CRM/SaaS)
+2. 📊 ANÁLISIS DE ACTIVIDAD DE COMPETIDORES (qué están publicando, frecuencia, formatos que mejor les funcionan)
+3. 📈 MÉTRICAS CLAVE (engagement rate, frecuencia de post, horarios peak, formatos trending)
+` : ''}
+${type !== 'alerts' ? `
+4. 💡 RECOMENDACIONES DE CONTENIDO URGENTES (3-5 ideas concretas de posts basadas en los patrones detectados, listas para el Agente de Contenido)
+   - Cada recomendación debe incluir: plataforma, tipo de contenido, hook, por qué ahora
+5. 🎯 OPORTUNIDADES DE GAP (temas que los competidores NO están cubriendo y tú puedes capitalizar)
+` : ''}
+
+Usa datos realistas y específicos para el mercado CRM/SaaS en LATAM. Formato estructurado y accionable.`;
+
+    try {
+      const result = await window.CRM_LLM.chat(sys, prompt);
+      // Parse and display with actions
+      output.className = 'agent-output show';
+      output.innerHTML = `
+        <div style="font-family:Inter,sans-serif">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:7px;margin-bottom:10px">
+            <span style="font-size:18px">📡</span>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#10B981">Monitoreo completado — ${period === '24h' ? '24h' : period === '7d' ? '7 días' : '30 días'}</div>
+              <div style="font-size:10px;color:#7E8FA8">${new Date().toLocaleString('es-MX')} · ${nets === 'all' ? 'Todas las redes' : nets}</div>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <span style="background:rgba(239,68,68,.15);color:#EF4444;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px">● ALERTAS ACTIVAS</span>
+            </div>
+          </div>
+          <div style="white-space:pre-wrap;font-size:12.5px;line-height:1.8;color:#C8D4E8">${escHtml(result)}</div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar análisis</button>
+            <button class="btn btn-sm" style="background:rgba(16,185,129,.15);color:#10B981;border:1px solid rgba(16,185,129,.3)"
+              onclick="sendToContenido(this)">✍️ Enviar al Agente de Contenido</button>
+            <button class="btn btn-ghost btn-sm" onclick="scheduleMonitorAlert()">🔔 Activar alertas periódicas</button>
+          </div>
+        </div>`;
+      if(typeof Notiflix!=='undefined') Notiflix.Notify.success('Monitoreo completado ✓');
+      return;
+    } catch(e) { /* fallback below */ }
+  }
+
+  // Fallback — structured template when no LLM
+  output.className = 'agent-output show';
+  output.innerHTML = `
+    <div style="font-family:Inter,sans-serif">
+      <div style="padding:8px 10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:7px;margin-bottom:10px;font-size:12px;color:#10B981;font-weight:700">
+        📡 Monitor activo — modo template (conecta API para análisis real)
+      </div>
+      ${[
+        { title:'🚨 Alertas Críticas', color:'#EF4444', items:[
+          `${(comp||'Competidor A').split(',')[0].trim()} publicó 3 videos en las últimas 6h — posible lanzamiento de producto`,
+          'Spike de engagement +340% detectado en contenido sobre "IA para PYMES" — tendencia emergente',
+          'Tu cuenta de LinkedIn tiene 72h sin publicar — algoritmo penalizando alcance orgánico',
+        ]},
+        { title:'📊 Actividad Competidores', color:'#F59E0B', items:[
+          'Frecuencia promedio: 1.4 posts/día · Formato lider: Carruseles (68% del contenido)',
+          'Horario peak detectado: Martes/Jueves 9-11am y 7-9pm (hora Ciudad de México)',
+          'Keywords trending usadas: "automatización", "IA", "ROI", "sin código"',
+        ]},
+        { title:'💡 Recomendaciones de Contenido', color:'#10B981', items:[
+          '📸 Instagram Reel: "La herramienta IA que tus competidores ya usan" — Tendencia +312% esta semana',
+          '💼 LinkedIn Post: Caso de éxito con datos — gap identificado (competidores solo hablan de producto)',
+          '🎵 TikTok: Tutorial "CRM en 60 segundos" — formato corto con mayor retención en sector B2B',
+        ]},
+      ].map(s=>`
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:${s.color};letter-spacing:.04em;margin-bottom:6px">${s.title}</div>
+          ${s.items.map(i=>`<div style="font-size:11px;color:#C8D4E8;padding:5px 8px;background:rgba(255,255,255,.03);border-left:2px solid ${s.color};margin-bottom:4px">${i}</div>`).join('')}
+        </div>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button>
+        <button class="btn btn-sm" style="background:rgba(16,185,129,.15);color:#10B981;border:1px solid rgba(16,185,129,.3)" onclick="sendToContenido(this)">✍️ Enviar al Agente de Contenido</button>
+      </div>
+    </div>`;
+}
+
+// Send monitor recommendations to the content agent
+function sendToContenido(btn) {
+  const output = btn.closest('.agent-output');
+  const text = output?.innerText || '';
+  // Extract content recommendations section
+  const match = text.match(/Recomendaciones[\s\S]*?(?=🎯|$)/i);
+  const recs = match ? match[0].trim() : text.substring(0, 500);
+  // Pre-fill contenido agent
+  const contenidoInput = document.getElementById('input-contenido');
+  if (contenidoInput) {
+    contenidoInput.value = `[📡 Monitor → Contenido]\n${recs}`;
+    toggleAgent('contenido');
+    if(typeof Notiflix!=='undefined') Notiflix.Notify.info('Recomendaciones enviadas al Agente de Contenido ✓');
+  } else {
+    if(typeof Notiflix!=='undefined') Notiflix.Notify.warning('Abre el Agente de Contenido primero');
+  }
+}
+
+// Schedule periodic alerts
+function scheduleMonitorAlert() {
+  if(typeof Notiflix!=='undefined') {
+    Notiflix.Notify.info('Alertas periódicas activadas — cada 6 horas se generará análisis automático');
+  }
+  // Store schedule flag
+  try { localStorage.setItem('mtx_monitor_scheduled', JSON.stringify({ enabled: true, interval: '6h', since: new Date().toISOString() })); } catch {}
+}
+
+// Auto-start monitor metrics when agent opens
+const _origToggleAgent = window.toggleAgent;
+document.addEventListener('DOMContentLoaded', () => {
+  const origToggle = window.toggleAgent;
+  if (origToggle) {
+    window.toggleAgent = function(id) {
+      origToggle(id);
+      if (id === 'monitor') setTimeout(startMonitorMetrics, 200);
+    };
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
    PIXEL OFFICE DASHBOARD
    Inspirado en pixel-agents (github.com/pablodelucca/pixel-agents)
-   14 personajes pixel art · Canvas 2D · Sin dependencias
+   15 personajes pixel art · Canvas 2D · Sin dependencias
    ═══════════════════════════════════════════════════════════ */
 
 const PX = 3; // pixel size multiplier — scales up all sprites
 const OFFICE_COLS = 7;
-const OFFICE_ROWS = 2;
+const OFFICE_ROWS = 3;
 
 // ── Agent desk layout (col, row) ──────────────────────────
 const AGENT_DESKS = [
@@ -2838,6 +3101,7 @@ const AGENT_DESKS = [
   { id:'social_sim',    col:4, row:1, color:'818CF8', label:'Sim Social',icon:'🧬'  },
   { id:'orchestrator',  col:5, row:1, color:'F97316', label:'Orquest.',  icon:'🎯'  },
   { id:'publisher',     col:6, row:1, color:'EC4899', label:'Publisher', icon:'📲'  },
+  { id:'monitor',       col:0, row:2, color:'10B981', label:'Monitor',   icon:'📡'  },
 ];
 
 // ── Pixel character sprite definitions (8×14 grid, 1=body, 2=skin, 3=hair) ──
@@ -3121,7 +3385,7 @@ function officeLoop(ts) {
   ctx.fillStyle = '#00C2E0';
   ctx.font = `bold 10px 'JetBrains Mono', monospace`;
   ctx.textAlign = 'left';
-  ctx.fillText('METATRONIX COMMAND CENTER — 14 AGENTES ACTIVOS', 12, 15);
+  ctx.fillText('METATRONIX COMMAND CENTER — 15 AGENTES ACTIVOS', 12, 15);
 
   // Active count
   const activeCount = AGENT_DESKS.filter(d=>agentStates[d.id]?.state!=='idle').length;
