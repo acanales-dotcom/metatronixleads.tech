@@ -241,6 +241,15 @@
 .flywheel-num { font-family:var(--font-head); font-size:1.8rem; color:var(--blue); line-height:1; }
 .flywheel-label { font-size:11px; color:var(--text-muted); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
 .flywheel-arrow { display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--cyan); }
+/* ── View toggle buttons ────────────────────────────── */
+.mkt-view-btn {
+  padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  cursor: pointer; background: rgba(255,255,255,.04); color: var(--t2);
+  border: 1px solid rgba(255,255,255,.08); transition: all .12s; font-family: 'Inter', sans-serif;
+}
+.mkt-view-btn.active { background: rgba(0,212,240,.12); color: var(--cyan); border-color: rgba(0,212,240,.3); }
+.mkt-view-btn:hover:not(.active) { color: var(--t1); border-color: var(--b2); }
+
 /* ── Video IA Panel removed — now an agent ── */
   </style>
 </head>
@@ -356,8 +365,25 @@
     </div>
   </div>
 
-  <!-- Agents Grid -->
-  <div class="agents-grid" id="agents-grid"></div>
+  <!-- View Toggle -->
+  <div style="display:flex;gap:6px;padding:0 24px 12px;align-items:center">
+    <button class="mkt-view-btn active" id="vbtn-grid" onclick="setMktView('grid',this)">⊞ Agentes</button>
+    <button class="mkt-view-btn" id="vbtn-dash" onclick="setMktView('dash',this)">🎮 Dashboard Pixel</button>
+    <span style="font-size:10px;color:#4A5568;font-family:Inter,sans-serif;margin-left:4px">Inspirado en pixel-agents (pablodelucca)</span>
+  </div>
+
+  <!-- Agents Grid View -->
+  <div id="view-grid">
+    <div class="agents-grid" id="agents-grid"></div>
+  </div>
+
+  <!-- Pixel Dashboard View -->
+  <div id="view-dash" style="display:none;padding:0 24px 24px">
+    <canvas id="pixel-office" style="width:100%;border-radius:12px;border:1px solid rgba(0,212,240,.15);cursor:pointer;display:block;image-rendering:pixelated"></canvas>
+    <div id="pixel-agent-info" style="margin-top:10px;padding:10px 14px;background:rgba(0,212,240,.06);border:1px solid rgba(0,212,240,.15);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00C2E0;min-height:36px">
+      👆 Haz clic en un agente para ejecutarlo — los personajes se animan mientras trabajan
+    </div>
+  </div>
 
 </div><!-- /.page -->
 
@@ -580,11 +606,11 @@ const AGENTS = [
     icon: '🧬',
     iconBg: 'linear-gradient(135deg,#1E1B4B,#312E81)',
     name: 'SIMULACIÓN SOCIAL',
-    desc: 'Simula la reacción de tu audiencia antes de publicar. Crea 8 personas IA con diferentes perfiles y predice engagement, objeciones y probabilidad de conversión.',
-    models: ['CRM_LLM', 'Multi-persona', 'MiroFish-concept'],
+    desc: 'Simula la reacción de tu audiencia antes de publicar. 32 personas IA con perfiles LATAM — predice engagement, objeciones y probabilidad de conversión.',
+    models: ['CRM_LLM', 'Multi-persona', 'Oficina Virtual'],
     inputLabel: 'Contenido o campaña a simular',
     inputPlaceholder: 'Ej: "Lanzamos MetaTronix CRM con IA por $299/mes. Implementación en 1 semana. Sin contratos." — post para LinkedIn dirigido a directores de ventas LATAM',
-    run: runAgentSocialSim, accentColor: '#818CF8',
+    run: runAgentSocialSim, accentColor: '#818CF8', isSocialSimAgent: true,
   },
   {
     id: 'orchestrator',
@@ -628,14 +654,14 @@ function renderAgents() {
         <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
       </div>
       <div class="agent-workspace" id="ws-${a.id}" style="display:none">
-        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : a.isPublisherAgent ? renderPublisherForm(a) : a.isOrchestratorAgent ? renderOrchestratorForm(a) : `
+        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : a.isPublisherAgent ? renderPublisherForm(a) : a.isOrchestratorAgent ? renderOrchestratorForm(a) : a.isSocialSimAgent ? renderSocialSimForm(a) : `
           <div class="agent-input-row">
             <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
             <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
           </div>`}
-        <button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')">
+        ${!a.isSocialSimAgent ? `<button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')">
           <span>⚡ Ejecutar ${a.name}</span>
-        </button>
+        </button>` : ''}
         <div id="output-${a.id}" class="agent-output"></div>
       </div>
     </div>
@@ -1997,6 +2023,13 @@ async function runAgentSocialSim(id, output) {
   const content = getInput('social_sim');
   if (!content) { output.innerHTML='<div style="color:var(--danger);font-size:12px">Escribe el contenido o campaña a simular</div>'; return; }
 
+  // Arranca la oficina visual
+  startOpinionSimulation();
+  // Init office canvas if not yet visible
+  if (document.getElementById('opinion-office') && !opinionOfficeInitialized) {
+    initOpinionOffice();
+  }
+
   // Selección inteligente: 16 personas representativas del total de 32
   const selected = selectRepresentativePersonas(16);
 
@@ -2047,6 +2080,8 @@ async function runAgentSocialSim(id, output) {
       reaction.objecion = reaction.score<55 ? p.sesgo : '';
     }
     reactions.push({ ...p, ...reaction });
+    // Live-update office as each persona reacts
+    opinionReactions = [...reactions];
   }
 
   setP(100, 'Compilando resultados…');
@@ -2146,7 +2181,27 @@ async function runAgentSocialSim(id, output) {
             : `🔄 Reformula el contenido. Solo ${topPos.length}/${selected.length} personas responden positivamente. Usa el Agente de Contenido para alternativas.`}
         </div>
       </div>
+      <!-- Ver en Oficina button -->
+      <div style="margin-top:10px">
+        <button id="btn-ver-oficina"
+          style="width:100%;padding:8px 12px;font-size:11px;font-weight:700;font-family:Inter,sans-serif;border-radius:7px;border:1px solid rgba(129,140,248,.3);background:rgba(129,140,248,.08);color:#818CF8;cursor:pointer;letter-spacing:.04em;transition:all .2s">
+          🏢 Ver en Oficina MetaTronix
+        </button>
+      </div>
     </div>`;
+
+  // Attach reactions to the "Ver Oficina" button via data attribute instead of inline JSON
+  const verBtn = document.getElementById('btn-ver-oficina');
+  if (verBtn) {
+    verBtn.onclick = (e) => {
+      e.stopPropagation();
+      updateOpinionOffice(reactions);
+      const officeBtn = document.getElementById('svbtn-office');
+      if (officeBtn) setSimView('office', officeBtn);
+    };
+  }
+  // Auto-update office data
+  updateOpinionOffice(reactions);
 }
 
 /* Helper: selecciona N personas representativas del pool de 32 */
@@ -2261,6 +2316,76 @@ window.sendToCampaignQueue = function() {
    Instagram · TikTok · LinkedIn — publicación automática
    Via Cloudflare Workers como proxy OAuth
    ═══════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════
+   SIMULACIÓN SOCIAL — Workspace con Oficina MetaTronix
+   ═══════════════════════════════════════════════════════════ */
+function renderSocialSimForm(a) {
+  return `
+    <!-- View toggle -->
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button class="sim-view-btn active" id="svbtn-sim" onclick="event.stopPropagation();setSimView('sim',this)"
+        style="flex:1;padding:6px 10px;font-size:11px;font-weight:700;font-family:Inter,sans-serif;border-radius:6px;border:1px solid rgba(129,140,248,.3);background:rgba(129,140,248,.12);color:#818CF8;cursor:pointer;letter-spacing:.04em;transition:all .2s">
+        🧬 Simulador
+      </button>
+      <button class="sim-view-btn" id="svbtn-office" onclick="event.stopPropagation();setSimView('office',this)"
+        style="flex:1;padding:6px 10px;font-size:11px;font-weight:700;font-family:Inter,sans-serif;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#7E8FA8;cursor:pointer;letter-spacing:.04em;transition:all .2s">
+        🏢 Oficina MetaTronix
+      </button>
+    </div>
+
+    <!-- Simulator view -->
+    <div id="sim-view-sim">
+      <div class="agent-input-row">
+        <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
+        <textarea id="input-social_sim" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
+      </div>
+      <button class="agent-run-btn" id="btn-social_sim" onclick="event.stopPropagation();runAgent('social_sim')"
+        style="background:linear-gradient(135deg,#4F46E5,#7C3AED)">
+        <span>⚡ Simular con 32 Personas IA</span>
+      </button>
+    </div>
+
+    <!-- Oficina view -->
+    <div id="sim-view-office" style="display:none">
+      <div style="padding:8px 0 10px">
+        <div style="font-size:11px;font-weight:800;color:#818CF8;letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px">OFICINA METATRONIX — SIMULADOR DE OPINIÓN</div>
+        <div style="font-size:10px;color:#4A5568">32 personas IA · Ejecuta la simulación para ver sus reacciones en tiempo real</div>
+      </div>
+      <canvas id="opinion-office" style="width:100%;border-radius:10px;border:1px solid rgba(129,140,248,.18);display:block;image-rendering:pixelated;background:#080B14;cursor:default"></canvas>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
+        <div style="font-size:10px;color:#4A5568;flex:1">
+          <span id="office-status-label" style="color:#818CF8;font-weight:600">Esperando simulación…</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <span style="font-size:9px;display:flex;align-items:center;gap:3px;color:#10B981"><span style="width:8px;height:8px;background:#10B981;border-radius:50%;display:inline-block"></span>Positivo</span>
+          <span style="font-size:9px;display:flex;align-items:center;gap:3px;color:#F59E0B"><span style="width:8px;height:8px;background:#F59E0B;border-radius:50%;display:inline-block"></span>Neutral</span>
+          <span style="font-size:9px;display:flex;align-items:center;gap:3px;color:#EF4444"><span style="width:8px;height:8px;background:#EF4444;border-radius:50%;display:inline-block"></span>Negativo</span>
+        </div>
+      </div>
+      <button class="agent-run-btn" style="margin-top:8px;background:linear-gradient(135deg,#4F46E5,#7C3AED)"
+        onclick="event.stopPropagation();setSimView('sim',document.getElementById('svbtn-sim'));setTimeout(()=>runAgent('social_sim'),120)">
+        <span>⚡ Ejecutar Simulación</span>
+      </button>
+    </div>
+  `;
+}
+
+function setSimView(view, btn) {
+  document.querySelectorAll('.sim-view-btn').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.color = '#7E8FA8';
+    b.style.borderColor = 'rgba(255,255,255,.1)';
+    b.classList.remove('active');
+  });
+  btn.style.background = 'rgba(129,140,248,.12)';
+  btn.style.color = '#818CF8';
+  btn.style.borderColor = 'rgba(129,140,248,.3)';
+  btn.classList.add('active');
+  document.getElementById('sim-view-sim').style.display = view==='sim' ? '' : 'none';
+  document.getElementById('sim-view-office').style.display = view==='office' ? '' : 'none';
+  if (view==='office') initOpinionOffice();
+}
 
 function renderPublisherForm(a) {
   const creds = getSocialCreds();
@@ -2401,6 +2526,640 @@ async function runAgentPublisher(id, output) {
         </div>` : ''}
     </div>`;
   if(typeof Notiflix!=='undefined' && results.some(r=>r.status==='ok')) Notiflix.Notify.success('Publicado ✓');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PIXEL OFFICE DASHBOARD
+   Inspirado en pixel-agents (github.com/pablodelucca/pixel-agents)
+   14 personajes pixel art · Canvas 2D · Sin dependencias
+   ═══════════════════════════════════════════════════════════ */
+
+const PX = 3; // pixel size multiplier — scales up all sprites
+const OFFICE_COLS = 7;
+const OFFICE_ROWS = 2;
+
+// ── Agent desk layout (col, row) ──────────────────────────
+const AGENT_DESKS = [
+  { id:'investigacion', col:0, row:0, color:'3B82F6', label:'Invest.',  icon:'🔍' },
+  { id:'contenido',     col:1, row:0, color:'10B981', label:'Contenido',icon:'✍️' },
+  { id:'publicidad',    col:2, row:0, color:'F59E0B', label:'Publicidad',icon:'📢' },
+  { id:'youtube',       col:3, row:0, color:'EF4444', label:'YouTube',   icon:'📺' },
+  { id:'larry',         col:4, row:0, color:'8B5CF6', label:'Larry SDR', icon:'🤖' },
+  { id:'streams',       col:5, row:0, color:'06B6D4', label:'Comunidad', icon:'📡' },
+  { id:'clio',          col:6, row:0, color:'EC4899', label:'Clio',      icon:'🎯' },
+  { id:'video',         col:0, row:1, color:'00C2E0', label:'Video IA',  icon:'🎬' },
+  { id:'image',         col:1, row:1, color:'A78BFA', label:'Imagen IA', icon:'🖼'  },
+  { id:'editor',        col:2, row:1, color:'F97316', label:'Editor',    icon:'🎞'  },
+  { id:'geo',           col:3, row:1, color:'10B981', label:'Geo Intel', icon:'🗺'  },
+  { id:'social_sim',    col:4, row:1, color:'818CF8', label:'Sim Social',icon:'🧬'  },
+  { id:'orchestrator',  col:5, row:1, color:'F97316', label:'Orquest.',  icon:'🎯'  },
+  { id:'publisher',     col:6, row:1, color:'EC4899', label:'Publisher', icon:'📲'  },
+];
+
+// ── Pixel character sprite definitions (8×14 grid, 1=body, 2=skin, 3=hair) ──
+// Format: array of [x, y, colorType] — 0=bg, 1=shirt, 2=skin, 3=hair, 4=pants, 5=screen
+const CHAR_BASE = [
+  // Hair row
+  [2,0,3],[3,0,3],[4,0,3],[5,0,3],
+  // Head
+  [1,1,2],[2,1,2],[3,1,2],[4,1,2],[5,1,2],[6,1,2],
+  [1,2,2],[2,2,2],[3,2,2],[4,2,2],[5,2,2],[6,2,2],
+  [1,3,2],[2,3,2],[3,3,2],[4,3,2],[5,3,2],[6,3,2],
+  // Body/shirt
+  [1,4,1],[2,4,1],[3,4,1],[4,4,1],[5,4,1],[6,4,1],
+  [0,5,1],[1,5,1],[2,5,1],[3,5,1],[4,5,1],[5,5,1],[6,5,1],[7,5,1],
+  [0,6,1],[1,6,1],[2,6,1],[3,6,1],[4,6,1],[5,6,1],[6,6,1],[7,6,1],
+  [1,7,1],[2,7,1],[3,7,1],[4,7,1],[5,7,1],[6,7,1],
+  // Pants
+  [1,8,4],[2,8,4],[3,8,4],[4,8,4],[5,8,4],[6,8,4],
+  [1,9,4],[2,9,4],[5,9,4],[6,9,4],
+  // Feet
+  [1,10,3],[2,10,3],[5,10,3],[6,10,3],
+];
+
+// Arms: idle (sitting), typing (alternating)
+const ARMS_IDLE   = [[0,5,2],[7,5,2],[0,6,2],[7,6,2]];
+const ARMS_TYPE_A = [[0,5,2],[7,5,2],[0,6,2],[7,4,2]]; // right arm up
+const ARMS_TYPE_B = [[0,4,2],[7,5,2],[0,6,2],[7,6,2]]; // left arm up
+const ARMS_WALK_A = [[0,5,1],[7,6,1]];
+const ARMS_WALK_B = [[0,6,1],[7,5,1]];
+
+// Monitor on desk
+const MONITOR = [
+  [1,0,5],[2,0,5],[3,0,5],[4,0,5],[5,0,5],[6,0,5],
+  [1,1,5],[2,1,5],[3,1,5],[4,1,5],[5,1,5],[6,1,5],
+  [1,2,5],[2,2,5],[3,2,5],[4,2,5],[5,2,5],[6,2,5],
+  [0,3,0],[1,3,0],[3,3,0],[4,3,0],[5,3,0],[6,3,0],[7,3,0], // stand
+  [0,4,0],[1,4,0],[2,4,0],[3,4,0],[4,4,0],[5,4,0],[6,4,0],[7,4,0], // base
+];
+
+// Agent states
+const agentStates = {};
+AGENT_DESKS.forEach(d => {
+  agentStates[d.id] = { state:'idle', frame:0, walkX:0, walkY:0, msg:'', progress:0 };
+});
+
+let officeCanvas = null;
+let officeCtx = null;
+let officeAF = null;
+let officeVisible = false;
+let officeFrame = 0;
+
+function setMktView(view, btn) {
+  document.querySelectorAll('.mkt-view-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('view-grid').style.display = view==='grid' ? 'block' : 'none';
+  document.getElementById('view-dash').style.display = view==='dash' ? 'block' : 'none';
+  officeVisible = view === 'dash';
+  if (officeVisible) {
+    initPixelOffice();
+    requestAnimationFrame(officeLoop);
+  } else {
+    if (officeAF) cancelAnimationFrame(officeAF);
+  }
+}
+
+function initPixelOffice() {
+  const canvas = document.getElementById('pixel-office');
+  if (!canvas) return;
+  // Size: 7 desks × 2 rows, each desk = 120px wide, 100px tall
+  const deskW = 120, deskH = 100;
+  const canvasW = OFFICE_COLS * deskW + 40;
+  const canvasH = OFFICE_ROWS * deskH + 60;
+  canvas.width  = canvasW;
+  canvas.height = canvasH;
+  officeCanvas = canvas;
+  officeCtx    = canvas.getContext('2d');
+  // Click handler
+  canvas.onclick = e => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top)  * scaleY;
+    // Find clicked desk
+    AGENT_DESKS.forEach(d => {
+      const dx = 20 + d.col * deskW;
+      const dy = 30 + d.row * deskH;
+      if (mx >= dx && mx <= dx+deskW-10 && my >= dy && my <= dy+deskH-10) {
+        activatePixelAgent(d.id);
+      }
+    });
+  };
+}
+
+function activatePixelAgent(agentId) {
+  const agent = AGENTS.find(a=>a.id===agentId);
+  if (!agent) return;
+  const info = document.getElementById('pixel-agent-info');
+  if (info) info.textContent = `⚡ Activando ${agent.name}…`;
+  // Trigger the agent run
+  const btn = document.getElementById(`btn-${agentId}`);
+  if (btn && !btn.disabled) {
+    // Open the agent card first
+    toggleAgent(agentId);
+    setTimeout(() => runAgent(agentId), 300);
+  } else {
+    // Set working state visually
+    agentStates[agentId].state = 'typing';
+    if (info) info.textContent = `🔍 ${agent.name} ejecutándose — abre el panel de agentes para ver el output`;
+  }
+}
+
+// Override runAgent to trigger pixel animations
+const _pixelOrigRun = window.runAgent;
+window.runAgent = async function(id) {
+  const st = agentStates[id];
+  if (st) {
+    st.state = 'walking';
+    st.walkX = 0;
+    const info = document.getElementById('pixel-agent-info');
+    const agent = AGENTS.find(a=>a.id===id);
+    if (info) info.textContent = `🏃 ${agent?.name||id} caminando a su escritorio…`;
+    // Walk for 1s then type
+    setTimeout(() => {
+      st.state = 'typing';
+      st.progress = 0;
+      if (info) info.textContent = `⌨️ ${agent?.name||id} procesando — modelo: ${agent?.models?.[0]||'LLM'}`;
+    }, 800);
+  }
+  await _pixelOrigRun(id);
+  if (st) {
+    st.state = 'done';
+    const info = document.getElementById('pixel-agent-info');
+    const agent = AGENTS.find(a=>a.id===id);
+    if (info) info.textContent = `✅ ${agent?.name||id} completó la tarea — revisa el output en el panel de agentes`;
+    setTimeout(() => { if(st.state==='done') st.state='idle'; }, 3000);
+  }
+};
+
+function drawPixelChar(ctx, baseX, baseY, colorHex, state, frame) {
+  // Convert hex to RGB
+  const r = parseInt(colorHex.slice(0,2),16);
+  const g = parseInt(colorHex.slice(2,4),16);
+  const b = parseInt(colorHex.slice(4,6),16);
+
+  const skinR = 255, skinG = 200, skinB = 150;
+  const hairR = 60,  hairG = 40,  hairB = 20;
+  const pantR = Math.max(0,r-60), pantG = Math.max(0,g-60), pantB = Math.max(0,b-60);
+
+  const colorMap = {
+    1: `rgb(${r},${g},${b})`,
+    2: `rgb(${skinR},${skinG},${skinB})`,
+    3: `rgb(${hairR},${hairG},${hairB})`,
+    4: `rgb(${pantR},${pantG},${pantB})`,
+    5: `rgb(40,80,160)`,
+  };
+
+  // Walk bounce offset
+  const bounceY = (state==='walking' || state==='typing') ? (frame%2===0?0:-1)*PX : 0;
+
+  // Arms selection
+  let arms = ARMS_IDLE;
+  if (state==='typing')  arms = frame%2===0 ? ARMS_TYPE_A : ARMS_TYPE_B;
+  if (state==='walking') arms = frame%2===0 ? ARMS_WALK_A : ARMS_WALK_B;
+  if (state==='done') {
+    // Celebration — both arms up
+    arms = [[0,4,2],[7,4,2],[0,5,2],[7,5,2]];
+  }
+
+  const allPixels = [...CHAR_BASE, ...arms];
+
+  allPixels.forEach(([px, py, ct]) => {
+    if (!ct || !colorMap[ct]) return;
+    ctx.fillStyle = colorMap[ct];
+    ctx.fillRect(baseX + px*PX, baseY + py*PX + bounceY, PX, PX);
+  });
+
+  // Done star
+  if (state === 'done') {
+    ctx.fillStyle = '#FFD700';
+    ctx.font = `${PX*4}px serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('⭐', baseX + 4*PX, baseY - PX*2 + bounceY);
+  }
+}
+
+function drawDesk(ctx, x, y, agent, state, frame) {
+  const deskW = 110, deskH = 24;
+  const monitorY = y + 12;
+
+  // Desk surface
+  ctx.fillStyle = '#1C2236';
+  ctx.fillRect(x, y + 40, deskW, deskH);
+  ctx.fillStyle = 'rgba(255,255,255,.06)';
+  ctx.fillRect(x, y + 40, deskW, 2);
+
+  // Desk legs
+  ctx.fillStyle = '#141922';
+  ctx.fillRect(x+8, y+64, 6, 16);
+  ctx.fillRect(x+deskW-14, y+64, 6, 16);
+
+  // Monitor
+  const monColor = state==='idle' ? '#0C1829' : state==='typing' ? '#0D2040' : '#0A3020';
+  ctx.fillStyle = '#2A334E';
+  ctx.fillRect(x+35, monitorY, 44, 28);
+  ctx.fillStyle = monColor;
+  ctx.fillRect(x+37, monitorY+2, 40, 24);
+  // Screen glow when active
+  if (state==='typing' || state==='walking') {
+    const glowColor = `#${agent.color}`;
+    ctx.fillStyle = glowColor + '44';
+    ctx.fillRect(x+37, monitorY+2, 40, 24);
+    // Typing cursor
+    if (frame%2===0) {
+      ctx.fillStyle = '#' + agent.color;
+      ctx.fillRect(x+38 + (frame*7)%32, monitorY+18, 2, 6);
+    }
+    // Code lines
+    ctx.fillStyle = '#' + agent.color + '88';
+    [6,12,18].forEach(ly => ctx.fillRect(x+38, monitorY+ly, 10+Math.sin(frame+ly)*8, 2));
+  } else if (state==='done') {
+    ctx.fillStyle = '#10B981';
+    ctx.font = `bold ${PX*3}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('✓', x+57, monitorY+18);
+  }
+  // Monitor stand
+  ctx.fillStyle = '#2A334E';
+  ctx.fillRect(x+53, monitorY+28, 8, 6);
+  ctx.fillRect(x+46, monitorY+34, 22, 4);
+
+  // Chair
+  ctx.fillStyle = '#1A2030';
+  ctx.fillRect(x+30, y+55, 50, 16);
+  ctx.fillStyle = '#212840';
+  ctx.fillRect(x+34, y+38, 42, 20);
+
+  // Character at desk
+  const charX = x + 38;
+  const charY = y + 12;
+  drawPixelChar(ctx, charX, charY, agent.color, state, frame);
+
+  // Agent label
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.font = `bold ${PX*2.5}px Inter, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(agent.label, x + deskW/2, y + 88);
+
+  // Status dot
+  const dotColor = state==='idle'?'#4A5568':state==='done'?'#10B981':'#'+agent.color;
+  ctx.fillStyle = dotColor;
+  ctx.beginPath();
+  ctx.arc(x + deskW - 8, y + 44, 4, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function officeLoop(ts) {
+  if (!officeVisible || !officeCtx) return;
+  officeFrame = Math.floor(ts / 250) % 8; // 4fps animation
+
+  const ctx    = officeCtx;
+  const canvas = officeCanvas;
+  const deskW  = 120, deskH = 100;
+
+  // Background
+  ctx.fillStyle = '#0C0F17';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Floor grid
+  ctx.fillStyle = '#141922';
+  for (let gx=0; gx<canvas.width; gx+=20) {
+    ctx.fillRect(gx, 0, 1, canvas.height);
+  }
+  for (let gy=0; gy<canvas.height; gy+=20) {
+    ctx.fillRect(0, gy, canvas.width, 1);
+  }
+
+  // Header
+  ctx.fillStyle = 'rgba(0,212,240,.08)';
+  ctx.fillRect(0, 0, canvas.width, 24);
+  ctx.fillStyle = '#00C2E0';
+  ctx.font = `bold 10px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText('METATRONIX COMMAND CENTER — 14 AGENTES ACTIVOS', 12, 15);
+
+  // Active count
+  const activeCount = AGENT_DESKS.filter(d=>agentStates[d.id]?.state!=='idle').length;
+  if (activeCount > 0) {
+    ctx.fillStyle = '#10B981';
+    ctx.textAlign = 'right';
+    ctx.fillText(`⚡ ${activeCount} trabajando`, canvas.width - 12, 15);
+  }
+
+  // Draw each desk
+  AGENT_DESKS.forEach(d => {
+    const x = 20 + d.col * deskW;
+    const y = 30 + d.row * deskH;
+    const st = agentStates[d.id] || { state:'idle', frame:0 };
+    drawDesk(ctx, x, y, d, st.state, officeFrame);
+  });
+
+  // Row labels
+  ctx.fillStyle = 'rgba(255,255,255,.2)';
+  ctx.font = '9px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('FILA A — AGENTES DE TEXTO', 20, 28);
+  ctx.fillText('FILA B — AGENTES MEDIA & AVANZADOS', 20, 128);
+
+  officeAF = requestAnimationFrame(officeLoop);
+}
+
+// Keyboard shortcut: D = toggle dashboard
+document.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key==='d') {
+    e.preventDefault();
+    const isGrid = document.getElementById('view-grid').style.display !== 'none';
+    const targetBtn = document.getElementById(isGrid?'vbtn-dash':'vbtn-grid');
+    setMktView(isGrid?'dash':'grid', targetBtn);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   OFICINA METATRONIX — SIMULADOR DE OPINIÓN
+   32 personas IA en sala virtual · Canvas 2D · Sin dependencias
+   Muestra reacciones en tiempo real cuando corre la simulación
+   ═══════════════════════════════════════════════════════════ */
+
+const OPX = 2; // pixel scale for opinion office (smaller than main office)
+let opinionOfficeAF = null;
+let opinionFrame = 0;
+let opinionReactions = []; // populated by runAgentSocialSim
+let opinionActive = false; // true while simulation is running
+
+// Grid: 8 columns × 4 rows = 32 seats
+const OPINION_COLS = 8;
+const OPINION_ROWS = 4;
+
+// Persona color palette — 32 distinct hues
+const PERSONA_COLORS = [
+  '3B82F6','10B981','F59E0B','EF4444','8B5CF6','06B6D4','F97316','EC4899',
+  '14B8A6','84CC16','A78BFA','FB923C','38BDF8','4ADE80','FBBF24','F87171',
+  '6366F1','34D399','FCD34D','FCA5A5','818CF8','2DD4BF','FDE68A','FEE2E2',
+  '60A5FA','A7F3D0','FEF3C7','FECACA','7C3AED','0EA5E9','D97706','BE185D',
+];
+
+// Tiny 4×6 pixel character sprite (row-by-row, 0=off 1=on)
+const TINY_CHAR = [
+  [0,1,1,0],
+  [0,1,1,0],
+  [0,1,1,0],
+  [1,1,1,1],
+  [0,1,0,1],
+  [0,1,0,1],
+];
+// Talking state: arms up
+const TINY_TALK = [
+  [0,1,1,0],
+  [1,1,1,1],
+  [1,1,1,1],
+  [0,1,1,0],
+  [0,1,0,1],
+  [0,1,0,1],
+];
+// Reaction state: arms up higher
+const TINY_REACT = [
+  [1,1,1,1],
+  [0,1,1,0],
+  [0,1,1,0],
+  [1,1,1,1],
+  [0,1,0,1],
+  [0,1,0,1],
+];
+
+function drawTinyChar(ctx, x, y, colorHex, state, frame) {
+  const sprite = state === 'react' ? TINY_REACT : (state === 'talk' && frame % 2 === 0 ? TINY_TALK : TINY_CHAR);
+  const r = parseInt(colorHex.slice(0,2),16);
+  const g = parseInt(colorHex.slice(2,4),16);
+  const b = parseInt(colorHex.slice(4,6),16);
+  // Shadow
+  ctx.fillStyle = `rgba(0,0,0,0.35)`;
+  sprite.forEach((row, ry) =>
+    row.forEach((px, rx) => { if (px) ctx.fillRect(x + rx*OPX + 1, y + ry*OPX + 1, OPX, OPX); })
+  );
+  // Character
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  sprite.forEach((row, ry) =>
+    row.forEach((px, rx) => { if (px) ctx.fillRect(x + rx*OPX, y + ry*OPX, OPX, OPX); })
+  );
+}
+
+function drawPersonaDesk(ctx, colIdx, rowIdx, persona, reaction, offW, offH, frame) {
+  const cellW = offW / OPINION_COLS;
+  const cellH = offH / OPINION_ROWS;
+  const cx = colIdx * cellW + cellW / 2;
+  const cy = rowIdx * cellH + cellH / 2;
+
+  const charW = 4 * OPX;
+  const charH = 6 * OPX;
+
+  // Desk background glow
+  const colorHex = persona ? PERSONA_COLORS[(colIdx + rowIdx * OPINION_COLS) % PERSONA_COLORS.length] : '334155';
+  const score = reaction ? reaction.score : null;
+  const glowColor = score !== null ? (score >= 70 ? '#10B981' : score >= 45 ? '#F59E0B' : '#EF4444') : '#334155';
+
+  // Desk
+  ctx.fillStyle = 'rgba(15,23,42,0.7)';
+  ctx.strokeStyle = score !== null ? glowColor : 'rgba(129,140,248,.18)';
+  ctx.lineWidth = score !== null ? 1.5 : 0.5;
+  const deskW = cellW * 0.72;
+  const deskH = cellH * 0.35;
+  const deskX = cx - deskW / 2;
+  const deskY = cy - deskH * 0.2;
+  // Use custom roundRect for cross-browser support
+  ctx.beginPath();
+  ctx.moveTo(deskX + 2, deskY);
+  ctx.lineTo(deskX + deskW - 2, deskY);
+  ctx.arcTo(deskX + deskW, deskY, deskX + deskW, deskY + 2, 2);
+  ctx.lineTo(deskX + deskW, deskY + deskH - 2);
+  ctx.arcTo(deskX + deskW, deskY + deskH, deskX + deskW - 2, deskY + deskH, 2);
+  ctx.lineTo(deskX + 2, deskY + deskH);
+  ctx.arcTo(deskX, deskY + deskH, deskX, deskY + deskH - 2, 2);
+  ctx.lineTo(deskX, deskY + 2);
+  ctx.arcTo(deskX, deskY, deskX + 2, deskY, 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Monitor on desk
+  ctx.fillStyle = score !== null ? glowColor : '#1E293B';
+  ctx.fillRect(cx - 4, deskY - 7, 8, 7);
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(cx - 3, deskY - 6, 6, 5);
+  // Score on monitor
+  if (score !== null) {
+    ctx.fillStyle = glowColor;
+    ctx.font = `bold ${OPX * 2.5}px JetBrains Mono, monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(score, cx, deskY - 1);
+  }
+
+  // Character
+  const charX = Math.round(cx - charW / 2);
+  const charY = Math.round(deskY - charH - 3);
+  const charState = reaction ? (score >= 65 ? 'react' : score >= 45 ? 'talk' : 'idle') : 'idle';
+  if (persona) drawTinyChar(ctx, charX, charY, colorHex, charState, frame);
+
+  // Name label below desk
+  ctx.fillStyle = score !== null ? '#E8EDF8' : '#4A5568';
+  ctx.font = `${OPX * 2.2}px Inter, sans-serif`;
+  ctx.textAlign = 'center';
+  const shortName = persona ? persona.name.split(' ').slice(0,2).join(' ') : '';
+  if (shortName) {
+    ctx.fillText(shortName.length > 11 ? shortName.slice(0,10)+'…' : shortName, cx, deskY + deskH + 7);
+  }
+
+  // Speech bubble (when reacting)
+  if (reaction && reaction.emoji) {
+    const bubbleX = cx + charW * 0.6;
+    const bubbleY = charY - 6;
+    const bubbleR = 7;
+    ctx.fillStyle = 'rgba(30,41,59,0.92)';
+    ctx.strokeStyle = score >= 70 ? '#10B981' : score >= 45 ? '#F59E0B' : '#EF4444';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(bubbleX, bubbleY, bubbleR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Bubble tail
+    ctx.fillStyle = 'rgba(30,41,59,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(bubbleX - 3, bubbleY + bubbleR - 2);
+    ctx.lineTo(bubbleX - 7, bubbleY + bubbleR + 4);
+    ctx.lineTo(bubbleX, bubbleY + bubbleR - 2);
+    ctx.fill();
+    ctx.font = `${bubbleR * 1.3}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(reaction.emoji, bubbleX, bubbleY + bubbleR * 0.38);
+  }
+
+  // Country flag (tiny)
+  if (persona && persona.pais) {
+    const flagMap = {MX:'🇲🇽', CO:'🇨🇴', CL:'🇨🇱', AR:'🇦🇷', PE:'🇵🇪'};
+    const flag = flagMap[persona.pais] || '🌎';
+    ctx.font = `${OPX * 2}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(flag, deskX + 7, deskY + deskH - 1);
+  }
+}
+
+function drawOpinionRoom(canvas, frame) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Background
+  ctx.fillStyle = '#080B14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines (subtle)
+  ctx.strokeStyle = 'rgba(129,140,248,.04)';
+  ctx.lineWidth = 0.5;
+  for (let c = 1; c < OPINION_COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c * W/OPINION_COLS, 0); ctx.lineTo(c * W/OPINION_COLS, H); ctx.stroke();
+  }
+  for (let r = 1; r < OPINION_ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r * H/OPINION_ROWS); ctx.lineTo(W, r * H/OPINION_ROWS); ctx.stroke();
+  }
+
+  // Header bar
+  ctx.fillStyle = 'rgba(79,70,229,0.08)';
+  ctx.fillRect(0, 0, W, 14);
+  ctx.fillStyle = '#818CF8';
+  ctx.font = `bold ${OPX * 2.8}px Inter, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('OFICINA METATRONIX  —  SIMULADOR DE OPINIÓN', 8, 10);
+
+  // Count stats if reactions exist
+  if (opinionReactions.length > 0) {
+    const pos = opinionReactions.filter(r=>r.score>=70).length;
+    const neu = opinionReactions.filter(r=>r.score>=45&&r.score<70).length;
+    const neg = opinionReactions.filter(r=>r.score<45).length;
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#10B981'; ctx.fillText(`✅ ${pos}`, W - 110, 10);
+    ctx.fillStyle = '#F59E0B'; ctx.fillText(`🤔 ${neu}`, W - 66, 10);
+    ctx.fillStyle = '#EF4444'; ctx.fillText(`❌ ${neg}`, W - 20, 10);
+  }
+
+  // Draw each persona
+  const contentH = H - 14;
+  PERSONAS_SIM.forEach((persona, idx) => {
+    const col = idx % OPINION_COLS;
+    const row = Math.floor(idx / OPINION_COLS);
+    const reaction = opinionReactions.find(r => r.name === persona.name) || null;
+    drawPersonaDesk(ctx, col, row, persona, reaction, W, contentH, frame);
+  });
+
+  // Running overlay
+  if (opinionActive) {
+    const progress = opinionReactions.length / 16;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(0, H - 8, W, 8);
+    ctx.fillStyle = 'rgba(129,140,248,0.7)';
+    ctx.fillRect(0, H - 8, W * Math.min(progress, 1), 8);
+    // Animated scan line
+    const scanY = 14 + (frame % 60) * (contentH / 60);
+    ctx.fillStyle = 'rgba(129,140,248,.06)';
+    ctx.fillRect(0, scanY, W, 2);
+  }
+}
+
+let opinionOfficeInitialized = false;
+
+function initOpinionOffice() {
+  const canvas = document.getElementById('opinion-office');
+  if (!canvas) return;
+  // Set canvas resolution based on container
+  const container = canvas.parentElement;
+  const W = container ? Math.min(container.offsetWidth, 800) : 700;
+  const H = Math.round(W * 0.48);
+  canvas.width = W;
+  canvas.height = H;
+
+  if (opinionOfficeInitialized) return;
+  opinionOfficeInitialized = true;
+  opinionOfficeAF = null;
+
+  function loop(ts) {
+    const canvas = document.getElementById('opinion-office');
+    if (!canvas || canvas.closest('#sim-view-office')?.style.display === 'none') {
+      opinionOfficeInitialized = false;
+      return;
+    }
+    opinionFrame = Math.floor(ts / 250) % 120;
+    drawOpinionRoom(canvas, opinionFrame);
+    opinionOfficeAF = requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+// Override runAgentSocialSim to also update the office view
+const _origRunSocialSim = runAgentSocialSim;
+window._opinionHookReady = true;
+
+// Patch: call updateOpinionOffice(reactions) after sim completes
+function updateOpinionOffice(reactions) {
+  opinionReactions = reactions;
+  opinionActive = false;
+  const lbl = document.getElementById('office-status-label');
+  if (lbl) {
+    const avg = Math.round(reactions.reduce((s,r)=>s+(r.score||0),0)/reactions.length);
+    const color = avg>=70?'#10B981':avg>=45?'#F59E0B':'#EF4444';
+    lbl.style.color = color;
+    lbl.textContent = `Simulación completa — Score promedio: ${avg}/100`;
+  }
+  // Auto-open office view
+  const officeBtn = document.getElementById('svbtn-office');
+  if (officeBtn) {
+    setSimView('office', officeBtn);
+  }
+}
+
+function startOpinionSimulation() {
+  opinionReactions = [];
+  opinionActive = true;
+  const lbl = document.getElementById('office-status-label');
+  if (lbl) { lbl.style.color = '#818CF8'; lbl.textContent = 'Simulando reacciones…'; }
 }
 
 init();
