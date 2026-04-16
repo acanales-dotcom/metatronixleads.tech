@@ -494,15 +494,23 @@ async function init() {
   loadAlerts();
   loadNavCounters();
 
-  // Handle hash navigation
-  if (window.location.hash) {
-    const tab = window.location.hash.slice(1);
-    const tabMap = { cuentas:'pipeline', actividad:'tasks', reportes:'reports' };
-    if (tabMap[tab]) {
-      const btn = document.querySelector(`.home-tab[onclick*="${tabMap[tab]}"]`);
-      if (btn) showOpsTab(tabMap[tab], btn);
-    }
-  }
+  // Handle hash navigation (first load)
+  handleHashNav();
+
+  // Handle hash navigation when already on page (sidebar clicks without reload)
+  window.addEventListener('hashchange', handleHashNav);
+}
+
+function handleHashNav() {
+  const tab = window.location.hash.slice(1);
+  const tabMap = { cuentas:'pipeline', actividad:'tasks', reportes:'reports' };
+  if (!tabMap[tab]) return;
+  const target = tabMap[tab];
+  const btn = document.querySelector(`.home-tab[onclick*="${target}"]`);
+  if (btn) showOpsTab(target, btn);
+  // Scroll ops section into view
+  const opsEl = document.getElementById('ops-'+target) || document.querySelector('.home-ops-tabs');
+  if (opsEl) opsEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 
 /* ── DATA ────────────────────────────────────────────── */

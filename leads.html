@@ -263,11 +263,11 @@
       <span class="o-stat-icon">🔥</span>
       <div><div class="o-stat-num" id="sb-n-activos">—</div><div class="o-stat-lbl">Activos</div></div>
     </button>
-    <button class="o-stat">
+    <button class="o-stat" onclick="setMainView('kanban')" title="Ver pipeline completo">
       <span class="o-stat-icon">💰</span>
       <div><div class="o-stat-num" id="sb-n-pipeline">—</div><div class="o-stat-lbl">Pipeline</div></div>
     </button>
-    <button class="o-stat">
+    <button class="o-stat" onclick="filterByForecast()" title="Leads en cierre este mes">
       <span class="o-stat-icon">📈</span>
       <div><div class="o-stat-num" id="sb-n-forecast">—</div><div class="o-stat-lbl">Forecast</div></div>
     </button>
@@ -276,7 +276,7 @@
       <span class="o-stat-icon">✅</span>
       <div><div class="o-stat-num" id="sb-n-ganados">—</div><div class="o-stat-lbl">Ganados</div></div>
     </button>
-    <button class="o-stat">
+    <button class="o-stat" onclick="setMainView('dashboard')" title="Ver dashboard y reportes">
       <span class="o-stat-icon" id="sb-icon-conv">📊</span>
       <div><div class="o-stat-num" id="sb-n-conv">—</div><div class="o-stat-lbl">Conversión</div></div>
     </button>
@@ -4061,6 +4061,16 @@ function filterByActive() {
 function filterWon() {
   const el = document.getElementById('filter-stage');
   if (el) { el.value = 'cierre'; applyFilters(); }
+}
+
+function filterByForecast() {
+  // Muestra leads en etapas de cierre activo (propuesta + negociación + cierre)
+  const el = document.getElementById('filter-stage');
+  if (el) { el.value = 'propuesta'; applyFilters(); }
+  setMainView('kanban');
+  // Highlight visual
+  const btn = document.querySelector('[onclick="filterByForecast()"]');
+  if (btn) { btn.style.background='rgba(0,212,240,.12)'; setTimeout(()=>btn.style.background='',1500); }
 }
 
 function exportCSV() {
