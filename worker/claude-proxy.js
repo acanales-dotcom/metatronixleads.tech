@@ -15,12 +15,15 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:5500',
 ];
 
+const SUPABASE_URL = 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+
 function corsHeaders(origin) {
   const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin':  allowed,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, X-Client-Info, Prefer, Range',
+    'Access-Control-Expose-Headers': 'Content-Range, X-Content-Range',
     'Access-Control-Max-Age':       '86400',
   };
 }
@@ -35,7 +38,46 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
-    // Solo POST
+    // ── Ruta /supabase/* → proxy transparente a Supabase ─────────────────────
+    if (url.pathname.startsWith('/supabase')) {
+      const supaPath = url.pathname.replace(/^\/supabase/, '') || '/';
+      const supaTarget = SUPABASE_URL + supaPath + url.search;
+
+      // Reenviar headers relevantes, excepto host
+      const fwdHeaders = new Headers();
+      for (const [k, v] of request.headers.entries()) {
+        const kl = k.toLowerCase();
+        if (kl === 'host' || kl === 'origin' || kl === 'referer') continue;
+        fwdHeaders.set(k, v);
+      }
+
+      try {
+        const supaRes = await fetch(supaTarget, {
+          method:  request.method,
+          headers: fwdHeaders,
+          body:    ['GET','HEAD'].includes(request.method) ? undefined : request.body,
+        });
+
+        const resHeaders = new Headers(corsHeaders(origin));
+        // Copiar headers relevantes de la respuesta de Supabase
+        for (const h of ['content-type','content-range','x-content-range','etag','cache-control']) {
+          const v = supaRes.headers.get(h);
+          if (v) resHeaders.set(h, v);
+        }
+
+        return new Response(supaRes.body, {
+          status:  supaRes.status,
+          headers: resHeaders,
+        });
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ error: 'Supabase proxy error: ' + err.message }),
+          { status: 502, headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Solo POST para las demás rutas (Claude, Perplexity)
     if (request.method !== 'POST') {
       return new Response('Method Not Allowed', { status: 405 });
     }

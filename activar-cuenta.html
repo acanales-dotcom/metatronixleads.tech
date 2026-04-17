@@ -181,9 +181,24 @@
 <script src="/config.js"></script>
 <script>
 const EMAIL = 'acanales@ibanormexico.com';
-const SUPA_URL = window.MTX_CONFIG?.SUPABASE_URL || 'https://hodrfonbpmqulkyzrzpq.supabase.co';
-const SUPA_KEY = window.MTX_CONFIG?.SUPABASE_ANON_KEY || '';
-const db = supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+const SUPA_URL   = window.MTX_CONFIG?.SUPABASE_URL    || 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+const SUPA_KEY   = window.MTX_CONFIG?.SUPABASE_ANON_KEY || '';
+const PROXY_BASE = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev';
+
+// Ruta todas las llamadas de Supabase por el Cloudflare Worker
+// (necesario porque GitHub Pages bloquea *.supabase.co via CSP)
+const supaFetch = (input, init) => {
+  const url = typeof input === 'string' ? input : input.url;
+  const proxied = url.startsWith(SUPA_URL)
+    ? url.replace(SUPA_URL, PROXY_BASE + '/supabase')
+    : url;
+  return fetch(typeof input === 'string' ? proxied : new Request(proxied, input), init);
+};
+
+const db = supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true },
+  global: { fetch: supaFetch },
+});
 
 /* ── Redirigir si ya hay sesión ── */
 (async () => {
