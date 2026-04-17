@@ -446,6 +446,11 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">⌂</span>
         <span class="nav-label">Inicio</span>
       </a>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- VENTAS -->
+      <div class="sidebar-section-label">Ventas</div>
       <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">
         <span class="nav-icon">◈</span>
         <span class="nav-label">Pipeline</span>
@@ -467,8 +472,8 @@ function renderHeader(user, activePage) {
 
       <div class="sidebar-divider"></div>
 
-      <!-- VENTAS TOOLS -->
-      <div class="sidebar-section-label">Ventas</div>
+      <!-- MARKETING TOOLS -->
+      <div class="sidebar-section-label">Marketing</div>
       <a href="/oportunidades.html" class="sidebar-nav-link ${activePage==='oportunidades'?'active':''}">
         <span class="nav-icon">🔍</span>
         <span class="nav-label">Inteligencia de Mercados</span>
