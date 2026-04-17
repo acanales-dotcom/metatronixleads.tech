@@ -7,8 +7,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="/assets/style.css?v=202604173">
-  <link rel="stylesheet" href="/assets/agent.css?v=202604173">
+  <link rel="stylesheet" href="/assets/style.css?v=202604174">
+  <link rel="stylesheet" href="/assets/agent.css?v=202604174">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -33,72 +33,8 @@
       };
     }
   </script>
-  <script>
-    // CRM_LLM — usa Cloudflare Worker como proxy a Claude API (sin descarga local)
-    if (!window.CRM_LLM) {
-      window.CRM_LLM = {
-        engine: true,   // siempre "activo" — no requiere inicialización local
-        _workerUrl: (window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev'),
-        async init(cb) {
-          // Verifica conectividad con el Worker
-          if (cb) cb({ progress: 0.2, text: 'Verificando conexión con Claude API...' });
-          try {
-            const probe = await fetch(this._workerUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:5, messages:[{role:'user',content:'hi'}] }),
-              signal: AbortSignal.timeout(8000)
-            });
-            if (cb) cb({ progress: 1.0, text: 'Claude API conectada ✓' });
-          } catch(e) {
-            if (cb) cb({ progress: 1.0, text: 'Modo directo activo ✓' });
-          }
-          this.engine = true;
-        },
-        async chat(sys, msg) {
-          const url = this._workerUrl;
-          let fullText = '';
-          try {
-            const resp = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model: 'claude-haiku-4-5-20251001',
-                max_tokens: 1500,
-                system: sys,
-                messages: [{ role: 'user', content: msg }],
-                stream: true
-              }),
-              signal: AbortSignal.timeout(30000)
-            });
-            if (!resp.ok) { throw new Error('Worker error ' + resp.status); }
-            // Read SSE stream
-            const reader = resp.body.getReader();
-            const decoder = new TextDecoder();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              const chunk = decoder.decode(value, { stream: true });
-              const lines = chunk.split('\n');
-              for (const line of lines) {
-                if (!line.startsWith('data: ')) continue;
-                const data = line.slice(6);
-                if (data === '[DONE]') break;
-                try {
-                  const parsed = JSON.parse(data);
-                  const delta = parsed.delta?.text || parsed.delta?.content?.[0]?.text || '';
-                  fullText += delta;
-                } catch(e2) {}
-              }
-            }
-            return fullText || '(sin respuesta)';
-          } catch(e) {
-            throw new Error('Failed to fetch');
-          }
-        }
-      };
-    }
-  </script>
+  <!-- CRM_LLM compartido — módulo central con retry y JWT auth -->
+  <script src="/assets/crm-llm.js?v=202604174" defer></script>
 
   <style>
 /* ── Marketing IA — Estilos específicos ────────────────────── */
@@ -629,10 +565,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=202604171425"></script>
-<script src="/assets/agent.js?v=202604171425"></script>
-<script src="/assets/salescoach.js?v=4"></script>
-<script src="/assets/teamchat.js?v=4"></script>
+<script src="/assets/app.js?v=202604174"></script>
+<script src="/assets/agent.js?v=202604174"></script>
+<script src="/assets/salescoach.js?v=202604174"></script>
+<script src="/assets/teamchat.js?v=202604174"></script>
 <script>
 /* ════════════════════════════════════════════════════════
    MetaTronix — Marketing IA

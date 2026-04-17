@@ -774,9 +774,60 @@ function initSecurityMonitor() {
   window.MTX_SECURITY_MONITOR = true;
 }
 
-/* ── Run security init on every page ────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   MOBILE SIDEBAR — hamburger + overlay
+   ═══════════════════════════════════════════════════════════ */
+function initMobileSidebar() {
+  if (document.querySelector('.app-hamburger')) return; // ya inicializado
+
+  // Botón hamburguesa
+  const btn = document.createElement('button');
+  btn.className   = 'app-hamburger';
+  btn.setAttribute('aria-label', 'Abrir navegación');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.innerHTML   = '<span></span><span></span><span></span>';
+  btn.addEventListener('click', toggleMobileSidebar);
+  document.body.appendChild(btn);
+
+  // Overlay oscuro
+  const overlay = document.createElement('div');
+  overlay.className = 'sidebar-mobile-overlay';
+  overlay.addEventListener('click', closeMobileSidebar);
+  document.body.appendChild(overlay);
+}
+
+function toggleMobileSidebar() {
+  const sidebar = document.querySelector('.app-sidebar');
+  const overlay = document.querySelector('.sidebar-mobile-overlay');
+  const btn     = document.querySelector('.app-hamburger');
+  const isOpen  = sidebar?.classList.contains('mobile-open');
+  sidebar?.classList.toggle('mobile-open');
+  overlay?.classList.toggle('open');
+  btn?.classList.toggle('open');
+  btn?.setAttribute('aria-expanded', String(!isOpen));
+  document.body.style.overflow = isOpen ? '' : 'hidden';
+}
+
+function closeMobileSidebar() {
+  document.querySelector('.app-sidebar')?.classList.remove('mobile-open');
+  document.querySelector('.sidebar-mobile-overlay')?.classList.remove('open');
+  document.querySelector('.app-hamburger')?.classList.remove('open');
+  document.querySelector('.app-hamburger')?.setAttribute('aria-expanded', 'false');
+  document.body.style.overflow = '';
+}
+
+// Cerrar sidebar al navegar (click en link del sidebar en móvil)
+document.addEventListener('click', e => {
+  if (window.innerWidth > 768) return;
+  if (e.target.closest('.sidebar-nav-link')) closeMobileSidebar();
+});
+
+/* ── Run security + mobile init on every page ─────────── */
 document.addEventListener('DOMContentLoaded', () => {
   injectSecurityHeaders();
   initSessionTimeout();
   initSecurityMonitor();
+  // Mobile sidebar se inicia DESPUÉS de que renderHeader() inserta el sidebar
+  // Se llama desde renderHeader vía observer o desde cada página individualmente
+  setTimeout(initMobileSidebar, 100);
 });

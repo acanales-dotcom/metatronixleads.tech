@@ -20,7 +20,8 @@
   let websiteSources  = [];
   let sharedDocs      = [];
   let approvedDocs    = [];
-  let currentMode     = 'metagenio'; // metagenio | metafollow | sersionate
+  const MODE_STORAGE_KEY = 'mtx_agent_mode';
+  let currentMode     = (sessionStorage.getItem(MODE_STORAGE_KEY) || 'metagenio'); // persiste entre navegaciones
   let pipelineState   = null; // datos para MetaFollow
 
   const MODE_CONFIG = {
@@ -263,6 +264,7 @@
   function switchMode (mode) {
     if (!MODE_CONFIG[mode]) return;
     currentMode = mode;
+    sessionStorage.setItem(MODE_STORAGE_KEY, mode); // persistir modo entre páginas
     messages = [];
     introSent = false;
     historyLoaded = false;
