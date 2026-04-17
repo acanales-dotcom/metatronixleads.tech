@@ -375,9 +375,10 @@
         <span class="kb-status" onclick="toggleKB()" id="kb-status-btn">
           🧠 Base de Conocimiento <span id="kb-status-dot">●</span>
         </span>
-        <button class="btn btn-primary btn-sm" onclick="initLLM()">
-          ⚡ Activar LLM
-        </button>
+        <span id="llm-status-badge" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:10px;background:rgba(148,163,184,.1);color:#94A3B8;border:1px solid rgba(148,163,184,.2)">
+          <span id="llm-status-dot" style="width:6px;height:6px;border-radius:50%;background:#94A3B8;display:inline-block"></span>
+          <span id="llm-status-txt">Conectando…</span>
+        </span>
         <span id="gpu-badge" style="display:none;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(0,194,224,.1);color:#00C2E0;border:1px solid rgba(0,194,224,.2)"></span>
       </div>
     </div>
@@ -538,6 +539,59 @@
       <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(0,212,240,.3);letter-spacing:.1em">
         HAZ CLIC EN UN AGENTE PARA ACTIVARLO
       </span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COMMAND CENTER — UN PROMPT, TODA LA AGENCIA DE MARKETING
+       ══════════════════════════════════════════════════════════ -->
+  <div id="command-center" style="margin:0 24px 14px;background:linear-gradient(135deg,#06111A 0%,#071620 100%);border:1px solid rgba(0,194,224,.28);border-radius:14px;overflow:hidden;position:relative">
+    <div style="position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.07) 3px,rgba(0,0,0,.07) 4px)"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid rgba(0,194,224,.15);position:relative;z-index:1;background:rgba(0,194,224,.04)">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#00C2E0;letter-spacing:.12em;display:flex;align-items:center;gap:9px">
+        <span style="width:8px;height:8px;border-radius:50%;background:#00C2E0;display:inline-block;animation:hud-blink 1.4s ease-in-out infinite"></span>
+        MISIÓN CENTRAL — PON A TRABAJAR A TODA LA AGENCIA
+      </div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,194,224,.4);letter-spacing:.1em">1 PROMPT · 15 AGENTES · RESULTADOS EN PARALELO</span>
+    </div>
+    <div style="padding:16px 18px;position:relative;z-index:1">
+      <div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px;line-height:1.6">
+        Describe tu objetivo de marketing: <strong style="color:#00C2E0">producto o campaña, audiencia, contexto del mercado y qué quieres lograr</strong>. Todos los agentes trabajarán simultáneamente.
+      </div>
+      <textarea id="mission-input"
+        rows="4"
+        placeholder="Ej: Quiero lanzar MetaTronix CRM para el segmento de directores de ventas en retail México. Mi objetivo es generar 50 leads calificados este mes. Presupuesto de marketing $3,000 USD. Necesito la estrategia completa: narrativa, contenido, ads, email y medición."
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(0,194,224,.25);border-radius:8px;padding:12px 14px;color:#fff;font-family:'DM Sans',Inter,sans-serif;font-size:13px;line-height:1.7;resize:vertical;outline:none;transition:border-color .2s"
+        onfocus="this.style.borderColor='rgba(0,194,224,.6)'"
+        onblur="this.style.borderColor='rgba(0,194,224,.25)'"
+      ></textarea>
+      <div style="margin-top:10px;margin-bottom:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,194,224,.45);letter-spacing:.12em;margin-bottom:7px">EJEMPLOS RÁPIDOS — HAZ CLIC PARA CARGAR:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <button onclick="loadExampleMkt('lanzamiento')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer" >🚀 Lanzar producto nuevo</button>
+          <button onclick="loadExampleMkt('contenido')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer">✍️ Plan de contenido mensual</button>
+          <button onclick="loadExampleMkt('leads')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer">🎯 Generar leads calificados</button>
+          <button onclick="loadExampleMkt('competencia')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer">🔭 Analizar competencia</button>
+          <button onclick="loadExampleMkt('reactivar')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer">📧 Campaña de reactivación</button>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,.25);border:1px solid rgba(0,194,224,.1);border-radius:8px;padding:10px 14px;margin-bottom:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,194,224,.5);letter-spacing:.12em;margin-bottom:8px">QUÉ OBTENDRÁS — 15 RESULTADOS SIMULTÁNEOS:</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:5px">
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🔭</span> Análisis de mercado y tendencias</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>✍️</span> Narrativa y mensajes clave</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🎯</span> Estrategia de audiencias</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📣</span> Anuncios y copy para ads</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📱</span> Contenido para redes sociales</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📧</span> Campañas de email marketing</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📊</span> Plan de medición y KPIs</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🎯</span> Orquestador con plan de campaña</div>
+        </div>
+      </div>
+      <button id="launch-btn" onclick="launchAllAgents()" style="width:100%;padding:14px 20px;background:linear-gradient(135deg,#0369A1,#0284C7);border:none;border-radius:10px;color:#fff;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;letter-spacing:.08em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;text-transform:uppercase" onmouseover="this.style.background='linear-gradient(135deg,#0284C7,#0EA5E9)';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='linear-gradient(135deg,#0369A1,#0284C7)';this.style.transform='translateY(0)'">
+        <span id="launch-icon">🚀</span>
+        <span id="launch-text">LANZAR TODA LA AGENCIA — 15 AGENTES EN PARALELO</span>
+      </button>
     </div>
   </div>
 
@@ -1152,6 +1206,78 @@ async function initLLM() {
   }
 }
 
+/* ── EJEMPLOS DE MISIÓN — MARKETING ─────────────────── */
+const EJEMPLOS_MKT = {
+  lanzamiento: `Quiero lanzar MetaTronix CRM para el segmento de Directores de Ventas en retail México. Objetivo: generar 50 leads calificados en 30 días. Presupuesto $3,000 USD. Necesito la narrativa del lanzamiento, copy para anuncios de Google y LinkedIn, secuencia de emails de nurturing y el calendario de contenido para el mes.`,
+  contenido:   `Necesito el plan de contenido de mayo para MetaTronix. Audiencia: Directores de Ventas y CEOs de empresas 50-500 empleados en LATAM. Objetivo: posicionarnos como expertos en CRM IA. Quiero ideas para LinkedIn (4 posts/semana), YouTube (1 video/semana) y newsletter semanal. Tono: directo, sin tecnicismos, orientado a resultados.`,
+  leads:       `Quiero generar 100 leads calificados este mes para el pipeline de ventas. ICP: Director de Ventas o CEO, empresa 100-500 empleados, sector retail o fintech, México y Colombia. Presupuesto de pauta $5,000 USD. Necesito la estrategia completa: canales, segmentación, mensajes, landing page y lead magnet.`,
+  competencia: `Necesito un análisis de la competencia de MetaTronix: Salesforce, HubSpot y Pipedrive en el mercado LATAM 2026. Quiero entender qué están haciendo en contenido, posicionamiento y precios, y cómo diferenciarnos. También las oportunidades de mercado que ellos están dejando sin atender.`,
+  reactivar:   `Tengo una lista de 200 leads que se registraron hace 3-6 meses pero nunca compraron. Industrias: retail (40%), fintech (30%), manufactura (30%). Necesito una campaña de reactivación de 4 semanas: secuencia de 5 emails, 2 piezas de contenido y una oferta de reenganche irresistible.`,
+};
+
+function loadExampleMkt(key) {
+  const input = document.getElementById('mission-input');
+  if (input && EJEMPLOS_MKT[key]) {
+    input.value = EJEMPLOS_MKT[key];
+    input.style.borderColor = 'rgba(0,194,224,.6)';
+    input.focus();
+    setTimeout(() => { input.style.borderColor = 'rgba(0,194,224,.25)'; }, 1200);
+  }
+}
+
+/* ── LAUNCH ALL AGENTS ───────────────────────────────── */
+async function launchAllAgents() {
+  const mission = document.getElementById('mission-input')?.value.trim();
+  if (!mission) {
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.warning('Escribe la misión primero ↑');
+    else alert('Escribe la misión primero');
+    return;
+  }
+  const launchBtn  = document.getElementById('launch-btn');
+  const launchText = document.getElementById('launch-text');
+  const launchIcon = document.getElementById('launch-icon');
+  if (launchBtn)  { launchBtn.disabled = true; launchBtn.style.background = 'linear-gradient(135deg,#075985,#0369A1)'; }
+  if (launchIcon) launchIcon.textContent = '⏳';
+  if (launchText) launchText.textContent = 'AGENCIA EN OPERACIÓN — PROCESANDO CON IA…';
+
+  const targets = AGENTS.filter(a => !a.isVideoAgent && !a.isMediaAgent);
+  targets.forEach(a => {
+    const input = document.getElementById(`input-${a.id}`);
+    if (input) input.value = mission;
+    const ws   = document.getElementById(`ws-${a.id}`);
+    const card = document.getElementById(`card-${a.id}`);
+    if (ws)   ws.style.display = 'block';
+    if (card) card.classList.add('active');
+  });
+
+  document.getElementById('agents-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await Promise.allSettled(targets.map(a => runAgent(a.id)));
+
+  if (launchBtn)  { launchBtn.disabled = false; launchBtn.style.background = 'linear-gradient(135deg,#0369A1,#0284C7)'; }
+  if (launchIcon) launchIcon.textContent = '✅';
+  if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ LA MISIÓN — LANZA OTRA';
+  setTimeout(() => {
+    if (launchIcon) launchIcon.textContent = '🚀';
+    if (launchText) launchText.textContent = 'LANZAR TODA LA AGENCIA — 15 AGENTES EN PARALELO';
+  }, 4000);
+}
+
+/* ── LLM STATUS BADGE ────────────────────────────────── */
+function setLLMBadge(state, text) {
+  const dot   = document.getElementById('llm-status-dot');
+  const txt   = document.getElementById('llm-status-txt');
+  const badge = document.getElementById('llm-status-badge');
+  const colors = {
+    connecting: { dot:'#F59E0B', bg:'rgba(245,158,11,.1)',  border:'rgba(245,158,11,.25)', text:'#F59E0B' },
+    ready:      { dot:'#00C2E0', bg:'rgba(0,194,224,.1)',   border:'rgba(0,194,224,.25)',  text:'#00C2E0' },
+    offline:    { dot:'#6366F1', bg:'rgba(99,102,241,.1)',  border:'rgba(99,102,241,.25)', text:'#818CF8' },
+  };
+  const c = colors[state] || colors.connecting;
+  if (dot)   dot.style.background = c.dot;
+  if (txt)   { txt.textContent = text; txt.style.color = c.text; }
+  if (badge) { badge.style.background = c.bg; badge.style.borderColor = c.border; }
+}
+
 /* ── INIT ────────────────────────────────────────────── */
 async function init() {
   currentUser = await requireAuth();
@@ -1162,15 +1288,30 @@ async function init() {
     Notiflix.Notify.init({ position:'right-bottom', timeout:3000, fontSize:'13px' });
   }
 
-  // Load HuggingFace token from Supabase portal_settings
   await loadHFToken();
 
-  // Update KB status
   const kb = getKB();
   updateKBStatus(!!kb.empresa);
-
-  // Render agents
   renderAgents();
+
+  // Auto-init LLM sin botón manual
+  setLLMBadge('connecting', 'Conectando…');
+  try {
+    if (window.CRM_LLM) {
+      await window.CRM_LLM.init();
+      llmReady = true;
+      setLLMBadge('ready', 'Claude IA ✓');
+      const bar = document.getElementById('llm-bar');
+      if (bar) bar.className = 'llm-init-bar hidden';
+      AGENTS.forEach(a => {
+        const s = document.getElementById(`status-${a.id}`);
+        if (s) { s.textContent = '✓ IA Lista'; s.className = 'agent-status ready'; }
+      });
+    }
+  } catch(e) {
+    setLLMBadge('offline', 'Modo template');
+    llmReady = false;
+  }
 }
 
 async function loadHFToken() {

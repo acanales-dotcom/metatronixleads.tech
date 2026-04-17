@@ -345,9 +345,10 @@
         <span class="kb-status" onclick="toggleKB()" id="kb-status-btn">
           🎯 Base de Ventas <span id="kb-status-dot">●</span>
         </span>
-        <button class="btn btn-primary btn-sm" onclick="initLLM()" style="background:#059669;border-color:#059669">
-          ⚡ Activar LLM
-        </button>
+        <span id="llm-status-badge" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:10px;background:rgba(148,163,184,.1);color:#94A3B8;border:1px solid rgba(148,163,184,.2)">
+          <span id="llm-status-dot" style="width:6px;height:6px;border-radius:50%;background:#94A3B8;display:inline-block"></span>
+          <span id="llm-status-txt">Conectando…</span>
+        </span>
         <span id="gpu-badge" style="display:none;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(16,185,129,.1);color:#10B981;border:1px solid rgba(16,185,129,.2)"></span>
       </div>
     </div>
@@ -507,6 +508,73 @@
       <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(0,255,136,.3);letter-spacing:.1em">
         HAZ CLIC EN UN AGENTE PARA ACTIVARLO
       </span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       COMMAND CENTER — UN PROMPT, TODA LA AGENCIA
+       ══════════════════════════════════════════════════════════ -->
+  <div id="command-center" style="margin:14px 24px 0;background:linear-gradient(135deg,#071A10 0%,#0A2015 100%);border:1px solid rgba(0,255,136,.28);border-radius:14px;overflow:hidden;position:relative">
+    <!-- scanline -->
+    <div style="position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.07) 3px,rgba(0,0,0,.07) 4px)"></div>
+    <!-- header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid rgba(0,255,136,.15);position:relative;z-index:1;background:rgba(0,255,136,.04)">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#00ff88;letter-spacing:.12em;display:flex;align-items:center;gap:9px">
+        <span style="width:8px;height:8px;border-radius:50%;background:#00ff88;display:inline-block;animation:hud-blink 1.4s ease-in-out infinite"></span>
+        MISIÓN CENTRAL — PON A TRABAJAR A TODA LA AGENCIA
+      </div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,255,136,.4);letter-spacing:.1em">1 PROMPT · 10 AGENTES · RESULTADOS EN PARALELO</span>
+    </div>
+    <!-- body -->
+    <div style="padding:16px 18px;position:relative;z-index:1">
+      <!-- instruction -->
+      <div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px;line-height:1.6">
+        Describe tu situación de ventas: <strong style="color:#00ff88">cliente, industria, contexto del deal y qué quieres lograr</strong>. Todos los agentes recibirán este contexto y trabajarán simultáneamente.
+      </div>
+      <!-- textarea -->
+      <textarea id="mission-input"
+        rows="4"
+        placeholder="Ej: Tengo un prospecto llamado RetailMax, empresa de retail con 200 vendedores en México. Su dolor es que el forecast es manual en Excel y tarda 2 días en armar el reporte semanal. Tenemos demo agendada en 48 horas y quiero cerrar antes de fin de mes. Mi precio objetivo es $799 USD/mes."
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(0,255,136,.25);border-radius:8px;padding:12px 14px;color:#fff;font-family:'DM Sans',Inter,sans-serif;font-size:13px;line-height:1.7;resize:vertical;outline:none;transition:border-color .2s;placeholder-color:rgba(255,255,255,.3)"
+        onfocus="this.style.borderColor='rgba(0,255,136,.6)'"
+        onblur="this.style.borderColor='rgba(0,255,136,.25)'"
+      ></textarea>
+
+      <!-- example chips -->
+      <div style="margin-top:10px;margin-bottom:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,255,136,.45);letter-spacing:.12em;margin-bottom:7px">EJEMPLOS RÁPIDOS — HAZ CLIC PARA CARGAR:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <button onclick="loadExample('prospectar')" style="padding:5px 11px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.22);border-radius:20px;color:#6EE7B7;font-size:11px;font-family:Inter,sans-serif;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(0,255,136,.16)'" onmouseout="this.style.background='rgba(0,255,136,.08)'">🔍 Prospectar nuevo segmento</button>
+          <button onclick="loadExample('calificar')" style="padding:5px 11px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.22);border-radius:20px;color:#6EE7B7;font-size:11px;font-family:Inter,sans-serif;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(0,255,136,.16)'" onmouseout="this.style.background='rgba(0,255,136,.08)'">⚖️ Calificar lead activo</button>
+          <button onclick="loadExample('demo')" style="padding:5px 11px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.22);border-radius:20px;color:#6EE7B7;font-size:11px;font-family:Inter,sans-serif;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(0,255,136,.16)'" onmouseout="this.style.background='rgba(0,255,136,.08)'">🎤 Preparar demo/pitch</button>
+          <button onclick="loadExample('cerrar')" style="padding:5px 11px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.22);border-radius:20px;color:#6EE7B7;font-size:11px;font-family:Inter,sans-serif;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(0,255,136,.16)'" onmouseout="this.style.background='rgba(0,255,136,.08)'">🏆 Cerrar deal esta semana</button>
+          <button onclick="loadExample('objecion')" style="padding:5px 11px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.22);border-radius:20px;color:#6EE7B7;font-size:11px;font-family:Inter,sans-serif;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(0,255,136,.16)'" onmouseout="this.style.background='rgba(0,255,136,.08)'">🤝 Responder objeción de precio</button>
+          <button onclick="loadExample('reactivar')" style="padding:5px 11px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.22);border-radius:20px;color:#6EE7B7;font-size:11px;font-family:Inter,sans-serif;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(0,255,136,.16)'" onmouseout="this.style.background='rgba(0,255,136,.08)'">📬 Reactivar lead frío</button>
+        </div>
+      </div>
+
+      <!-- output preview -->
+      <div style="background:rgba(0,0,0,.25);border:1px solid rgba(0,255,136,.1);border-radius:8px;padding:10px 14px;margin-bottom:14px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,255,136,.5);letter-spacing:.12em;margin-bottom:8px">QUÉ OBTENDRÁS — 10 RESULTADOS SIMULTÁNEOS:</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:5px">
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🔍</span> Lista de prospectos del segmento</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>⚖️</span> Score BANT/MEDDIC del lead</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🧩</span> Guía de preguntas de discovery</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🎤</span> Script de demo personalizado</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🤝</span> Respuesta a objeciones</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🏆</span> Mensaje de cierre listo</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📋</span> Propuesta comercial completa</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📬</span> Mensajes de seguimiento</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📊</span> Análisis WBR del pipeline</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🎯</span> Plan de ataque del Orquestador</div>
+        </div>
+      </div>
+
+      <!-- launch button -->
+      <button id="launch-btn" onclick="launchAllAgents()" style="width:100%;padding:14px 20px;background:linear-gradient(135deg,#047857,#059669);border:none;border-radius:10px;color:#fff;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;letter-spacing:.08em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;text-transform:uppercase" onmouseover="this.style.background='linear-gradient(135deg,#059669,#10B981)';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='linear-gradient(135deg,#047857,#059669)';this.style.transform='translateY(0)'">
+        <span id="launch-icon">🚀</span>
+        <span id="launch-text">LANZAR TODA LA AGENCIA — 10 AGENTES EN PARALELO</span>
+      </button>
     </div>
   </div>
 
@@ -1721,6 +1789,89 @@ async function runAgentSimVentas(id, output) {
     </div>`;
 }
 
+/* ── EJEMPLOS DE MISIÓN ──────────────────────────────── */
+const EJEMPLOS = {
+  prospectar: `Quiero atacar un nuevo segmento: Directores de Ventas en empresas de retail con 100 a 500 empleados en México que ya tienen CRM pero lo usan menos del 40% del equipo. Su dolor principal es el forecast manual y los reportes tardados. Presupuesto estimado $300-800 USD/mes. Necesito lista de prospectos, cómo contactarlos y el mensaje perfecto de apertura.`,
+  calificar:  `Tengo un lead: RetailMax, empresa de retail con 200 vendedores en CDMX. El contacto es Carlos Mena, Gerente de Ventas, mostró interés en la demo la semana pasada pero el presupuesto no está confirmado. Su dolor: reportes manuales en Excel que toman 2 días. No sé si el CFO está involucrado. Necesito saber si vale la pena invertir tiempo en este deal.`,
+  demo:       `Tengo una demo en 48 horas con el Director de Ventas de FinTech Capital, empresa de 150 vendedores en México. Su problema: bajo adoption de su CRM actual (40% del equipo), forecast imposible, perdida de seguimiento de leads. Precio objetivo: $799/mes. Necesito el script completo de la demo, las preguntas de discovery y cómo abrir la presentación.`,
+  cerrar:     `Tengo un deal de $799 USD/mes con RetailMax que lleva 3 semanas en propuesta. El Director de Ventas me dijo que le gusta pero que el board necesita aprobar. El cierre del trimestre es en 18 días. Necesito el plan para acelerar el cierre: qué decirle hoy, qué mensaje enviar al CFO y cómo crear urgencia legítima sin ser agresivo.`,
+  objecion:   `Mi prospecto (Director TI, empresa de 300 empleados) acaba de decirme: "Está muy interesante pero Salesforce nos ofrece 40% de descuento si firmamos esta semana y su equipo ya lo conoce". Necesito la respuesta exacta que dar en este momento para no perder el deal y reposicionar MetaTronix vs Salesforce.`,
+  reactivar:  `Tengo 5 leads fríos que prospecté hace 3 semanas: todos abrieron mi primer email pero ninguno respondió. Industrias: 2 retail, 2 fintech, 1 manufactura. Empresa promedio 150-300 empleados. Necesito los mensajes de reactivación para cada canal (email y WhatsApp) y la estrategia para volver a abrir conversación sin parecer desesperado.`,
+};
+
+function loadExample(key) {
+  const input = document.getElementById('mission-input');
+  if (input && EJEMPLOS[key]) {
+    input.value = EJEMPLOS[key];
+    input.style.borderColor = 'rgba(0,255,136,.6)';
+    input.focus();
+    setTimeout(() => { input.style.borderColor = 'rgba(0,255,136,.25)'; }, 1200);
+  }
+}
+
+/* ── LAUNCH ALL AGENTS ───────────────────────────────── */
+async function launchAllAgents() {
+  const mission = document.getElementById('mission-input')?.value.trim();
+  if (!mission) {
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.warning('Escribe la misión primero ↑');
+    else alert('Escribe la misión primero');
+    return;
+  }
+
+  // Actualizar botón a estado "en progreso"
+  const launchBtn  = document.getElementById('launch-btn');
+  const launchText = document.getElementById('launch-text');
+  const launchIcon = document.getElementById('launch-icon');
+  if (launchBtn)  { launchBtn.disabled = true; launchBtn.style.background = 'linear-gradient(135deg,#065F46,#047857)'; }
+  if (launchIcon) launchIcon.textContent = '⏳';
+  if (launchText) launchText.textContent = 'AGENCIA EN OPERACIÓN — PROCESANDO CON IA…';
+
+  // Agentes que reciben la misión (todos menos sim_ventas que tiene su propio flujo)
+  const targets = AGENTS.filter(a => !a.isSimVentasAgent);
+
+  // Propagar misión a todos los inputs y abrir cards
+  targets.forEach(a => {
+    const input = document.getElementById(`input-${a.id}`);
+    if (input) input.value = mission;
+    const ws   = document.getElementById(`ws-${a.id}`);
+    const card = document.getElementById(`card-${a.id}`);
+    if (ws)   ws.style.display = 'block';
+    if (card) card.classList.add('active');
+  });
+
+  // Scroll a la grilla
+  document.getElementById('agents-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Ejecutar todos en paralelo
+  await Promise.allSettled(targets.map(a => runAgent(a.id)));
+
+  // Restaurar botón
+  if (launchBtn)  { launchBtn.disabled = false; launchBtn.style.background = 'linear-gradient(135deg,#047857,#059669)'; }
+  if (launchIcon) launchIcon.textContent = '✅';
+  if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ LA MISIÓN — LANZA OTRA';
+  setTimeout(() => {
+    if (launchIcon) launchIcon.textContent = '🚀';
+    if (launchText) launchText.textContent = 'LANZAR TODA LA AGENCIA — 10 AGENTES EN PARALELO';
+  }, 4000);
+}
+
+/* ── LLM STATUS BADGE ────────────────────────────────── */
+function setLLMBadge(state, text) {
+  const dot   = document.getElementById('llm-status-dot');
+  const txt   = document.getElementById('llm-status-txt');
+  const badge = document.getElementById('llm-status-badge');
+  const colors = {
+    connecting: { dot:'#F59E0B', bg:'rgba(245,158,11,.1)',  border:'rgba(245,158,11,.25)', text:'#F59E0B' },
+    ready:      { dot:'#10B981', bg:'rgba(16,185,129,.1)', border:'rgba(16,185,129,.25)', text:'#10B981' },
+    offline:    { dot:'#6366F1', bg:'rgba(99,102,241,.1)', border:'rgba(99,102,241,.25)', text:'#818CF8' },
+    error:      { dot:'#EF4444', bg:'rgba(239,68,68,.1)',  border:'rgba(239,68,68,.25)',  text:'#EF4444' },
+  };
+  const c = colors[state] || colors.connecting;
+  if (dot)   { dot.style.background = c.dot; }
+  if (txt)   { txt.textContent = text; txt.style.color = c.text; }
+  if (badge) { badge.style.background = c.bg; badge.style.borderColor = c.border; }
+}
+
 /* ── INIT ────────────────────────────────────────────── */
 async function init() {
   currentUser = await requireAuth();
@@ -1734,6 +1885,27 @@ async function init() {
   const kb = getKB();
   updateKBStatus(!!kb.empresa);
   renderAgents();
+
+  // Auto-init LLM sin botón manual
+  setLLMBadge('connecting', 'Conectando…');
+  try {
+    if (window.CRM_LLM) {
+      await window.CRM_LLM.init();
+      llmReady = true;
+      setLLMBadge('ready', 'Claude IA ✓');
+      // Ocultar barra de progreso
+      const bar = document.getElementById('llm-bar');
+      if (bar) bar.className = 'llm-init-bar hidden';
+      // Actualizar status de todos los agentes
+      AGENTS.forEach(a => {
+        const s = document.getElementById(`status-${a.id}`);
+        if (s) { s.textContent = '✓ IA Lista'; s.className = 'agent-status ready'; }
+      });
+    }
+  } catch(e) {
+    setLLMBadge('offline', 'Modo template');
+    llmReady = false;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
