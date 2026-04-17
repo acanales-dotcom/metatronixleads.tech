@@ -469,6 +469,10 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">◇</span>
         <span class="nav-label">Reportes</span>
       </a>
+      <a href="/ventas.html" class="sidebar-nav-link ${activePage==='ventas'?'active':''}">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">Agencia IA</span>
+      </a>
 
       <div class="sidebar-divider"></div>
 
