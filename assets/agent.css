@@ -47,17 +47,20 @@
   height: 88px;
   background: transparent;
   border: none;
-  cursor: pointer;
+  cursor: grab;
   outline: none;
   padding: 0;
   filter: drop-shadow(0 6px 16px rgba(0,0,0,.28));
   animation: mgenio-idle 3.2s ease-in-out infinite;
   transition: filter .2s;
+  user-select: none;
+  touch-action: none;
 }
 #mtx-agent-btn:hover {
   filter: drop-shadow(0 8px 20px rgba(0,0,0,.38)) brightness(1.06);
   animation-duration: 1.8s;
 }
+#mtx-agent-btn.dragging { cursor: grabbing; animation: none; opacity: .9; }
 #mtx-agent-btn.open {
   animation: mgenio-talk 0.6s ease-in-out infinite;
   filter: drop-shadow(0 6px 18px rgba(0,85,255,.32));

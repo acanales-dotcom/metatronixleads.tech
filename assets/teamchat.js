@@ -224,12 +224,14 @@
       #tchat-btn {
         position: fixed; bottom: 108px; left: 20px;
         z-index: 9050; width: 44px; height: 44px;
+        cursor: grab; user-select: none; touch-action: none;
         background: #1C2236; border: 1px solid rgba(0,212,240,.25);
         border-radius: 50%; cursor: pointer; display: flex;
         align-items: center; justify-content: center; font-size: 18px;
         transition: all .15s; box-shadow: 0 4px 14px rgba(0,0,0,.5);
       }
       #tchat-btn:hover { background: rgba(0,212,240,.15); border-color: #00D4F0; transform: scale(1.08); }
+      #tchat-btn.dragging { cursor: grabbing; transform: scale(1.05); opacity: .9; }
       #tchat-badge {
         position: absolute; top: -3px; right: -3px;
         width: 16px; height: 16px; border-radius: 50%;
@@ -398,7 +400,7 @@
     btn.title = 'Chat Interno del Equipo';
     btn.innerHTML = `💬<span id="tchat-badge"></span>`;
     btn.style.position = 'relative';
-    btn.onclick = toggleChat;
+    // click handled by makeDraggable below
 
     const panel = document.createElement('div');
     panel.id = 'tchat-panel';
@@ -447,6 +449,7 @@
     document.body.appendChild(panel);
     renderMessages(activeRoom);
     updateAllUnread();
+    makeTchatDraggable(btn, panel);
   }
 
   /* ── Render DM list ─────────────────────────────────────── */
@@ -638,6 +641,87 @@
     // Periodic unread check + user refresh every 2 min
     setInterval(updateAllUnread, 30000);
     setInterval(loadUsers, 120000);
+  }
+
+  /* ── Draggable TeamChat button ──────────────────────────── */
+  function makeTchatDraggable(btn, panel) {
+    const THRESH = 4, POS_KEY = 'mtx_tchat_pos';
+
+    function anchorTopLeft() {
+      const r = btn.getBoundingClientRect();
+      btn.style.bottom = 'auto'; btn.style.right = 'auto';
+      btn.style.top  = clampY(r.top)  + 'px';
+      btn.style.left = clampX(r.left) + 'px';
+    }
+
+    function repositionPanel() {
+      if (!panel) return;
+      const br = btn.getBoundingClientRect();
+      const pw = panel.offsetWidth  || 390;
+      const ph = panel.offsetHeight || 540;
+      const gap = 10;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      let left = br.right + gap;
+      if (left + pw > vw - 8) left = br.left - pw - gap;
+      left = Math.max(8, Math.min(vw - pw - 8, left));
+      let top = br.bottom - ph;
+      if (top < 8) top = br.top;
+      top = Math.max(8, Math.min(vh - ph - 8, top));
+      panel.style.bottom = 'auto'; panel.style.right = 'auto';
+      panel.style.top  = top  + 'px';
+      panel.style.left = left + 'px';
+    }
+
+    // Restore saved position
+    try {
+      const s = JSON.parse(localStorage.getItem(POS_KEY));
+      if (s && typeof s.top === 'number') {
+        btn.style.bottom = 'auto'; btn.style.right = 'auto';
+        btn.style.top  = clampY(s.top)  + 'px';
+        btn.style.left = clampX(s.left) + 'px';
+      }
+    } catch(_) {}
+
+    let sx, sy, sl, st, moved = false, active = false;
+
+    btn.addEventListener('pointerdown', e => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      anchorTopLeft();
+      active = true; moved = false;
+      sx = e.clientX; sy = e.clientY;
+      sl = parseFloat(btn.style.left);
+      st = parseFloat(btn.style.top);
+      btn.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    btn.addEventListener('pointermove', e => {
+      if (!active) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) < THRESH && Math.abs(dy) < THRESH) return;
+      moved = true;
+      btn.classList.add('dragging');
+      btn.style.top  = clampY(st + dy) + 'px';
+      btn.style.left = clampX(sl + dx) + 'px';
+      if (chatOpen) repositionPanel();
+      e.preventDefault();
+    });
+
+    btn.addEventListener('pointerup', () => {
+      if (!active) return;
+      active = false;
+      btn.classList.remove('dragging');
+      if (moved) {
+        try { localStorage.setItem(POS_KEY, JSON.stringify({top: parseFloat(btn.style.top), left: parseFloat(btn.style.left)})); } catch(_) {}
+      } else {
+        toggleChat();
+      }
+    });
+
+    btn.addEventListener('pointercancel', () => { active = false; btn.classList.remove('dragging'); });
+
+    function clampX(x) { return Math.max(0, Math.min(window.innerWidth  - (btn.offsetWidth  || 44), x)); }
+    function clampY(y) { return Math.max(0, Math.min(window.innerHeight - (btn.offsetHeight || 44), y)); }
   }
 
   window.teamChat = { sendMessage, injectSystemMessage };
