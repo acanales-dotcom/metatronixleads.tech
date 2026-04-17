@@ -750,12 +750,14 @@ tbody tr:hover td { background: var(--s2); cursor: pointer; }
 }
 .o-drawer.open { transform: translateX(0); }
 .o-drawer-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  position: fixed; top: 0; bottom: 0; right: 0;
+  left: var(--sidebar-w, 220px);
+  background: rgba(0,0,0,.5);
   z-index: 399; opacity: 0; pointer-events: none;
   transition: opacity .22s; backdrop-filter: blur(2px);
 }
 .o-drawer-overlay.visible { opacity: 1; pointer-events: all; }
-.lead-drawer { position: fixed; inset: 0; z-index: 400; pointer-events: none; }
+.lead-drawer { position: fixed; top: 0; bottom: 0; right: 0; left: var(--sidebar-w, 220px); z-index: 400; pointer-events: none; }
 .lead-drawer.open { pointer-events: all; }
 .drawer-overlay {
   position: absolute; inset: 0; background: rgba(0,0,0,.5);
