@@ -698,9 +698,19 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     const contextMsgs = messages.slice(-HISTORY_LIMIT);
 
     try {
+      // Inyectar JWT de Supabase para autenticación con el Worker v2
+      let _authH = {};
+      try {
+        if (db) {
+          const { data: _sd } = await db.auth.getSession();
+          const _tok = _sd?.session?.access_token;
+          if (_tok) _authH = { 'Authorization': `Bearer ${_tok}` };
+        }
+      } catch (_) {}
+
       const res = await fetch(proxyUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ..._authH },
         body: JSON.stringify({
           model:      'claude-haiku-4-5-20251001',
           max_tokens: 1024,

@@ -123,9 +123,20 @@ async function generateWithClaude(messages, onChunk, onDone, onError) {
     return;
   }
   try {
+    // Inyectar JWT de Supabase para autenticación con el Worker v2
+    let _authH = {};
+    try {
+      const _db = getDB();
+      if (_db) {
+        const { data: _sd } = await _db.auth.getSession();
+        const _tok = _sd?.session?.access_token;
+        if (_tok) _authH = { 'Authorization': `Bearer ${_tok}` };
+      }
+    } catch (_) {}
+
     const res = await fetch(proxyUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ..._authH },
       body: JSON.stringify({ messages, max_tokens: 4096 })
     });
     if (!res.ok) { onError(`Error del servidor: ${res.status}`); return; }

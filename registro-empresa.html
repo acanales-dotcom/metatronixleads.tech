@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetaTronix — Registra tu Empresa</title>
+<meta name="description" content="Activa tu portal de ventas con IA en menos de 5 minutos. CRM, agentes de IA y documentos inteligentes para tu equipo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/config.js"></script>
+
+<style>
+/* ── Reset & Base ──────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A0D14;--bg2:#0E1119;--s1:#13171F;--s2:#181D28;--s3:#1E2535;
+  --b1:rgba(255,255,255,.07);--b2:rgba(255,255,255,.12);--b3:rgba(255,255,255,.20);
+  --t1:#E8EDF8;--t2:#7E8FA8;--t3:#3D4A60;
+  --accent:#00FF88;--accent-d:rgba(0,255,136,.10);--accent-d2:rgba(0,255,136,.06);
+  --cyan:#00D4F0;--red:#EF4444;--amber:#F59E0B;--purple:#8B5CF6;
+  --r:6px;--r-lg:10px;--r-xl:16px;--r-2xl:24px;
+  --font-head:'Bebas Neue',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --sh:0 4px 24px rgba(0,0,0,.5);
+  --sh-lg:0 8px 48px rgba(0,0,0,.6);
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-body);background:var(--bg);color:var(--t1);
+  min-height:100vh;line-height:1.6;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,255,136,.07) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 90% 10%, rgba(0,212,240,.05) 0%, transparent 60%);
+}
+a{color:var(--accent);text-decoration:none}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.page{max-width:1140px;margin:0 auto;padding:0 24px}
+
+/* ── NAV ──────────────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(10,13,20,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--b1);
+}
+.nav-inner{
+  max-width:1140px;margin:0 auto;padding:0 24px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.nav-brand{
+  font-family:var(--font-head);font-size:22px;letter-spacing:.06em;
+  color:var(--t1);display:flex;align-items:center;gap:10px;
+}
+.nav-brand-dot{
+  width:10px;height:10px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav-links{display:flex;align-items:center;gap:20px}
+.nav-link{font-size:13px;color:var(--t2);transition:color .15s}
+.nav-link:hover{color:var(--t1)}
+.btn-nav{
+  padding:8px 18px;background:var(--accent);color:#000;
+  border-radius:var(--r);font-size:13px;font-weight:700;
+  transition:opacity .15s;border:none;cursor:pointer;
+}
+.btn-nav:hover{opacity:.85}
+
+/* ── HERO ─────────────────────────────────────────────────── */
+.hero{
+  padding:140px 0 80px;text-align:center;
+  position:relative;overflow:hidden;
+}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;background:var(--accent-d);border:1px solid rgba(0,255,136,.25);
+  border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:28px;
+}
+.hero-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite}
+h1{
+  font-family:var(--font-head);font-size:clamp(46px,8vw,88px);line-height:.95;
+  letter-spacing:.02em;margin-bottom:24px;
+}
+h1 .accent{color:var(--accent)}
+h1 .dim{color:var(--t2)}
+.hero-sub{
+  font-size:clamp(15px,2vw,19px);color:var(--t2);max-width:600px;
+  margin:0 auto 40px;line-height:1.7;
+}
+.hero-cta-group{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn-primary{
+  padding:14px 32px;background:var(--accent);color:#000;
+  border-radius:var(--r-lg);font-size:15px;font-weight:700;
+  border:none;cursor:pointer;transition:all .2s;
+  box-shadow:0 0 24px rgba(0,255,136,.3);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 0 32px rgba(0,255,136,.45)}
+.btn-ghost{
+  padding:14px 32px;background:transparent;color:var(--t1);
+  border-radius:var(--r-lg);font-size:15px;font-weight:600;
+  border:1px solid var(--b2);cursor:pointer;transition:all .2s;
+}
+.btn-ghost:hover{border-color:var(--b3);background:var(--s1)}
+.hero-proof{
+  margin-top:48px;display:flex;align-items:center;justify-content:center;
+  gap:24px;flex-wrap:wrap;font-size:12px;color:var(--t3);font-family:var(--font-mono);
+}
+.hero-proof-item{display:flex;align-items:center;gap:6px}
+.proof-check{color:var(--accent);font-size:14px}
+
+/* ── STATS ────────────────────────────────────────────────── */
+.stats{padding:40px 0;border-top:1px solid var(--b1);border-bottom:1px solid var(--b1)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b1)}
+.stat-item{
+  background:var(--bg);padding:32px 24px;text-align:center;
+}
+.stat-num{
+  font-family:var(--font-head);font-size:42px;line-height:1;
+  color:var(--accent);letter-spacing:.02em;margin-bottom:6px;
+}
+.stat-label{font-size:12px;color:var(--t2);font-family:var(--font-mono);letter-spacing:.06em}
+
+/* ── FEATURES ─────────────────────────────────────────────── */
+.features{padding:80px 0}
+.section-tag{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:12px;
+}
+.section-title{
+  font-family:var(--font-head);font-size:clamp(36px,5vw,56px);
+  letter-spacing:.02em;margin-bottom:16px;line-height:1.05;
+}
+.section-sub{font-size:15px;color:var(--t2);max-width:520px;line-height:1.7}
+.features-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+  background:var(--b1);margin-top:52px;border:1px solid var(--b1);
+  border-radius:var(--r-xl);overflow:hidden;
+}
+.feat-card{
+  background:var(--s1);padding:32px 28px;
+  transition:background .2s;
+}
+.feat-card:hover{background:var(--s2)}
+.feat-icon{
+  width:44px;height:44px;border-radius:var(--r-lg);
+  background:var(--accent-d);border:1px solid rgba(0,255,136,.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;margin-bottom:18px;
+}
+.feat-title{font-weight:700;font-size:15px;margin-bottom:8px}
+.feat-desc{font-size:13px;color:var(--t2);line-height:1.65}
+
+/* ── AGENTS PREVIEW ───────────────────────────────────────── */
+.agents-section{padding:80px 0;overflow:hidden}
+.agents-marquee-wrap{
+  margin-top:48px;position:relative;
+  mask-image:linear-gradient(to right,transparent 0%,black 10%,black 90%,transparent 100%);
+}
+.agents-marquee{display:flex;gap:12px;animation:marquee 30s linear infinite;width:max-content}
+.agents-marquee:hover{animation-play-state:paused}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.agent-pill{
+  flex-shrink:0;display:flex;align-items:center;gap:10px;
+  padding:12px 20px;background:var(--s1);border:1px solid var(--b1);
+  border-radius:999px;font-size:13px;white-space:nowrap;
+  transition:border-color .2s;
+}
+.agent-pill:hover{border-color:var(--b2)}
+.agent-pill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── PRICING ──────────────────────────────────────────────── */
+.pricing{padding:80px 0}
+.pricing-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
+  background:var(--b1);margin-top:52px;border:1px solid var(--b1);
+  border-radius:var(--r-xl);overflow:hidden;
+}
+.price-card{
+  background:var(--s1);padding:36px 28px;display:flex;flex-direction:column;
+  position:relative;
+}
+.price-card.featured{background:var(--s2)}
+.price-badge{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  padding:4px 14px;background:var(--accent);color:#000;
+  border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;white-space:nowrap;
+}
+.price-tier{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--t2);margin-bottom:8px;
+}
+.price-val{
+  font-family:var(--font-head);font-size:52px;line-height:1;
+  letter-spacing:.01em;margin-bottom:4px;
+}
+.price-val sup{font-size:22px;vertical-align:super}
+.price-period{font-size:12px;color:var(--t2);margin-bottom:24px;font-family:var(--font-mono)}
+.price-desc{font-size:13px;color:var(--t2);margin-bottom:24px;line-height:1.6}
+.price-divider{height:1px;background:var(--b1);margin:20px 0}
+.price-features{list-style:none;margin-bottom:28px;flex:1}
+.price-features li{
+  font-size:13px;color:var(--t2);padding:6px 0;
+  display:flex;align-items:flex-start;gap:10px;
+}
+.price-features .chk{color:var(--accent);flex-shrink:0;margin-top:1px}
+.price-features .dim{color:var(--t3)}
+.btn-price{
+  width:100%;padding:12px;border-radius:var(--r-lg);
+  font-size:14px;font-weight:700;cursor:pointer;
+  border:1px solid var(--b2);background:transparent;color:var(--t1);
+  transition:all .2s;
+}
+.btn-price:hover{background:var(--s3);border-color:var(--b3)}
+.btn-price.primary{
+  background:var(--accent);color:#000;border-color:var(--accent);
+  box-shadow:0 0 20px rgba(0,255,136,.25);
+}
+.btn-price.primary:hover{opacity:.9}
+
+/* ── REGISTRO FORM ────────────────────────────────────────── */
+.registro{padding:80px 0 120px;scroll-margin-top:80px}
+.registro-wrapper{
+  display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start;
+}
+.registro-copy{}
+.registro-copy h2{
+  font-family:var(--font-head);font-size:clamp(36px,4vw,52px);
+  letter-spacing:.02em;line-height:1.05;margin-bottom:16px;
+}
+.registro-copy p{font-size:15px;color:var(--t2);line-height:1.7;margin-bottom:28px}
+.steps-list{list-style:none;display:flex;flex-direction:column;gap:16px}
+.step-item{display:flex;align-items:flex-start;gap:14px}
+.step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--accent-d);border:1px solid rgba(0,255,136,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:11px;color:var(--accent);
+  font-weight:700;flex-shrink:0;margin-top:1px;
+}
+.step-text{font-size:14px;color:var(--t2);line-height:1.6}
+.step-text strong{color:var(--t1)}
+
+/* ── FORM ─────────────────────────────────────────────────── */
+.form-card{
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:var(--r-2xl);padding:40px 36px;
+  box-shadow:var(--sh-lg);
+  position:sticky;top:88px;
+}
+.form-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.form-subtitle{font-size:13px;color:var(--t2);margin-bottom:28px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{margin-bottom:16px}
+.form-label{
+  display:block;font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--t2);margin-bottom:6px;
+}
+.form-input,.form-select{
+  width:100%;padding:11px 14px;
+  background:var(--s2);border:1px solid var(--b1);
+  border-radius:var(--r-lg);font-size:14px;color:var(--t1);
+  font-family:var(--font-body);outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.form-input:focus,.form-select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-d2);
+}
+.form-input::placeholder{color:var(--t3)}
+.form-select{appearance:none;cursor:pointer}
+.form-select option{background:var(--s2)}
+
+.form-divider{
+  height:1px;background:var(--b1);margin:20px 0;
+  display:flex;align-items:center;gap:12px;
+  font-size:11px;color:var(--t3);font-family:var(--font-mono);
+}
+.form-divider::before,.form-divider::after{content:'';flex:1;height:1px;background:var(--b1)}
+
+.pwd-wrap{position:relative}
+.pwd-toggle{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--t2);
+  padding:4px;font-size:16px;line-height:1;transition:color .15s;
+}
+.pwd-toggle:hover{color:var(--t1)}
+
+.form-submit{
+  width:100%;padding:14px;background:var(--accent);color:#000;
+  border:none;border-radius:var(--r-lg);font-size:15px;font-weight:700;
+  cursor:pointer;margin-top:4px;transition:all .2s;
+  box-shadow:0 0 24px rgba(0,255,136,.25);
+}
+.form-submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 0 32px rgba(0,255,136,.4)}
+.form-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+.form-note{
+  font-size:11px;color:var(--t3);text-align:center;
+  margin-top:12px;line-height:1.6;
+}
+.form-note a{color:var(--t2)}
+
+/* ── ESTADO ── */
+.form-msg{
+  display:none;margin-top:14px;padding:12px 16px;
+  border-radius:var(--r-lg);font-size:13px;line-height:1.5;
+}
+.form-msg.error{
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#FCA5A5;display:block;
+}
+.form-msg.success{
+  background:var(--accent-d);border:1px solid rgba(0,255,136,.3);color:var(--accent);display:block;
+}
+
+/* ── SUCCESS STATE ────────────────────────────────────────── */
+.success-state{display:none;text-align:center;padding:16px 0}
+.success-icon{
+  font-size:52px;margin-bottom:16px;
+  animation:popIn .5s cubic-bezier(.17,.67,.35,1.3);
+}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.success-title{font-size:20px;font-weight:700;margin-bottom:8px;color:var(--accent)}
+.success-text{font-size:14px;color:var(--t2);line-height:1.6;margin-bottom:24px}
+.btn-portal{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:13px 28px;background:var(--accent);color:#000;
+  border-radius:var(--r-lg);font-size:15px;font-weight:700;
+  border:none;cursor:pointer;transition:all .2s;
+  box-shadow:0 0 24px rgba(0,255,136,.3);
+}
+.btn-portal:hover{opacity:.9;transform:translateY(-1px)}
+
+/* ── FOOTER ───────────────────────────────────────────────── */
+footer{
+  border-top:1px solid var(--b1);padding:32px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;max-width:1140px;margin:0 auto;
+}
+.footer-brand{font-family:var(--font-head);font-size:16px;letter-spacing:.06em;color:var(--t2)}
+.footer-note{font-size:11px;color:var(--t3);font-family:var(--font-mono)}
+
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media(max-width:900px){
+  .features-grid,.pricing-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .registro-wrapper{grid-template-columns:1fr;gap:40px}
+  .form-card{position:static}
+  .form-row{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .nav-links{display:none}
+  h1{font-size:42px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      METATRONIX
+    </div>
+    <div class="nav-links">
+      <a href="#features" class="nav-link">Funciones</a>
+      <a href="#pricing" class="nav-link">Precios</a>
+      <a href="/index.html" class="nav-link">Iniciar sesión</a>
+      <button class="btn-nav" onclick="document.getElementById('registro').scrollIntoView({behavior:'smooth'})">
+        Registrar empresa
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="page">
+    <div class="hero-tag">
+      <span class="hero-tag-dot"></span>
+      Portal de Ventas con IA · LATAM
+    </div>
+    <h1>
+      Tu equipo de ventas<br>
+      <span class="accent">potenciado</span><br>
+      <span class="dim">con inteligencia artificial</span>
+    </h1>
+    <p class="hero-sub">
+      CRM, agentes de IA especializados en ventas y marketing, generador de documentos y pipeline visual — todo en un portal que habla de <em>tus</em> productos.
+    </p>
+    <div class="hero-cta-group">
+      <button class="btn-primary" onclick="document.getElementById('registro').scrollIntoView({behavior:'smooth'})">
+        Activar mi portal gratis →
+      </button>
+      <a href="#pricing" class="btn-ghost">Ver planes</a>
+    </div>
+    <div class="hero-proof">
+      <span class="hero-proof-item"><span class="proof-check">✓</span> Activo en 5 minutos</span>
+      <span class="hero-proof-item"><span class="proof-check">✓</span> Sin tarjeta de crédito</span>
+      <span class="hero-proof-item"><span class="proof-check">✓</span> Soporte en español</span>
+      <span class="hero-proof-item"><span class="proof-check">✓</span> Cancelación en cualquier momento</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS ─────────────────────────────────────────────────── -->
+<section class="stats">
+  <div class="page">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-num">+24</div>
+        <div class="stat-label">Agentes de IA especializados</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">50</div>
+        <div class="stat-label">Perfiles de simulación de compra</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">&lt;5'</div>
+        <div class="stat-label">Tiempo de activación</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">En español, para tu empresa</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ───────────────────────────────────────────────── -->
+<section class="features" id="features">
+  <div class="page">
+    <div class="section-tag">// funciones</div>
+    <h2 class="section-title">Todo lo que necesita<br>tu equipo de ventas</h2>
+    <p class="section-sub">Sin configuraciones complejas. Sin integraciones rotas. Un portal que funciona desde el primer día.</p>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">🎯</div>
+        <div class="feat-title">Pipeline de Ventas</div>
+        <div class="feat-desc">Gestión de leads con vista Kanban y lista. Seguimiento por etapas, fechas de contacto y valor estimado. KPIs personales en tiempo real.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🤖</div>
+        <div class="feat-title">Agentes de IA</div>
+        <div class="feat-desc">10 agentes de ventas + 14 de marketing + 3 asistentes de portal. Cada uno especializado en una función: prospectar, negociar, cerrar, crear campañas.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🧠</div>
+        <div class="feat-title">Simulación de Compra</div>
+        <div class="feat-desc">Panel de 50 perfiles de compradores con 8 PhD en psicología de ventas. Simula cómo reaccionaría tu mercado antes de lanzar una propuesta.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📄</div>
+        <div class="feat-title">Generador de Documentos</div>
+        <div class="feat-desc">Propuestas, contratos, cotizaciones e informes generados por IA en segundos. Con el tono y la información de tu empresa. Descarga en HTML listo para imprimir.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔍</div>
+        <div class="feat-title">Inteligencia de Mercado</div>
+        <div class="feat-desc">Motor de búsqueda con IA para investigar prospectos, analizar sectores, identificar oportunidades y construir argumentos de venta con datos reales.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏢</div>
+        <div class="feat-title">Base de Conocimiento</div>
+        <div class="feat-desc">Sube PDFs, Word, Excel y los agentes aprenden de tu empresa. MetaGenio responde con la información de tus propios documentos internos.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── AGENTS MARQUEE ─────────────────────────────────────────── -->
+<section class="agents-section">
+  <div class="page">
+    <div class="section-tag">// agentes disponibles</div>
+    <h2 class="section-title">Un equipo de IA<br>disponible 24/7</h2>
+  </div>
+  <div class="agents-marquee-wrap" style="margin-top:40px">
+    <div class="agents-marquee" id="marquee">
+      <!-- se duplica vía JS para loop infinito -->
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ────────────────────────────────────────────────── -->
+<section class="pricing" id="pricing">
+  <div class="page">
+    <div class="section-tag">// planes</div>
+    <h2 class="section-title">Precios claros,<br>sin sorpresas</h2>
+    <p class="section-sub">Todos los planes incluyen agentes de IA, pipeline de ventas, generador de documentos y soporte en español.</p>
+    <div class="pricing-grid">
+      <!-- Starter -->
+      <div class="price-card">
+        <div class="price-tier">Starter</div>
+        <div class="price-val"><sup>$</sup>299</div>
+        <div class="price-period">USD / mes · hasta 5 usuarios</div>
+        <div class="price-desc">Para equipos pequeños que quieren empezar con IA en ventas sin complicaciones.</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="chk">✓</span> Pipeline + Kanban de leads</li>
+          <li><span class="chk">✓</span> MetaGenio (asistente de portal)</li>
+          <li><span class="chk">✓</span> Generador de documentos IA</li>
+          <li><span class="chk">✓</span> 5 agentes de ventas</li>
+          <li><span class="chk">✓</span> 200 usos de Claude/mes por usuario</li>
+          <li><span class="chk">✓</span> Documentos ilimitados</li>
+          <li><span class="dim">✗ Simulación de compra (50 perfiles)</span></li>
+          <li><span class="dim">✗ Agentes de marketing</span></li>
+          <li><span class="dim">✗ Inteligencia de mercado</span></li>
+        </ul>
+        <button class="btn-price" onclick="selectPlan('starter')">Empezar con Starter</button>
+      </div>
+
+      <!-- Pro (featured) -->
+      <div class="price-card featured">
+        <div class="price-badge">MÁS POPULAR</div>
+        <div class="price-tier">Profesional</div>
+        <div class="price-val"><sup>$</sup>599</div>
+        <div class="price-period">USD / mes · hasta 15 usuarios</div>
+        <div class="price-desc">El portal completo. Ventas + marketing + IA de simulación para equipos que quieren cerrar más.</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="chk">✓</span> Todo de Starter</li>
+          <li><span class="chk">✓</span> 10 agentes de ventas completos</li>
+          <li><span class="chk">✓</span> 14 agentes de marketing</li>
+          <li><span class="chk">✓</span> Simulación de compra (50 perfiles + 8 PhD)</li>
+          <li><span class="chk">✓</span> Inteligencia de mercado</li>
+          <li><span class="chk">✓</span> Base de conocimiento propia (docs subidos)</li>
+          <li><span class="chk">✓</span> 500 usos de Claude/mes por usuario</li>
+          <li><span class="chk">✓</span> Panel de administración completo</li>
+        </ul>
+        <button class="btn-price primary" onclick="selectPlan('pro')">Activar plan Profesional →</button>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="price-card">
+        <div class="price-tier">Enterprise</div>
+        <div class="price-val" style="font-size:38px">A medida</div>
+        <div class="price-period">Contáctanos para cotización</div>
+        <div class="price-desc">Para empresas con múltiples equipos, personalización de agentes y requisitos específicos de seguridad.</div>
+        <div class="price-divider"></div>
+        <ul class="price-features">
+          <li><span class="chk">✓</span> Todo de Profesional</li>
+          <li><span class="chk">✓</span> Usuarios ilimitados</li>
+          <li><span class="chk">✓</span> Agentes personalizados para tu empresa</li>
+          <li><span class="chk">✓</span> Dominio propio (tuempresa.com)</li>
+          <li><span class="chk">✓</span> Integración con tu CRM existente</li>
+          <li><span class="chk">✓</span> SLA 99.9% + soporte prioritario</li>
+          <li><span class="chk">✓</span> Onboarding dedicado</li>
+          <li><span class="chk">✓</span> Factura fiscal México/LATAM</li>
+        </ul>
+        <button class="btn-price" onclick="window.location.href='mailto:acanales@ibanormexico.com?subject=MetaTronix Enterprise'">
+          Contactar ventas
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── REGISTRO ────────────────────────────────────────────────── -->
+<section class="registro" id="registro">
+  <div class="page">
+    <div class="registro-wrapper">
+      <!-- Copy -->
+      <div class="registro-copy">
+        <div class="section-tag">// activación</div>
+        <h2>Activa tu portal<br>en 5 minutos</h2>
+        <p>Sin instalaciones, sin configuraciones complejas. Llena el formulario, activa tu cuenta de administrador y empieza a usar los agentes de IA con tu equipo hoy mismo.</p>
+        <ul class="steps-list">
+          <li class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-text"><strong>Registra tu empresa</strong> — nombre, industria y tamaño de equipo</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-text"><strong>Crea tu cuenta de admin</strong> — tú controlas quién tiene acceso</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-text"><strong>Confirma tu email</strong> — recibirás un enlace de acceso inmediato</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-text"><strong>Invita a tu equipo</strong> — desde el panel de administración</div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Form card -->
+      <div class="form-card">
+        <div id="form-state">
+          <div class="form-title">Crear cuenta de empresa</div>
+          <div class="form-subtitle">Tu primer mes es completamente gratuito, sin tarjeta.</div>
+
+          <form id="reg-form" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="f-empresa">Empresa *</label>
+                <input type="text" id="f-empresa" class="form-input" placeholder="MetaTronix SA" required maxlength="100">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-industria">Industria *</label>
+                <select id="f-industria" class="form-select" required>
+                  <option value="" disabled selected>Selecciona…</option>
+                  <option value="retail">Retail / Comercio</option>
+                  <option value="tecnologia">Tecnología / Software</option>
+                  <option value="servicios">Servicios Profesionales</option>
+                  <option value="manufactura">Manufactura / Industrial</option>
+                  <option value="salud">Salud / Farmacéutica</option>
+                  <option value="educacion">Educación / Capacitación</option>
+                  <option value="fintech">Fintech / Financiero</option>
+                  <option value="inmobiliaria">Inmobiliaria / Construcción</option>
+                  <option value="alimentos">Alimentos / Bebidas</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="f-nombre">Tu nombre *</label>
+                <input type="text" id="f-nombre" class="form-input" placeholder="Ana García" required maxlength="80">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-equipo">Tamaño de equipo</label>
+                <select id="f-equipo" class="form-select">
+                  <option value="1-5">1–5 personas</option>
+                  <option value="6-15" selected>6–15 personas</option>
+                  <option value="16-50">16–50 personas</option>
+                  <option value="50+">Más de 50</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-divider">datos de acceso</div>
+
+            <div class="form-group">
+              <label class="form-label" for="f-email">Email corporativo *</label>
+              <input type="email" id="f-email" class="form-input" placeholder="tu@empresa.com" required maxlength="255">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="f-pwd">Contraseña *</label>
+              <div class="pwd-wrap">
+                <input type="password" id="f-pwd" class="form-input" placeholder="Mínimo 8 caracteres" required minlength="8" style="padding-right:44px">
+                <button type="button" class="pwd-toggle" onclick="togglePwd()" id="pwd-eye">👁</button>
+              </div>
+            </div>
+
+            <div id="form-msg" class="form-msg"></div>
+
+            <button type="submit" class="form-submit" id="form-btn">
+              Activar mi portal gratis →
+            </button>
+            <p class="form-note">
+              Al registrarte aceptas los <a href="/privacy.html">Términos y política de privacidad</a>.<br>
+              ¿Ya tienes cuenta? <a href="/index.html">Inicia sesión</a>.
+            </p>
+          </form>
+        </div>
+
+        <!-- Success state -->
+        <div class="success-state" id="success-state">
+          <div class="success-icon">🎉</div>
+          <div class="success-title">¡Empresa registrada!</div>
+          <div class="success-text">
+            Enviamos un email de confirmación a <strong id="success-email"></strong>.<br>
+            Confirma tu cuenta y accede al portal de inmediato.
+          </div>
+          <button class="btn-portal" onclick="window.location.href='/index.html'">
+            <span>→</span> Ir al portal
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-brand">METATRONIX · IBANOR SA DE CV</div>
+  <div class="footer-note">© 2026 · metatronixleads.tech · Hecho en México</div>
+</footer>
+
+<script>
+/* ── Agentes marquee ──────────────────────────────────────────── */
+const AGENTS = [
+  {name:'MetaGenio',color:'#1a6fff',icon:'📎'},
+  {name:'MetaFollow',color:'#00c853',icon:'📬'},
+  {name:'SerSionate',color:'#ff6d00',icon:'🦊'},
+  {name:'Prospector IA',color:'#00D4F0',icon:'🔍'},
+  {name:'Calificador IA',color:'#10B981',icon:'⚡'},
+  {name:'Negociador IA',color:'#F59E0B',icon:'🤝'},
+  {name:'Cerrador IA',color:'#EF4444',icon:'🎯'},
+  {name:'Propuesta IA',color:'#8B5CF6',icon:'📄'},
+  {name:'Seguimiento IA',color:'#00D4F0',icon:'📊'},
+  {name:'WBR Pipeline AI',color:'#14B8A6',icon:'📈'},
+  {name:'Observador Mktg',color:'#3B82F6',icon:'👁'},
+  {name:'Director Creativo',color:'#EC4899',icon:'🎨'},
+  {name:'Motor de Contenido',color:'#F59E0B',icon:'⚙'},
+  {name:'Conversor de Leads',color:'#10B981',icon:'🔄'},
+  {name:'Video IA',color:'#EF4444',icon:'🎬'},
+  {name:'Imagen IA',color:'#8B5CF6',icon:'🖼'},
+  {name:'Simulación Social',color:'#00FF88',icon:'👥'},
+  {name:'PhD Ventas Panel',color:'#FFD700',icon:'🧠'},
+  {name:'Descubridor IA',color:'#00D4F0',icon:'🗺'},
+  {name:'Presentador IA',color:'#14B8A6',icon:'🎤'},
+];
+
+const marquee = document.getElementById('marquee');
+const items = [...AGENTS,...AGENTS].map(a => `
+  <div class="agent-pill">
+    <span style="font-size:16px">${a.icon}</span>
+    <span style="color:${a.color};font-weight:600">${a.name}</span>
+  </div>`).join('');
+marquee.innerHTML = items;
+
+/* ── Plan selection: scroll to form + pre-fill ────────────────── */
+function selectPlan(plan) {
+  document.getElementById('registro').scrollIntoView({behavior:'smooth'});
+  setTimeout(() => {
+    const note = document.querySelector('.form-subtitle');
+    if (note) {
+      const labels = {starter:'Plan Starter · $299 USD/mes',pro:'Plan Profesional · $599 USD/mes'};
+      note.textContent = labels[plan] || 'Plan seleccionado. Primer mes gratis.';
+    }
+  }, 400);
+}
+
+/* ── Toggle password ──────────────────────────────────────────── */
+function togglePwd() {
+  const input = document.getElementById('f-pwd');
+  const eye   = document.getElementById('pwd-eye');
+  input.type  = input.type === 'password' ? 'text' : 'password';
+  eye.textContent = input.type === 'password' ? '👁' : '🙈';
+}
+
+/* ── Form submission ──────────────────────────────────────────── */
+document.getElementById('reg-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const empresa   = document.getElementById('f-empresa').value.trim();
+  const industria = document.getElementById('f-industria').value;
+  const nombre    = document.getElementById('f-nombre').value.trim();
+  const equipo    = document.getElementById('f-equipo').value;
+  const email     = document.getElementById('f-email').value.trim().toLowerCase();
+  const pwd       = document.getElementById('f-pwd').value;
+  const msg       = document.getElementById('form-msg');
+  const btn       = document.getElementById('form-btn');
+
+  // Validaciones
+  msg.className = 'form-msg';
+  msg.style.display = 'none';
+
+  if (!empresa || !industria || !nombre || !email || !pwd) {
+    showMsg('error', 'Por favor completa todos los campos obligatorios.');
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showMsg('error', 'Ingresa un email válido.');
+    return;
+  }
+  if (pwd.length < 8) {
+    showMsg('error', 'La contraseña debe tener al menos 8 caracteres.');
+    return;
+  }
+
+  // Loading
+  btn.disabled = true;
+  btn.textContent = 'Creando tu portal…';
+
+  try {
+    const cfg = window.MTX_CONFIG;
+    if (!cfg?.SUPABASE_URL || cfg.SUPABASE_URL.includes('YOURPROJECT')) {
+      throw new Error('Portal no configurado. Contacta a soporte.');
+    }
+
+    const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+
+    // 1. Crear usuario Auth
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+      email,
+      password: pwd,
+      options: {
+        data: {
+          full_name: nombre,
+          company:   empresa,
+        },
+        emailRedirectTo: window.location.origin + '/index.html'
+      }
+    });
+
+    if (authErr) {
+      if (authErr.message.includes('already registered') || authErr.message.includes('already in use')) {
+        showMsg('error', 'Este email ya está registrado. <a href="/index.html">Inicia sesión aquí</a>.');
+      } else {
+        showMsg('error', 'Error al crear cuenta: ' + authErr.message);
+      }
+      btn.disabled = false;
+      btn.textContent = 'Activar mi portal gratis →';
+      return;
+    }
+
+    if (!authData?.user) {
+      showMsg('error', 'No se pudo crear la cuenta. Intenta de nuevo.');
+      btn.disabled = false;
+      btn.textContent = 'Activar mi portal gratis →';
+      return;
+    }
+
+    // 2. Upsert profile con rol admin + datos de empresa
+    const { error: profileErr } = await sb.from('profiles').upsert({
+      id:                  authData.user.id,
+      full_name:           nombre,
+      role:                'admin',
+      company_name:        empresa,
+      industry:            industria,
+      team_size:           equipo,
+      claude_enabled:      true,
+      claude_monthly_limit:100,
+      claude_usage_month:  0,
+      claude_reset_month:  new Date().toISOString().slice(0,7),
+    }, { onConflict: 'id', ignoreDuplicates: false });
+
+    // profileErr no es fatal — el perfil puede haberse creado via trigger
+    // Solo lo logueamos silenciosamente
+
+    // 3. Mostrar éxito
+    document.getElementById('form-state').style.display = 'none';
+    document.getElementById('success-email').textContent = email;
+    const ss = document.getElementById('success-state');
+    ss.style.display = 'block';
+
+    // Log de registro
+    try {
+      await sb.from('activity_logs').insert({
+        user_id:     authData.user.id,
+        action:      'empresa_registrada',
+        entity_type: 'onboarding',
+        metadata:    { empresa, industria, equipo, fuente: 'registro-empresa.html' }
+      });
+    } catch(_) {}
+
+  } catch (err) {
+    showMsg('error', err.message || 'Error inesperado. Intenta de nuevo.');
+    btn.disabled = false;
+    btn.textContent = 'Activar mi portal gratis →';
+  }
+});
+
+function showMsg(type, html) {
+  const msg = document.getElementById('form-msg');
+  msg.className = 'form-msg ' + type;
+  msg.innerHTML = html;
+  msg.style.display = 'block';
+}
+</script>
+</body>
+</html>
