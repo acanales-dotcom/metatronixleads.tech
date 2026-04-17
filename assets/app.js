@@ -471,7 +471,7 @@ function renderHeader(user, activePage) {
       </a>
       <a href="/ventas.html" class="sidebar-nav-link ${activePage==='ventas'?'active':''}">
         <span class="nav-icon">💰</span>
-        <span class="nav-label">Agencia IA</span>
+        <span class="nav-label">MetaVentax AI</span>
       </a>
 
       <div class="sidebar-divider"></div>
@@ -484,7 +484,7 @@ function renderHeader(user, activePage) {
       </a>
       <a href="/marketing.html" class="sidebar-nav-link ${activePage==='marketing'?'active':''}">
         <span class="nav-icon">📣</span>
-        <span class="nav-label">Marketing IA</span>
+        <span class="nav-label">MetaMKTX</span>
       </a>
       <a href="/captureform.html" class="sidebar-nav-link" target="_blank" title="Formulario público de captura de leads">
         <span class="nav-icon">↗</span>
