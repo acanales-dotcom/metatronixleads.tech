@@ -1,0 +1,72 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# supabase-restore.yml
+# Restaura el proyecto Supabase si fue pausado por inactividad.
+# REQUIERE: secret SUPABASE_ACCESS_TOKEN en GitHub repository settings.
+#
+# Cómo agregar el secret:
+#   1. Ir a: https://github.com/acanales-dotcom/metatronixleads.tech/settings/secrets/actions
+#   2. Click "New repository secret"
+#   3. Name: SUPABASE_ACCESS_TOKEN
+#   4. Value: tu token de acceso personal de Supabase
+#      (obtener en: https://supabase.com/dashboard/account/tokens)
+# ─────────────────────────────────────────────────────────────────────────────
+name: Supabase Restore (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribir "restaurar" para confirmar'
+        required: true
+        default: ''
+
+jobs:
+  restore:
+    name: Restaurar proyecto Supabase
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'restaurar' }}
+
+    steps:
+      - name: Llamar API de restauración
+        run: |
+          echo "🔄 Iniciando restauración del proyecto hodrfonbpmqulkyzrzpq..."
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            "https://api.supabase.com/v1/projects/hodrfonbpmqulkyzrzpq/restore" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}" \
+            -H "Content-Type: application/json")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "204" ]; then
+            echo "✅ Restauración iniciada correctamente."
+            echo "   El proyecto tardará ~2 minutos en estar activo."
+            echo "   Portal: https://metatronixleads.tech"
+          else
+            echo "❌ Error al restaurar: HTTP $HTTP_CODE"
+            echo "   Verificar que SUPABASE_ACCESS_TOKEN sea válido."
+            exit 1
+          fi
+
+      - name: Esperar y verificar
+        run: |
+          echo "⏳ Esperando 90 segundos para verificar que el proyecto esté activo..."
+          sleep 90
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            "https://hodrfonbpmqulkyzrzpq.supabase.co/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NjgwMDgsImV4cCI6MjA1ODQ0NDAwOH0.7dC8Vl5UdMNGKnEBZIlvmFJNMHJUCbYMgMpDAmLjHkU" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NjgwMDgsImV4cCI6MjA1ODQ0NDAwOH0.7dC8Vl5UdMNGKnEBZIlvmFJNMHJUCbYMgMpDAmLjHkU")
+
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Proyecto activo y respondiendo. Portal disponible en https://metatronixleads.tech"
+          else
+            echo "⚠️  El proyecto puede tardar unos minutos más. HTTP: $STATUS"
+            echo "   Revisar en: https://supabase.com/dashboard/project/hodrfonbpmqulkyzrzpq"
+          fi

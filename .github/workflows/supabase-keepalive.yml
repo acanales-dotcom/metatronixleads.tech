@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# supabase-keepalive.yml
+# Previene que el proyecto Supabase (free tier) se pause por inactividad.
+# Ejecuta una consulta real a la base de datos cada 4 días.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Cada 4 días a las 08:00 UTC (evita exactamente el límite de 7 días)
+    - cron: '0 8 */4 * *'
+
+  # También permite ejecución manual desde GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Razón de ejecución manual'
+        required: false
+        default: 'Ping manual'
+
+jobs:
+  keepalive:
+    name: Ping Supabase DB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping — consulta real a profiles
+        run: |
+          echo "⏰ $(date -u '+%Y-%m-%d %H:%M:%S UTC') — enviando ping a Supabase..."
+
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X GET \
+            "https://hodrfonbpmqulkyzrzpq.supabase.co/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NjgwMDgsImV4cCI6MjA1ODQ0NDAwOH0.7dC8Vl5UdMNGKnEBZIlvmFJNMHJUCbYMgMpDAmLjHkU" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4NjgwMDgsImV4cCI6MjA1ODQ0NDAwOH0.7dC8Vl5UdMNGKnEBZIlvmFJNMHJUCbYMgMpDAmLjHkU")
+
+          echo "📡 HTTP Status: $RESPONSE"
+
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ Supabase activo — ping exitoso."
+          elif [ "$RESPONSE" = "503" ] || [ "$RESPONSE" = "000" ]; then
+            echo "🔴 ALERTA: Supabase podría estar pausado (HTTP $RESPONSE)."
+            echo "   → Ir a https://supabase.com/dashboard y restaurar el proyecto."
+            exit 1
+          else
+            echo "⚠️  Respuesta inesperada: HTTP $RESPONSE — se continúa sin fallar."
+          fi
+
+      - name: Log resultado
+        if: always()
+        run: |
+          echo "──────────────────────────────────"
+          echo "Proyecto  : hodrfonbpmqulkyzrzpq"
+          echo "Portal    : metatronixleads.tech"
+          echo "Próxima   : en ~4 días (cron '0 8 */4 * *')"
+          echo "──────────────────────────────────"
