@@ -307,6 +307,33 @@
 }
 
 /* Welcome card */
+/* ── Mode tabs ─────────────────────────────────────────── */
+.agent-mode-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: #0f1623;
+  flex-shrink: 0;
+}
+.mode-tab {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.35);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: var(--font-mono, monospace);
+}
+.mode-tab:hover { color: rgba(255,255,255,.7); }
+.mode-tab.active { color: #1a6fff; border-bottom-color: #1a6fff; }
+.mode-tab[data-mode="metafollow"].active  { color: #00c853; border-bottom-color: #00c853; }
+.mode-tab[data-mode="sersionate"].active  { color: #ff6d00; border-bottom-color: #ff6d00; }
+
 .agent-welcome {
   background: linear-gradient(135deg, #f0f4ff, #e8eeff);
   border: 1px solid #c8d8ff;

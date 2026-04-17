@@ -14,12 +14,53 @@
   const HISTORY_DISPLAY = 20; // mensajes a mostrar en UI al restaurar
 
   let db, currentUser, sessionId, messages = [], isOpen = false, isTyping = false;
-  let historyLoaded = false;   // ¿ya cargamos/mostramos historial?
-  let introSent = false;       // ¿ya enviamos saludo de bienvenida esta sesión?
-  let knowledgeBase   = [];   // agent_knowledge (legacy)
-  let websiteSources  = [];   // knowledge_sources (scraped websites)
-  let sharedDocs      = [];   // metatronix_docs con text_content
-  let approvedDocs    = [];   // documents aprobados del portal
+  let historyLoaded = false;
+  let introSent = false;
+  let knowledgeBase   = [];
+  let websiteSources  = [];
+  let sharedDocs      = [];
+  let approvedDocs    = [];
+  let currentMode     = 'metagenio'; // metagenio | metafollow | sersionate
+  let pipelineState   = null; // datos para MetaFollow
+
+  const MODE_CONFIG = {
+    metagenio: {
+      label: 'MetaGenio',
+      role:  'Asistente General',
+      color: '#1a6fff',
+      welcome: '📎 ¡Hola! Soy MetaGenio, tu asistente de portal. ¿En qué puedo ayudarte?',
+      quickActions: [
+        { icon:'📂', msg:'¿Cómo subo un documento en Docs MTX? Explícame paso a paso.',        label:'¿Cómo subo un documento?' },
+        { icon:'🎯', msg:'¿Cómo registro un nuevo lead? Explícame todos los campos y pasos.',  label:'¿Cómo agrego un lead?' },
+        { icon:'📄', msg:'¿Cómo genero un documento con IA? Dame el proceso completo.',        label:'¿Cómo genero documentos?' },
+        { icon:'🏢', msg:'¿Qué hace MetaTronix y cuáles son sus subsidiarias y productos?',    label:'¿Qué hace MetaTronix?' },
+      ]
+    },
+    metafollow: {
+      label: 'MetaFollow',
+      role:  'Agente de Seguimiento',
+      color: '#00c853',
+      welcome: '📬 Soy MetaFollow. Te ayudo con seguimientos de leads, coordinación con el Orquestador de Ventas y Marketing, y actualizaciones de pipeline.',
+      quickActions: [
+        { icon:'📊', msg:'Dame el estado actual del pipeline de ventas: etapas, leads urgentes y valor total.',  label:'Estado del pipeline' },
+        { icon:'📬', msg:'¿Qué leads necesitan seguimiento hoy o esta semana? Lista los más urgentes.',          label:'Leads urgentes hoy' },
+        { icon:'🎯', msg:'¿Qué ha hecho el Orquestador de Ventas recientemente? Dame un resumen de acciones.', label:'Reporte Orquestador Ventas' },
+        { icon:'📣', msg:'¿Qué ha hecho el Orquestador de Marketing recientemente? Dame un resumen.',          label:'Reporte Orquestador Mktg' },
+      ]
+    },
+    sersionate: {
+      label: 'SerSionate',
+      role:  'Especialista MetaTronix',
+      color: '#ff6d00',
+      welcome: '🦊 Soy SerSionate. Hablo exclusivamente sobre MetaTronix: productos, servicios, procesos internos y cultura de empresa. ¿Qué quieres saber?',
+      quickActions: [
+        { icon:'🏢', msg:'¿Cuáles son todos los productos y servicios de MetaTronix e IBANOR SA de CV?',          label:'Productos y servicios' },
+        { icon:'🌐', msg:'¿Cuáles son las subsidiarias de MetaTronix y a qué se dedica cada una?',               label:'Subsidiarias' },
+        { icon:'📋', msg:'¿Cuáles son los procesos internos principales de MetaTronix para ventas?',             label:'Procesos internos' },
+        { icon:'🤝', msg:'¿Cuál es la propuesta de valor de MetaTronix frente a la competencia?',               label:'Propuesta de valor' },
+      ]
+    }
+  };
 
     /* ── MetaGenio SVG ─────────────────────────────────────────── */
   function metaGenioSVG (id) {
@@ -206,7 +247,67 @@
   }
 
   /* ── System prompt dinámico ─────────────────────────────── */
+  /* ── MetaFollow: carga estado pipeline ─────────────────── */
+  async function loadPipelineState () {
+    if (!db || !currentUser) return;
+    try {
+      const [{ data: leads }, { data: convs }] = await Promise.all([
+        db.from('leads').select('id,empresa,contacto,etapa,valor_estimado,fecha_seguimiento,notas').order('fecha_seguimiento', { ascending: true }).limit(30),
+        db.from('agent_conversations').select('agent_mode,messages,created_at').order('created_at', { ascending: false }).limit(10),
+      ]);
+      pipelineState = { leads: leads || [], recentConvs: convs || [] };
+    } catch (_) { pipelineState = null; }
+  }
+
+  /* ── Switch de modo ─────────────────────────────────────── */
+  function switchMode (mode) {
+    if (!MODE_CONFIG[mode]) return;
+    currentMode = mode;
+    messages = [];
+    introSent = false;
+    historyLoaded = false;
+
+    // Actualizar tabs UI
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+
+    // Limpiar mensajes y mostrar bienvenida del nuevo modo
+    const msgBox = document.getElementById('agent-messages');
+    if (!msgBox) return;
+    msgBox.innerHTML = '';
+    const cfg = MODE_CONFIG[mode];
+
+    // Welcome card
+    const welcome = document.createElement('div');
+    welcome.className = 'agent-welcome';
+    welcome.innerHTML = `<div class="agent-welcome-title">${cfg.welcome}</div>`;
+    msgBox.appendChild(welcome);
+
+    // Quick actions
+    const qa = document.createElement('div');
+    qa.className = 'agent-quick-actions';
+    qa.id = 'agent-quick-actions';
+    cfg.quickActions.forEach(a => {
+      const b = document.createElement('button');
+      b.className = 'quick-action-btn';
+      b.dataset.icon = a.icon;
+      b.dataset.msg  = a.msg;
+      b.textContent  = a.label;
+      b.onclick = () => sendMessage(a.msg);
+      qa.appendChild(b);
+    });
+    msgBox.appendChild(qa);
+
+    // Actualizar color acento del panel
+    const panel = document.getElementById('mtx-agent-panel');
+    if (panel) panel.style.setProperty('--mode-color', cfg.color);
+
+    // Si MetaFollow, cargar pipeline en background
+    if (mode === 'metafollow') loadPipelineState();
+  }
+
   function buildSystemPrompt () {
+    if (currentMode === 'metafollow') return buildMetaFollowPrompt();
+    if (currentMode === 'sersionate') return buildSerSionatePrompt();
     const page     = detectPage();
     const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador';
     const userRole = currentUser?.profile?.role || 'user';
@@ -403,6 +504,80 @@ REGLAS DE COMPORTAMIENTO
 5. Nunca compartas datos personales de otros colaboradores.
 6. Si el usuario parece perdido, pregúntale qué quiere lograr y guíalo proactivamente.
 ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Responde sobre el portal usando la guía anterior.' : ''}`;
+  }
+
+  /* ── MetaFollow system prompt ──────────────────────────── */
+  function buildMetaFollowPrompt () {
+    const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador';
+    let pipelineText = '';
+    if (pipelineState?.leads?.length) {
+      pipelineText = '\n\n════════ ESTADO ACTUAL DEL PIPELINE ════════\n';
+      const now = new Date();
+      pipelineState.leads.forEach(l => {
+        const fecha = l.fecha_seguimiento ? new Date(l.fecha_seguimiento) : null;
+        const diasRestantes = fecha ? Math.ceil((fecha - now) / 86400000) : null;
+        const urgencia = diasRestantes !== null ? (diasRestantes < 0 ? '🔴 VENCIDO' : diasRestantes <= 3 ? '🟡 URGENTE' : '🟢') : '⚪';
+        pipelineText += `${urgencia} ${l.empresa} | ${l.etapa} | $${(l.valor_estimado||0).toLocaleString()} | ${fecha ? fecha.toLocaleDateString('es-MX') : 'Sin fecha'}\n`;
+      });
+      const total = pipelineState.leads.reduce((s, l) => s + (l.valor_estimado || 0), 0);
+      pipelineText += `\nTOTAL PIPELINE: $${total.toLocaleString()} MXN | ${pipelineState.leads.length} leads activos\n`;
+    }
+    return `Eres MetaFollow, el Agente de Seguimiento y Coordinación de MetaTronix.
+
+IDENTIDAD: Especialista en seguimiento de prospectos, coordinación entre equipos y actualización del pipeline. Trabajas de la mano con el Orquestador de Ventas (en ventas.html) y el Orquestador de Marketing (en marketing.html). Eres directo, orientado a acción, con respuestas concretas y ejecutables.
+
+USUARIO: ${userName}
+
+TUS FUNCIONES PRINCIPALES:
+1. Reportar el estado del pipeline de ventas en tiempo real
+2. Identificar leads que necesitan seguimiento urgente
+3. Coordinar con el Orquestador de Ventas: envía resúmenes de pipeline, sugiere acciones de cierre
+4. Coordinar con el Orquestador de Marketing: reporta qué leads llegaron por cada canal, qué campañas están activas
+5. Generar secuencias de seguimiento (email, WhatsApp, llamada) personalizadas
+6. Resumir qué han hecho los agentes de ventas y marketing recientemente
+${pipelineText}
+ORQUESTADORES DISPONIBLES:
+- Orquestador de Ventas → en /ventas.html → dirige 10 agentes: Prospector, Calificador, Descubridor, Presentador, Negociador, Cerrador, Propuesta IA, Seguimiento IA, WBR Pipeline AI
+- Orquestador de Marketing → en /marketing.html → dirige 14 agentes: Observador, Narrador, Director, Motor, Conversor, Aprendizaje, Video IA, Imagen IA, Simulador Social
+
+REGLAS:
+1. Siempre responde en español, con acciones específicas y ejecutables
+2. Para actualizaciones del Orquestador: sugiere qué comunicar y cómo, y proporciona el mensaje listo para copiar/pegar
+3. Prioriza siempre por urgencia (leads vencidos > leads urgentes > leads normales)
+4. Cuando no tengas datos en tiempo real, indícalo claramente y sugiere dónde verificar`;
+  }
+
+  /* ── SerSionate system prompt ───────────────────────────── */
+  function buildSerSionatePrompt () {
+    const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador';
+    let mtxKnowledge = '';
+    if (websiteSources.length) {
+      websiteSources.forEach(s => { mtxKnowledge += `\n▸ ${s.title}:\n${s.content}\n`; });
+    }
+    if (sharedDocs.length) {
+      sharedDocs.filter(d => d.text_content).forEach(d => { mtxKnowledge += `\n▸ ${d.title}:\n${d.text_content?.slice(0,2000)}\n`; });
+    }
+    return `Eres SerSionate, el Especialista de Marca MetaTronix.
+
+IDENTIDAD: Agente de conocimiento profundo sobre MetaTronix e IBANOR SA de CV. Tu único propósito es responder preguntas sobre MetaTronix: productos, servicios, subsidiarias, procesos internos, cultura, propuesta de valor y estrategia comercial.
+
+USUARIO: ${userName}
+
+REGLA ABSOLUTA: Solo hablas de MetaTronix, IBANOR SA de CV, y sus subsidiarias y productos.
+Si alguien pregunta sobre cualquier otro tema (política, deportes, tecnología general, competidores, etc.), respondes amablemente:
+"Soy SerSionate, especialista exclusivo de MetaTronix. Solo puedo ayudarte con preguntas sobre MetaTronix, IBANOR SA de CV, sus productos y servicios. ¿En qué aspecto de MetaTronix puedo ayudarte?"
+
+ÁREAS DE CONOCIMIENTO METATRONIX:
+- Productos y servicios de MetaTronix e IBANOR SA de CV
+- Subsidiarias y su propósito
+- Propuesta de valor y diferenciadores competitivos
+- Procesos internos de ventas, marketing y operaciones
+- Cultura organizacional y valores de la empresa
+- Portal interno metatronixleads.tech y sus módulos
+- Agentes MetaGenio y MetaFollow (colaboran contigo en el mismo panel)
+- Políticas, procedimientos y documentos oficiales
+${mtxKnowledge ? '\n════ CONOCIMIENTO OFICIAL METATRONIX ════\n' + mtxKnowledge : ''}
+TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca especules sobre MetaTronix si no tienes la información — di claramente que no tienes ese dato y sugiere consultar con el equipo o subir el documento en Docs MTX.`;
   }
 
   /* ── Detectar página actual ─────────────────────────────── */
@@ -631,6 +806,13 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
         </div>
       </div>
 
+      <!-- Mode tabs -->
+      <div class="agent-mode-tabs">
+        <button class="mode-tab active" data-mode="metagenio">MetaGenio</button>
+        <button class="mode-tab" data-mode="metafollow">MetaFollow</button>
+        <button class="mode-tab" data-mode="sersionate">SerSionate</button>
+      </div>
+
       <!-- Messages -->
       <div class="agent-messages" id="agent-messages">
         <div class="agent-welcome">
@@ -775,6 +957,11 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     const send   = document.getElementById('mtx-agent-send');
     const clear  = document.getElementById('agent-clear-btn');
     const msgBox = document.getElementById('agent-messages');
+
+    // Mode tab switching
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => switchMode(tab.dataset.mode));
+    });
 
     // Toggle panel — initAgentDrag handles pointerup; this click fires only if
     // e.preventDefault() wasn't called (non-pointer devices fallback)
