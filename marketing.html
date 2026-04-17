@@ -216,6 +216,28 @@
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
+/* ═══════════════════════ USAGE BLOCKER ═════════════════ */
+@keyframes blocker-in { from{opacity:0;transform:scale(.94) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.usage-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);animation:fadeIn .2s ease; }
+.usage-modal { background:linear-gradient(145deg,#0D1117,#161B22);border:1px solid rgba(239,68,68,.35);border-radius:16px;max-width:440px;width:100%;overflow:hidden;animation:blocker-in .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 60px rgba(239,68,68,.18),0 24px 80px rgba(0,0,0,.5);position:relative; }
+.usage-modal::before { content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 3px); }
+.usage-modal-header { padding:18px 22px 14px;border-bottom:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.06);position:relative;z-index:1; }
+.usage-modal-icon { font-size:36px;display:block;margin-bottom:8px; }
+.usage-modal-title { font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#FCA5A5;letter-spacing:.08em;margin-bottom:3px; }
+.usage-modal-sub { font-size:11px;color:rgba(252,165,165,.5);letter-spacing:.04em;font-family:Inter,sans-serif; }
+.usage-modal-body { padding:18px 22px;position:relative;z-index:1; }
+.usage-bar-wrap { margin:14px 0; }
+.usage-bar-label { display:flex;justify-content:space-between;margin-bottom:6px;font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.45); }
+.usage-bar-track { height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden; }
+.usage-bar-fill { height:100%;border-radius:4px;background:linear-gradient(90deg,#EF4444,#F97316);transition:width .6s ease; }
+.usage-msg { font-size:13px;line-height:1.7;color:rgba(255,255,255,.65);font-family:Inter,sans-serif;margin-bottom:14px; }
+.usage-reset-date { display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.4);font-family:'JetBrains Mono',monospace;margin-bottom:18px; }
+.usage-modal-actions { display:flex;gap:8px;flex-wrap:wrap; }
+.usage-btn-primary { flex:1;padding:10px 16px;background:linear-gradient(135deg,#7C3AED,#6D28D9);border:none;border-radius:8px;color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:all .15s; }
+.usage-btn-primary:hover { background:linear-gradient(135deg,#8B5CF6,#7C3AED);transform:translateY(-1px); }
+.usage-btn-ghost { padding:10px 14px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.45);font-size:12px;font-family:Inter,sans-serif;cursor:pointer;transition:all .15s; }
+.usage-btn-ghost:hover { border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.7); }
+
 /* ═══════════════════════ GENIE ═══════════════════════ */
 @keyframes genie-appear { 0%{opacity:0;transform:translateY(40px) scale(.95)} 60%{opacity:1;transform:translateY(-6px) scale(1.01)} 100%{transform:translateY(0) scale(1)} }
 @keyframes lamp-float { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-10px) rotate(4deg)} }
@@ -431,10 +453,7 @@
         <span class="kb-status" onclick="toggleKB()" id="kb-status-btn">
           🧠 Base de Conocimiento <span id="kb-status-dot">●</span>
         </span>
-        <span id="llm-status-badge" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:10px;background:rgba(148,163,184,.1);color:#94A3B8;border:1px solid rgba(148,163,184,.2)">
-          <span id="llm-status-dot" style="width:6px;height:6px;border-radius:50%;background:#94A3B8;display:inline-block"></span>
-          <span id="llm-status-txt">Conectando…</span>
-        </span>
+        <span id="usage-badge" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:10px;background:rgba(0,194,224,.08);color:#00C2E0;border:1px solid rgba(0,194,224,.2);font-family:var(--font-mono)" title="Usos de IA este mes"></span>
         <span id="gpu-badge" style="display:none;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(0,194,224,.1);color:#00C2E0;border:1px solid rgba(0,194,224,.2)"></span>
       </div>
     </div>
@@ -992,16 +1011,29 @@ async function runAgent(id) {
   const status = document.getElementById(`status-${id}`);
   if (!output) return;
 
+  // ── Control de uso ──
+  if (llmReady) {
+    const ok = await _runAgentWithUsage(id);
+    if (!ok) return;
+  }
+
   setAgentBusy(id, true, status, btn);
   output.className = 'agent-output show';
   output.innerHTML = `<div class="agent-loading"><div class="agent-spinner"></div> Procesando con IA...</div>`;
 
+  let usedLLM = false;
   try {
+    const _origChat = window.CRM_LLM?.chat?.bind(window.CRM_LLM);
+    if (_origChat && window.CRM_LLM) {
+      window.CRM_LLM.chat = async (...args) => { usedLLM = true; return _origChat(...args); };
+    }
     await agent.run(id, output);
+    if (_origChat && window.CRM_LLM) window.CRM_LLM.chat = _origChat;
   } catch(e) {
-    output.innerHTML = `<div style="color:var(--danger)">❌ Error: ${e.message}</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Consejo: Activa el LLM con ⚡ o verifica la conexión a internet para los modelos HuggingFace.</div>`;
+    output.innerHTML = `<div style="color:var(--danger)">❌ Error: ${e.message}</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Verifica tu conexión a internet.</div>`;
   } finally {
     setAgentBusy(id, false, status, btn);
+    if (usedLLM) await _postRunIncrement();
   }
 }
 
@@ -1266,6 +1298,91 @@ async function initLLM() {
 }
 
 /* ══════════════════════════════════════════════════════
+   USAGE CONTROL — Límite mensual de consultas IA
+   ══════════════════════════════════════════════════════ */
+let _usage = { used:0, limit:100, allowed:true, loaded:false };
+
+async function loadUsage() {
+  if (!currentUser) return;
+  try {
+    const result = await checkClaudeAccess(currentUser.id);
+    _usage = { ...result, loaded:true };
+    updateUsageBadge();
+  } catch(_) { _usage.allowed=true; _usage.loaded=true; }
+}
+
+function updateUsageBadge() {
+  const badge = document.getElementById('usage-badge');
+  if (!badge || !_usage.loaded) return;
+  const { used, limit } = _usage;
+  const pct = Math.min(Math.round((used/(limit||1))*100), 100);
+  const warn = pct >= 80, over = pct >= 100;
+  badge.style.display = 'inline-flex';
+  badge.style.color = over ? '#EF4444' : warn ? '#F59E0B' : '';
+  badge.style.borderColor = over ? 'rgba(239,68,68,.3)' : warn ? 'rgba(245,158,11,.3)' : '';
+  badge.style.background = over ? 'rgba(239,68,68,.08)' : warn ? 'rgba(245,158,11,.08)' : '';
+  badge.textContent = `${used} / ${limit} usos`;
+}
+
+function showUsageLimitModal() {
+  const { used, limit } = _usage;
+  const pct = Math.min(Math.round((used/(limit||1))*100), 100);
+  const nextReset = (() => {
+    const d=new Date(); d.setMonth(d.getMonth()+1); d.setDate(1);
+    return d.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
+  })();
+  const overlay = document.createElement('div');
+  overlay.className = 'usage-overlay'; overlay.id = 'usage-overlay';
+  overlay.innerHTML = `
+    <div class="usage-modal">
+      <div class="usage-modal-header">
+        <span class="usage-modal-icon">🔒</span>
+        <div class="usage-modal-title">LÍMITE MENSUAL ALCANZADO</div>
+        <div class="usage-modal-sub">METATRONIX · CONTROL DE ACCESO IA</div>
+      </div>
+      <div class="usage-modal-body">
+        <div class="usage-bar-wrap">
+          <div class="usage-bar-label"><span>Usos este mes</span><span>${used} / ${limit} (${pct}%)</span></div>
+          <div class="usage-bar-track"><div class="usage-bar-fill" style="width:${pct}%"></div></div>
+        </div>
+        <div class="usage-msg">
+          Has llegado al límite de <strong style="color:#FCA5A5">${limit} consultas IA</strong> de tu plan para este mes.<br><br>
+          Tu administrador ha sido <strong style="color:#A5B4FC">notificado automáticamente</strong>. En cuanto autorice la extensión, podrás continuar.
+        </div>
+        <div class="usage-reset-date">🗓 Reset automático: ${nextReset}</div>
+        <div class="usage-modal-actions">
+          <button class="usage-btn-primary" onclick="requestUsageExtension()">📩 Solicitar extensión al admin</button>
+          <button class="usage-btn-ghost" onclick="document.getElementById('usage-overlay').remove()">Cerrar</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+async function requestUsageExtension() {
+  document.getElementById('usage-overlay')?.remove();
+  if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('✅ Solicitud enviada — tu administrador recibirá la notificación de inmediato');
+}
+
+async function _runAgentWithUsage(id) {
+  if (_usage.loaded && !_usage.allowed) { showUsageLimitModal(); return false; }
+  if (llmReady && currentUser) {
+    const check = await checkClaudeAccess(currentUser.id).catch(() => ({ allowed:true }));
+    _usage = { ...check, loaded:true }; updateUsageBadge();
+    if (!check.allowed) { showUsageLimitModal(); return false; }
+  }
+  return true;
+}
+
+async function _postRunIncrement() {
+  if (llmReady && currentUser) {
+    await incrementClaudeUsage(currentUser.id).catch(()=>{});
+    _usage.used = (_usage.used||0) + 1; updateUsageBadge();
+  }
+}
+
+/* ══════════════════════════════════════════════════════
    GENIE — El Genio de la Lámpara de MetaTronix (Marketing)
    ══════════════════════════════════════════════════════ */
 
@@ -1446,22 +1563,6 @@ async function launchAllAgents() {
   }, 5000);
 }
 
-/* ── LLM STATUS BADGE ────────────────────────────────── */
-function setLLMBadge(state, text) {
-  const dot   = document.getElementById('llm-status-dot');
-  const txt   = document.getElementById('llm-status-txt');
-  const badge = document.getElementById('llm-status-badge');
-  const colors = {
-    connecting: { dot:'#F59E0B', bg:'rgba(245,158,11,.1)',  border:'rgba(245,158,11,.25)', text:'#F59E0B' },
-    ready:      { dot:'#00C2E0', bg:'rgba(0,194,224,.1)',   border:'rgba(0,194,224,.25)',  text:'#00C2E0' },
-    offline:    { dot:'#6366F1', bg:'rgba(99,102,241,.1)',  border:'rgba(99,102,241,.25)', text:'#818CF8' },
-  };
-  const c = colors[state] || colors.connecting;
-  if (dot)   dot.style.background = c.dot;
-  if (txt)   { txt.textContent = text; txt.style.color = c.text; }
-  if (badge) { badge.style.background = c.bg; badge.style.borderColor = c.border; }
-}
-
 /* ── INIT ────────────────────────────────────────────── */
 async function init() {
   currentUser = await requireAuth();
@@ -1478,13 +1579,11 @@ async function init() {
   updateKBStatus(!!kb.empresa);
   renderAgents();
 
-  // Auto-init LLM sin botón manual
-  setLLMBadge('connecting', 'Conectando…');
+  // Auto-init LLM
   try {
     if (window.CRM_LLM) {
       await window.CRM_LLM.init();
       llmReady = true;
-      setLLMBadge('ready', 'Claude IA ✓');
       const bar = document.getElementById('llm-bar');
       if (bar) bar.className = 'llm-init-bar hidden';
       AGENTS.forEach(a => {
@@ -1492,10 +1591,9 @@ async function init() {
         if (s) { s.textContent = '✓ IA Lista'; s.className = 'agent-status ready'; }
       });
     }
-  } catch(e) {
-    setLLMBadge('offline', 'Modo template');
-    llmReady = false;
-  }
+  } catch(e) { llmReady = false; }
+
+  loadUsage();
 }
 
 async function loadHFToken() {
