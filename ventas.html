@@ -1207,6 +1207,39 @@ const WBR_FRAMEWORK = {
     'UNA sola decisión de la semana. No se sale de la sala sin ella.',
     'Si un bloque tiene 2+ alertas rojas, se agenda deep dive fuera del WBR.',
   ],
+  agenda: [
+    { minuto: '0-5',   bloque: 'Apertura: métrica única de la semana',        responsable: 'Head of Sales Ops' },
+    { minuto: '5-15',  bloque: 'Cazador: input metrics',                      responsable: 'Growth Engineer' },
+    { minuto: '15-25', bloque: 'Estratega + Arquitecto: input metrics',        responsable: 'Account Strategist' },
+    { minuto: '25-35', bloque: 'Ejecutor: input metrics',                      responsable: 'Client Executive' },
+    { minuto: '35-45', bloque: 'Success Architect: input metrics',             responsable: 'Success Architect Lead' },
+    { minuto: '45-55', bloque: 'Sistema de Aprendizaje: cambios al sistema',   responsable: 'Growth Engineer' },
+    { minuto: '55-60', bloque: 'Decisión de la semana',                        responsable: 'Head of Sales Ops' },
+  ],
+  checklist: {
+    antes: [
+      'Dashboard actualizado con datos de la semana cerrada (cierre viernes 6pm).',
+      'Memo narrativo de 6 páginas listo y distribuido domingo 6pm.',
+      'Alertas rojas identificadas y preparadas para presentación.',
+    ],
+    durante: [
+      'Cronómetro visible. Cada bloque tiene su tiempo asignado.',
+      'Cero discusión emocional. Si alguien se desvía, vuelve al dato.',
+      'La decisión de la semana se toma antes del minuto 60.',
+    ],
+    despues: [
+      'Minuta de 1 página con la decisión y responsable.',
+      'Registro en Memoria Institucional.',
+      'Seguimiento al viernes siguiente sobre el avance de la decisión.',
+    ],
+  },
+  decisionEjemplo: {
+    que:      'Cambiar el ángulo del primer email de outreach en sector retail',
+    quien:    'Client Executive',
+    fecha:    'WBR dentro de 2 semanas',
+    metrica:  'Tasa de respuesta a primer contacto en retail',
+    reversion:'Si cae por debajo del 10%, se revierte',
+  },
 };
 
 /* 10 — WBR PIPELINE AI */
@@ -1218,12 +1251,16 @@ async function runAgentPipelineAI(id, output) {
     `${b.icon} BLOQUE ${b.num} — ${b.nombre.toUpperCase()} (resp: ${b.responsable})\nObjetivo: ${b.objetivo}\nMétricas: ${b.metricas.map(m=>`${m.nombre}: meta ${m.meta}`).join(' | ')}\nAlertas rojas: ${b.alertas.join(' / ')}`
   ).join('\n\n');
 
+  const agendaCtx = WBR_FRAMEWORK.agenda.map(a=>`${a.minuto}: ${a.bloque} (${a.responsable})`).join('\n');
+  const checkCtx  = `ANTES: ${WBR_FRAMEWORK.checklist.antes.join(' | ')}\nDURANTE: ${WBR_FRAMEWORK.checklist.durante.join(' | ')}\nDESPUÉS: ${WBR_FRAMEWORK.checklist.despues.join(' | ')}`;
+  const ejCtx     = Object.entries(WBR_FRAMEWORK.decisionEjemplo).map(([k,v])=>`${k}: ${v}`).join(' | ');
+
   const sys = buildVentasPrompt('WBR Pipeline AI — Head of Sales Ops',
-    `Eres el Head of Sales Ops conduciendo el Weekly Business Review (WBR) de la agencia de ventas B2B.\n\nFRAMEWORK WBR:\n${wbrCtx}\n\nPrincipio Bezos: si mueves los inputs correctos con disciplina, los outputs llegan como consecuencia.\nRegla: solo una decisión de la semana. No dos. No tres. Una.`);
+    `Eres el Head of Sales Ops conduciendo el Weekly Business Review (WBR) de la agencia de ventas B2B.\n\nAGENDA WBR (60 min fijos, cada lunes 9:00 AM):\n${agendaCtx}\n\nFRAMEWORK DE BLOQUES:\n${wbrCtx}\n\nCHECKLIST:\n${checkCtx}\n\nEJEMPLO DE DECISIÓN SEMANAL: ${ejCtx}\n\nPrincipio Bezos: si mueves los inputs correctos con disciplina, los outputs llegan como consecuencia.\nRegla: solo una decisión de la semana. No dos. No tres. Una. Si un bloque tiene 2+ alertas rojas, anota que se requiere deep dive fuera del WBR.`);
 
   if (window.CRM_LLM?.engine) {
     const result = await window.CRM_LLM.chat(sys,
-      `Conduce el WBR completo con estos datos. Estructura tu análisis exactamente así:\n\n🔍 BLOQUE 1 — CAZADOR\n[Evalúa cada métrica vs su meta. Marca ✅ si cumple o 🔴 si es alerta roja. Diagnóstico en 2 líneas.]\n\n🧠 BLOQUE 2 — ESTRATEGA + ARQUITECTO\n[Misma estructura]\n\n📬 BLOQUE 3 — EJECUTOR\n[Misma estructura]\n\n🏆 BLOQUE 4 — SUCCESS ARCHITECT\n[Misma estructura]\n\n🔄 BLOQUE 5 — SISTEMA DE APRENDIZAJE\n[Misma estructura]\n\n---\n📊 RESUMEN EJECUTIVO (60 segundos)\n- Bloques en verde: [lista]\n- Bloques con alertas rojas: [lista + qué implica]\n- Health score del sistema: [0-100] con justificación de 1 línea\n\n⚡ DECISIÓN DE LA SEMANA\n- Qué se decide: [acción concreta y medible]\n- Quién ejecuta: [un solo dueño]\n- Fecha de verificación: [próximo WBR o el siguiente]\n- Métrica que debe moverse: [una métrica específica del dashboard]\n- Criterio de reversión: [si X empeora, se revierte]\n\nDatos de la semana: ${datos}`);
+      `Conduce el WBR completo con estos datos. Estructura tu análisis EXACTAMENTE así:\n\n🔍 BLOQUE 1 — CAZADOR (min 5-15, resp: Growth Engineer)\n[Evalúa cada métrica vs su meta. Marca ✅ si cumple o 🔴 si es alerta roja. Diagnóstico en 2 líneas. Si hay 2+ alertas rojas: indica "→ DEEP DIVE requerido fuera del WBR".]\n\n🧠 BLOQUE 2 — ESTRATEGA + ARQUITECTO (min 15-25, resp: Account Strategist)\n[Misma estructura]\n\n📬 BLOQUE 3 — EJECUTOR (min 25-35, resp: Client Executive)\n[Misma estructura]\n\n🏆 BLOQUE 4 — SUCCESS ARCHITECT (min 35-45, resp: Success Architect Lead)\n[Misma estructura]\n\n🔄 BLOQUE 5 — SISTEMA DE APRENDIZAJE (min 45-55, resp: Growth Engineer)\n[Misma estructura]\n\n---\n📊 RESUMEN EJECUTIVO (apertura — métrica única de la semana)\n- Bloques ✅ en verde: [lista]\n- Bloques 🔴 con alertas: [lista + deep dive si corresponde]\n- Health score del sistema: [0-100] con justificación de 1 línea\n\n⚡ DECISIÓN DE LA SEMANA (min 55-60)\n- Qué se decide: [acción concreta y medible]\n- Quién ejecuta: [un solo dueño, nombre del rol]\n- Fecha de verificación: [WBR en X semanas]\n- Métrica que debe moverse: [una métrica específica del dashboard]\n- Criterio de reversión: [si X empeora por debajo de Y, se revierte]\n\n📋 MINUTA (para distribuir después del WBR)\n[Resumen de 3-4 líneas: estado del sistema + decisión + responsable + próximo seguimiento viernes]\n\nDatos de la semana: ${datos}`);
 
     output.innerHTML = `
       <div class="output-section">
@@ -1278,20 +1315,60 @@ function buildWBRFallback(datos) {
     <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#00ff88;letter-spacing:.08em;margin-bottom:12px;padding:6px 10px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:6px">
       📊 WBR — WEEKLY BUSINESS REVIEW · Activa el LLM para análisis IA con tus datos reales
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--surface);border-radius:6px;border:1px solid var(--border)">
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;padding:8px 10px;background:var(--surface);border-radius:6px;border:1px solid var(--border)">
       <strong>Principio Bezos:</strong> si mueves los inputs correctos con la disciplina correcta, los outputs llegan como consecuencia.<br>
-      <strong>Regla:</strong> el WBR dura 60 minutos. Solo inputs. Cero opiniones. Solo los números y UNA decisión.
+      <strong>Regla:</strong> 60 min fijos · Solo inputs · Cero opiniones · UNA decisión · 2+ alertas rojas = deep dive fuera del WBR.
     </div>
-    ${bloqueHTML}
-    <div style="border:1px solid rgba(249,115,22,.25);border-radius:8px;padding:12px 14px;background:rgba(249,115,22,.04)">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#F97316;letter-spacing:.08em;margin-bottom:10px">⚡ DECISIÓN DE LA SEMANA</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        ${[['Qué se decide','Acción concreta y medible'],['Quién ejecuta','Un solo dueño'],['Fecha de verificación','Próximo WBR'],['Métrica que debe moverse','Una métrica del dashboard'],['Criterio de reversión','Si X empeora, se revierte']].map(([campo,placeholder])=>`
-        <tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:7px 8px;font-weight:700;color:var(--navy);width:45%">${campo}</td>
-          <td style="padding:7px 8px;color:#94A3B8;font-style:italic">${placeholder}</td>
+    <!-- AGENDA -->
+    <div style="margin-bottom:12px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00ff88;letter-spacing:.08em;margin-bottom:6px">⏱ AGENDA LUNES 9:00 AM</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <tr style="background:rgba(0,255,136,.06)">
+          <th style="padding:4px 8px;text-align:left;color:#00ff88;font-family:'JetBrains Mono',monospace;font-size:9px">MIN</th>
+          <th style="padding:4px 8px;text-align:left;color:#00ff88;font-family:'JetBrains Mono',monospace;font-size:9px">BLOQUE</th>
+          <th style="padding:4px 8px;text-align:left;color:#00ff88;font-family:'JetBrains Mono',monospace;font-size:9px">RESPONSABLE</th>
+        </tr>
+        ${WBR_FRAMEWORK.agenda.map(a=>`
+        <tr style="border-bottom:1px solid rgba(0,255,136,.08)">
+          <td style="padding:4px 8px;font-family:'JetBrains Mono',monospace;color:#059669;font-size:10px">${a.minuto}</td>
+          <td style="padding:4px 8px;color:var(--text)">${a.bloque}</td>
+          <td style="padding:4px 8px;color:#4A5568;font-size:10px">${a.responsable}</td>
         </tr>`).join('')}
       </table>
+    </div>
+    ${bloqueHTML}
+    <!-- DECISIÓN + EJEMPLO -->
+    <div style="border:1px solid rgba(249,115,22,.25);border-radius:8px;padding:12px 14px;background:rgba(249,115,22,.04);margin-bottom:10px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#F97316;letter-spacing:.08em;margin-bottom:10px">⚡ DECISIÓN DE LA SEMANA (min 55-60)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        ${[
+          ['Qué se decide',        'Acción concreta y medible',        WBR_FRAMEWORK.decisionEjemplo.que],
+          ['Quién ejecuta',        'Un solo dueño',                    WBR_FRAMEWORK.decisionEjemplo.quien],
+          ['Fecha de verificación','Próximo WBR o el siguiente',        WBR_FRAMEWORK.decisionEjemplo.fecha],
+          ['Métrica que se mueve', 'Una métrica específica del dashboard', WBR_FRAMEWORK.decisionEjemplo.metrica],
+          ['Criterio de reversión','Si X empeora, se revierte',         WBR_FRAMEWORK.decisionEjemplo.reversion],
+        ].map(([campo,placeholder,ejemplo])=>`
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:6px 8px;font-weight:700;color:var(--navy);width:35%;font-size:11px">${campo}</td>
+          <td style="padding:6px 8px;color:#94A3B8;font-style:italic;font-size:11px;width:35%">${placeholder}</td>
+          <td style="padding:6px 8px;color:#F97316;font-size:10px;font-family:'JetBrains Mono',monospace">ej: ${ejemplo}</td>
+        </tr>`).join('')}
+      </table>
+    </div>
+    <!-- CHECKLIST HEAD OF SALES OPS -->
+    <div style="border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px 14px;background:rgba(245,158,11,.03);margin-bottom:10px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#F59E0B;letter-spacing:.08em;margin-bottom:10px">✅ CHECKLIST HEAD OF SALES OPS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        ${[
+          ['ANTES',   '#059669', WBR_FRAMEWORK.checklist.antes],
+          ['DURANTE', '#2563EB', WBR_FRAMEWORK.checklist.durante],
+          ['DESPUÉS', '#7C3AED', WBR_FRAMEWORK.checklist.despues],
+        ].map(([label, color, items])=>`
+        <div style="padding:8px 10px;border:1px solid ${color}25;border-radius:6px;background:${color}06">
+          <div style="font-size:10px;font-weight:700;color:${color};font-family:'JetBrains Mono',monospace;margin-bottom:6px">${label}</div>
+          ${items.map(i=>`<label style="font-size:10px;color:var(--text);display:flex;gap:5px;margin-bottom:4px;cursor:pointer"><input type="checkbox" style="margin-top:1px;accent-color:${color}"><span>${i}</span></label>`).join('')}
+        </div>`).join('')}
+      </div>
     </div>
     <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar framework</button>
@@ -1305,16 +1382,65 @@ function toggleWBRRef() {
   if (panel.style.display === 'none') {
     panel.style.display = 'block';
     panel.innerHTML = `
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00ff88;letter-spacing:.1em;margin-bottom:8px">
-        📖 FRAMEWORK WBR — METAS & ALERTAS DE REFERENCIA
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00ff88;letter-spacing:.1em;margin-bottom:10px;padding:5px 8px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:4px">
+        📖 FRAMEWORK WBR COMPLETO — REFERENCIA RÁPIDA
       </div>
+
+      <!-- AGENDA 60 MIN -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:#00ff88;font-family:'JetBrains Mono',monospace;margin-bottom:5px">⏱ AGENDA — 60 MIN FIJOS · LUNES 9:00 AM</div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <tr style="background:rgba(0,255,136,.06)">
+            <th style="padding:3px 6px;text-align:left;color:#00ff88;font-family:'JetBrains Mono',monospace">MIN</th>
+            <th style="padding:3px 6px;text-align:left;color:#00ff88;font-family:'JetBrains Mono',monospace">BLOQUE</th>
+            <th style="padding:3px 6px;text-align:left;color:#00ff88;font-family:'JetBrains Mono',monospace">RESPONSABLE</th>
+          </tr>
+          ${WBR_FRAMEWORK.agenda.map(a=>`
+          <tr style="border-bottom:1px solid rgba(0,255,136,.08)">
+            <td style="padding:3px 6px;font-family:'JetBrains Mono',monospace;color:#059669;font-size:9px">${a.minuto}</td>
+            <td style="padding:3px 6px;color:var(--text)">${a.bloque}</td>
+            <td style="padding:3px 6px;color:#4A5568">${a.responsable}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+
+      <!-- MÉTRICAS POR BLOQUE -->
+      <div style="font-size:10px;font-weight:700;color:#00ff88;font-family:'JetBrains Mono',monospace;margin-bottom:5px">📊 METAS & ALERTAS POR BLOQUE</div>
       ${WBR_FRAMEWORK.bloques.map(b=>`
-        <div style="margin-bottom:8px;padding:8px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.12);border-radius:6px">
-          <div style="font-size:10px;font-weight:700;color:#00ff88;font-family:'JetBrains Mono',monospace;margin-bottom:4px">${b.icon} ${b.nombre.toUpperCase()}</div>
-          ${b.metricas.map(m=>`<div style="font-size:10px;color:var(--text);padding:2px 0">• ${m.nombre}: <strong>${m.meta}</strong></div>`).join('')}
+        <div style="margin-bottom:7px;padding:7px 10px;background:rgba(0,255,136,.03);border:1px solid rgba(0,255,136,.1);border-radius:5px">
+          <div style="font-size:10px;font-weight:700;color:#00ff88;font-family:'JetBrains Mono',monospace;margin-bottom:3px">${b.icon} ${b.nombre.toUpperCase()}</div>
+          ${b.metricas.map(m=>`<div style="font-size:10px;color:var(--text);padding:1px 0">• ${m.nombre}: <strong style="color:#059669">${m.meta}</strong></div>`).join('')}
         </div>`).join('')}
-      <div style="font-size:10px;color:#4A5568;margin-top:6px">
-        ${WBR_FRAMEWORK.reglas.map(r=>`<div>• ${r}</div>`).join('')}
+
+      <!-- CHECKLIST HEAD OF SALES OPS -->
+      <div style="margin-top:10px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:#F59E0B;font-family:'JetBrains Mono',monospace;margin-bottom:5px">✅ CHECKLIST HEAD OF SALES OPS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          ${[
+            ['ANTES',   '#059669', WBR_FRAMEWORK.checklist.antes],
+            ['DURANTE', '#2563EB', WBR_FRAMEWORK.checklist.durante],
+            ['DESPUÉS', '#7C3AED', WBR_FRAMEWORK.checklist.despues],
+          ].map(([label, color, items])=>`
+          <div style="padding:7px 8px;border:1px solid ${color}30;border-radius:5px;background:${color}08">
+            <div style="font-size:9px;font-weight:700;color:${color};font-family:'JetBrains Mono',monospace;margin-bottom:4px">${label}</div>
+            ${items.map(i=>`<div style="font-size:9px;color:var(--text);padding:1px 0;display:flex;gap:4px"><span>□</span><span>${i}</span></div>`).join('')}
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- EJEMPLO DECISIÓN -->
+      <div style="padding:8px 10px;border:1px solid rgba(249,115,22,.2);border-radius:5px;background:rgba(249,115,22,.04)">
+        <div style="font-size:10px;font-weight:700;color:#F97316;font-family:'JetBrains Mono',monospace;margin-bottom:5px">⚡ EJEMPLO DE DECISIÓN SEMANAL</div>
+        ${Object.entries(WBR_FRAMEWORK.decisionEjemplo).map(([k,v])=>`
+          <div style="font-size:10px;padding:2px 0;display:flex;gap:6px">
+            <span style="color:#F97316;font-weight:700;min-width:80px;font-family:'JetBrains Mono',monospace">${k}:</span>
+            <span style="color:var(--text)">${v}</span>
+          </div>`).join('')}
+      </div>
+
+      <!-- REGLAS -->
+      <div style="font-size:10px;color:#4A5568;margin-top:8px;padding:7px 10px;background:var(--surface);border-radius:5px;border:1px solid var(--border)">
+        ${WBR_FRAMEWORK.reglas.map(r=>`<div style="padding:1px 0">• ${r}</div>`).join('')}
       </div>`;
   } else {
     panel.style.display = 'none';
