@@ -766,11 +766,11 @@ const AGENTS = [
     id: 'pipeline_ai',
     icon: '📊',
     iconBg: 'linear-gradient(135deg,#1C1917,#292524)',
-    name: 'ANÁLISIS PIPELINE',
-    desc: 'Analiza la salud del pipeline completo, detecta deals en riesgo, calcula forecast realista y genera el plan de acción para cerrar el trimestre.',
-    models: ['CRM_LLM', 'Forecast', 'Deal Health'],
-    inputLabel: 'Datos del pipeline para analizar',
-    inputPlaceholder: 'Ej: Pipeline: $4.2M. Deals: 12 activos. Etapas: 3 en propuesta, 4 en demo agendada, 5 en calificación. Cierre trimestre: 22 días. Win rate histórico: 28%.',
+    name: 'WBR — PIPELINE AI',
+    desc: 'Weekly Business Review: analiza los 5 bloques de input metrics (Cazador, Estratega, Ejecutor, Success, Aprendizaje), detecta alertas rojas y genera la Decisión de la Semana.',
+    models: ['CRM_LLM', 'WBR Framework', 'Input Metrics'],
+    inputLabel: 'Datos de la semana para el WBR (pega los números de cada bloque o describe el estado)',
+    inputPlaceholder: 'Ej: Cazador: 18 cuentas detectadas, precisión 65%, 3 rescates. Ejecutor: 22 secuencias, 12% respuesta, 6 reuniones. Deals en pipeline: $3.8M, 14 activos, cierre en 18 días.',
     run: runAgentPipelineAI, accentColor: '#F97316',
   },
 ];
@@ -1108,28 +1108,217 @@ async function runAgentSeguimiento(id, output) {
   ]);
 }
 
-/* 10 — PIPELINE AI */
+/* ══════════════════════════════════════════════════════
+   WBR FRAMEWORK — Dashboard de Input Metrics
+   Weekly Business Review — Agencia de Ventas B2B
+   Principio: los inputs los controlas. Los outputs no.
+   ══════════════════════════════════════════════════════ */
+const WBR_FRAMEWORK = {
+  bloques: [
+    {
+      id: 'cazador', num: 1, icon: '🔍', nombre: 'Cazador',
+      responsable: 'Growth Engineer',
+      objetivo: 'Evaluar la calidad y volumen del pipeline de entrada.',
+      metricas: [
+        { nombre: 'Cuentas detectadas score >70',   meta: '20 a 50 / semana' },
+        { nombre: 'Precisión de señales',             meta: '>70%' },
+        { nombre: 'Tiempo señal → cuenta cualificada',meta: '<48 horas' },
+        { nombre: 'Rescates de nurturing trimestral', meta: 'Al menos 2' },
+      ],
+      alertas: [
+        '<20 cuentas detectadas: Cazador ciego o mercado frío. Revisar fuentes.',
+        'Precisión <60%: criterios de calificación mal calibrados.',
+        'Tiempo >72h: cuello de botella entre Cazador y Estratega.',
+      ],
+    },
+    {
+      id: 'estratega', num: 2, icon: '🧠', nombre: 'Estratega + Arquitecto',
+      responsable: 'Account Strategist',
+      objetivo: 'Velocidad de conversión de cuenta cualificada a propuesta entregada.',
+      metricas: [
+        { nombre: 'Dossiers completos generados',           meta: '15 a 30 / semana' },
+        { nombre: 'Dossiers con mapa de poder completo',    meta: '>90%' },
+        { nombre: 'Propuestas entregadas',                  meta: '10 a 20 / semana' },
+        { nombre: 'Tiempo entre dossier y propuesta',       meta: '<5 días' },
+        { nombre: 'Propuestas con ROI cuantificado',        meta: '100%' },
+      ],
+      alertas: [
+        '<60% dossiers convertidos en propuestas: Estratega sobrecalificando.',
+        'Tiempo >7 días dossier → propuesta: Arquitecto en cuello de botella.',
+        'Propuestas sin ROI cuantificado: violación de tenet, revisión inmediata.',
+      ],
+    },
+    {
+      id: 'ejecutor', num: 3, icon: '📬', nombre: 'Ejecutor',
+      responsable: 'Client Executive',
+      objetivo: 'Calidad y disciplina del contacto externo.',
+      metricas: [
+        { nombre: 'Secuencias de outreach iniciadas',           meta: '20 a 40 / semana' },
+        { nombre: 'Tasa de respuesta a primer contacto',        meta: '>15%' },
+        { nombre: 'Reuniones agendadas',                        meta: '5 a 10 / semana' },
+        { nombre: 'Seguimientos post-reunión enviados <2 horas',meta: '100%' },
+        { nombre: 'Mensajes >120 palabras',                     meta: '0 (violación)' },
+      ],
+      alertas: [
+        'Respuesta <10%: outreach no personalizado o target equivocado.',
+        'Seguimientos tardíos: viola tenet de 2 horas, deal en riesgo.',
+        'Mensajes >120 palabras: cambio a plantillas genéricas detectado.',
+      ],
+    },
+    {
+      id: 'success', num: 4, icon: '🏆', nombre: 'Success Architect',
+      responsable: 'Success Architect Lead',
+      objetivo: 'Salud de la cartera existente y ejecución del handoff.',
+      metricas: [
+        { nombre: 'Cuentas Fase A con victoria proyectada día 7', meta: '100% de onboardings' },
+        { nombre: 'Cuentas Fase B con check-in en calendario',    meta: '100%' },
+        { nombre: 'Documentos de Expectativas firmados',          meta: '100% de firmas' },
+        { nombre: 'Cuentas con señales de fuga detectadas',       meta: 'Reportar todas' },
+        { nombre: 'Oportunidades de expansión (Fase C)',          meta: 'Al menos 1 por cuenta' },
+      ],
+      alertas: [
+        'Contrato firmado sin Documento de Expectativas: violación de protocolo, escalamiento inmediato.',
+        'Cuenta en Fase A sin victoria proyectada al día 7: riesgo alto de fracaso en día 30.',
+        'Señal de fuga no accionada en 48 horas: riesgo de churn.',
+      ],
+    },
+    {
+      id: 'aprendizaje', num: 5, icon: '🔄', nombre: 'Sistema de Aprendizaje',
+      responsable: 'Growth Engineer',
+      objetivo: 'Revisar los cambios que el sistema propone hacer a sí mismo esta semana.',
+      metricas: [
+        { nombre: 'Autopsias completadas de deals cerrados',meta: '100% de deals cerrados' },
+        { nombre: 'Modificaciones al sistema propuestas',   meta: '1 a 2 (no más)' },
+        { nombre: 'Modificaciones revertidas',              meta: '0 a 1' },
+        { nombre: 'Patrones replicables extraídos',         meta: 'Al menos 1 por deal ganado' },
+      ],
+      alertas: [
+        'Deal cerrado sin autopsia: caso no se cierra formalmente hasta completarla.',
+        'Más de 2 modificaciones por semana: destruye trazabilidad, se rechazan.',
+        'Más de 1 reversión: Sistema de Aprendizaje generando ruido, revisión del Prompt Engineer.',
+      ],
+    },
+  ],
+  reglas: [
+    'Duración fija: 60 minutos. Nunca más, nunca menos.',
+    'Cero PowerPoints. Memo narrativo de 6 páginas leído en silencio los primeros 15 min.',
+    'Solo inputs. Cero outputs (esos se revisan en el QBR trimestral).',
+    'Los números hablan primero. Las opiniones vienen después.',
+    'UNA sola decisión de la semana. No se sale de la sala sin ella.',
+    'Si un bloque tiene 2+ alertas rojas, se agenda deep dive fuera del WBR.',
+  ],
+};
+
+/* 10 — WBR PIPELINE AI */
 async function runAgentPipelineAI(id, output) {
-  const datos = getInput(id) || 'Pipeline $4.2M, 12 deals activos, win rate 28%, cierre trimestre en 22 días';
-  const sys = buildVentasPrompt('Analista de Pipeline IA',
-    'Analizar la salud completa del pipeline, detectar deals en riesgo, calcular forecast realista y generar el plan de acción para cerrar el trimestre.');
+  const datos = getInput(id) || 'Cazador: 18 cuentas, precisión 65%. Ejecutor: 22 secuencias, 12% respuesta, 6 reuniones. Pipeline: $3.8M, 14 deals, cierre en 18 días.';
+
+  // Render WBR reference panel + input
+  const wbrCtx = WBR_FRAMEWORK.bloques.map(b =>
+    `${b.icon} BLOQUE ${b.num} — ${b.nombre.toUpperCase()} (resp: ${b.responsable})\nObjetivo: ${b.objetivo}\nMétricas: ${b.metricas.map(m=>`${m.nombre}: meta ${m.meta}`).join(' | ')}\nAlertas rojas: ${b.alertas.join(' / ')}`
+  ).join('\n\n');
+
+  const sys = buildVentasPrompt('WBR Pipeline AI — Head of Sales Ops',
+    `Eres el Head of Sales Ops conduciendo el Weekly Business Review (WBR) de la agencia de ventas B2B.\n\nFRAMEWORK WBR:\n${wbrCtx}\n\nPrincipio Bezos: si mueves los inputs correctos con disciplina, los outputs llegan como consecuencia.\nRegla: solo una decisión de la semana. No dos. No tres. Una.`);
 
   if (window.CRM_LLM?.engine) {
     const result = await window.CRM_LLM.chat(sys,
-      `Realiza el análisis completo de pipeline y genera el forecast:\n\n1. 📊 HEALTH SCORE DEL PIPELINE (evaluación de salud 0-100 con diagnóstico)\n2. 🔴 DEALS EN RIESGO CRÍTICO (los que probablemente se pierden si no actúas hoy)\n3. 🟡 DEALS ESTANCADOS (cuánto tiempo llevan en cada etapa y qué los desbloquea)\n4. 🟢 DEALS ACELERABLES (los que pueden cerrar antes del estimado — cómo)\n5. 📈 FORECAST PONDERADO (proyección realista por probabilidad de cierre)\n6. 🏆 RECOMENDACIÓN TOP 3 (las 3 acciones que más mueven el pipeline esta semana)\n7. ⚡ KPI DE SEGUIMIENTO (qué métrica revisar en 7 días para saber si el plan funcionó)\n\nDatos del pipeline: ${datos}`);
-    output.innerHTML = `<div class="output-section"><div class="output-title">📊 Pipeline AI — Análisis y Forecast</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar análisis</button><button class="btn btn-ghost btn-sm" onclick="toggleAgent('orquestador')">🎯 Plan de Ataque</button></div>`;
+      `Conduce el WBR completo con estos datos. Estructura tu análisis exactamente así:\n\n🔍 BLOQUE 1 — CAZADOR\n[Evalúa cada métrica vs su meta. Marca ✅ si cumple o 🔴 si es alerta roja. Diagnóstico en 2 líneas.]\n\n🧠 BLOQUE 2 — ESTRATEGA + ARQUITECTO\n[Misma estructura]\n\n📬 BLOQUE 3 — EJECUTOR\n[Misma estructura]\n\n🏆 BLOQUE 4 — SUCCESS ARCHITECT\n[Misma estructura]\n\n🔄 BLOQUE 5 — SISTEMA DE APRENDIZAJE\n[Misma estructura]\n\n---\n📊 RESUMEN EJECUTIVO (60 segundos)\n- Bloques en verde: [lista]\n- Bloques con alertas rojas: [lista + qué implica]\n- Health score del sistema: [0-100] con justificación de 1 línea\n\n⚡ DECISIÓN DE LA SEMANA\n- Qué se decide: [acción concreta y medible]\n- Quién ejecuta: [un solo dueño]\n- Fecha de verificación: [próximo WBR o el siguiente]\n- Métrica que debe moverse: [una métrica específica del dashboard]\n- Criterio de reversión: [si X empeora, se revierte]\n\nDatos de la semana: ${datos}`);
+
+    output.innerHTML = `
+      <div class="output-section">
+        <div class="output-title">📊 WBR — Weekly Business Review</div>
+        <div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar WBR</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleWBRRef()">📖 Ver Framework</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('orquestador')">🎯 Plan de Ataque</button>
+      </div>
+      <div id="wbr-ref-panel" style="display:none;margin-top:12px"></div>`;
     return;
   }
-  renderOutput(output, [
-    { title: '📊 Health Score: 61/100',
-      items: ['Pipeline activo: $4.2M | Win rate histórico: 28% | Días para cierre: 22', 'DIAGNÓSTICO: Pipeline saludable en volumen pero con 40% de deals estancados >14 días en propuesta — velocidad por debajo del benchmark.'] },
-    { title: '🔴 Deals en Riesgo Crítico',
-      items: ['• Deal >$500K que lleva 21 días sin actividad — riesgo alto de pérdida silenciosa', '• 2 deals donde el champion interno dejó de responder — señal de bloqueo interno'] },
-    { title: '📈 Forecast Ponderado (22 días)',
-      items: ['Etapa Propuesta ($2.1M × 35%) = $735K', 'Etapa Negociación ($1.2M × 65%) = $780K', 'Etapa Demo agendada ($900K × 15%) = $135K', '→ FORECAST REALISTA: $1.65M MXN (39% del pipeline total)'] },
-    { title: '🏆 Top 3 Acciones Esta Semana',
-      items: ['1. LLAMADA hoy a los 2 deals más avanzados — no email. El 70% de los deals se cierra en llamada.', '2. ESCALAR deal estancado >21 días — habla directamente con el decisor final, bypasear al contacto.', '3. NUTRIR deals en demo agendada con caso de éxito de cliente similar — antes de la reunión.'] },
-  ]);
+
+  /* ── FALLBACK TEMPLATE — WBR COMPLETO ── */
+  output.className = 'agent-output show';
+  output.innerHTML = buildWBRFallback(datos);
+}
+
+function buildWBRFallback(datos) {
+  const bloques = WBR_FRAMEWORK.bloques;
+  const bloqueHTML = bloques.map(b => `
+    <div style="border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:rgba(0,255,136,.03)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:16px">${b.icon}</span>
+        <strong style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#00ff88;letter-spacing:.08em">BLOQUE ${b.num} — ${b.nombre.toUpperCase()}</strong>
+        <span style="font-size:10px;color:#4A5568;margin-left:auto">Resp: ${b.responsable}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${b.objetivo}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:4px 6px;color:var(--navy);font-size:10px;font-weight:700">MÉTRICA</th>
+          <th style="text-align:center;padding:4px 6px;color:var(--navy);font-size:10px;font-weight:700">META</th>
+          <th style="text-align:center;padding:4px 6px;color:var(--navy);font-size:10px;font-weight:700">REAL</th>
+          <th style="text-align:center;padding:4px 6px;color:var(--navy);font-size:10px;font-weight:700">STATUS</th>
+        </tr>
+        ${b.metricas.map(m=>`
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 6px;color:var(--text)">${m.nombre}</td>
+          <td style="padding:5px 6px;text-align:center;color:#059669;font-family:'JetBrains Mono',monospace">${m.meta}</td>
+          <td style="padding:5px 6px;text-align:center;color:#94A3B8;font-size:10px">—</td>
+          <td style="padding:5px 6px;text-align:center">⬜</td>
+        </tr>`).join('')}
+      </table>
+      <div style="margin-top:8px">
+        ${b.alertas.map(a=>`<div style="font-size:10px;padding:4px 8px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:4px;color:#EF4444;margin-bottom:3px">🔴 ${a}</div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  return `
+    <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#00ff88;letter-spacing:.08em;margin-bottom:12px;padding:6px 10px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:6px">
+      📊 WBR — WEEKLY BUSINESS REVIEW · Activa el LLM para análisis IA con tus datos reales
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 10px;background:var(--surface);border-radius:6px;border:1px solid var(--border)">
+      <strong>Principio Bezos:</strong> si mueves los inputs correctos con la disciplina correcta, los outputs llegan como consecuencia.<br>
+      <strong>Regla:</strong> el WBR dura 60 minutos. Solo inputs. Cero opiniones. Solo los números y UNA decisión.
+    </div>
+    ${bloqueHTML}
+    <div style="border:1px solid rgba(249,115,22,.25);border-radius:8px;padding:12px 14px;background:rgba(249,115,22,.04)">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#F97316;letter-spacing:.08em;margin-bottom:10px">⚡ DECISIÓN DE LA SEMANA</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        ${[['Qué se decide','Acción concreta y medible'],['Quién ejecuta','Un solo dueño'],['Fecha de verificación','Próximo WBR'],['Métrica que debe moverse','Una métrica del dashboard'],['Criterio de reversión','Si X empeora, se revierte']].map(([campo,placeholder])=>`
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 8px;font-weight:700;color:var(--navy);width:45%">${campo}</td>
+          <td style="padding:7px 8px;color:#94A3B8;font-style:italic">${placeholder}</td>
+        </tr>`).join('')}
+      </table>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar framework</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAgent('orquestador')">🎯 Plan de Ataque</button>
+    </div>`;
+}
+
+function toggleWBRRef() {
+  const panel = document.getElementById('wbr-ref-panel');
+  if (!panel) return;
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    panel.innerHTML = `
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00ff88;letter-spacing:.1em;margin-bottom:8px">
+        📖 FRAMEWORK WBR — METAS & ALERTAS DE REFERENCIA
+      </div>
+      ${WBR_FRAMEWORK.bloques.map(b=>`
+        <div style="margin-bottom:8px;padding:8px 10px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.12);border-radius:6px">
+          <div style="font-size:10px;font-weight:700;color:#00ff88;font-family:'JetBrains Mono',monospace;margin-bottom:4px">${b.icon} ${b.nombre.toUpperCase()}</div>
+          ${b.metricas.map(m=>`<div style="font-size:10px;color:var(--text);padding:2px 0">• ${m.nombre}: <strong>${m.meta}</strong></div>`).join('')}
+        </div>`).join('')}
+      <div style="font-size:10px;color:#4A5568;margin-top:6px">
+        ${WBR_FRAMEWORK.reglas.map(r=>`<div>• ${r}</div>`).join('')}
+      </div>`;
+  } else {
+    panel.style.display = 'none';
+  }
 }
 
 /* ── LLM INIT ────────────────────────────────────────── */
