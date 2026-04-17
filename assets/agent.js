@@ -129,12 +129,6 @@
     await loadKnowledge();
     buildUI();
     bindEvents();
-    makeDraggable(
-      document.getElementById('mtx-agent-btn'),
-      document.getElementById('mtx-agent-panel'),
-      'mtx_agent_pos',
-      () => togglePanel()
-    );
     await loadRecentHistory();   // carga + renderiza historial en UI
     showSpeechBubble();          // burbuja flotante de saludo
   }
@@ -682,6 +676,95 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
 
     document.body.appendChild(btn);
     document.body.appendChild(panel);
+    initAgentDrag(btn, panel);
+  }
+
+  /* ── Draggable MetaGenio ─────────────────────────────────── */
+  function initAgentDrag(btn, panel) {
+    const THRESH = 4, POS_KEY = 'mtx_agent_pos';
+
+    function anchorTopLeft() {
+      const r = btn.getBoundingClientRect();
+      btn.style.bottom = 'auto'; btn.style.right = 'auto';
+      btn.style.top  = clampY(r.top)  + 'px';
+      btn.style.left = clampX(r.left) + 'px';
+    }
+
+    function repositionPanel() {
+      if (!panel || !panel.classList.contains('open')) return;
+      const br = btn.getBoundingClientRect();
+      const pw = panel.offsetWidth  || 380;
+      const ph = panel.offsetHeight || 520;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      let left = br.right + 10;
+      if (left + pw > vw - 8) left = br.left - pw - 10;
+      left = Math.max(8, Math.min(vw - pw - 8, left));
+      let top = br.bottom - ph;
+      if (top < 8) top = br.top;
+      top = Math.max(8, Math.min(vh - ph - 8, top));
+      panel.style.bottom = 'auto'; panel.style.right = 'auto';
+      panel.style.top  = top  + 'px';
+      panel.style.left = left + 'px';
+    }
+
+    // Restore saved position
+    try {
+      const s = JSON.parse(localStorage.getItem(POS_KEY));
+      if (s && typeof s.top === 'number') {
+        btn.style.bottom = 'auto'; btn.style.right = 'auto';
+        btn.style.top  = clampY(s.top)  + 'px';
+        btn.style.left = clampX(s.left) + 'px';
+      }
+    } catch(_) {}
+
+    let sx, sy, sl, st, moved = false, active = false;
+
+    btn.addEventListener('pointerdown', e => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      // Kill animation FIRST so getBoundingClientRect is unaffected by scale/translate
+      btn.style.animation = 'none';
+      const r = btn.getBoundingClientRect();
+      btn.style.bottom = 'auto'; btn.style.right = 'auto';
+      btn.style.top  = clampY(r.top)  + 'px';
+      btn.style.left = clampX(r.left) + 'px';
+      active = true; moved = false;
+      sx = e.clientX; sy = e.clientY;
+      sl = parseFloat(btn.style.left);
+      st = parseFloat(btn.style.top);
+      btn.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    btn.addEventListener('pointermove', e => {
+      if (!active) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) < THRESH && Math.abs(dy) < THRESH) return;
+      moved = true;
+      btn.classList.add('dragging');
+      btn.style.top  = clampY(st + dy) + 'px';
+      btn.style.left = clampX(sl + dx) + 'px';
+      repositionPanel();
+      e.preventDefault();
+    });
+
+    btn.addEventListener('pointerup', () => {
+      if (!active) return;
+      active = false;
+      btn.classList.remove('dragging');
+      btn.style.animation = '';
+      if (moved) {
+        try { localStorage.setItem(POS_KEY, JSON.stringify({top: parseFloat(btn.style.top), left: parseFloat(btn.style.left)})); } catch(_) {}
+      } else {
+        togglePanel();
+      }
+    });
+
+    btn.addEventListener('pointercancel', () => {
+      active = false; btn.classList.remove('dragging'); btn.style.animation = '';
+    });
+
+    function clampX(x) { return Math.max(0, Math.min(window.innerWidth  - (btn.offsetWidth  || 88), x)); }
+    function clampY(y) { return Math.max(0, Math.min(window.innerHeight - (btn.offsetHeight || 88), y)); }
   }
 
   /* ── Bind events ────────────────────────────────────────── */
@@ -693,8 +776,9 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
     const clear  = document.getElementById('agent-clear-btn');
     const msgBox = document.getElementById('agent-messages');
 
-    // Toggle panel — drag handler takes over; this fires only when not dragging
-    // (makeDraggable prevents click after drag via stopOnce)
+    // Toggle panel — initAgentDrag handles pointerup; this click fires only if
+    // e.preventDefault() wasn't called (non-pointer devices fallback)
+    btn.addEventListener('click', (e) => { if (!e._fromDrag) togglePanel(); });
 
     // Send message
     send.addEventListener('click', () => sendMessage());
@@ -893,94 +977,6 @@ ${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Respon
   function scrollMessages () {
     const msgBox = document.getElementById('agent-messages');
     if (msgBox) setTimeout(() => { msgBox.scrollTop = msgBox.scrollHeight; }, 50);
-  }
-
-  /* ── Draggable widget ───────────────────────────────────── */
-  function makeDraggable(btn, panel, posKey, onTap) {
-    if (!btn) return;
-    const THRESH = 4;
-
-    function anchorTopLeft() {
-      const r = btn.getBoundingClientRect();
-      btn.style.bottom = 'auto'; btn.style.right = 'auto';
-      btn.style.top  = clampY(r.top)  + 'px';
-      btn.style.left = clampX(r.left) + 'px';
-    }
-
-    function repositionPanel() {
-      if (!panel) return;
-      const br = btn.getBoundingClientRect();
-      const pw = panel.offsetWidth  || 380;
-      const ph = panel.offsetHeight || 520;
-      const gap = 10;
-      const vw = window.innerWidth, vh = window.innerHeight;
-      // Prefer right of btn; fall back left
-      let left = br.right + gap;
-      if (left + pw > vw - 8) left = br.left - pw - gap;
-      left = Math.max(8, Math.min(vw - pw - 8, left));
-      // Align bottoms; clamp
-      let top = br.bottom - ph;
-      if (top < 8) top = br.top;
-      top = Math.max(8, Math.min(vh - ph - 8, top));
-      panel.style.bottom = 'auto'; panel.style.right = 'auto';
-      panel.style.top  = top  + 'px';
-      panel.style.left = left + 'px';
-    }
-
-    // Restore saved position
-    try {
-      const s = JSON.parse(localStorage.getItem(posKey));
-      if (s && typeof s.top === 'number') {
-        btn.style.bottom = 'auto'; btn.style.right = 'auto';
-        btn.style.top  = clampY(s.top)  + 'px';
-        btn.style.left = clampX(s.left) + 'px';
-      }
-    } catch(_) {}
-
-    let sx, sy, sl, st, moved = false, active = false;
-
-    btn.addEventListener('pointerdown', e => {
-      if (e.button !== 0 && e.pointerType === 'mouse') return;
-      anchorTopLeft();
-      btn.style.animation = 'none';
-      active = true; moved = false;
-      sx = e.clientX; sy = e.clientY;
-      sl = parseFloat(btn.style.left);
-      st = parseFloat(btn.style.top);
-      btn.setPointerCapture(e.pointerId);
-      e.preventDefault();
-    });
-
-    btn.addEventListener('pointermove', e => {
-      if (!active) return;
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (!moved && Math.abs(dx) < THRESH && Math.abs(dy) < THRESH) return;
-      moved = true;
-      btn.classList.add('dragging');
-      btn.style.top  = clampY(st + dy) + 'px';
-      btn.style.left = clampX(sl + dx) + 'px';
-      repositionPanel();
-      e.preventDefault();
-    });
-
-    btn.addEventListener('pointerup', () => {
-      if (!active) return;
-      active = false;
-      btn.classList.remove('dragging');
-      btn.style.animation = '';
-      if (moved) {
-        try { localStorage.setItem(posKey, JSON.stringify({top: parseFloat(btn.style.top), left: parseFloat(btn.style.left)})); } catch(_) {}
-      } else {
-        if (onTap) onTap();
-      }
-    });
-
-    btn.addEventListener('pointercancel', () => {
-      active = false; btn.classList.remove('dragging'); btn.style.animation = '';
-    });
-
-    function clampX(x) { return Math.max(0, Math.min(window.innerWidth  - (btn.offsetWidth  || 88), x)); }
-    function clampY(y) { return Math.max(0, Math.min(window.innerHeight - (btn.offsetHeight || 88), y)); }
   }
 
   /* ── Boot ───────────────────────────────────────────────── */
