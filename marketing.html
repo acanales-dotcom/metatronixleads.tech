@@ -216,6 +216,62 @@
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
+/* ═══════════════════════ GENIE ═══════════════════════ */
+@keyframes genie-appear { 0%{opacity:0;transform:translateY(40px) scale(.95)} 60%{opacity:1;transform:translateY(-6px) scale(1.01)} 100%{transform:translateY(0) scale(1)} }
+@keyframes lamp-float { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-10px) rotate(4deg)} }
+@keyframes lamp-glow { 0%,100%{box-shadow:0 0 30px 8px rgba(251,191,36,.25),0 0 60px 16px rgba(251,191,36,.08)} 50%{box-shadow:0 0 55px 18px rgba(251,191,36,.45),0 0 90px 30px rgba(251,191,36,.18)} }
+@keyframes smoke-1 { 0%{opacity:.7;transform:translateX(0) translateY(0) scale(1)} 100%{opacity:0;transform:translateX(-20px) translateY(-80px) scale(2.5)} }
+@keyframes smoke-2 { 0%{opacity:.6;transform:translateX(0) translateY(0) scale(1)} 100%{opacity:0;transform:translateX(18px) translateY(-70px) scale(2)} }
+@keyframes smoke-3 { 0%{opacity:.5;transform:translateX(0) translateY(0) scale(1)} 100%{opacity:0;transform:translateX(-8px) translateY(-90px) scale(3)} }
+@keyframes genie-face-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes section-slide { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+@keyframes star-spin { 0%{transform:rotate(0deg) scale(1);opacity:.9} 50%{transform:rotate(180deg) scale(1.3);opacity:1} 100%{transform:rotate(360deg) scale(1);opacity:.9} }
+.genie-panel { background:linear-gradient(145deg,#12071F 0%,#1A0B2E 35%,#0E1A2E 65%,#0A1215 100%); border:1px solid rgba(251,191,36,.35); border-radius:16px; overflow:hidden; position:relative; animation:genie-appear .7s cubic-bezier(.34,1.56,.64,1) forwards; box-shadow:0 0 60px rgba(251,191,36,.12),0 24px 80px rgba(0,0,0,.4); }
+.genie-panel::before { content:''; position:absolute; inset:0; pointer-events:none; z-index:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 3px); }
+.genie-stars { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+.genie-star { position:absolute; width:3px; height:3px; border-radius:50%; background:#FBF0A0; animation:star-spin 3s ease-in-out infinite; }
+.genie-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid rgba(251,191,36,.2); background:rgba(251,191,36,.05); position:relative; z-index:1; }
+.genie-title-block { display:flex; align-items:center; gap:12px; }
+.genie-lamp-wrap { width:52px; height:52px; position:relative; display:flex; align-items:center; justify-content:center; animation:lamp-glow 2.2s ease-in-out infinite; border-radius:50%; }
+.genie-lamp-emoji { font-size:32px; line-height:1; animation:lamp-float 3s ease-in-out infinite; display:block; }
+.genie-smoke { position:absolute; top:-4px; left:50%; transform:translateX(-50%); pointer-events:none; }
+.genie-smoke span { display:block; width:8px; height:8px; border-radius:50%; background:rgba(251,191,36,.55); position:absolute; }
+.genie-smoke span:nth-child(1) { left:-4px; animation:smoke-1 2s ease-out infinite; }
+.genie-smoke span:nth-child(2) { left:4px;  animation:smoke-2 2s ease-out infinite; animation-delay:.5s; }
+.genie-smoke span:nth-child(3) { left:0;    animation:smoke-3 2s ease-out infinite; animation-delay:1s; }
+.genie-title-text { display:flex; flex-direction:column; gap:2px; }
+.genie-title-main { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; color:#FDE68A; letter-spacing:.08em; }
+.genie-title-sub { font-size:11px; color:rgba(253,230,138,.5); font-family:Inter,sans-serif; letter-spacing:.04em; }
+.genie-close { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15); border-radius:8px; padding:5px 12px; color:rgba(255,255,255,.5); font-size:12px; cursor:pointer; font-family:Inter,sans-serif; transition:all .15s; }
+.genie-close:hover { background:rgba(255,255,255,.12); color:#fff; }
+.genie-body { padding:20px 24px; position:relative; z-index:1; }
+.genie-face { display:flex; align-items:center; gap:14px; margin-bottom:20px; padding:14px 16px; background:rgba(251,191,36,.06); border:1px solid rgba(251,191,36,.15); border-radius:10px; }
+.genie-avatar { font-size:40px; line-height:1; animation:genie-face-bob 3s ease-in-out infinite; flex-shrink:0; }
+.genie-speech { font-size:13px; color:rgba(253,230,138,.8); font-style:italic; line-height:1.7; font-family:Inter,sans-serif; }
+.genie-sections { display:flex; flex-direction:column; gap:12px; }
+.genie-section { border-radius:10px; overflow:hidden; animation:section-slide .4s ease forwards; border:1px solid transparent; }
+.genie-section-header { display:flex; align-items:center; gap:10px; padding:10px 14px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.1em; }
+.genie-section-body { padding:12px 14px; font-size:13px; line-height:1.8; white-space:pre-wrap; font-family:Inter,sans-serif; }
+.gs-resumen   { background:rgba(139,92,246,.08); border-color:rgba(139,92,246,.25); }
+.gs-resumen .genie-section-header   { background:rgba(139,92,246,.12); color:#C4B5FD; }
+.gs-resumen .genie-section-body     { color:#DDD6FE; }
+.gs-aplicar   { background:rgba(16,185,129,.07); border-color:rgba(16,185,129,.22); }
+.gs-aplicar .genie-section-header   { background:rgba(16,185,129,.1); color:#6EE7B7; }
+.gs-aplicar .genie-section-body     { color:#A7F3D0; }
+.gs-primero   { background:rgba(251,191,36,.08); border-color:rgba(251,191,36,.3); }
+.gs-primero .genie-section-header   { background:rgba(251,191,36,.12); color:#FDE68A; }
+.gs-primero .genie-section-body     { color:#FEF3C7; }
+.gs-plan      { background:rgba(99,102,241,.08); border-color:rgba(99,102,241,.22); }
+.gs-plan .genie-section-header      { background:rgba(99,102,241,.1); color:#A5B4FC; }
+.gs-plan .genie-section-body        { color:#C7D2FE; }
+.gs-prediccion { background:rgba(239,68,68,.07); border-color:rgba(239,68,68,.22); }
+.gs-prediccion .genie-section-header { background:rgba(239,68,68,.1); color:#FCA5A5; }
+.gs-prediccion .genie-section-body   { color:#FECACA; }
+.genie-loading-dots { display:inline-flex; gap:5px; align-items:center; padding:4px 0; }
+.genie-loading-dots span { width:7px; height:7px; border-radius:50%; background:#FDE68A; animation:hud-blink 1s ease-in-out infinite; }
+.genie-loading-dots span:nth-child(2) { animation-delay:.2s; }
+.genie-loading-dots span:nth-child(3) { animation-delay:.4s; }
+
 /* ── AGENT HQ — HUD videojuego ──────────────────────── */
 @keyframes hud-pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
 @keyframes hud-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(400%)} }
@@ -601,6 +657,9 @@
     <button class="mkt-view-btn" id="vbtn-dash" onclick="setMktView('dash',this)">🎮 Dashboard Pixel</button>
     <span style="font-size:10px;color:#4A5568;font-family:Inter,sans-serif;margin-left:4px">Inspirado en pixel-agents (pablodelucca)</span>
   </div>
+
+  <!-- GENIE CONTAINER -->
+  <div id="genie-container" style="display:none;padding:0 24px 32px"></div>
 
   <!-- Agents Grid View -->
   <div id="view-grid">
@@ -1206,6 +1265,122 @@ async function initLLM() {
   }
 }
 
+/* ══════════════════════════════════════════════════════
+   GENIE — El Genio de la Lámpara de MetaTronix (Marketing)
+   ══════════════════════════════════════════════════════ */
+
+function buildGeniePanelSkeleton() {
+  const stars = Array.from({length:18}, () => {
+    const top=Math.random()*100, left=Math.random()*100, delay=(Math.random()*4).toFixed(1), size=Math.random()>.7?'4px':'2px';
+    return `<div class="genie-star" style="top:${top}%;left:${left}%;width:${size};height:${size};animation-delay:${delay}s"></div>`;
+  }).join('');
+  return `
+  <div class="genie-panel">
+    <div class="genie-stars">${stars}</div>
+    <div class="genie-header">
+      <div class="genie-title-block">
+        <div class="genie-lamp-wrap">
+          <span class="genie-lamp-emoji">🪔</span>
+          <div class="genie-smoke"><span></span><span></span><span></span></div>
+        </div>
+        <div class="genie-title-text">
+          <div class="genie-title-main">🧞 EL GENIO DE METATRONIX</div>
+          <div class="genie-title-sub">Síntesis estratégica de toda la agencia · Plan de acción inmediato</div>
+        </div>
+      </div>
+      <button class="genie-close" onclick="document.getElementById('genie-container').style.display='none'">✕ Cerrar</button>
+    </div>
+    <div class="genie-body">
+      <div class="genie-face">
+        <div class="genie-avatar">🧞</div>
+        <div class="genie-speech" id="genie-speech">
+          Mis agentes han terminado. Analizando todo su trabajo para darte la dirección perfecta…
+          <div class="genie-loading-dots"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+      <div class="genie-sections" id="genie-sections"></div>
+    </div>
+  </div>`;
+}
+
+async function showGenie(mission, agentResults) {
+  const container = document.getElementById('genie-container');
+  if (!container) return;
+  container.style.display = 'block';
+  container.innerHTML = buildGeniePanelSkeleton();
+  container.scrollIntoView({ behavior:'smooth', block:'start' });
+  const sectionsEl = document.getElementById('genie-sections');
+  const speechEl   = document.getElementById('genie-speech');
+  const outputsText = agentResults.filter(r=>r.text).map(r=>`### ${r.name}\n${r.text.slice(0,500)}`).join('\n\n---\n\n');
+
+  if (!window.CRM_LLM?.engine) {
+    if (speechEl) speechEl.innerHTML = '🪄 Activa el LLM para que el Genio pueda darte su síntesis completa.';
+    buildGenieSections(sectionsEl, {
+      resumen:    `Los 15 agentes de marketing analizaron tu misión: "${mission.slice(0,120)}…"\n\nEl Observador detectó las tendencias clave. El Narrador tiene la historia central. El Activador construyó las audiencias. El Amplificador tiene los anuncios listos. El Orquestador coordina todo el plan.`,
+      aplicar:    `1. Usa el output del Narrador para crear el mensaje principal de tu campaña.\n2. Aplica las audiencias del Activador en tus campañas de ads.\n3. Lanza los primeros 3 contenidos del Creador de Contenido esta semana.\n4. Configura la secuencia de email del Guardián del Email.\n5. Define los KPIs del Analista para medir resultados desde el día 1.`,
+      primero:    `⚡ EN LOS PRÓXIMOS 60 MINUTOS:\nEntra al Orquestador de Marketing → pega tu objetivo y contexto → obtén el plan maestro de campaña. Es el agente que coordina a todos los demás y te dice qué activar primero.`,
+      plan:       `Día 1: Aprueba la narrativa del Narrador y el brief de campaña.\nDía 2: Configura audiencias del Activador en plataformas de pauta.\nDía 3: Lanza primeros contenidos orgánicos del Creador.\nDía 4: Activa anuncios del Amplificador con presupuesto de prueba.\nDía 5: Envía primer email del Guardián al segmento caliente.\nDía 6: Revisa métricas del Analista y ajusta.\nDía 7: WBR de Marketing — decisión de la semana y escalar lo que funciona.`,
+      prediccion: `Si ejecutas este plan los próximos 7 días:\n• Primeros 10-20 leads inbound generados\n• +3x alcance orgánico vs semana anterior\n• Benchmark claro de costo por lead\n\nEn 30 días con disciplina:\n• 50-100 leads calificados en pipeline\n• CAC definido para el canal principal\n• Contenido evergreen generando leads de forma autónoma`,
+    });
+    return;
+  }
+  const sys = `Eres el Genio de MetaTronix — sintetizas el trabajo de la agencia de MARKETING completa y das dirección estratégica clara, específica y accionable.
+
+MetaTronix es un CRM + IA para equipos de ventas en LATAM. ICP: Director de Ventas o CEO, empresa 20-500 empleados, sector retail/fintech/industrial. Precios: Starter $299/mes · Growth $799/mes · Enterprise $2,499/mes.
+
+REGLAS: Responde en español. Sé específico con métricas. Menciona los agentes por nombre. Cada acción tiene QUÉ, CUÁNDO y MÉTRICA.`;
+  const userMsg = `La agencia trabajó en esta misión: "${mission.slice(0,300)}"\n\nOutputs:\n\n${outputsText}\n\nResponde con EXACTAMENTE estas 5 secciones:\n\n🔮 RESUMEN EJECUTIVO\n[3 líneas: qué encontró la agencia, cuál es la oportunidad central y el alcance potencial]\n\n💡 CÓMO APLICARLO HOY\n[5 acciones concretas. Formato: N. ACCIÓN → qué hacer · cuándo · métrica de éxito]\n\n⚡ LO PRIMERO QUE DEBES HACER\n[La acción #1 para los próximos 60 minutos — ultra específica, con nombres de agentes y pasos]\n\n🗓️ PLAN DE 7 DÍAS\n[Día 1 al 7 — qué ejecutar en MetaTronix — una acción por día, ejecutable por un marketer real]\n\n🎯 PREDICCIÓN DEL GENIO\n[Resultado esperado: en 7 días (con números) y en 30 días (con números) para MetaTronix]`;
+  try {
+    if (speechEl) speechEl.innerHTML = '🪄 Analizando el trabajo de los 15 agentes… dame un momento.';
+    const result = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 2000 });
+    if (speechEl) speechEl.innerHTML = '✨ Aquí está mi síntesis — sigue cada sección en orden para el máximo impacto.';
+    buildGenieSections(sectionsEl, parseGenieSections(result));
+  } catch(e) {
+    if (speechEl) speechEl.innerHTML = `⚠️ Error del Genio: ${e.message}`;
+  }
+}
+
+function parseGenieSections(text) {
+  const s = { resumen:'', aplicar:'', primero:'', plan:'', prediccion:'' };
+  const patterns = [
+    [/🔮[^\n]*\n([\s\S]*?)(?=💡|$)/, 'resumen'],
+    [/💡[^\n]*\n([\s\S]*?)(?=⚡|$)/, 'aplicar'],
+    [/⚡[^\n]*\n([\s\S]*?)(?=🗓️|$)/, 'primero'],
+    [/🗓️[^\n]*\n([\s\S]*?)(?=🎯|$)/, 'plan'],
+    [/🎯[^\n]*\n([\s\S]*?)(?=$)/, 'prediccion'],
+  ];
+  for (const [re, key] of patterns) { const m=text.match(re); if(m) s[key]=m[1].trim(); }
+  if (!s.resumen && !s.aplicar) s.resumen = text.trim();
+  return s;
+}
+
+function buildGenieSections(container, s) {
+  if (!container) return;
+  const defs = [
+    { key:'resumen',    cls:'gs-resumen',    icon:'🔮', title:'RESUMEN EJECUTIVO' },
+    { key:'aplicar',    cls:'gs-aplicar',    icon:'💡', title:'CÓMO APLICARLO HOY' },
+    { key:'primero',    cls:'gs-primero',    icon:'⚡', title:'LO PRIMERO QUE DEBES HACER' },
+    { key:'plan',       cls:'gs-plan',       icon:'🗓️', title:'PLAN DE 7 DÍAS' },
+    { key:'prediccion', cls:'gs-prediccion', icon:'🎯', title:'PREDICCIÓN DEL GENIO' },
+  ];
+  container.innerHTML = defs.map((d,i) => `
+    <div class="genie-section ${d.cls}" style="animation-delay:${i*.1}s">
+      <div class="genie-section-header"><span style="font-size:16px">${d.icon}</span>${d.title}</div>
+      <div class="genie-section-body">${escHtml(s[d.key]||'—')}</div>
+    </div>`).join('') + `
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="copyGenieOutput()" style="color:#FDE68A;border-color:rgba(251,191,36,.3)">📋 Copiar síntesis</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mission-input').focus();document.getElementById('command-center').scrollIntoView({behavior:'smooth'})" style="color:#7DD3FC;border-color:rgba(0,194,224,.3)">🚀 Nueva misión</button>
+    </div>`;
+}
+
+function copyGenieOutput() {
+  const panel = document.querySelector('.genie-panel');
+  if (!panel) return;
+  navigator.clipboard?.writeText(panel.innerText).catch(()=>{});
+  if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Síntesis del Genio copiada ✓');
+}
+
 /* ── EJEMPLOS DE MISIÓN — MARKETING ─────────────────── */
 const EJEMPLOS_MKT = {
   lanzamiento: `Quiero lanzar MetaTronix CRM para el segmento de Directores de Ventas en retail México. Objetivo: generar 50 leads calificados en 30 días. Presupuesto $3,000 USD. Necesito la narrativa del lanzamiento, copy para anuncios de Google y LinkedIn, secuencia de emails de nurturing y el calendario de contenido para el mes.`,
@@ -1255,11 +1430,20 @@ async function launchAllAgents() {
 
   if (launchBtn)  { launchBtn.disabled = false; launchBtn.style.background = 'linear-gradient(135deg,#0369A1,#0284C7)'; }
   if (launchIcon) launchIcon.textContent = '✅';
-  if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ LA MISIÓN — LANZA OTRA';
+  if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ LA MISIÓN — INVOCANDO GENIO…';
+
+  // Recoger todos los outputs
+  const agentResults = targets.map(a => ({
+    name: a.name,
+    text: (document.getElementById(`output-${a.id}`)?.innerText || '').trim(),
+  })).filter(r => r.text.length > 20);
+
+  await showGenie(mission, agentResults);
+
   setTimeout(() => {
     if (launchIcon) launchIcon.textContent = '🚀';
     if (launchText) launchText.textContent = 'LANZAR TODA LA AGENCIA — 15 AGENTES EN PARALELO';
-  }, 4000);
+  }, 5000);
 }
 
 /* ── LLM STATUS BADGE ────────────────────────────────── */

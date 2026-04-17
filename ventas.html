@@ -195,6 +195,200 @@
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
+/* ═══════════════════════════════════════════════════════
+   GENIE — El Genio de la Lámpara
+   ═══════════════════════════════════════════════════════ */
+@keyframes genie-appear {
+  0%   { opacity:0; transform:translateY(40px) scale(.95); }
+  60%  { opacity:1; transform:translateY(-6px) scale(1.01); }
+  100% { transform:translateY(0) scale(1); }
+}
+@keyframes lamp-float {
+  0%,100% { transform:translateY(0) rotate(-4deg); }
+  50%      { transform:translateY(-10px) rotate(4deg); }
+}
+@keyframes lamp-glow {
+  0%,100% { box-shadow:0 0 30px 8px rgba(251,191,36,.25), 0 0 60px 16px rgba(251,191,36,.08); }
+  50%      { box-shadow:0 0 55px 18px rgba(251,191,36,.45), 0 0 90px 30px rgba(251,191,36,.18); }
+}
+@keyframes smoke-1 {
+  0%   { opacity:.7; transform:translateX(0) translateY(0) scale(1); }
+  100% { opacity:0; transform:translateX(-20px) translateY(-80px) scale(2.5); }
+}
+@keyframes smoke-2 {
+  0%   { opacity:.6; transform:translateX(0) translateY(0) scale(1); }
+  100% { opacity:0; transform:translateX(18px) translateY(-70px) scale(2); }
+}
+@keyframes smoke-3 {
+  0%   { opacity:.5; transform:translateX(0) translateY(0) scale(1); }
+  100% { opacity:0; transform:translateX(-8px) translateY(-90px) scale(3); }
+}
+@keyframes genie-face-bob {
+  0%,100% { transform:translateY(0); }
+  50%      { transform:translateY(-6px); }
+}
+@keyframes section-slide {
+  from { opacity:0; transform:translateX(-12px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+@keyframes star-spin {
+  0%   { transform:rotate(0deg) scale(1); opacity:.9; }
+  50%  { transform:rotate(180deg) scale(1.3); opacity:1; }
+  100% { transform:rotate(360deg) scale(1); opacity:.9; }
+}
+
+.genie-panel {
+  background: linear-gradient(145deg,#12071F 0%,#1A0B2E 35%,#0E1A2E 65%,#0A1215 100%);
+  border: 1px solid rgba(251,191,36,.35);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  animation: genie-appear .7s cubic-bezier(.34,1.56,.64,1) forwards;
+  box-shadow: 0 0 60px rgba(251,191,36,.12), 0 24px 80px rgba(0,0,0,.4);
+}
+.genie-panel::before {
+  content:'';
+  position:absolute; inset:0; pointer-events:none; z-index:0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 3px);
+}
+.genie-stars {
+  position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:0;
+}
+.genie-star {
+  position:absolute; width:3px; height:3px; border-radius:50%; background:#FBF0A0;
+  animation:star-spin 3s ease-in-out infinite;
+}
+.genie-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px;
+  border-bottom:1px solid rgba(251,191,36,.2);
+  background:rgba(251,191,36,.05);
+  position:relative; z-index:1;
+}
+.genie-title-block {
+  display:flex; align-items:center; gap:12px;
+}
+.genie-lamp-wrap {
+  width:52px; height:52px; position:relative;
+  display:flex; align-items:center; justify-content:center;
+  animation: lamp-glow 2.2s ease-in-out infinite;
+  border-radius:50%;
+}
+.genie-lamp-emoji {
+  font-size:32px; line-height:1;
+  animation: lamp-float 3s ease-in-out infinite;
+  display:block;
+}
+.genie-smoke {
+  position:absolute; top:-4px; left:50%; transform:translateX(-50%);
+  pointer-events:none;
+}
+.genie-smoke span {
+  display:block; width:8px; height:8px; border-radius:50%;
+  background:rgba(251,191,36,.55); position:absolute;
+}
+.genie-smoke span:nth-child(1) { left:-4px; animation:smoke-1 2s ease-out infinite; animation-delay:0s; }
+.genie-smoke span:nth-child(2) { left:4px;  animation:smoke-2 2s ease-out infinite; animation-delay:.5s; }
+.genie-smoke span:nth-child(3) { left:0;    animation:smoke-3 2s ease-out infinite; animation-delay:1s; }
+.genie-title-text {
+  display:flex; flex-direction:column; gap:2px;
+}
+.genie-title-main {
+  font-family:'JetBrains Mono',monospace;
+  font-size:15px; font-weight:700;
+  color:#FDE68A; letter-spacing:.08em;
+}
+.genie-title-sub {
+  font-size:11px; color:rgba(253,230,138,.5);
+  font-family:Inter,sans-serif; letter-spacing:.04em;
+}
+.genie-close {
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15);
+  border-radius:8px; padding:5px 12px; color:rgba(255,255,255,.5);
+  font-size:12px; cursor:pointer; font-family:Inter,sans-serif;
+  transition:all .15s;
+}
+.genie-close:hover { background:rgba(255,255,255,.12); color:#fff; }
+
+.genie-body {
+  padding:20px 24px;
+  position:relative; z-index:1;
+}
+.genie-face {
+  display:flex; align-items:center; gap:14px;
+  margin-bottom:20px;
+  padding:14px 16px;
+  background:rgba(251,191,36,.06);
+  border:1px solid rgba(251,191,36,.15);
+  border-radius:10px;
+}
+.genie-avatar {
+  font-size:40px; line-height:1;
+  animation: genie-face-bob 3s ease-in-out infinite;
+  flex-shrink:0;
+}
+.genie-speech {
+  font-size:13px; color:rgba(253,230,138,.8);
+  font-style:italic; line-height:1.7;
+  font-family:Inter,sans-serif;
+}
+.genie-cursor {
+  display:inline-block; width:2px; height:14px;
+  background:#FDE68A; margin-left:2px; vertical-align:middle;
+  animation:hud-blink .9s step-end infinite;
+}
+
+.genie-sections {
+  display:flex; flex-direction:column; gap:12px;
+}
+.genie-section {
+  border-radius:10px; overflow:hidden;
+  animation: section-slide .4s ease forwards;
+  border:1px solid transparent;
+}
+.genie-section-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px; font-weight:700; letter-spacing:.1em;
+}
+.genie-section-body {
+  padding:12px 14px;
+  font-size:13px; line-height:1.8;
+  white-space:pre-wrap; font-family:Inter,sans-serif;
+}
+
+/* Section themes */
+.gs-resumen   { background:rgba(139,92,246,.08); border-color:rgba(139,92,246,.25); }
+.gs-resumen .genie-section-header   { background:rgba(139,92,246,.12); color:#C4B5FD; }
+.gs-resumen .genie-section-body     { color:#DDD6FE; }
+
+.gs-aplicar   { background:rgba(16,185,129,.07); border-color:rgba(16,185,129,.22); }
+.gs-aplicar .genie-section-header   { background:rgba(16,185,129,.1); color:#6EE7B7; }
+.gs-aplicar .genie-section-body     { color:#A7F3D0; }
+
+.gs-primero   { background:rgba(251,191,36,.08); border-color:rgba(251,191,36,.3); }
+.gs-primero .genie-section-header   { background:rgba(251,191,36,.12); color:#FDE68A; }
+.gs-primero .genie-section-body     { color:#FEF3C7; }
+
+.gs-plan      { background:rgba(99,102,241,.08); border-color:rgba(99,102,241,.22); }
+.gs-plan .genie-section-header      { background:rgba(99,102,241,.1); color:#A5B4FC; }
+.gs-plan .genie-section-body        { color:#C7D2FE; }
+
+.gs-prediccion { background:rgba(239,68,68,.07); border-color:rgba(239,68,68,.22); }
+.gs-prediccion .genie-section-header { background:rgba(239,68,68,.1); color:#FCA5A5; }
+.gs-prediccion .genie-section-body   { color:#FECACA; }
+
+.genie-loading-dots {
+  display:inline-flex; gap:5px; align-items:center; padding:4px 0;
+}
+.genie-loading-dots span {
+  width:7px; height:7px; border-radius:50%; background:#FDE68A;
+  animation:hud-blink 1s ease-in-out infinite;
+}
+.genie-loading-dots span:nth-child(2) { animation-delay:.2s; }
+.genie-loading-dots span:nth-child(3) { animation-delay:.4s; }
+
 /* ── AGENT HQ — HUD verde ventas ──────────────────────── */
 @keyframes hud-pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
 @keyframes hud-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(400%)} }
@@ -583,6 +777,9 @@
     <button class="mkt-view-btn active" id="vbtn-grid" onclick="setMktView('grid',this)">⊞ Agentes</button>
     <span style="font-size:10px;color:#4A5568;font-family:Inter,sans-serif;margin-left:4px">Agencia de Ventas — 10 Agentes IA · Pipeline de Cierre Inevitable</span>
   </div>
+
+  <!-- GENIE CONTAINER — aparece después de que todos los agentes terminan -->
+  <div id="genie-container" style="display:none;padding:0 24px 32px"></div>
 
   <!-- Agents Grid View -->
   <div id="view-grid">
@@ -1789,6 +1986,190 @@ async function runAgentSimVentas(id, output) {
     </div>`;
 }
 
+/* ══════════════════════════════════════════════════════
+   GENIE — El Genio de la Lámpara de MetaTronix
+   Aparece cuando toda la agencia termina su misión
+   ══════════════════════════════════════════════════════ */
+
+function buildGeniePanelSkeleton() {
+  // Random stars
+  const stars = Array.from({length:18}, () => {
+    const top  = Math.random()*100;
+    const left = Math.random()*100;
+    const delay = (Math.random()*4).toFixed(1);
+    const size  = Math.random() > .7 ? '4px' : '2px';
+    return `<div class="genie-star" style="top:${top}%;left:${left}%;width:${size};height:${size};animation-delay:${delay}s"></div>`;
+  }).join('');
+
+  return `
+  <div class="genie-panel">
+    <div class="genie-stars">${stars}</div>
+
+    <!-- Header -->
+    <div class="genie-header">
+      <div class="genie-title-block">
+        <div class="genie-lamp-wrap">
+          <span class="genie-lamp-emoji">🪔</span>
+          <div class="genie-smoke">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="genie-title-text">
+          <div class="genie-title-main">🧞 EL GENIO DE METATRONIX</div>
+          <div class="genie-title-sub">Síntesis estratégica de toda la agencia · Plan de acción inmediato</div>
+        </div>
+      </div>
+      <button class="genie-close" onclick="document.getElementById('genie-container').style.display='none'">✕ Cerrar</button>
+    </div>
+
+    <!-- Body -->
+    <div class="genie-body">
+      <!-- Genie face + speech -->
+      <div class="genie-face">
+        <div class="genie-avatar">🧞</div>
+        <div class="genie-speech" id="genie-speech">
+          Mis agentes han terminado. Analizando todo su trabajo para darte la dirección perfecta…
+          <div class="genie-loading-dots"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+
+      <!-- Sections container -->
+      <div class="genie-sections" id="genie-sections"></div>
+    </div>
+  </div>`;
+}
+
+async function showGenie(mission, agentResults) {
+  const container = document.getElementById('genie-container');
+  if (!container) return;
+
+  // Render skeleton
+  container.style.display = 'block';
+  container.innerHTML = buildGeniePanelSkeleton();
+  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const sectionsEl = document.getElementById('genie-sections');
+  const speechEl   = document.getElementById('genie-speech');
+
+  // Preparar contexto de todos los agentes (máx 500 chars cada uno)
+  const outputsText = agentResults
+    .filter(r => r.text)
+    .map(r => `### ${r.name}\n${r.text.slice(0, 500)}`)
+    .join('\n\n---\n\n');
+
+  if (!window.CRM_LLM?.engine) {
+    // Fallback sin LLM
+    if (speechEl) speechEl.innerHTML = '🪄 Activa el LLM para que el Genio pueda darte su síntesis completa.';
+    buildGenieSections(sectionsEl, {
+      resumen:    `Los 10 agentes de ventas analizaron tu misión: "${mission.slice(0,120)}…"\n\nEl Prospector identificó el perfil ICP ideal. El Calificador evaluó el potencial del deal con BANT/MEDDIC. El Descubridor preparó las preguntas clave. El Presentador tiene el script listo. El Negociador tiene respuestas para cada objeción. El Cerrador tiene el mensaje final preparado.`,
+      aplicar:    `1. Usa el output del Prospector para identificar 10 contactos hoy mismo.\n2. Aplica el score del Calificador para decidir en qué deal invertir el 80% de tu tiempo.\n3. Usa la guía del Descubridor en tu próxima llamada.\n4. Envía la propuesta del Propuesta IA con el pricing recomendado.\n5. Activa el Seguimiento IA para el follow-up de los próximos 3 días.`,
+      primero:    `⚡ EN LOS PRÓXIMOS 60 MINUTOS:\nEntra al Orquestador → pega el estado real de tu pipeline → obtén el plan de ataque de hoy. Es el agente que coordina a todos los demás y te dice exactamente qué deal atacar primero y por qué.`,
+      plan:       `Día 1: Ejecuta el plan del Prospector — 10 contactos nuevos.\nDía 2: Califica los 3 mejores leads con el Calificador.\nDía 3: Prepara discovery con el Descubridor para los leads top.\nDía 4: Demo con el script del Presentador.\nDía 5: Envía propuesta generada por Propuesta IA.\nDía 6: Seguimiento con los mensajes del Seguimiento IA.\nDía 7: WBR — revisa el pipeline con Pipeline AI y ajusta.`,
+      prediccion: `Si ejecutas este plan los próximos 7 días:\n• +3 a +5 nuevas oportunidades calificadas en pipeline\n• Al menos 1 demo agendada con prospecto de alto potencial\n• Tasa de respuesta +40% vs método manual\n\nEn 30 días con disciplina de ejecución:\n• 1 a 2 deals cerrados o en etapa de propuesta avanzada\n• Pipeline limpio y con forecast confiable en MetaTronix`,
+    });
+    return;
+  }
+
+  // Con LLM — llamada a Claude
+  const sys = `Eres el Genio de MetaTronix — sintetizas el trabajo de la agencia de ventas completa y das dirección estratégica clara, específica y accionable para el equipo de MetaTronix.
+
+MetaTronix es un CRM + IA para equipos de ventas en LATAM. Su proceso: Prospección → Calificación BANT → Demo → Propuesta → Negociación → Cierre. ICP: Director de Ventas o CEO, empresa 20-500 empleados, sector retail/fintech/industrial, México y LATAM. Precios: Starter $299/mes · Growth $799/mes · Enterprise $2,499/mes.
+
+REGLAS:
+- Responde SIEMPRE en español. Sé específico, usa datos y nombres concretos.
+- Menciona a los agentes por nombre cuando cites su output.
+- Cada acción debe tener: QUÉ, CUÁNDO y MÉTRICA de éxito.
+- El plan de 7 días debe ser ejecutable por un vendedor real de MetaTronix.`;
+
+  const userMsg = `La agencia trabajó en esta misión: "${mission.slice(0,300)}"
+
+Outputs de los agentes:
+
+${outputsText}
+
+Responde con EXACTAMENTE estas 5 secciones (usa este formato con los emojis de título):
+
+🔮 RESUMEN EJECUTIVO
+[3 líneas: qué encontró la agencia, cuál es la oportunidad central y el tamaño del premio]
+
+💡 CÓMO APLICARLO HOY
+[5 acciones concretas. Cada una en formato: N. ACCIÓN → qué hacer · cuándo · métrica de éxito]
+
+⚡ LO PRIMERO QUE DEBES HACER
+[La acción #1 para los próximos 60 minutos — ultra específica, con nombres de agentes y pasos exactos]
+
+🗓️ PLAN DE 7 DÍAS
+[Día 1 al 7 — qué ejecutar en MetaTronix con esta información — una acción por día, ejecutable por un vendedor real]
+
+🎯 PREDICCIÓN DEL GENIO
+[Si ejecutas este plan: resultado esperado en 7 días (con números) y en 30 días (con números) para MetaTronix]`;
+
+  try {
+    if (speechEl) speechEl.innerHTML = '🪄 Analizando el trabajo de los 10 agentes… dame un momento.';
+    const result = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 2000 });
+    if (speechEl) speechEl.innerHTML = '✨ Aquí está mi síntesis completa — sigue cada sección en orden para obtener el máximo resultado.';
+
+    // Parse sections from result
+    const parsed = parseGenieSections(result);
+    buildGenieSections(sectionsEl, parsed);
+
+  } catch(e) {
+    if (speechEl) speechEl.innerHTML = `⚠️ El genio tuvo un problema: ${e.message}`;
+  }
+}
+
+/* Parse Claude's response into named sections */
+function parseGenieSections(text) {
+  const sections = { resumen:'', aplicar:'', primero:'', plan:'', prediccion:'' };
+  const patterns = [
+    [/🔮[^\n]*\n([\s\S]*?)(?=💡|$)/,    'resumen'],
+    [/💡[^\n]*\n([\s\S]*?)(?=⚡|$)/,    'aplicar'],
+    [/⚡[^\n]*\n([\s\S]*?)(?=🗓️|$)/,   'primero'],
+    [/🗓️[^\n]*\n([\s\S]*?)(?=🎯|$)/,   'plan'],
+    [/🎯[^\n]*\n([\s\S]*?)(?=$)/,        'prediccion'],
+  ];
+  for (const [re, key] of patterns) {
+    const m = text.match(re);
+    if (m) sections[key] = m[1].trim();
+  }
+  // Fallback: if parsing failed, dump all text in resumen
+  if (!sections.resumen && !sections.aplicar) sections.resumen = text.trim();
+  return sections;
+}
+
+/* Build the visual section cards */
+function buildGenieSections(container, s) {
+  if (!container) return;
+  const defs = [
+    { key:'resumen',    cls:'gs-resumen',    icon:'🔮', title:'RESUMEN EJECUTIVO' },
+    { key:'aplicar',    cls:'gs-aplicar',    icon:'💡', title:'CÓMO APLICARLO HOY' },
+    { key:'primero',    cls:'gs-primero',    icon:'⚡', title:'LO PRIMERO QUE DEBES HACER' },
+    { key:'plan',       cls:'gs-plan',       icon:'🗓️', title:'PLAN DE 7 DÍAS' },
+    { key:'prediccion', cls:'gs-prediccion', icon:'🎯', title:'PREDICCIÓN DEL GENIO' },
+  ];
+  container.innerHTML = defs.map((d, i) => `
+    <div class="genie-section ${d.cls}" style="animation-delay:${i*0.1}s">
+      <div class="genie-section-header">
+        <span style="font-size:16px">${d.icon}</span>
+        ${d.title}
+      </div>
+      <div class="genie-section-body">${escHtml(s[d.key] || '—')}</div>
+    </div>
+  `).join('') + `
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="copyGenieOutput()" style="color:#FDE68A;border-color:rgba(251,191,36,.3)">📋 Copiar síntesis completa</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mission-input').focus();document.getElementById('command-center').scrollIntoView({behavior:'smooth'})" style="color:#6EE7B7;border-color:rgba(16,185,129,.3)">🚀 Nueva misión</button>
+    </div>`;
+}
+
+function copyGenieOutput() {
+  const panel = document.querySelector('.genie-panel');
+  if (!panel) return;
+  const text = panel.innerText;
+  navigator.clipboard?.writeText(text).catch(()=>{});
+  if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Síntesis del Genio copiada ✓');
+}
+
 /* ── EJEMPLOS DE MISIÓN ──────────────────────────────── */
 const EJEMPLOS = {
   prospectar: `Quiero atacar un nuevo segmento: Directores de Ventas en empresas de retail con 100 a 500 empleados en México que ya tienen CRM pero lo usan menos del 40% del equipo. Su dolor principal es el forecast manual y los reportes tardados. Presupuesto estimado $300-800 USD/mes. Necesito lista de prospectos, cómo contactarlos y el mensaje perfecto de apertura.`,
@@ -1848,11 +2229,21 @@ async function launchAllAgents() {
   // Restaurar botón
   if (launchBtn)  { launchBtn.disabled = false; launchBtn.style.background = 'linear-gradient(135deg,#047857,#059669)'; }
   if (launchIcon) launchIcon.textContent = '✅';
-  if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ LA MISIÓN — LANZA OTRA';
+  if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ LA MISIÓN — INVOCAR GENIO…';
+
+  // Recoger todos los outputs
+  const agentResults = targets.map(a => ({
+    name: a.name,
+    text: (document.getElementById(`output-${a.id}`)?.innerText || '').trim(),
+  })).filter(r => r.text.length > 20);
+
+  // Invocar al Genio
+  await showGenie(mission, agentResults);
+
   setTimeout(() => {
     if (launchIcon) launchIcon.textContent = '🚀';
     if (launchText) launchText.textContent = 'LANZAR TODA LA AGENCIA — 10 AGENTES EN PARALELO';
-  }, 4000);
+  }, 5000);
 }
 
 /* ── LLM STATUS BADGE ────────────────────────────────── */
