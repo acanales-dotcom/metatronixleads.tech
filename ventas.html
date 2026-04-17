@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Ventas IA</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/agent.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- HF Transformers -->
+  <script type="module">
+    import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.1";
+    env.allowLocalModels = false;
+    window.HFPipeline = pipeline;
+    if (!window.CRM_AI) {
+      window.CRM_AI = {
+        _p: {},
+        async get(task, model, opts={}) {
+          if (!this._p[task]) this._p[task] = await pipeline(task, model, {device:'webgpu', dtype:'q4', ...opts});
+          return this._p[task];
+        },
+        sentiment:  () => window.CRM_AI.get('sentiment-analysis','Xenova/distilbert-base-multilingual-cased-sentiments-student'),
+        embeddings: () => window.CRM_AI.get('feature-extraction','Xenova/all-MiniLM-L6-v2'),
+        zeroShot:   () => window.CRM_AI.get('zero-shot-classification','Xenova/mobilebert-uncased-mnli',{}),
+        summary:    () => window.CRM_AI.get('summarization','Xenova/distilbart-cnn-6-6',{}),
+        ner:        () => window.CRM_AI.get('ner','Xenova/bert-base-NER',{aggregation_strategy:'simple'})
+      };
+    }
+  </script>
+  <script>
+    // CRM_LLM — usa Cloudflare Worker como proxy a Claude API
+    if (!window.CRM_LLM) {
+      window.CRM_LLM = {
+        engine: true,
+        _workerUrl: (window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev'),
+        async init(cb) {
+          if (cb) cb({ progress: 0.2, text: 'Verificando conexión con Claude API...' });
+          try {
+            const probe = await fetch(this._workerUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:5, messages:[{role:'user',content:'hi'}] }),
+              signal: AbortSignal.timeout(8000)
+            });
+            if (cb) cb({ progress: 1.0, text: 'Claude API conectada ✓' });
+          } catch(e) {
+            if (cb) cb({ progress: 1.0, text: 'Modo directo activo ✓' });
+          }
+          this.engine = true;
+        },
+        async chat(sys, msg) {
+          const url = this._workerUrl;
+          let fullText = '';
+          try {
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 1500,
+                system: sys,
+                messages: [{ role: 'user', content: msg }],
+                stream: true
+              }),
+              signal: AbortSignal.timeout(30000)
+            });
+            if (!resp.ok) { throw new Error('Worker error ' + resp.status); }
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+              for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6);
+                if (data === '[DONE]') break;
+                try {
+                  const parsed = JSON.parse(data);
+                  const delta = parsed.delta?.text || parsed.delta?.content?.[0]?.text || '';
+                  fullText += delta;
+                } catch(e2) {}
+              }
+            }
+            return fullText || '(sin respuesta)';
+          } catch(e) {
+            throw new Error('Failed to fetch');
+          }
+        }
+      };
+    }
+  </script>
+
+  <style>
+/* ── Ventas IA — Estilos específicos ────────────────────── */
+.mkt-shell { display:flex; flex-direction:column; min-height:100vh; }
+
+/* Control panel */
+.mkt-cp {
+  position:sticky; top:0; z-index:50;
+  background:#fff; border-bottom:1px solid var(--border);
+  padding:0 24px; box-shadow:0 1px 4px rgba(8,37,95,.04);
+}
+.mkt-cp-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 0; gap:12px;
+}
+
+/* Knowledge Base panel — verde ventas */
+.kb-panel {
+  background:linear-gradient(135deg,#064E3B 0%,#065F46 100%);
+  padding:20px 24px; border-bottom:1px solid rgba(255,255,255,.1);
+  display:none;
+}
+.kb-panel.open { display:block; }
+.kb-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+.kb-field { display:flex; flex-direction:column; gap:5px; }
+.kb-field label { font-size:11px; font-weight:700; color:rgba(255,255,255,.65); letter-spacing:.06em; text-transform:uppercase; }
+.kb-field textarea, .kb-field input {
+  border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1);
+  color:#fff; border-radius:6px; padding:8px 10px;
+  font-family:var(--font-body); font-size:13px; resize:none;
+  outline:none; transition:border-color .15s;
+}
+.kb-field textarea::placeholder, .kb-field input::placeholder { color:rgba(255,255,255,.4); }
+.kb-field textarea:focus, .kb-field input:focus { border-color:#00ff88; }
+
+/* Agent grid */
+.agents-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(340px,1fr));
+  gap:16px; padding:20px 24px;
+}
+
+/* Agent card */
+.agent-card {
+  background:#fff; border:1px solid var(--border); border-radius:12px;
+  overflow:hidden; transition:box-shadow .2s, transform .15s;
+  cursor:pointer;
+}
+.agent-card:hover { box-shadow:0 8px 32px rgba(0,64,40,.14); transform:translateY(-2px); }
+.agent-card.active { border-color:#10B981; box-shadow:0 0 0 2px rgba(16,185,129,.15); }
+
+.agent-card-header {
+  padding:16px 18px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-start; gap:12px;
+}
+.agent-icon {
+  width:44px; height:44px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+}
+.agent-card-meta { flex:1; min-width:0; }
+.agent-name { font-family:var(--font-head); font-size:1rem; letter-spacing:.04em; color:var(--navy); line-height:1; margin-bottom:4px; }
+.agent-desc { font-size:12px; color:var(--text-muted); line-height:1.4; }
+.agent-status {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:10px; font-weight:700; padding:2px 7px;
+  border-radius:10px; letter-spacing:.04em; text-transform:uppercase;
+  flex-shrink:0;
+}
+.agent-status.ready  { background:#F0FDF4; color:#16A34A; }
+.agent-status.busy   { background:#ECFDF5; color:#059669; }
+.agent-status.idle   { background:#F8FAFC; color:#94A3B8; }
+
+/* Agent models badges */
+.agent-models { display:flex; gap:4px; flex-wrap:wrap; padding:8px 18px; border-bottom:1px solid var(--border); background:var(--surface); }
+.model-tag {
+  font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px;
+  background:#ECFDF5; color:#059669; letter-spacing:.02em;
+}
+
+/* Agent workspace (expanded) */
+.agent-workspace { padding:16px 18px; }
+.agent-input-row { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.agent-input-row textarea {
+  border:1px solid var(--border); border-radius:8px; padding:10px 12px;
+  font-family:var(--font-body); font-size:13px; resize:vertical;
+  min-height:80px; outline:none; transition:border-color .15s;
+}
+.agent-input-row textarea:focus { border-color:#10B981; box-shadow:0 0 0 3px rgba(16,185,129,.08); }
+.agent-run-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:10px 18px; background:#059669; color:#fff;
+  border:none; border-radius:8px; font-family:var(--font-body);
+  font-weight:700; font-size:14px; cursor:pointer; transition:all .15s;
+  width:100%;
+}
+.agent-run-btn:hover { background:#047857; transform:translateY(-1px); }
+.agent-run-btn:disabled { background:var(--border2); color:var(--text-faint); cursor:not-allowed; transform:none; }
+
+/* Output area */
+.agent-output {
+  margin-top:12px; background:var(--surface);
+  border:1px solid var(--border); border-radius:8px;
+  padding:12px; font-size:13px; line-height:1.7;
+  color:var(--text); min-height:60px; white-space:pre-wrap;
+  max-height:400px; overflow-y:auto;
+  display:none;
+}
+.agent-output.show { display:block; animation:fadeIn .2s ease; }
+.agent-output .output-section { margin-bottom:12px; }
+.agent-output .output-title { font-weight:700; color:var(--navy); margin-bottom:4px; }
+.agent-output .output-item {
+  padding:8px 10px; background:#fff; border:1px solid var(--border);
+  border-radius:6px; margin-bottom:6px; font-size:12.5px;
+}
+
+/* Output tabs */
+.output-tabs { display:flex; gap:4px; margin-top:10px; margin-bottom:6px; }
+.out-tab {
+  padding:4px 10px; font-size:11px; font-weight:600;
+  border:1px solid var(--border); border-radius:4px;
+  background:#fff; cursor:pointer; color:var(--text-muted);
+  transition:all .12s;
+}
+.out-tab.active { background:#059669; color:#fff; border-color:#059669; }
+
+/* Loading animation */
+.agent-loading {
+  display:flex; align-items:center; gap:8px;
+  color:var(--text-muted); font-size:13px; padding:12px 0;
+}
+.agent-spinner {
+  width:16px; height:16px; border:2px solid var(--border2);
+  border-top-color:#10B981; border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+
+/* LLM init bar */
+.llm-init-bar {
+  background:var(--surface2); border-bottom:1px solid var(--border);
+  padding:10px 24px; display:flex; align-items:center; gap:12px;
+  font-size:13px; color:var(--text-muted);
+}
+.llm-init-bar.hidden { display:none; }
+.llm-progress { flex:1; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+.llm-progress-fill { height:100%; background:linear-gradient(90deg,#10B981,#00ff88); border-radius:2px; transition:width .3s; }
+
+/* KB status */
+.kb-status {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:12px; font-size:11px; font-weight:600;
+  background:rgba(16,185,129,.1); color:#059669; cursor:pointer;
+  transition:background .15s; border:1px solid rgba(16,185,129,.2);
+}
+.kb-status:hover { background:rgba(16,185,129,.18); }
+
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+/* ── AGENT HQ — HUD verde ventas ──────────────────────── */
+@keyframes hud-pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+@keyframes hud-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(400%)} }
+@keyframes hud-blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+@keyframes slot-glow { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,0)} 50%{box-shadow:0 0 12px 2px rgba(0,255,136,.25)} }
+
+.agent-hq {
+  margin: 10px 24px 0;
+  background: linear-gradient(180deg,#081A10 0%,#0A1E12 100%);
+  border: 1px solid rgba(0,255,136,.22);
+  border-radius: 12px; overflow: hidden; position: relative;
+}
+.agent-hq::before {
+  content:''; pointer-events:none;
+  position:absolute; inset:0; z-index:0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
+}
+.hq-scanbeam {
+  position:absolute; left:0; right:0; height:40px;
+  background: linear-gradient(180deg,transparent,rgba(0,255,136,.04) 50%,transparent);
+  animation: hud-scan 4s linear infinite; pointer-events:none; z-index:0;
+}
+.hq-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 16px; border-bottom:1px solid rgba(0,255,136,.15);
+  position:relative; z-index:1;
+  background: rgba(0,255,136,.04);
+}
+.hq-title {
+  font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+  color:#00ff88; letter-spacing:.12em; text-transform:uppercase;
+  display:flex; align-items:center; gap:8px;
+}
+.hq-title-dot {
+  width:6px; height:6px; background:#00ff88; border-radius:50%;
+  animation: hud-blink 1.4s ease-in-out infinite;
+}
+.hq-meta {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:rgba(0,255,136,.45); letter-spacing:.09em;
+}
+.hq-row-label {
+  padding:4px 16px 2px;
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  color:rgba(0,255,136,.35); letter-spacing:.14em; text-transform:uppercase;
+  position:relative; z-index:1;
+  display:flex; align-items:center; gap:6px;
+}
+.hq-row-label::after {
+  content:''; flex:1; height:1px; background:rgba(0,255,136,.1);
+}
+.hq-slots {
+  display:grid; grid-template-columns:repeat(7,1fr);
+  gap:5px; padding:6px 12px 10px; position:relative; z-index:1;
+}
+.hq-slot {
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(0,255,136,.12);
+  border-radius:7px; padding:9px 7px 8px;
+  text-align:center; cursor:pointer; position:relative;
+  transition: all .18s; overflow:hidden;
+}
+.hq-slot::before {
+  content:''; position:absolute; inset:0; border-radius:7px;
+  background:linear-gradient(135deg,rgba(0,255,136,.06),transparent);
+  opacity:0; transition:opacity .18s;
+}
+.hq-slot:hover {
+  border-color:rgba(0,255,136,.5); background:rgba(0,255,136,.07);
+  transform:translateY(-2px);
+}
+.hq-slot:hover::before { opacity:1; }
+.hq-slot.active-slot {
+  border-color:rgba(0,255,136,.7); background:rgba(0,255,136,.1);
+  animation: slot-glow 1.8s ease-in-out infinite;
+}
+.hq-slot::after {
+  content:''; position:absolute; top:3px; right:3px;
+  width:6px; height:6px;
+  border-top:1px solid rgba(0,255,136,.3);
+  border-right:1px solid rgba(0,255,136,.3);
+}
+.hq-slot-tl {
+  position:absolute; top:3px; left:3px;
+  width:6px; height:6px;
+  border-top:1px solid rgba(0,255,136,.3);
+  border-left:1px solid rgba(0,255,136,.3);
+}
+.hq-slot-num {
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  color:rgba(0,255,136,.4); letter-spacing:.08em; margin-bottom:4px;
+}
+.hq-slot-icon { font-size:18px; line-height:1; margin-bottom:4px; display:block; }
+.hq-slot-name {
+  font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600;
+  color:#C8E8D0; letter-spacing:.04em; text-transform:uppercase;
+  line-height:1.2; min-height:18px;
+}
+.hq-slot-cat {
+  font-size:7.5px; color:rgba(0,255,136,.4); letter-spacing:.06em;
+  text-transform:uppercase; margin-top:3px;
+  font-family:'JetBrains Mono',monospace;
+}
+.hq-slot-status {
+  position:absolute; bottom:5px; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; gap:2px;
+}
+.hq-slot-dot {
+  width:4px; height:4px; border-radius:50%; background:#10B981;
+  animation: hud-pulse 2s ease-in-out infinite;
+}
+.hq-slot-dot.orange { background:#F59E0B; animation-delay:.3s; }
+
+/* View toggle buttons */
+.mkt-view-btn {
+  padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  cursor: pointer; background: rgba(255,255,255,.04); color: var(--t2);
+  border: 1px solid rgba(255,255,255,.08); transition: all .12s; font-family: 'Inter', sans-serif;
+}
+.mkt-view-btn.active { background: rgba(0,255,136,.12); color: #00ff88; border-color: rgba(0,255,136,.3); }
+.mkt-view-btn:hover:not(.active) { color: var(--t1); border-color: var(--b2); }
+
+/* Larry leads */
+.larry-leads { margin-top:10px; }
+.larry-lead-item {
+  display:flex; align-items:center; gap:10px; padding:8px 10px;
+  border:1px solid var(--border); border-radius:6px; margin-bottom:6px;
+  background:#fff; cursor:pointer; transition:background .1s;
+}
+.larry-lead-item:hover { background:var(--surface2); }
+.larry-lead-selected { border-color:#10B981; background:#ECFDF5 !important; }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page mkt-shell">
+
+  <!-- Control Panel -->
+  <div class="mkt-cp">
+    <div class="mkt-cp-row">
+      <nav class="o-breadcrumbs">
+        <a href="/home.html">MetaTronix</a>
+        <span class="o-breadcrumbs-sep">›</span>
+        <span class="o-breadcrumbs-current">Ventas IA</span>
+      </nav>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="kb-status" onclick="toggleKB()" id="kb-status-btn">
+          🎯 Base de Ventas <span id="kb-status-dot">●</span>
+        </span>
+        <button class="btn btn-primary btn-sm" onclick="initLLM()" style="background:#059669;border-color:#059669">
+          ⚡ Activar LLM
+        </button>
+        <span id="gpu-badge" style="display:none;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(16,185,129,.1);color:#10B981;border:1px solid rgba(16,185,129,.2)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LLM Init Bar -->
+  <div class="llm-init-bar" id="llm-bar">
+    <div class="agent-spinner"></div>
+    <span id="llm-bar-text">LLM listo para activarse — click "⚡ Activar LLM" para inicializar</span>
+    <div class="llm-progress"><div class="llm-progress-fill" id="llm-fill" style="width:0%"></div></div>
+    <span id="llm-pct" style="font-family:var(--font-mono);font-size:11px;white-space:nowrap">0%</span>
+  </div>
+
+  <!-- Knowledge Base -->
+  <div class="kb-panel" id="kb-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-family:var(--font-head);font-size:1.1rem;letter-spacing:.08em;color:#fff">🎯 BASE DE VENTAS — Alimenta a todos los agentes</div>
+      <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.3)" onclick="saveKB()">💾 Guardar</button>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">Información del proceso comercial que todos los agentes de ventas usan para generar contenido personalizado.</div>
+    <div class="kb-grid">
+      <div class="kb-field">
+        <label>Empresa / Producto Estrella</label>
+        <input id="kb-empresa" placeholder="MetaTronix — CRM IA para LATAM">
+      </div>
+      <div class="kb-field">
+        <label>Proceso de Ventas (etapas)</label>
+        <textarea id="kb-proceso" rows="2" placeholder="Prospección → Calificación → Demo → Propuesta → Negociación → Cierre..."></textarea>
+      </div>
+      <div class="kb-field">
+        <label>ICP — Perfil de Cliente Ideal</label>
+        <textarea id="kb-icp" rows="2" placeholder="Director de Ventas, empresa 50-500 empleados, México/LATAM, sector retail o fintech..."></textarea>
+      </div>
+      <div class="kb-field">
+        <label>Propuesta de Valor Comercial</label>
+        <textarea id="kb-valor" rows="2" placeholder="30% más cierres en 90 días, implementación en 1 semana, soporte en español..."></textarea>
+      </div>
+      <div class="kb-field">
+        <label>Ticket Promedio / Precios</label>
+        <input id="kb-precio" placeholder="$299-$2,499 USD/mes · Enterprise desde $5,000 USD">
+      </div>
+      <div class="kb-field">
+        <label>Objeciones más comunes</label>
+        <input id="kb-objeciones" placeholder="Precio, integración con sistemas actuales, tiempo de implementación, ROI...">
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT HQ — HUD verde ventas — 10 agentes -->
+  <div class="agent-hq">
+    <div class="hq-scanbeam"></div>
+
+    <!-- Header -->
+    <div class="hq-header">
+      <div class="hq-title">
+        <span class="hq-title-dot"></span>
+        AGENCIA DE VENTAS — PIPELINE COMMAND
+      </div>
+      <div class="hq-meta">10 AGENTES ACTIVOS &nbsp;·&nbsp; SISTEMA EN LÍNEA &nbsp;·&nbsp; METATRONIX v3.0</div>
+    </div>
+
+    <!-- Row A: Los 7 Mecanismos de Ventas -->
+    <div class="hq-row-label">FILA A — LOS 7 MECANISMOS · PIPELINE DE CIERRE INEVITABLE</div>
+    <div class="hq-slots">
+      <div class="hq-slot" onclick="toggleAgent('prospector')" title="Prospector">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">01</div>
+        <span class="hq-slot-icon">🔍</span>
+        <div class="hq-slot-name">Prospector</div>
+        <div class="hq-slot-cat">Leads</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('calificador')" title="Calificador">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">02</div>
+        <span class="hq-slot-icon">⚖️</span>
+        <div class="hq-slot-name">Calificador</div>
+        <div class="hq-slot-cat">BANT/MEDDIC</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('descubridor')" title="Descubridor">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">03</div>
+        <span class="hq-slot-icon">🧩</span>
+        <div class="hq-slot-name">Descubridor</div>
+        <div class="hq-slot-cat">Discovery</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('presentador')" title="Presentador">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">04</div>
+        <span class="hq-slot-icon">🎤</span>
+        <div class="hq-slot-name">Presentador</div>
+        <div class="hq-slot-cat">Demo · Pitch</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('negociador')" title="Negociador">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">05</div>
+        <span class="hq-slot-icon">🤝</span>
+        <div class="hq-slot-name">Negociador</div>
+        <div class="hq-slot-cat">Objeciones</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('cerrador')" title="Cerrador">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">06</div>
+        <span class="hq-slot-icon">🏆</span>
+        <div class="hq-slot-name">Cerrador</div>
+        <div class="hq-slot-cat">Cierre</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('orquestador')" title="Orquestador de Ventas">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">07</div>
+        <span class="hq-slot-icon">🎯</span>
+        <div class="hq-slot-name">Orquestador</div>
+        <div class="hq-slot-cat">Pipeline</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+    </div>
+
+    <!-- Row B: Infraestructura Compartida -->
+    <div class="hq-row-label">FILA B — INFRAESTRUCTURA COMPARTIDA · HERRAMIENTAS DE APOYO</div>
+    <div class="hq-slots" style="padding-top:2px">
+      <div class="hq-slot" onclick="toggleAgent('propuesta')" title="Generador de Propuestas">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">08</div>
+        <span class="hq-slot-icon">📋</span>
+        <div class="hq-slot-name">Propuesta IA</div>
+        <div class="hq-slot-cat">Docs · PDF</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('seguimiento')" title="Seguimiento Inteligente">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">09</div>
+        <span class="hq-slot-icon">📬</span>
+        <div class="hq-slot-name">Seguimiento</div>
+        <div class="hq-slot-cat">Email · WA</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('pipeline_ai')" title="Análisis de Pipeline">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">10</div>
+        <span class="hq-slot-icon">📊</span>
+        <div class="hq-slot-name">Pipeline AI</div>
+        <div class="hq-slot-cat">Forecast</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+    </div>
+
+    <!-- Footer bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 16px 7px;border-top:1px solid rgba(0,255,136,.1);position:relative;z-index:1">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(0,255,136,.3);letter-spacing:.1em">
+        ● VERDE = LISTO &nbsp;&nbsp; ● AMARILLO = REQUIERE TOKEN HF
+      </span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(0,255,136,.3);letter-spacing:.1em">
+        HAZ CLIC EN UN AGENTE PARA ACTIVARLO
+      </span>
+    </div>
+  </div>
+
+  <!-- View Toggle -->
+  <div style="display:flex;gap:6px;padding:12px 24px;align-items:center">
+    <button class="mkt-view-btn active" id="vbtn-grid" onclick="setMktView('grid',this)">⊞ Agentes</button>
+    <span style="font-size:10px;color:#4A5568;font-family:Inter,sans-serif;margin-left:4px">Agencia de Ventas — 10 Agentes IA · Pipeline de Cierre Inevitable</span>
+  </div>
+
+  <!-- Agents Grid View -->
+  <div id="view-grid">
+    <div class="agents-grid" id="agents-grid"></div>
+  </div>
+
+</div><!-- /.page -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js?v=4"></script>
+<script src="/assets/agent.js?v=4"></script>
+<script src="/assets/salescoach.js?v=4"></script>
+<script src="/assets/teamchat.js?v=4"></script>
+<script>
+/* ════════════════════════════════════════════════════════
+   MetaTronix — Ventas IA
+   10 Agentes: 7 Mecanismos de Cierre + 3 Infraestructura
+   Arquitectura de Pipeline de Cierre Inevitable v3.0
+   ════════════════════════════════════════════════════════ */
+
+let currentUser = null;
+let llmReady    = false;
+let allLeads    = [];
+
+/* ── KNOWLEDGE BASE ─────────────────────────────────── */
+const KB_KEY = 'mtx_ventas_kb';
+
+function getKB() {
+  try { return JSON.parse(localStorage.getItem(KB_KEY) || '{}'); } catch { return {}; }
+}
+function saveKB() {
+  const kb = {
+    empresa:    document.getElementById('kb-empresa')?.value || '',
+    proceso:    document.getElementById('kb-proceso')?.value || '',
+    icp:        document.getElementById('kb-icp')?.value || '',
+    valor:      document.getElementById('kb-valor')?.value || '',
+    precio:     document.getElementById('kb-precio')?.value || '',
+    objeciones: document.getElementById('kb-objeciones')?.value || '',
+    updated:    new Date().toISOString(),
+  };
+  localStorage.setItem(KB_KEY, JSON.stringify(kb));
+  updateKBStatus(true);
+  if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Base de ventas guardada ✓');
+  else showToast('Base de ventas guardada ✓', 'success');
+}
+function loadKBToForm() {
+  const kb = getKB();
+  if (document.getElementById('kb-empresa'))    document.getElementById('kb-empresa').value    = kb.empresa    || 'MetaTronix — CRM + IA para equipos de ventas en LATAM';
+  if (document.getElementById('kb-proceso'))    document.getElementById('kb-proceso').value    = kb.proceso    || 'Prospección → Calificación BANT → Demo 30 min → Propuesta → Negociación → Cierre → Onboarding';
+  if (document.getElementById('kb-icp'))        document.getElementById('kb-icp').value        = kb.icp        || 'Director de Ventas o CEO, empresa 20-500 empleados, sector retail, fintech o industrial, México y LATAM';
+  if (document.getElementById('kb-valor'))      document.getElementById('kb-valor').value      = kb.valor      || 'Aumenta cierre 30% en 90 días, implementación en 1 semana, sin código, soporte 24/7 en español, 70% menos costo que Salesforce';
+  if (document.getElementById('kb-precio'))     document.getElementById('kb-precio').value     = kb.precio     || 'Starter $299 USD/mes · Growth $799 USD/mes · Enterprise desde $2,499 USD/mes';
+  if (document.getElementById('kb-objeciones')) document.getElementById('kb-objeciones').value = kb.objeciones || 'Precio muy alto, ya tenemos CRM, no tenemos tiempo para implementar, necesito aprobación del board, el equipo no adopta herramientas nuevas';
+}
+function updateKBStatus(hasData) {
+  const dot = document.getElementById('kb-status-dot');
+  if (dot) { dot.style.color = hasData ? '#10B981' : '#94A3B8'; }
+}
+function toggleKB() {
+  const p = document.getElementById('kb-panel');
+  if (p) { p.classList.toggle('open'); loadKBToForm(); }
+}
+
+/* ── SYSTEM PROMPT BUILDER ───────────────────────────── */
+function buildVentasPrompt(agenteName, mision) {
+  const kb = getKB();
+  return `Eres el ${agenteName} de MetaTronix — Agencia de Ventas de Cierre Inevitable.
+
+EMPRESA: ${kb.empresa || 'MetaTronix — CRM + IA para equipos de ventas en LATAM'}
+PROCESO DE VENTAS: ${kb.proceso || 'Prospección → Calificación → Demo → Propuesta → Negociación → Cierre'}
+PERFIL DE CLIENTE IDEAL (ICP): ${kb.icp || 'Director de Ventas, empresa 20-500 empleados, México y LATAM'}
+PROPUESTA DE VALOR: ${kb.valor || 'Aumenta cierre 30% en 90 días, implementación 1 semana, soporte en español'}
+PRECIOS: ${kb.precio || 'Starter $299/mes · Growth $799/mes · Enterprise $2,499/mes'}
+OBJECIONES COMUNES: ${kb.objeciones || 'Precio, integración, tiempo de implementación, ROI'}
+MISIÓN DEL AGENTE: ${mision}
+
+REGLAS DEL SISTEMA:
+1. Responde siempre en español. Sé específico, accionable y listo para usar.
+2. Cada respuesta termina con una ACCIÓN INMEDIATA concreta.
+3. Métrica única de éxito: tasa de cierre y velocidad del pipeline.
+4. Todo lo que no mueve el deal hacia el cierre se elimina del proceso.`;
+}
+
+/* ── AGENTS DEFINITION ──────────────────────────────── */
+const AGENTS = [
+  /* ── CAPA 1: LOS 7 MECANISMOS DE VENTAS ─────────── */
+  {
+    id: 'prospector',
+    icon: '🔍',
+    iconBg: 'linear-gradient(135deg,#ECFDF5,#D1FAE5)',
+    name: 'PROSPECTOR',
+    desc: 'Identifica y cualifica prospectos de alto valor antes del primer contacto. Genera listas ICPs, señales de compra y el mensaje de apertura perfecto para cada canal.',
+    models: ['CRM_LLM', 'ICP Scoring', 'Outreach'],
+    inputLabel: '¿Qué tipo de prospecto o segmento quieres atacar?',
+    inputPlaceholder: 'Ej: Directores de Ventas en empresas retail México 100-500 empleados que usan Salesforce pero se quejan del costo',
+    run: runAgentProspector,
+  },
+  {
+    id: 'calificador',
+    icon: '⚖️',
+    iconBg: 'linear-gradient(135deg,#F0FDF4,#BBFCCB)',
+    name: 'CALIFICADOR',
+    desc: 'Aplica BANT, MEDDIC y señales de intención para score cada lead. Decide en 5 minutos si el prospecto merece avanzar o se regresa a nurturing.',
+    models: ['CRM_LLM', 'BANT', 'MEDDIC'],
+    inputLabel: 'Información del lead a calificar',
+    inputPlaceholder: 'Ej: Empresa: RetailMax, 200 empleados, Director de TI interesado, presupuesto no definido, pain: su CRM actual falla con el equipo de campo',
+    run: runAgentCalificador,
+  },
+  {
+    id: 'descubridor',
+    icon: '🧩',
+    iconBg: 'linear-gradient(135deg,#F0FDFA,#CCFBF1)',
+    name: 'DESCUBRIDOR',
+    desc: 'Genera el mapa de dolor del prospecto con preguntas de descubrimiento de alto impacto. Usa SPIN Selling y Challenger Sale para revelar el problema que el cliente no sabía que tenía.',
+    models: ['CRM_LLM', 'SPIN Selling', 'Challenger'],
+    inputLabel: 'Contexto del prospecto para preparar la sesión de discovery',
+    inputPlaceholder: 'Ej: Director de Ventas de empresa fintech, 150 vendedores, pain detectado: bajo adoption de su CRM actual, demo en 48 horas',
+    run: runAgentDescubridor,
+  },
+  {
+    id: 'presentador',
+    icon: '🎤',
+    iconBg: 'linear-gradient(135deg,#F0FDF4,#D1FAE5)',
+    name: 'PRESENTADOR',
+    desc: 'Prepara el script de demo perfecto, personalizado al dolor del prospecto. Estructura la presentación para que el cliente vea su futuro mejor antes de escuchar el precio.',
+    models: ['CRM_LLM', 'Demo Script', 'Storytelling'],
+    inputLabel: 'Información del prospecto y sus pain points detectados',
+    inputPlaceholder: 'Ej: CFO de empresa retail, dolor: no sabe qué vendedores van a cerrar este mes, quiere forecast confiable, demo en 30 minutos',
+    run: runAgentPresentador,
+  },
+  {
+    id: 'negociador',
+    icon: '🤝',
+    iconBg: 'linear-gradient(135deg,#FFFBEB,#FEF3C7)',
+    name: 'NEGOCIADOR',
+    desc: 'Desarma objeciones de precio, competencia y timing con frameworks probados. Genera respuestas palabra por palabra para las objeciones más comunes sin perder el deal.',
+    models: ['CRM_LLM', 'Objeciones', 'Negociación'],
+    inputLabel: '¿Qué objeción enfrentas o qué situación de negociación tienes?',
+    inputPlaceholder: 'Ej: El prospecto dice "necesito pensarlo" después de la demo. O: "Salesforce nos ofrece 40% de descuento si firmamos esta semana"',
+    run: runAgentNegociador,
+  },
+  {
+    id: 'cerrador',
+    icon: '🏆',
+    iconBg: 'linear-gradient(135deg,#FFF7ED,#FFEDD5)',
+    name: 'CERRADOR',
+    desc: 'Genera las técnicas de cierre exactas para este deal. Trial close, urgencia real, concesiones estratégicas y el email o mensaje de cierre que hace que firmen hoy.',
+    models: ['CRM_LLM', 'Técnicas Cierre', 'Urgencia'],
+    inputLabel: 'Estado actual del deal — ¿qué falta para cerrar?',
+    inputPlaceholder: 'Ej: Deal $180K MXN, 3 semanas en propuesta, stakeholder dice que le gusta pero el board debe aprobar. ¿Cómo acelero?',
+    run: runAgentCerrador,
+  },
+  {
+    id: 'orquestador',
+    icon: '🎯',
+    iconBg: 'linear-gradient(135deg,#0A1E12,#0D2416)',
+    name: 'ORQUESTADOR',
+    desc: 'Única interfaz con el Director de Ventas. Recibe el estado del pipeline en lenguaje natural, diagnostica cuellos de botella y genera el plan de ataque semanal.',
+    models: ['CRM_LLM', 'Pipeline Review', 'Forecast'],
+    inputLabel: 'Estado del pipeline o pregunta de estrategia comercial',
+    inputPlaceholder: 'Ej: Tengo 8 deals en pipeline por $2.3M MXN, 3 en negociación, cierre del trimestre en 18 días. ¿Qué hago primero?',
+    run: runAgentOrquestador, isOrquestadorAgent: true, accentColor: '#10B981',
+  },
+  /* ── CAPA 2: INFRAESTRUCTURA COMPARTIDA ──────────── */
+  {
+    id: 'propuesta',
+    icon: '📋',
+    iconBg: 'linear-gradient(135deg,#0A1E12,#0F2B18)',
+    name: 'PROPUESTA IA',
+    desc: 'Genera propuestas comerciales personalizadas listas para enviar. Incluye sección ejecutiva, ROI proyectado, hoja de ruta de implementación y CTA de cierre.',
+    models: ['CRM_LLM', 'Propuesta Comercial', 'ROI Builder'],
+    inputLabel: 'Datos del prospecto y deal para generar la propuesta',
+    inputPlaceholder: 'Ej: Cliente: RetailMax, 200 vendedores, pain: forecast manual. Producto: MetaTronix Growth. Precio ofertado: $799 USD/mes. Tomador de decisión: Director de Ventas.',
+    run: runAgentPropuesta,
+  },
+  {
+    id: 'seguimiento',
+    icon: '📬',
+    iconBg: 'linear-gradient(135deg,#0A1A1E,#0C2429)',
+    name: 'SEGUIMIENTO IA',
+    desc: 'Genera secuencias de seguimiento multicanal (email + WhatsApp) para cada etapa del pipeline. Nunca más un "solo quería saber cómo van" que mata el deal.',
+    models: ['CRM_LLM', 'Email · WhatsApp', 'Sequences'],
+    inputLabel: 'Situación del deal y canal de seguimiento',
+    inputPlaceholder: 'Ej: Prospecté a un Director de Ventas hace 5 días, abrió mi email pero no respondió. O: Lead frío de 3 semanas que necesito reactivar.',
+    run: runAgentSeguimiento,
+  },
+  {
+    id: 'pipeline_ai',
+    icon: '📊',
+    iconBg: 'linear-gradient(135deg,#1C1917,#292524)',
+    name: 'ANÁLISIS PIPELINE',
+    desc: 'Analiza la salud del pipeline completo, detecta deals en riesgo, calcula forecast realista y genera el plan de acción para cerrar el trimestre.',
+    models: ['CRM_LLM', 'Forecast', 'Deal Health'],
+    inputLabel: 'Datos del pipeline para analizar',
+    inputPlaceholder: 'Ej: Pipeline: $4.2M. Deals: 12 activos. Etapas: 3 en propuesta, 4 en demo agendada, 5 en calificación. Cierre trimestre: 22 días. Win rate histórico: 28%.',
+    run: runAgentPipelineAI, accentColor: '#F97316',
+  },
+];
+
+/* ── RENDER AGENTS ──────────────────────────────────── */
+function renderAgents() {
+  const grid = document.getElementById('agents-grid');
+  if (!grid) return;
+  grid.innerHTML = AGENTS.map(a => `
+    <div class="agent-card" id="card-${a.id}" onclick="toggleAgent('${a.id}')">
+      <div class="agent-card-header">
+        <div class="agent-icon" style="background:${a.iconBg}">${a.icon}</div>
+        <div class="agent-card-meta">
+          <div class="agent-name">${a.name}</div>
+          <div class="agent-desc">${a.desc}</div>
+        </div>
+        <span class="agent-status idle" id="status-${a.id}">Listo</span>
+      </div>
+      <div class="agent-models">
+        ${a.models.map(m=>`<span class="model-tag">${m}</span>`).join('')}
+        <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
+      </div>
+      <div class="agent-workspace" id="ws-${a.id}" style="display:none" onclick="event.stopPropagation()">
+        ${a.inputLabel ? `
+          <div class="agent-input-row">
+            <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
+            <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
+          </div>` : ''}
+        <button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')" style="${a.isOrquestadorAgent ? 'background:linear-gradient(135deg,#047857,#059669)' : a.accentColor ? `background:${a.accentColor}` : ''}">
+          <span>⚡ Ejecutar ${a.name}</span>
+        </button>
+        <div id="output-${a.id}" class="agent-output"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleAgent(id) {
+  const ws   = document.getElementById(`ws-${id}`);
+  const card = document.getElementById(`card-${id}`);
+  if (!ws) return;
+  const isOpen = ws.style.display !== 'none';
+  document.querySelectorAll('.agent-workspace').forEach(w=>w.style.display='none');
+  document.querySelectorAll('.agent-card').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.hq-slot').forEach(s=>s.classList.remove('active-slot'));
+  if (!isOpen) {
+    ws.style.display='block';
+    if(card) card.classList.add('active');
+    const slot = document.querySelector(`.hq-slot[onclick*="'${id}'"]`);
+    if(slot) slot.classList.add('active-slot');
+    if(card) card.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+}
+
+function setMktView(view, btn) {
+  document.querySelectorAll('.mkt-view-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+/* ── RUN AGENTS ─────────────────────────────────────── */
+async function runAgent(id) {
+  const agent = AGENTS.find(a=>a.id===id);
+  if (!agent) return;
+  const btn    = document.getElementById(`btn-${id}`);
+  const output = document.getElementById(`output-${id}`);
+  const status = document.getElementById(`status-${id}`);
+  if (!output) return;
+
+  setAgentBusy(id, true, status, btn);
+  output.className = 'agent-output show';
+  output.innerHTML = `<div class="agent-loading"><div class="agent-spinner"></div> Procesando con IA...</div>`;
+
+  try {
+    await agent.run(id, output);
+  } catch(e) {
+    output.innerHTML = `<div style="color:var(--danger)">❌ Error: ${e.message}</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Consejo: Activa el LLM con ⚡ o verifica la conexión a internet.</div>`;
+  } finally {
+    setAgentBusy(id, false, status, btn);
+  }
+}
+
+function setAgentBusy(id, busy, status, btn) {
+  if (status) { status.textContent = busy ? '⚡ Ejecutando' : 'Listo'; status.className = `agent-status ${busy?'busy':'ready'}`; }
+  if (btn)    { btn.disabled = busy; btn.querySelector('span').textContent = busy ? '⏳ Procesando...' : `⚡ Ejecutar ${AGENTS.find(a=>a.id===id)?.name||''}`; }
+}
+
+function getInput(id) {
+  return document.getElementById(`input-${id}`)?.value.trim() || '';
+}
+
+function renderOutput(output, sections) {
+  output.innerHTML = sections.map(s=>`
+    <div class="output-section">
+      <div class="output-title">${s.title}</div>
+      ${s.items.map(item=>`<div class="output-item">${item}</div>`).join('')}
+    </div>`).join('') + `<div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar todo</button>
+    </div>`;
+}
+
+function copyOutput(el) {
+  const text = el?.innerText || '';
+  navigator.clipboard?.writeText(text).catch(()=>{});
+  if (typeof Notiflix!=='undefined') Notiflix.Notify.success('Copiado al portapapeles ✓');
+}
+
+function passToAgent(targetId, text) {
+  const input = document.getElementById(`input-${targetId}`);
+  if (input) { input.value = text; }
+  toggleAgent(targetId);
+}
+
+/* ══════════════════════════════════════════════════════
+   IMPLEMENTACIONES — LOS 7 MECANISMOS DE VENTAS
+   ══════════════════════════════════════════════════════ */
+
+/* 01 — PROSPECTOR */
+async function runAgentProspector(id, output) {
+  const query = getInput(id) || 'Directores de Ventas en empresas retail México 100-500 empleados';
+  const sys = buildVentasPrompt('Prospector',
+    'Identificar y cualificar prospectos de alto valor antes del primer contacto. Generar perfil ICP preciso, señales de compra detectables y el mensaje de apertura perfecto para cada canal.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Actúa como Prospector de élite. Para este segmento/prospecto genera:\n\n1. 🎯 PERFIL ICP REFINADO (características exactas del prospecto ideal para este segmento)\n2. 🔍 SEÑALES DE COMPRA (5 triggers que indican que está listo para comprar ahora)\n3. 📍 DÓNDE ENCONTRARLOS (canales, grupos, eventos, plataformas donde están activos)\n4. 📧 EMAIL DE PRIMER CONTACTO (asunto + cuerpo de 4 líneas — personalizado, no genérico)\n5. 💬 MENSAJE DE WHATSAPP/LINKEDIN (opener de 2 líneas que genera respuesta)\n6. ⚡ ACCIÓN INMEDIATA (qué hacer en los próximos 60 minutos para contactar 10 prospectos de este perfil)\n\nSegmento/Prospecto objetivo: ${query}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🔍 Prospector — Plan de Prospección</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('calificador',this.closest('.agent-output').innerText.slice(0,400))">⚖️ Calificar leads</button></div>`;
+    return;
+  }
+  const kb = getKB();
+  renderOutput(output, [
+    { title: '🎯 Perfil ICP Refinado',
+      items: [`Director de Ventas / CEO de empresa ${kb.icp?.includes('fintech') ? 'fintech' : 'retail'} en México, 50-300 empleados, ya tiene CRM pero lo usa menos del 40% del equipo`, 'Dolor visible: forecast manual en Excel, gerencia pide reportes que tardan 2 días en armar', 'Señal de compra: buscan en LinkedIn "CRM México" o "CRM vendedores campo"'] },
+    { title: '📧 Email de Primer Contacto',
+      items: ['ASUNTO: [Nombre], vi que [empresa] tiene 80 vendedores — ¿cuánto tiempo les toma armar el reporte semanal?\nCUERPO: En [empresa similar] lo teníamos resuelto en 15 minutos con MetaTronix. ¿Tienes 20 min esta semana para ver si te sirve?\nCTA: → [link agenda]'] },
+    { title: '💬 Opener LinkedIn',
+      items: ['Hola [Nombre], vi tu post sobre los retos del equipo de ventas en campo — en MetaTronix resolvemos exactamente eso. ¿Te parece si te muestro cómo en 15 minutos?'] },
+    { title: '⚡ Acción Inmediata',
+      items: ['1. Busca en LinkedIn "Director de Ventas" + sector + México → filtra por 2do grado. 2. Envía 10 mensajes en los próximos 45 minutos. 3. Registra todos en CRM con tag "prospección_masiva_01"'] },
+  ]);
+}
+
+/* 02 — CALIFICADOR */
+async function runAgentCalificador(id, output) {
+  const leadInfo = getInput(id) || 'Empresa retail 200 empleados, interés mostrado en demo, presupuesto sin confirmar';
+  const sys = buildVentasPrompt('Calificador',
+    'Aplicar BANT y MEDDIC para determinar en 5 minutos si el prospecto merece el 80% del tiempo del vendedor o se envía a nurturing. Producir score 0-100 con justificación.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Califica este lead aplicando frameworks de ventas B2B enterprise:\n\n1. ⚖️ ANÁLISIS BANT\n   - Budget (presupuesto): ¿tiene o puede conseguirlo?\n   - Authority (autoridad): ¿es el decisor o influencer clave?\n   - Need (necesidad): ¿el dolor es real y urgente?\n   - Timeline (tiempo): ¿hay urgencia para comprar pronto?\n\n2. 🎯 ANÁLISIS MEDDIC\n   - Metrics: ¿qué KPIs quiere mejorar?\n   - Economic Buyer: ¿quién firma el cheque?\n   - Decision Criteria: ¿cómo evalúa opciones?\n   - Decision Process: ¿cuál es el proceso de aprobación?\n   - Identify Pain: ¿cuál es el dolor específico y su costo?\n   - Champion: ¿quién está de nuestro lado interno?\n\n3. 📊 SCORE FINAL (0-100) con justificación de 2 líneas\n4. ✅ RECOMENDACIÓN: AVANZAR / NURTURING / DESCARTAR\n5. ⚡ SIGUIENTE PASO EXACTO si se decide avanzar\n\nDatos del lead: ${leadInfo}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">⚖️ Calificador — Análisis BANT/MEDDIC</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('descubridor',this.closest('.agent-output').innerText.slice(0,400))">🧩 Ir a Discovery</button></div>`;
+    return;
+  }
+  renderOutput(output, [
+    { title: '⚖️ Score BANT',
+      items: ['Budget: 6/10 — presupuesto no confirmado pero empresa con tamaño para pagarlo', 'Authority: 7/10 — contacto es influencer fuerte, decisor final es CFO', 'Need: 9/10 — dolor de forecast manual claramente articulado', 'Timeline: 5/10 — sin urgencia declarada, fin de trimestre puede ser palanca'] },
+    { title: '📊 Score Final: 68/100',
+      items: ['RECOMENDACIÓN: ✅ AVANZAR — el dolor es real y el tamaño justifica el esfuerzo. Prioridad media-alta.'] },
+    { title: '⚡ Siguiente Paso',
+      items: ['Agenda discovery de 30 min en los próximos 3 días. Objetivo: confirmar budget con CFO y encontrar el champion interno. Prepara 3 preguntas de dolor financiero.'] },
+  ]);
+}
+
+/* 03 — DESCUBRIDOR */
+async function runAgentDescubridor(id, output) {
+  const contexto = getInput(id) || 'Director de Ventas empresa fintech 150 empleados, demo en 48 horas';
+  const sys = buildVentasPrompt('Descubridor',
+    'Generar el mapa de dolor del prospecto con preguntas de descubrimiento de alto impacto usando SPIN Selling y Challenger Sale. Revelar el problema que el cliente no sabía que tenía.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Prepara la sesión de discovery perfecta para este prospecto:\n\n1. 🗺️ MAPA DE DOLOR HIPOTÉTICO (los 3 dolores más probables antes de hablar con ellos)\n2. ❓ PREGUNTAS SPIN (3 de Situación, 3 de Problema, 3 de Implicación, 2 de Necesidad de solución)\n3. 🎯 PREGUNTA KILLER (1 pregunta que revela el costo real del problema — en $)\n4. ⚠️ SEÑALES DE ALERTA a detectar durante la llamada\n5. 🏆 INSIGHT CHALLENGER (1 perspectiva que el cliente no tiene y que posiciona a MetaTronix como experto indispensable)\n6. ⚡ APERTURA DE LA LLAMADA (primeros 60 segundos — frase exacta para tomar el control)\n\nContexto del prospecto: ${contexto}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🧩 Descubridor — Guía de Discovery</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar guía</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('presentador',this.closest('.agent-output').innerText.slice(0,500))">🎤 Preparar Demo</button></div>`;
+    return;
+  }
+  renderOutput(output, [
+    { title: '❓ Preguntas SPIN',
+      items: ['SITUACIÓN: "¿Cuántos vendedores tienen en campo y cómo registran actualmente sus visitas?" / "¿Qué herramienta usan hoy para el forecast mensual?"', 'PROBLEMA: "¿Con qué frecuencia el forecast real vs el proyectado tiene una diferencia mayor al 20%?" / "¿Cuánto tiempo invierte su equipo en reportes que no generan ventas?"', 'IMPLICACIÓN: "Si esa diferencia en forecast les ha costado alguna vez perder un cliente o no cumplir metas, ¿cómo afecta eso al equipo?" / "¿Qué pasa internamente cuando no se cumple la meta del trimestre?"', 'NECESIDAD: "Si tuvieran visibilidad en tiempo real del pipeline y el forecast se actualizara solo — ¿qué cambiaría en su operación?"'] },
+    { title: '🏆 Insight Challenger',
+      items: ['Los directores de ventas en LATAM pierden en promedio 8 horas/semana arreglando datos de su CRM en lugar de coachear a su equipo. MetaTronix elimina ese trabajo — no porque sea más barato, sino porque sus vendedores realmente lo usan.'] },
+    { title: '⚡ Apertura de Llamada',
+      items: ['"[Nombre], agendamos 30 minutos — yo voy a hacer la mayor parte de las preguntas porque quiero entender tu operación antes de mostrarte cualquier cosa. ¿Te parece bien si arrancamos por ahí?"'] },
+  ]);
+}
+
+/* 04 — PRESENTADOR */
+async function runAgentPresentador(id, output) {
+  const contexto = getInput(id) || 'CFO empresa retail, dolor: no tiene forecast confiable, demo 30 minutos';
+  const sys = buildVentasPrompt('Presentador',
+    'Preparar el script de demo perfecto, personalizado al dolor detectado en el discovery. Estructurar para que el cliente vea su futuro mejor antes de escuchar el precio.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Crea el script de demo/presentación completo para este prospecto:\n\n1. 🎬 ESTRUCTURA DE 30 MINUTOS (minuto a minuto: qué mostrar, qué decir, qué preguntar)\n2. 🖥️ FLUJO DE DEMO (las 3-5 funcionalidades a mostrar y en qué orden — de dolor a solución)\n3. 💬 FRASES ANCLA (3 frases para conectar cada feature con el dolor específico del prospecto)\n4. ⚡ MOMENTO WOW (el instante exacto donde el cliente dice "¡esto es lo que necesito!" — cómo crearlo)\n5. 🚩 PREGUNTAS DE VALIDACIÓN (3 preguntas para medir temperatura durante la demo)\n6. 🏁 CIERRE DE LA DEMO (cómo terminar con la propuesta en la mesa, no con "te mando info")\n\nContexto del prospecto y pain detectado: ${contexto}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🎤 Presentador — Script de Demo</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar script</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('propuesta',this.closest('.agent-output').innerText.slice(0,400))">📋 Generar Propuesta</button></div>`;
+    return;
+  }
+  const kb = getKB();
+  renderOutput(output, [
+    { title: '🎬 Estructura de 30 Minutos',
+      items: ['Min 0-5: Agenda + validación del dolor. "Antes de mostrar nada, déjame confirmar que entendí bien el problema"', 'Min 5-20: Demo flujo principal enfocado en el pain. Empieza con el resultado final (dashboard), no con el setup', 'Min 20-25: Funcionalidades adicionales solo si el cliente las pide. No features dump.', 'Min 25-30: Resumen de valor + siguiente paso concreto. Propuesta en 48h máximo.'] },
+    { title: '⚡ Momento WOW',
+      items: ['Muestra el dashboard de forecast en tiempo real. Luego di: "¿Cuánto tiempo les toma actualmente tener esta misma vista?" — cuando dicen "2 días" o "nunca es precisa", ese es el momento. Pausa 3 segundos. Deja que el silencio trabaje.'] },
+    { title: '🏁 Cierre de Demo',
+      items: [`"${kb.empresa || 'MetaTronix'} resuelve exactamente lo que me describiste. Tengo dos opciones para presentarte — ¿te va bien que te las mande mañana antes de mediodía para que las revises antes del viernes?"` ] },
+  ]);
+}
+
+/* 05 — NEGOCIADOR */
+async function runAgentNegociador(id, output) {
+  const objecion = getInput(id) || 'El prospecto dice "está muy caro" después de ver el precio';
+  const sys = buildVentasPrompt('Negociador',
+    'Desarmar objeciones con frameworks probados y generar respuestas palabra por palabra. Defender el precio sin descuentos innecesarios. Mantener el deal en movimiento.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Genera la estrategia completa para manejar esta situación de negociación:\n\n1. 🔍 DIAGNÓSTICO (¿es una objeción real o una señal de compra disfrazada?)\n2. 💬 RESPUESTA INMEDIATA (frase exacta para responder — máx 3 líneas, sin ponerse defensivo)\n3. 🎯 REENCUADRE DE VALOR (cómo convertir "costo" en "inversión con ROI demostrable")\n4. 📊 CÁLCULO DE ROI EN VIVO (cómo hacer que el cliente calcule su propio ROI en la llamada)\n5. 🚀 MANEJO DE ALTERNATIVAS (si menciona a un competidor — cómo responder sin hablar mal de ellos)\n6. ⚡ PREGUNTA DE CIERRE POST-OBJECIÓN (cómo retomar el control y avanzar)\n\nObjeción / situación: ${objecion}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🤝 Negociador — Estrategia Anti-Objeción</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('cerrador',this.closest('.agent-output').innerText.slice(0,400))">🏆 Técnicas de Cierre</button></div>`;
+    return;
+  }
+  const kb = getKB();
+  renderOutput(output, [
+    { title: '🔍 Diagnóstico de Objeción',
+      items: ['"Está muy caro" en 80% de los casos es una señal de que el valor no está claro, no que el presupuesto no existe. Pregunta antes de defenderte.'] },
+    { title: '💬 Respuesta Inmediata',
+      items: ['"Entiendo. ¿El precio que viste está por encima de lo que tenían presupuestado, o es que todavía no ven claro cómo impacta en sus números?" — Esta pregunta separa la objeción real de la objeción táctica.'] },
+    { title: '📊 ROI en Vivo',
+      items: [`"Hagamos el cálculo juntos. ¿Cuántos vendedores tienen? ¿Cuánto es el ticket promedio? Si MetaTronix sube su tasa de cierre solo un 5% — ¿cuánto representaría eso al año?" → El precio de ${kb.precio?.split('·')[0]?.trim() || '$299/mes'} se vuelve irrelevante cuando el cliente calcula $800K MXN de ganancia incremental.`] },
+    { title: '⚡ Pregunta Post-Objeción',
+      items: ['"Si el precio no fuera un factor, ¿hay algo más que necesitarías ver para tomar la decisión esta semana?"'] },
+  ]);
+}
+
+/* 06 — CERRADOR */
+async function runAgentCerrador(id, output) {
+  const situacion = getInput(id) || 'Deal en propuesta hace 3 semanas, cliente interesado pero no decide';
+  const sys = buildVentasPrompt('Cerrador',
+    'Generar las técnicas de cierre exactas para este deal específico. Crear urgencia real, concesiones estratégicas mínimas y el mensaje o email de cierre que hace que firmen hoy.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Genera el plan de cierre completo para este deal:\n\n1. 🔥 DIAGNÓSTICO DE BLOQUEO (¿por qué no ha firmado? — las 3 razones más probables)\n2. ⏰ URGENCIA REAL (cómo crear urgencia genuina sin mentir ni presionar — basado en el negocio del cliente)\n3. 🎯 TÉCNICA DE CIERRE RECOMENDADA (elige la más adecuada: trial close, assumptive close, now-or-never, summary close)\n4. 📧 EMAIL/MENSAJE DE CIERRE (redacción completa lista para enviar — máx 8 líneas)\n5. 🤝 CONCESIÓN ESTRATÉGICA (si necesitas dar algo — qué dar sin destruir el margen)\n6. ⚡ PLAN B (si no cierra hoy — cuándo y cómo vuelves a la carga sin morir en el intento)\n\nSituación del deal: ${situacion}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🏆 Cerrador — Plan de Cierre</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar plan</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('seguimiento',this.closest('.agent-output').innerText.slice(0,300))">📬 Secuencia seguimiento</button></div>`;
+    return;
+  }
+  renderOutput(output, [
+    { title: '🔥 Diagnóstico de Bloqueo',
+      items: ['1. No tiene claro quién aprueba — el proceso interno de compra no está mapeado', '2. Otra prioridad interna apareció — el dolor de CRM bajó en su lista', '3. Esperando que tú hagas el siguiente movimiento — muchos vendedores dejan morir deals por miedo a presionar'] },
+    { title: '📧 Email de Cierre',
+      items: ['"[Nombre], llevas 3 semanas con nuestra propuesta. Quiero ser directo: ¿qué falta para que esto avance esta semana?\nTengo un cupo de implementación disponible esta semana. Si no lo tomas, el siguiente slot es en 3 semanas.\n¿15 minutos hoy o mañana para resolverlo juntos?\n— [Tu nombre]"'] },
+    { title: '⚡ Plan B — Follow-up a 5 días',
+      items: ['Si no responde en 48h: WhatsApp directo. "Hola [Nombre], vi que revisaste la propuesta — ¿hay algo que no quedó claro?" — una sola pregunta, sin presión visible.'] },
+  ]);
+}
+
+/* 07 — ORQUESTADOR */
+async function runAgentOrquestador(id, output) {
+  const instruccion = getInput(id) || 'Tengo 8 deals por $2.3M MXN, cierre de trimestre en 18 días. ¿Qué hago?';
+  const sys = buildVentasPrompt('Orquestador de Ventas',
+    'Única interfaz con el Director de Ventas. Recibir el estado del pipeline, diagnosticar cuellos de botella, priorizar deals por probabilidad de cierre y generar el plan de ataque semanal.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Como Orquestador, genera el plan de ataque comercial completo:\n\n1. 🗺️ DIAGNÓSTICO DE PIPELINE (¿dónde están los cuellos de botella? ¿qué etapa tiene más deals atascados?)\n2. 🎯 PRIORIZACIÓN (top 3 deals con mayor probabilidad de cerrar este período — y por qué)\n3. ⚠️ DEALS EN RIESGO (los que pueden perderse si no actúas hoy)\n4. 📅 PLAN SEMANAL (día a día — qué deal atender, qué acción ejecutar)\n5. 📊 FORECAST REALISTA (qué porcentaje del pipeline esperar cerrar y en qué plazo)\n6. ⚡ PRIMERA ACCIÓN (lo más importante en las próximas 2 horas)\n\nEstado del pipeline: ${instruccion}`);
+    output.innerHTML = `
+      <div class="output-section">
+        <div class="output-title">🎯 Orquestador — Plan de Ataque Comercial</div>
+        <div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar plan</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('cerrador')">🏆 Cerrador</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('negociador')">🤝 Negociador</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('pipeline_ai')">📊 Pipeline AI</button>
+      </div>`;
+    return;
+  }
+  renderOutput(output, [
+    { title: '🎯 Priorización de Deals',
+      items: ['DEAL #1 — El de mayor valor con stakeholder champion activo. Cierre esta semana.', 'DEAL #2 — Propuesta enviada hace <7 días. Temperatura alta. Follow-up hoy.', 'DEAL #3 — Deal grande que lleva +3 semanas. Escalada requerida — habla con el decisor final esta semana.'] },
+    { title: '📅 Plan de Ataque — Próximos 3 Días',
+      items: ['HOY: Llama a los 3 deals prioritarios. No email, llamada. Agenda próximos pasos concretos.', 'MAÑANA: Envía follow-up a deals que no respondieron la llamada. Manda propuesta actualizada al Deal #3.', 'PASADO: Revisión de pipeline con el equipo. Descarta leads que no van a cerrar este trimestre — libera tiempo.'] },
+    { title: '⚡ Primera Acción',
+      items: ['Ejecuta el Cerrador con el deal más avanzado de tu pipeline ahora. Si no sabes cuál es, el Pipeline AI te lo dice.'] },
+  ]);
+}
+
+/* ══════════════════════════════════════════════════════
+   INFRAESTRUCTURA COMPARTIDA (Agentes 8-10)
+   ══════════════════════════════════════════════════════ */
+
+/* 08 — PROPUESTA IA */
+async function runAgentPropuesta(id, output) {
+  const datos = getInput(id) || 'Cliente: empresa retail 200 empleados, producto: MetaTronix Growth $799/mes, dolor: forecast manual';
+  const sys = buildVentasPrompt('Generador de Propuestas IA',
+    'Generar propuestas comerciales personalizadas, listas para enviar. Incluir resumen ejecutivo, ROI proyectado, plan de implementación y CTA de cierre.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Genera una propuesta comercial completa y lista para enviar:\n\n1. 📋 RESUMEN EJECUTIVO (3 párrafos: situación actual → dolor → solución propuesta)\n2. 💡 SOLUCIÓN PROPUESTA (qué incluye exactamente, configuración, usuarios, módulos)\n3. 📊 ROI PROYECTADO (cálculo concreto basado en los datos del cliente — con números)\n4. 🗓️ PLAN DE IMPLEMENTACIÓN (semana a semana, qué pasa cuándo)\n5. 💰 INVERSIÓN (tabla de precios clara — setup + mensualidad + condiciones)\n6. ✅ PRÓXIMOS PASOS (3 pasos claros para que el cliente firme esta semana)\n7. ⏰ VALIDEZ DE LA PROPUESTA (fecha de vencimiento + razón de urgencia real)\n\nDatos del deal: ${datos}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📋 Propuesta IA — Documento Comercial</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar propuesta</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('seguimiento',this.closest('.agent-output').innerText.slice(0,300))">📬 Crear secuencia de seguimiento</button></div>`;
+    return;
+  }
+  const kb = getKB();
+  renderOutput(output, [
+    { title: '📋 Resumen Ejecutivo',
+      items: [`[Nombre del cliente] actualmente gestiona su pipeline de ventas con herramientas desconectadas que generan forecast impreciso y reportes que consumen horas del equipo. MetaTronix centraliza toda la operación comercial en una plataforma IA, dando visibilidad en tiempo real y eliminando el trabajo manual.\n\nLa propuesta incluye implementación en 7 días, migración de datos históricos, capacitación completa del equipo y soporte 24/7 en español.`] },
+    { title: '📊 ROI Proyectado (12 meses)',
+      items: ['• Tiempo recuperado: 8 hrs/vendedor/semana × 20 vendedores = 160 hrs/semana → $48,000 USD/año en productividad', `• Mejora en tasa de cierre estimada +15% → +$${Math.round(parseInt('2000000')*0.15).toLocaleString()} MXN ingreso incremental`, `• Inversión anual MetaTronix: ${kb.precio?.split('·')[1]?.trim() || '$799/mes'} × 12 meses`, '→ ROI estimado: 8-12x en 12 meses'] },
+    { title: '✅ Próximos Pasos',
+      items: ['1. Firmar contrato (hoy o mañana)', '2. Kick-off con equipo de implementación (72h después)', '3. Go-live completo en 7 días hábiles'] },
+  ]);
+}
+
+/* 09 — SEGUIMIENTO IA */
+async function runAgentSeguimiento(id, output) {
+  const situacion = getInput(id) || 'Lead que abrió propuesta hace 5 días pero no respondió';
+  const sys = buildVentasPrompt('Seguimiento IA',
+    'Generar secuencias de seguimiento multicanal que mantienen el deal vivo sin ser intrusivo. Eliminar los "solo quería saber" que matan las relaciones comerciales.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Genera la secuencia de seguimiento completa para esta situación:\n\n1. 📧 SECUENCIA DE 4 EMAILS (asunto + cuerpo completo de cada uno, espaciados: día 1, día 3, día 7, día 14)\n2. 💬 MENSAJES DE WHATSAPP (versión corta de cada touchpoint — máx 3 líneas)\n3. 📞 GUIÓN DE LLAMADA (si no responde emails — cuándo llamar y qué decir exactamente)\n4. 🔄 REGLA DE CADENCIA (cuándo parar y cuándo reactivar si no hay respuesta)\n5. ⚡ PRIMER MENSAJE A ENVIAR HOY (el más importante — listo para copiar y pegar)\n\nSituación del deal / lead: ${situacion}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📬 Seguimiento IA — Secuencia Multicanal</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar secuencia completa</button></div>`;
+    return;
+  }
+  renderOutput(output, [
+    { title: '📧 Secuencia de 4 Emails',
+      items: ['DÍA 1 — ASUNTO: "[Nombre], algo que olvidé mencionar"\nCUERPO: Vi que revisaste la propuesta. Quería añadir algo que suele ser relevante: [insight personalizado]. ¿Lo conversamos 15 min?',
+              'DÍA 3 — ASUNTO: "¿Qué opina el equipo de [empresa]?"\nCUERPO: Nada urgente — solo curiosidad si ya tuviste chance de revisar la propuesta con tu equipo. ¿Hay algo que ajustar antes de que cumpla su fecha de validez?',
+              'DÍA 7 — ASUNTO: "Este viernes vence el precio actual"\nCUERPO: Quería avisarte que el precio de la propuesta vence el viernes. No es presión — solo no quiero que pierdas las condiciones actuales. ¿15 min para resolverlo?',
+              'DÍA 14 — ASUNTO: "¿Cerramos o pausamos?"\nCUERPO: Han pasado 2 semanas. Quiero ser directo: si no es el momento correcto, no hay problema — me avisas y lo retomamos cuando tenga más sentido. Solo dime en qué posición estamos.'] },
+    { title: '⚡ Mensaje de WhatsApp — DÍA 1',
+      items: ['"Hola [Nombre], vi que revisaste la propuesta. ¿Hay alguna sección que quieras que te explique mejor? O si ya tienen dudas del equipo, encantado de agendar 15 min."'] },
+  ]);
+}
+
+/* 10 — PIPELINE AI */
+async function runAgentPipelineAI(id, output) {
+  const datos = getInput(id) || 'Pipeline $4.2M, 12 deals activos, win rate 28%, cierre trimestre en 22 días';
+  const sys = buildVentasPrompt('Analista de Pipeline IA',
+    'Analizar la salud completa del pipeline, detectar deals en riesgo, calcular forecast realista y generar el plan de acción para cerrar el trimestre.');
+
+  if (window.CRM_LLM?.engine) {
+    const result = await window.CRM_LLM.chat(sys,
+      `Realiza el análisis completo de pipeline y genera el forecast:\n\n1. 📊 HEALTH SCORE DEL PIPELINE (evaluación de salud 0-100 con diagnóstico)\n2. 🔴 DEALS EN RIESGO CRÍTICO (los que probablemente se pierden si no actúas hoy)\n3. 🟡 DEALS ESTANCADOS (cuánto tiempo llevan en cada etapa y qué los desbloquea)\n4. 🟢 DEALS ACELERABLES (los que pueden cerrar antes del estimado — cómo)\n5. 📈 FORECAST PONDERADO (proyección realista por probabilidad de cierre)\n6. 🏆 RECOMENDACIÓN TOP 3 (las 3 acciones que más mueven el pipeline esta semana)\n7. ⚡ KPI DE SEGUIMIENTO (qué métrica revisar en 7 días para saber si el plan funcionó)\n\nDatos del pipeline: ${datos}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📊 Pipeline AI — Análisis y Forecast</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar análisis</button><button class="btn btn-ghost btn-sm" onclick="toggleAgent('orquestador')">🎯 Plan de Ataque</button></div>`;
+    return;
+  }
+  renderOutput(output, [
+    { title: '📊 Health Score: 61/100',
+      items: ['Pipeline activo: $4.2M | Win rate histórico: 28% | Días para cierre: 22', 'DIAGNÓSTICO: Pipeline saludable en volumen pero con 40% de deals estancados >14 días en propuesta — velocidad por debajo del benchmark.'] },
+    { title: '🔴 Deals en Riesgo Crítico',
+      items: ['• Deal >$500K que lleva 21 días sin actividad — riesgo alto de pérdida silenciosa', '• 2 deals donde el champion interno dejó de responder — señal de bloqueo interno'] },
+    { title: '📈 Forecast Ponderado (22 días)',
+      items: ['Etapa Propuesta ($2.1M × 35%) = $735K', 'Etapa Negociación ($1.2M × 65%) = $780K', 'Etapa Demo agendada ($900K × 15%) = $135K', '→ FORECAST REALISTA: $1.65M MXN (39% del pipeline total)'] },
+    { title: '🏆 Top 3 Acciones Esta Semana',
+      items: ['1. LLAMADA hoy a los 2 deals más avanzados — no email. El 70% de los deals se cierra en llamada.', '2. ESCALAR deal estancado >21 días — habla directamente con el decisor final, bypasear al contacto.', '3. NUTRIR deals en demo agendada con caso de éxito de cliente similar — antes de la reunión.'] },
+  ]);
+}
+
+/* ── LLM INIT ────────────────────────────────────────── */
+async function initLLM() {
+  if (llmReady) { if(typeof Notiflix!=='undefined') Notiflix.Notify.info('LLM ya está activo'); return; }
+  const bar  = document.getElementById('llm-bar');
+  const text = document.getElementById('llm-bar-text');
+  const fill = document.getElementById('llm-fill');
+  const pct  = document.getElementById('llm-pct');
+  if (bar) bar.className = 'llm-init-bar';
+
+  const updateProgress = (info) => {
+    const progress = info.progress || 0;
+    if (fill) fill.style.width = (progress*100)+'%';
+    if (pct)  pct.textContent  = Math.round(progress*100)+'%';
+    if (text) text.textContent = info.text || 'Conectando...';
+  };
+
+  if (!window.CRM_LLM) { if(text) text.textContent = '⚠️ LLM no disponible — recarga la página'; return; }
+
+  try {
+    if(text) text.textContent = '⚡ Conectando con Claude API...';
+    await window.CRM_LLM.init(updateProgress);
+    llmReady = true;
+    if (bar) bar.className = 'llm-init-bar hidden';
+    if(typeof Notiflix!=='undefined') Notiflix.Notify.success('Claude API activa ✓ — 10 agentes de ventas en modo IA completo');
+    AGENTS.forEach(a => {
+      const s = document.getElementById(`status-${a.id}`);
+      if (s) { s.textContent = '✓ IA Lista'; s.className = 'agent-status ready'; }
+    });
+  } catch(e) {
+    const msg = e.message.includes('fetch') || e.message.includes('network')
+      ? '📶 Sin conexión al Worker — agentes funcionando en modo template ✓'
+      : '⚠️ Worker no disponible — agentes en modo template inteligente ✓';
+    if(text) { text.textContent = msg; text.style.color = '#F59E0B'; }
+    setTimeout(()=>{ if(bar) bar.className='llm-init-bar hidden'; }, 4000);
+  }
+}
+
+function escHtml(s) {
+  const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML;
+}
+
+/* ── INIT ────────────────────────────────────────────── */
+async function init() {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'ventas');
+
+  if (typeof Notiflix !== 'undefined') {
+    Notiflix.Notify.init({ position:'right-bottom', timeout:3000, fontSize:'13px' });
+  }
+
+  const kb = getKB();
+  updateKBStatus(!!kb.empresa);
+  renderAgents();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
