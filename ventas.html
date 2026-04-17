@@ -775,6 +775,17 @@ const AGENTS = [
     inputPlaceholder: 'Ej: Cazador: 18 cuentas detectadas, precisión 65%, 3 rescates. Ejecutor: 22 secuencias, 12% respuesta, 6 reuniones. Deals en pipeline: $3.8M, 14 activos, cierre en 18 días.',
     run: runAgentPipelineAI, accentColor: '#F97316',
   },
+  {
+    id: 'sim_ventas',
+    icon: '🧬',
+    iconBg: 'linear-gradient(135deg,#1E1B4B,#312E81)',
+    name: 'SIMULACIÓN DE COMPRA',
+    desc: 'Prueba tu propuesta o seguimiento con 50 compradores B2B virtuales — CEOs, CFOs, comités, gatekeepers y 8 doctores especialistas en psicología y neurociencia de compra. Descubre las objeciones reales antes de enviarla.',
+    models: ['CRM_LLM', 'Multi-decisor', 'PhD Panel'],
+    inputLabel: 'Propuesta o mensaje de seguimiento a simular',
+    inputPlaceholder: 'Ej: "Hola Carlos, te escribo para dar seguimiento a nuestra propuesta del martes. MetaTronix CRM reduce el ciclo de ventas un 35% en 60 días. ¿Tienes 15 minutos esta semana para revisar los números?"',
+    run: runAgentSimVentas, accentColor: '#7C3AED', isSimVentasAgent: true,
+  },
 ];
 
 /* ── RENDER AGENTS ──────────────────────────────────── */
@@ -796,15 +807,15 @@ function renderAgents() {
         <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
       </div>
       <div class="agent-workspace" id="ws-${a.id}" style="display:none" onclick="event.stopPropagation()">
-        ${a.inputLabel ? `
+        ${a.isSimVentasAgent ? renderSimVentasForm(a) : a.inputLabel ? `
           <div class="agent-input-row">
             <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
             <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
           </div>` : ''}
-        <button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')" style="${a.isOrquestadorAgent ? 'background:linear-gradient(135deg,#047857,#059669)' : a.accentColor ? `background:${a.accentColor}` : ''}">
+        ${!a.isSimVentasAgent ? `<button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')" style="${a.isOrquestadorAgent ? 'background:linear-gradient(135deg,#047857,#059669)' : a.accentColor ? `background:${a.accentColor}` : ''}">
           <span>⚡ Ejecutar ${a.name}</span>
         </button>
-        <div id="output-${a.id}" class="agent-output"></div>
+        <div id="output-${a.id}" class="agent-output"></div>` : ''}
       </div>
     </div>
   `).join('');
@@ -1488,6 +1499,288 @@ async function initLLM() {
 
 function escHtml(s) {
   const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIMULACIÓN DE COMPRA — 50 Decisores B2B + PhD Panel
+   ═══════════════════════════════════════════════════════════ */
+const PERSONAS_VENTAS = [
+  // ── DECISORES NIVEL C (8) ─────────────────────────────────
+  { name:'CEO de PYME',              age:44, genero:'M', pais:'MX', nivel:'ceo_pyme',     perfil:'Toma decisiones rápido, valora ROI claro y bajo riesgo operacional. Firmará si confía en el vendedor.', sesgo:'Miedo a contratos largos y a sorpresas en implementación', emoji:'👔', tipo:'decisor' },
+  { name:'CFO Corporativo',          age:49, genero:'M', pais:'CO', nivel:'cfo',           perfil:'Control presupuestal absoluto. Requiere análisis de TCO, ROI a 12 meses y costo de oportunidad documentado.', sesgo:'Bloquea compras sin aprobación board y análisis de riesgo financiero', emoji:'📊', tipo:'decisor' },
+  { name:'Director General',         age:55, genero:'M', pais:'AR', nivel:'ceo_corp',      perfil:'Visión estratégica. Solo aprueba si la solución impacta crecimiento a 3+ años. Delega evaluación técnica.', sesgo:'Sin prisa. Delega. Solo aparece en el cierre. Necesita el "sí" del equipo primero.', emoji:'🏢', tipo:'decisor' },
+  { name:'VP de Ventas',             age:40, genero:'F', pais:'MX', nivel:'vp_ventas',     perfil:'Orientada a cuota y velocidad. Quiere demos con datos reales de su industria, no genéricos.', sesgo:'Escéptica a soluciones que no integren su CRM actual. Exige onboarding en 48h.', emoji:'💹', tipo:'decisor' },
+  { name:'Director Comercial',       age:45, genero:'M', pais:'MX', nivel:'dir_comercial', perfil:'Gestiona 40+ vendedores. Busca herramientas que adopten sin resistencia del equipo.', sesgo:'Preocupado por la curva de aprendizaje. Necesita soporte en español y capacitación incluida.', emoji:'🎯', tipo:'decisor' },
+  { name:'COO — Directora de Ops',   age:42, genero:'F', pais:'CL', nivel:'coo',           perfil:'Procesos, SLA y escalabilidad. Evalúa integración técnica antes que precio.', sesgo:'Exige documentación de API y SLA contractual. Sin esto no avanza a etapa de negociación.', emoji:'⚙️', tipo:'decisor' },
+  { name:'CEO Startup Scale-up',     age:34, genero:'M', pais:'MX', nivel:'ceo_startup',   perfil:'Velocidad de implementación, trial sin tarjeta, resultados en 30 días o cancela.', sesgo:'Compara contra 3 competidores simultáneamente. Alta sensibilidad a precio por usuario.', emoji:'🚀', tipo:'decisor' },
+  { name:'Dueño Empresa Familiar',   age:57, genero:'M', pais:'MX', nivel:'dono',          perfil:'Desconfía de tecnología. Compra por relación y confianza personal más que por features.', sesgo:'No compra sin referencia de alguien de su círculo de confianza. Proceso muy lento.', emoji:'🏭', tipo:'decisor' },
+  // ── COMPRADORES / PROCUREMENT (5) ────────────────────────
+  { name:'Gerente de Compras',       age:38, genero:'F', pais:'MX', nivel:'compras',       perfil:'Proceso formal de licitación. Evalúa 3+ proveedores, requiere propuesta estandarizada en su formato.', sesgo:'No toma decisiones unilaterales. Comité de 4 personas mínimo. Proceso de 60-90 días.', emoji:'📋', tipo:'comprador' },
+  { name:'CPO — Chief Procurement',  age:47, genero:'M', pais:'MX', nivel:'cpo',           perfil:'Protocolo de evaluación de proveedores. Contrato estándar, condiciones no negociables sin autorización.', sesgo:'Rechazo automático si no cumples con certificaciones del proveedor requeridas por la empresa.', emoji:'📑', tipo:'comprador' },
+  { name:'Directora Financiera',     age:46, genero:'F', pais:'PE', nivel:'cfo_med',       perfil:'Controla presupuesto de TI. ROI en máximo 6 meses o renegocia condiciones del contrato.', sesgo:'Bloquea si hay cargos ocultos o si el precio varía post-firma. Muy detallista.', emoji:'🏦', tipo:'comprador' },
+  { name:'Analista de Compras',      age:27, genero:'M', pais:'MX', nivel:'analista_compras', perfil:'Hace el benchmarking técnico. Llena el scorecard que verá el Comité de decisión.', sesgo:'Selecciona 3 finalistas por features vs precio. Alta influencia en el filtro inicial.', emoji:'🔍', tipo:'comprador' },
+  { name:'Comité de Evaluación',     age:43, genero:'M', pais:'MX', nivel:'comite',        perfil:'5 personas de distintas áreas. Consenso requerido. Proceso democrático y políticamente sensible.', sesgo:'Una sola objeción fuerte puede vetar. La política interna y las alianzas son clave.', emoji:'🏛️', tipo:'comprador' },
+  // ── INFLUENCIADORES INTERNOS (8) ─────────────────────────
+  { name:'Gerente de Ventas Senior', age:36, genero:'F', pais:'MX', nivel:'mgr_ventas',   perfil:'Usuaria diaria de la herramienta. Su adopción o rechazo condiciona la del equipo completo.', sesgo:'Escéptica si el demo no resuelve exactamente su flujo de trabajo. Necesita quick wins.', emoji:'💼', tipo:'influencer' },
+  { name:'Head de Revenue Ops',      age:33, genero:'M', pais:'MX', nivel:'revops',       perfil:'Arquitecto del stack comercial. Evalúa la integración técnica y el impacto en data pipeline.', sesgo:'Rechaza si no tiene API abierta o si complica el stack actual de herramientas.', emoji:'🔧', tipo:'influencer' },
+  { name:'Jefe de TI / IT Manager',  age:41, genero:'M', pais:'MX', nivel:'ti',           perfil:'Seguridad de datos, compliance e integración. Puede bloquear o facilitar toda la compra.', sesgo:'Exige GDPR/LFPDPPP, SOC2 o ISO 27001. Sin esto no firma la aprobación técnica.', emoji:'💻', tipo:'influencer' },
+  { name:'Champion Interno',         age:29, genero:'F', pais:'MX', nivel:'champion',     perfil:'Enamorada del producto desde el trial. Vende internamente y agenda reuniones con decisores.', sesgo:'Muy positiva pero limitada por presupuesto y jerarquía. Necesita apoyo para escalar la venta.', emoji:'⭐', tipo:'influencer' },
+  { name:'Consultor Externo',        age:44, genero:'M', pais:'MX', nivel:'consultor',    perfil:'Asesor de confianza del CEO. Su recomendación puede abrir o cerrar la puerta definitivamente.', sesgo:'Neutral analítico. Compara vs lo que ya conoce. Referido = compra casi asegurada.', emoji:'🎓', tipo:'influencer' },
+  { name:'Gerente de Marketing',     age:37, genero:'F', pais:'MX', nivel:'mkt_mgr',      perfil:'Evaluará cómo impacta el pipeline inbound. Quiere dashboards y reportes de atribución.', sesgo:'Rechaza si no integra con HubSpot/Marketo. Requiere atribución multi-touch real.', emoji:'📣', tipo:'influencer' },
+  { name:'VP de Customer Success',   age:38, genero:'F', pais:'MX', nivel:'cs_vp',        perfil:'Mide el impacto post-venta. Su adopción determina posibilidad de upsell y renovación.', sesgo:'Positiva si reduce churn y mejora NPS. Negativa si complejiza el proceso de onboarding.', emoji:'🌟', tipo:'influencer' },
+  { name:'Asistente Ejecutiva',      age:32, genero:'F', pais:'MX', nivel:'gatekeeper',   perfil:'Filtra el acceso al decisor. Puede agendar o enterrar la propuesta sin que el jefe la vea.', sesgo:'Neutral. Pasa lo que parece urgente y relevante. La empatía y el trato respetuoso importan mucho.', emoji:'🔑', tipo:'influencer' },
+  // ── PHD EXPERTOS — VENTAS Y PSICOLOGÍA (8) ───────────────
+  { name:'Dr. Reyes · PhD Behavioral Selling',       age:47, genero:'M', pais:'MX', nivel:'phd_ventas',       perfil:'Investigador en economía conductual aplicada a ventas B2B. Analiza si la propuesta activa los triggers de decisión correctos según Cialdini, SPIN y Challenger Sale.', sesgo:'Evalúa si hay contraste correcto, urgencia legítima y social proof concreto y verificable', emoji:'🧪', tipo:'phd' },
+  { name:'Dra. Torres · PhD Psicología de Compra',   age:43, genero:'F', pais:'MX', nivel:'phd_psicologia',   perfil:'Especialista en el proceso psicológico de toma de decisiones B2B. Detecta si el mensaje genera confianza, reduce riesgo percibido y activa el Sistema 2 de pensamiento.', sesgo:'Analiza anclaje de precio correcto, reciprocidad y reducción de disonancia cognitiva', emoji:'🧠', tipo:'phd' },
+  { name:'Dr. Salinas · PhD Psiquiatría y Ventas',   age:51, genero:'M', pais:'MX', nivel:'phd_psiquiatria',  perfil:'Experto en estados emocionales del comprador: ansiedad de compra, parálisis por análisis, FOMO y aversión a la pérdida. Diagnostica el estado mental del prospecto ante la propuesta.', sesgo:'Identifica si el timing emocional es correcto o si hay fatiga de decisión instalada', emoji:'🔬', tipo:'phd' },
+  { name:'Dra. Mendoza · PhD Neurociencia Consumidor', age:39, genero:'F', pais:'MX', nivel:'phd_neuro',      perfil:'Analiza la respuesta neurológica a propuestas y seguimientos. ¿El mensaje activa el circuito de recompensa o el de amenaza? ¿El lenguaje genera dopamina o cortisol?', sesgo:'Evalúa carga cognitiva, claridad narrativa y activación emocional del mensaje', emoji:'🫀', tipo:'phd' },
+  { name:'Dr. Guerrero · PhD Comportamiento Org.',   age:52, genero:'M', pais:'CO', nivel:'phd_org',          perfil:'Experto en dinámicas de comités de compra, política interna y coaliciones de decisión. Predice el comportamiento del buying committee ante cada propuesta.', sesgo:'Analiza si la propuesta crea aliados internos o genera resistencia en stakeholders clave', emoji:'🏗️', tipo:'phd' },
+  { name:'Dr. Vega · PhD Economía Conductual',       age:44, genero:'M', pais:'MX', nivel:'phd_economia',     perfil:'Prospect Theory aplicada a B2B. Analiza si el framing de pérdida vs ganancia está bien configurado y si el precio está anclado correctamente en el contexto del mercado.', sesgo:'Evalúa efecto decoy, comparación de alternativas y sesgo de statu quo en la propuesta', emoji:'📈', tipo:'phd' },
+  { name:'Dra. Navarro · PhD Psicología Social',     age:42, genero:'F', pais:'AR', nivel:'phd_social',       perfil:'Influencia, autoridad y validación social en decisiones B2B. Analiza si la propuesta construye correctamente la percepción de autoridad experta y el consenso social necesario.', sesgo:'Evalúa testimonios, logos de clientes, casos de éxito verificables y nivel de urgencia percibida', emoji:'🌐', tipo:'phd' },
+  { name:'Dr. Castillo · PhD Negociación Harvard',   age:49, genero:'M', pais:'MX', nivel:'phd_negociacion',  perfil:'Principled Negotiation, BATNA y teoría de juegos en ventas B2B. Analiza si la propuesta posiciona correctamente el ZOPA, protege el margen y crea valor real para ambas partes.', sesgo:'Evalúa concesiones estratégicas, zonas de acuerdo posibles y alternativas percibidas del comprador', emoji:'🤝', tipo:'phd' },
+  // ── VERTICALES DE INDUSTRIA (9) ──────────────────────────
+  { name:'Director TI — Salud',      age:45, genero:'M', pais:'MX', nivel:'ti_salud',     perfil:'Hospital privado. Cumplimiento NOM-024 y protección de datos de pacientes. Muy cauteloso.', sesgo:'Rechaza sin certificación de seguridad para datos de salud. Proceso muy largo y formal.', emoji:'🏥', tipo:'vertical' },
+  { name:'Directora de Educación',   age:41, genero:'F', pais:'MX', nivel:'educacion',    perfil:'Red de escuelas privadas. Ciclos de presupuesto anuales. Valora facilidad de uso extrema.', sesgo:'Presupuesto ya asignado para el año. Solo compra fuera de ciclo si es crítico para operaciones.', emoji:'🎒', tipo:'vertical' },
+  { name:'CEO de Constructora',      age:53, genero:'M', pais:'MX', nivel:'construccion', perfil:'Relaciones > tecnología. Compra a quien conoce o quien le fue referido por alguien de confianza.', sesgo:'Muy desconfiado de SaaS. Prefiere pago único que subscripción mensual.', emoji:'🏗️', tipo:'vertical' },
+  { name:'Director Fintech',         age:35, genero:'M', pais:'MX', nivel:'fintech',      perfil:'Startup financiera regulada. Valora compliance CNBV, APIs abiertas y velocidad de integración.', sesgo:'Descalifica si no cumple regulaciones aplicables. Evaluación muy técnica del equipo.', emoji:'💳', tipo:'vertical' },
+  { name:'Gerente Inmobiliario',     age:39, genero:'M', pais:'MX', nivel:'inmobiliaria', perfil:'Maneja 200+ prospectos simultáneos. Necesita CRM mobile-first para su equipo de campo.', sesgo:'Positivo si funciona offline y en WhatsApp. Negativo si requiere laptop para usarlo.', emoji:'🏠', tipo:'vertical' },
+  { name:'Director de Logística',    age:46, genero:'M', pais:'MX', nivel:'logistica',    perfil:'Operaciones 24/7. Necesita confiabilidad máxima y soporte en tiempo real no solo chat.', sesgo:'Exige SLA de 99.9% uptime y soporte telefónico. Rechaza si solo tienen chat o tickets.', emoji:'🚛', tipo:'vertical' },
+  { name:'CFO de Retail Cadena',     age:47, genero:'F', pais:'MX', nivel:'retail',       perfil:'Cadena de 80 tiendas. Evaluación con piloto en tiendas seleccionadas antes de escalar.', sesgo:'Requiere piloto de 30 días en 3 tiendas con KPIs de éxito definidos antes de firmar.', emoji:'🛒', tipo:'vertical' },
+  { name:'Director de Manufactura',  age:51, genero:'M', pais:'MX', nivel:'manufactura',  perfil:'Planta industrial. Proceso de compra muy lento y formal. Ecosistema SAP no negociable.', sesgo:'Solo integra con SAP. Rechaza si no hay conector nativo o si el costo de integración es alto.', emoji:'🏭', tipo:'vertical' },
+  { name:'CEO de Agencia Digital',   age:34, genero:'F', pais:'MX', nivel:'agencia',      perfil:'Agencia 40 personas. Presupuesto ajustado. Evalúa herramientas con potencial de reventa.', sesgo:'Positiva si hay programa de partners/resellers con margen atractivo y materiales de venta.', emoji:'💡', tipo:'vertical' },
+  // ── LATAM DIVERSIDAD (7) ─────────────────────────────────
+  { name:'Director Comercial Colombia', age:43, genero:'M', pais:'CO', nivel:'latam_co', perfil:'Empresa mediana Bogotá. Compara agresivamente vs competidores locales y regionales.', sesgo:'Prefiere empresa con oficina o soporte local en Colombia. El idioma regional importa.', emoji:'🇨🇴', tipo:'latam' },
+  { name:'CEO Startup Argentina',    age:32, genero:'F', pais:'AR', nivel:'latam_ar',    perfil:'B2B SaaS Palermo Valley. Busca benchmark global, valora integración con HubSpot nativa.', sesgo:'Muy influenciada por lo que usan los referentes de su ecosistema de startups.', emoji:'🇦🇷', tipo:'latam' },
+  { name:'VP Ventas Chile',          age:41, genero:'M', pais:'CL', nivel:'latam_cl',    perfil:'Empresa mediana Santiago. Muy ordenado en procesos. Paga bien si confía en el proveedor.', sesgo:'Exige contrato en español con términos chilenos y facturación local. Proceso largo pero cierra.', emoji:'🇨🇱', tipo:'latam' },
+  { name:'Director Comercial Perú',  age:46, genero:'M', pais:'PE', nivel:'latam_pe',    perfil:'Lima. Industria exportadora. Necesita análisis de ROI en soles y en dólares simultáneo.', sesgo:'Positivo si hay caso de éxito de empresa peruana o sector similar documentado.', emoji:'🇵🇪', tipo:'latam' },
+  { name:'Gerente de Ventas Brasil', age:38, genero:'F', pais:'BR', nivel:'latam_br',    perfil:'São Paulo. Requiere interfaz y soporte en portugués. Proceso muy burocrático y formal.', sesgo:'Descalifica si no hay versión en portugués o equipo de soporte local en Brasil.', emoji:'🇧🇷', tipo:'latam' },
+  { name:'Emprendedor Venezolano',   age:35, genero:'M', pais:'MX', nivel:'latam_ve',    perfil:'Fundó empresa en MX. Ágil, orientado a resultados, sin paciencia para procesos lentos.', sesgo:'Compra rápido si confía. Muy influenciado por referidos cercanos. Lealtad alta si le cumples.', emoji:'🔥', tipo:'latam' },
+  { name:'Director Comercial Ecuador', age:44, genero:'M', pais:'EC', nivel:'latam_ec', perfil:'Quito. Empresa mediana industrial. Presupuesto moderado, proceso conservador y formal.', sesgo:'Necesita ver casos de éxito en Ecuador o país comparable antes de comprometerse.', emoji:'🇪🇨', tipo:'latam' },
+  // ── EDGE CASES & GATEKEEPERS (5) ─────────────────────────
+  { name:'Legal y Compliance',       age:45, genero:'F', pais:'MX', nivel:'legal',       perfil:'Revisa el contrato línea por línea antes de firmar. Puede bloquear por cláusulas de datos.', sesgo:'Rechaza sin DPA (Data Processing Agreement) y cláusulas de confidencialidad bien redactadas.', emoji:'⚖️', tipo:'gatekeeper' },
+  { name:'Gerente de Anti-Riesgo',   age:43, genero:'M', pais:'MX', nivel:'riesgo',      perfil:'Evalúa el riesgo operacional de adoptar un nuevo proveedor tecnológico crítico.', sesgo:'Descalifica a proveedores sin historial financiero sólido o sin seguro de responsabilidad civil.', emoji:'🛡️', tipo:'gatekeeper' },
+  { name:'SDR — Usuario Final',      age:24, genero:'M', pais:'MX', nivel:'sdr',         perfil:'Usará la herramienta todos los días. Su experiencia en el piloto determina la adopción masiva.', sesgo:'Positivo si la UI es intuitiva. Rechaza si hay demasiados pasos para registrar un lead.', emoji:'📱', tipo:'gatekeeper' },
+  { name:'Board Member / Inversionista', age:54, genero:'M', pais:'MX', nivel:'board',   perfil:'Presiona al CEO para justificar cada gasto importante. Busca capital efficiency máxima.', sesgo:'Aprueba si hay ROI claro en 90 días y es crítico. Bloquea si parece "nice to have".', emoji:'💰', tipo:'gatekeeper' },
+  { name:'Competidor en Sala',       age:36, genero:'M', pais:'MX', nivel:'competidor',  perfil:'Evalúa tu propuesta como si fuera a replicarla. ¿El ángulo diferenciador es sostenible?', sesgo:'Analiza si la promesa de valor es reproducible fácilmente por cualquier competidor del mercado.', emoji:'👁️', tipo:'gatekeeper' },
+];
+
+/* Helper: selección representativa de N personas del pool de 50 */
+function selectVentasPersonas(n) {
+  const pool = [...PERSONAS_VENTAS];
+  const selected = [];
+  // Garantiza representación de todos los tipos
+  const tipos = ['decisor','comprador','influencer','phd','vertical','latam','gatekeeper'];
+  // Incluir SIEMPRE todos los PHDs (son los más importantes para análisis profundo)
+  const phds = pool.filter(p=>p.tipo==='phd');
+  phds.forEach(p => { selected.push(p); pool.splice(pool.indexOf(p),1); });
+  // Llenar resto con distribución balanceada
+  tipos.filter(t=>t!=='phd').forEach(tipo => {
+    const pool_tipo = pool.filter(p=>p.tipo===tipo);
+    const tomar = Math.floor((n - phds.length) / (tipos.length - 1));
+    for(let i=0; i<tomar && pool_tipo.length>0; i++) {
+      const idx = Math.floor(Math.random()*pool_tipo.length);
+      const p = pool_tipo.splice(idx,1)[0];
+      selected.push(p);
+      pool.splice(pool.indexOf(p),1);
+    }
+  });
+  // Completar slots restantes aleatoriamente
+  while(selected.length < n && pool.length > 0) {
+    const idx = Math.floor(Math.random()*pool.length);
+    selected.push(pool.splice(idx,1)[0]);
+  }
+  return selected.slice(0,n);
+}
+
+/* ── Render workspace del agente de simulación de ventas ── */
+function renderSimVentasForm(a) {
+  return `
+    <div class="agent-input-row">
+      <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
+      <textarea id="input-sim_ventas" placeholder="${a.inputPlaceholder}" rows="4" style="font-size:12px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--font-body);resize:vertical;outline:none;transition:border-color .15s;width:100%;box-sizing:border-box"></textarea>
+    </div>
+    <button class="agent-run-btn" id="btn-sim_ventas" onclick="event.stopPropagation();runAgent('sim_ventas')"
+      style="background:linear-gradient(135deg,#4C1D95,#7C3AED);margin-bottom:0">
+      <span>🧬 Simular con 50 Decisores B2B</span>
+    </button>
+    <div id="output-sim_ventas" class="agent-output"></div>
+  `;
+}
+
+/* ── Ejecutor del agente de simulación de ventas ─────────── */
+async function runAgentSimVentas(id, output) {
+  const content = document.getElementById('input-sim_ventas')?.value.trim();
+  if (!content) { output.innerHTML='<div style="color:var(--danger);font-size:12px">Escribe la propuesta o mensaje de seguimiento a simular</div>'; return; }
+
+  const selected = selectVentasPersonas(25); // 25 de 50 para velocidad — siempre incluye los 8 PHDs
+  output.className = 'agent-output show';
+  output.innerHTML = `<div style="font-size:12px;color:#818CF8;font-family:Inter,sans-serif;padding:8px 0">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div class="agent-spinner" style="border-top-color:#7C3AED"></div>
+      <span>Simulando decisiones — <strong style="color:#A78BFA">${selected.length} compradores</strong> de ${PERSONAS_VENTAS.length} disponibles…</span>
+    </div>
+    <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+      <div id="vsim-fill" style="height:100%;background:linear-gradient(90deg,#4C1D95,#7C3AED);width:3%;border-radius:2px;transition:width .3s"></div>
+    </div>
+    <div id="vsim-live" style="font-size:10px;color:#4A5568;margin-top:5px;font-family:monospace"></div>
+  </div>`;
+
+  const reactions = [];
+  const setP = (p,msg) => {
+    const f=document.getElementById('vsim-fill'); if(f) f.style.width=p+'%';
+    const l=document.getElementById('vsim-live'); if(l&&msg) l.textContent='→ '+msg;
+  };
+
+  for (let i = 0; i < selected.length; i++) {
+    const p = selected[i];
+    setP(5+(i/selected.length)*90, `${p.emoji||''} ${p.name} (${p.pais}, ${p.tipo})`);
+    let reaction = { persona: p.name, tipo: p.tipo, pais: p.pais, score: 0, emoji:'', decision:'evaluando', objecion:'', siguiente_paso:'', reaction:'', perspectiva:'' };
+
+    if (window.CRM_LLM?.engine) {
+      try {
+        const isPhd = p.tipo === 'phd';
+        const sys = isPhd
+          ? `Eres ${p.name}. ${p.perfil}. Analiza esta propuesta de ventas desde tu perspectiva científica experta. Responde SOLO en JSON válido sin markdown: {"score":0-100,"emoji":"1 emoji","perspectiva":"análisis experto en 2-3 frases","recomendacion":"1 acción concreta para mejorar la propuesta","objecion":"principal debilidad científica detectada"}`
+          : `Eres ${p.name}, ${p.age} años, ${p.pais}. ${p.perfil}. Sesgo clave: ${p.sesgo}. Responde SOLO en JSON válido sin markdown: {"score":0-100,"emoji":"1 emoji","decision":"interesado|evaluando|en_comite|rechazado","objecion":"1 objeción concreta o vacío","siguiente_paso":"acción que tomarías en las próximas 24h","reaction":"1 frase sobre tu reacción real"}`;
+        const question = isPhd
+          ? `Analiza esta propuesta/seguimiento de ventas que recibe un comprador B2B: "${content}"`
+          : `Recibes este mensaje/propuesta de ventas: "${content}". ¿Cuál es tu decisión?`;
+        const resp = await window.CRM_LLM.chat(sys, question);
+        try {
+          const parsed = JSON.parse(resp.replace(/```json?|```/g,'').trim());
+          reaction = { ...reaction, ...parsed };
+        } catch { reaction.score = 40+Math.round(Math.random()*40); reaction.emoji='🤔'; reaction.reaction=resp.slice(0,80); }
+      } catch { reaction.score = 30+Math.round(Math.random()*50); reaction.emoji='💬'; }
+    } else {
+      // Fallback heurístico por tipo de perfil
+      const isPhd = p.tipo === 'phd';
+      const isChampion = p.nivel === 'champion';
+      const isGatekeeper = p.nivel === 'legal' || p.nivel === 'riesgo' || p.nivel === 'comite';
+      reaction.score = isPhd ? 60+Math.round(Math.random()*35) : isChampion ? 75+Math.round(Math.random()*20) : isGatekeeper ? 25+Math.round(Math.random()*40) : 38+Math.round(Math.random()*45);
+      reaction.emoji = reaction.score>70?'✅':reaction.score>50?'🤔':'❌';
+      reaction.decision = reaction.score>70?'interesado':reaction.score>45?'evaluando':'rechazado';
+      reaction.reaction = reaction.score>70?'Propuesta sólida, quiero avanzar':reaction.score>50?'Interesante pero necesito más información':'Tengo dudas importantes antes de continuar';
+      reaction.objecion = reaction.score<55 ? p.sesgo.slice(0,80) : '';
+      if(isPhd) { reaction.perspectiva = `Desde la perspectiva de ${p.nivel.replace('phd_','')}, la propuesta ${reaction.score>60?'activa correctamente los mecanismos de decisión':'presenta oportunidades de mejora psicológica importantes'}.`; }
+    }
+    reactions.push({ ...p, ...reaction });
+  }
+
+  setP(100, 'Compilando análisis de decisión…');
+
+  const avgScore    = Math.round(reactions.reduce((s,r)=>s+r.score,0)/reactions.length);
+  const interesados = reactions.filter(r=>r.decision==='interesado'||r.score>=70);
+  const evaluando   = reactions.filter(r=>r.score>=45&&r.score<70);
+  const rechazados  = reactions.filter(r=>r.score<45);
+  const phdReactions = reactions.filter(r=>r.tipo==='phd').sort((a,b)=>b.score-a.score);
+  const nonPhd      = reactions.filter(r=>r.tipo!=='phd').sort((a,b)=>b.score-a.score);
+  const objections  = [...new Set(reactions.filter(r=>r.objecion).map(r=>r.objecion))];
+  const nextSteps   = [...new Set(reactions.filter(r=>r.siguiente_paso).map(r=>r.siguiente_paso))].slice(0,4);
+
+  // Breakdown por tipo de decisor
+  const tipoMap = {decisor:'Decisores C-Level',comprador:'Compradores',influencer:'Influenciadores',phd:'Panel PhD',vertical:'Industria',latam:'LATAM',gatekeeper:'Gatekeepers'};
+  const tipoBreakdown = {};
+  reactions.forEach(r => {
+    if(!tipoBreakdown[r.tipo]) tipoBreakdown[r.tipo]={count:0,sum:0};
+    tipoBreakdown[r.tipo].count++; tipoBreakdown[r.tipo].sum+=r.score;
+  });
+
+  output.innerHTML = `
+    <div style="font-family:Inter,sans-serif">
+      <!-- Hero score -->
+      <div style="display:flex;align-items:center;gap:14px;padding:14px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);border-radius:10px;margin-bottom:12px">
+        <div style="text-align:center;min-width:60px">
+          <div style="font-size:2.2rem;font-weight:800;color:${avgScore>=65?'#10B981':avgScore>=45?'#F59E0B':'#EF4444'};line-height:1;letter-spacing:-.02em">${avgScore}</div>
+          <div style="font-size:9px;color:#7E8FA8;text-transform:uppercase;letter-spacing:.07em;margin-top:2px">/ 100</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:#E8EDF8;margin-bottom:4px">
+            ${avgScore>=70?'🟢 Alta probabilidad de avance — propuesta lista para enviar':avgScore>=50?'🟡 Probabilidad moderada — ajusta antes de enviar':'🔴 Baja probabilidad — reformula la propuesta primero'}
+          </div>
+          <div style="display:flex;gap:10px;font-size:11px;flex-wrap:wrap">
+            <span style="color:#10B981">✅ ${interesados.length} interesados</span>
+            <span style="color:#F59E0B">🤔 ${evaluando.length} evaluando</span>
+            <span style="color:#EF4444">❌ ${rechazados.length} rechazados</span>
+          </div>
+          <div style="font-size:10px;color:#4A5568;margin-top:3px">${selected.length} de ${PERSONAS_VENTAS.length} perfiles simulados · 8 PhDs incluidos</div>
+        </div>
+      </div>
+
+      <!-- Score por tipo de decisor -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">SCORE POR ROL</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${Object.entries(tipoBreakdown).map(([tipo,v])=>{
+            const avg=Math.round(v.sum/v.count);
+            return `<div style="padding:4px 9px;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:12px;font-size:10px;font-weight:600">
+              ${tipoMap[tipo]||tipo} <span style="color:${avg>=65?'#10B981':avg>=45?'#F59E0B':'#EF4444'}">${avg}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Panel PhD -->
+      ${phdReactions.length ? `
+      <div style="margin-bottom:12px;padding:10px;background:rgba(76,29,149,.07);border:1px solid rgba(124,58,237,.2);border-radius:8px">
+        <div style="font-size:10px;font-weight:700;color:#A78BFA;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">🔬 PANEL DE EXPERTOS PhD</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${phdReactions.map(r=>`
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:7px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid #7C3AED">
+              <span style="font-size:14px">${r.emoji||'🔬'}</span>
+              <div style="flex:1">
+                <div style="font-size:10px;font-weight:700;color:#C4B5FD;margin-bottom:2px">${escHtml(r.name||'')} <span style="color:${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'};font-size:10px">${r.score}/100</span></div>
+                <div style="font-size:10px;color:#9CA3AF;line-height:1.5">${escHtml(r.perspectiva||r.reaction||'')}</div>
+                ${r.recomendacion ? `<div style="font-size:10px;color:#818CF8;margin-top:3px">→ ${escHtml(r.recomendacion)}</div>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- Reacciones individuales (no PhDs) -->
+      <div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">REACCIONES DE DECISORES</div>
+      <div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:12px;scrollbar-width:thin">
+        ${nonPhd.map(r=>`
+          <div style="display:flex;align-items:center;gap:7px;padding:6px 8px;background:rgba(255,255,255,.025);border-radius:5px;border-left:2px solid ${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'}">
+            <span style="font-size:13px">${r.emoji||'💬'}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:600;color:#E8EDF8;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                ${escHtml(r.name||'')}
+                <span style="font-size:9px;color:#4A5568;background:rgba(255,255,255,.05);padding:0 4px;border-radius:3px">${r.pais}</span>
+                <span style="font-size:9px;color:#4A5568">${tipoMap[r.tipo]||r.tipo}</span>
+                ${r.decision?`<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:${r.decision==='interesado'?'rgba(16,185,129,.15)':r.decision==='rechazado'?'rgba(239,68,68,.15)':'rgba(245,158,11,.15)'};color:${r.decision==='interesado'?'#10B981':r.decision==='rechazado'?'#EF4444':'#F59E0B'}">${r.decision}</span>`:''}
+              </div>
+              <div style="font-size:10px;color:#7E8FA8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml((r.reaction||r.objecion||'').slice(0,85))}</div>
+            </div>
+            <div style="font-size:13px;font-weight:700;color:${r.score>=65?'#10B981':r.score>=45?'#F59E0B':'#EF4444'};min-width:30px;text-align:right">${r.score}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Objeciones críticas -->
+      ${objections.length ? `
+        <div style="padding:10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:7px;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:700;color:#F59E0B;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">⚠️ OBJECIONES A RESOLVER ANTES DE ENVIAR</div>
+          ${objections.slice(0,6).map(o=>`<div style="font-size:11px;color:#7E8FA8;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">→ ${escHtml(o)}</div>`).join('')}
+        </div>` : ''}
+
+      <!-- Próximos pasos recomendados -->
+      ${nextSteps.length ? `
+        <div style="padding:10px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.15);border-radius:7px;margin-bottom:10px">
+          <div style="font-size:10px;font-weight:700;color:#10B981;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">✅ PRÓXIMOS PASOS QUE ESPERAN LOS DECISORES</div>
+          ${nextSteps.map(s=>`<div style="font-size:11px;color:#6EE7B7;padding:3px 0">→ ${escHtml(s)}</div>`).join('')}
+        </div>` : ''}
+
+      <!-- Recomendación final -->
+      <div style="padding:10px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.18);border-radius:7px">
+        <div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">VEREDICTO FINAL</div>
+        <div style="font-size:11px;color:#C4B5FD;line-height:1.6">
+          ${avgScore>=70
+            ? `✅ Propuesta lista para enviar. Mayor recepción en: ${interesados.slice(0,3).map(r=>r.name).join(', ')}. Los PhDs validan el enfoque. ${objections.length>0?`Considera resolver: ${escHtml(objections[0].slice(0,60))}…`:''}`
+            : avgScore>=50
+            ? `⚡ Ajusta la propuesta respondiendo ${objections.length} objeción${objections.length!==1?'es':''} antes de enviar. Los PHDs detectan áreas de mejora específicas. Perfil más receptivo: ${interesados[0]?.name||'ninguno aún'}.`
+            : `🔄 Reformula la propuesta. Solo ${interesados.length}/${selected.length} decisores responden positivamente. Consulta el panel PhD para redirección estratégica antes de volver a contactar.`}
+        </div>
+      </div>
+    </div>`;
 }
 
 /* ── INIT ────────────────────────────────────────────── */

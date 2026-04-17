@@ -2238,6 +2238,28 @@ const PERSONAS_SIM = [
   { name:'Periodista Digital',    age:31, genero:'M', pais:'MX', nivel:'media', perfil:'Cubre tecnología y startups, muy crítico y analítico', red:'Twitter/LinkedIn', sesgo:'verifica afirmaciones, busca datos concretos y fuentes', emoji:'📰' },
   { name:'Mamá Emprendedora',     age:36, genero:'F', pais:'MX', nivel:'micro', perfil:'Negocio desde casa, maneja redes sola, busca simplicidad', red:'Instagram/Facebook/WhatsApp', sesgo:'busca herramientas fáciles, precio bajo, tutorial en video', emoji:'👩‍💼' },
   { name:'Gerente de Distribución',age:40, genero:'M', pais:'MX', nivel:'medio', perfil:'Maneja fuerza de ventas campo, necesita CRM móvil offline', red:'LinkedIn/WhatsApp', sesgo:'exige app móvil funcional, cero tolerancia a bugs', emoji:'🚛' },
+  // ── PhD EXPERTOS — MARKETING Y PSICOLOGÍA (5) ───────────────────
+  { name:'Dr. Ramírez · PhD Comportamiento Consumidor', age:48, genero:'M', pais:'MX', nivel:'phd_consumidor', perfil:'Investigador en psicología del consumidor y decisiones de compra masiva. Evalúa si el mensaje activa los patrones de comportamiento correctos según Fogg Behavior Model.', red:'LinkedIn', sesgo:'busca evidencia de activación motivacional, ability y trigger correctos en el copy', emoji:'🧪' },
+  { name:'Dra. Peña · PhD Marketing Estratégico',       age:44, genero:'F', pais:'CO', nivel:'phd_marketing',  perfil:'Experta en posicionamiento y brand equity. Analiza si el mensaje refuerza o erosiona la percepción de marca en la mente del consumidor objetivo.', red:'LinkedIn', sesgo:'evalúa la coherencia entre propuesta de valor, tonalidad y expectativas del segmento', emoji:'📐' },
+  { name:'Dr. Flores · PhD Psicología de Marca',        age:46, genero:'M', pais:'MX', nivel:'phd_marca',      perfil:'Especialista en identidad de marca y arquetipos. Detecta si el contenido comunica el arquetipo correcto y genera la conexión emocional esperada con la audiencia.', red:'LinkedIn/Instagram', sesgo:'analiza congruencia emocional, autenticidad percibida y resonancia del mensaje con valores de marca', emoji:'🎭' },
+  { name:'Dra. Soto · PhD Economía del Comportamiento', age:41, genero:'F', pais:'CL', nivel:'phd_behavioral', perfil:'Behavioral economics aplicada a marketing digital. Evalúa sesgos cognitivos activados: disponibilidad, representatividad, anclaje de precio y efecto de arrastre social.', red:'LinkedIn/Twitter', sesgo:'busca evidencia de nudges bien diseñados y framing correcto de opciones para el consumidor', emoji:'🧬' },
+  { name:'Dr. Mora · PhD Neurociencia del Consumidor',   age:43, genero:'M', pais:'MX', nivel:'phd_neuro',      perfil:'Neuromarketing y respuesta cerebral a contenido publicitario. Analiza si el contenido genera activación del núcleo accumbens (recompensa) o la amígdala (amenaza).', red:'LinkedIn', sesgo:'evalúa carga cognitiva, atención visual, emoción vs razón y activación del sistema límbico', emoji:'🫀' },
+  // ── DECISORES DE MARKETING B2B (5) ────────────────────────────
+  { name:'CMO Corporativo',         age:46, genero:'M', pais:'MX', nivel:'cmo_corp',    perfil:'Chief Marketing Officer empresa grande. Aprueba presupuestos y estrategia. Busca impacto medible en revenue, no solo vanity metrics.', red:'LinkedIn', sesgo:'escéptico a campañas sin modelo de atribución claro o sin benchmark de industria', emoji:'🎯' },
+  { name:'VP de Producto',          age:37, genero:'F', pais:'MX', nivel:'vp_producto', perfil:'Decide el go-to-market. Necesita mensajes que resuenen con los pain points reales del buyer persona, no con features.', red:'LinkedIn/Twitter', sesgo:'rechaza copy que habla de features en lugar de outcomes y transformación del usuario', emoji:'📦' },
+  { name:'Director de E-commerce',  age:38, genero:'M', pais:'MX', nivel:'ecommerce',   perfil:'Mide todo en conversiones, CAC y ROAS. Evalúa cada contenido por su impacto en el funnel de compra.', red:'LinkedIn', sesgo:'descalifica contenido que no tenga CTA medible o que no conecte con etapa específica del funnel', emoji:'🛍️' },
+  { name:'Director de Comunicaciones', age:44, genero:'F', pais:'CO', nivel:'comms',    perfil:'Gestiona reputación y narrativa de marca. Evalúa si el contenido es coherente con el mensaje institucional.', red:'LinkedIn', sesgo:'preocupada por riesgo reputacional. Bloquea contenido que pueda generar crisis de comunicación', emoji:'📡' },
+  { name:'Head of Growth',          age:29, genero:'M', pais:'MX', nivel:'growth',      perfil:'Growth hacker obsesionado con loops virales y coeficiente K. Evalúa el potencial viral y compartible de cada pieza.', red:'Twitter/LinkedIn/TikTok', sesgo:'positivo solo si el contenido tiene hook fuerte en los primeros 3 segundos y loop de compartir', emoji:'📊' },
+  // ── CREADORES Y COMUNIDAD B2B (3) ─────────────────────────────
+  { name:'Micro-influencer B2B',    age:31, genero:'F', pais:'MX', nivel:'microinfluencer', perfil:'15K seguidores en LinkedIn, audiencia de directivos LATAM. Su opinión sobre herramientas de negocio tiene peso en su comunidad.', red:'LinkedIn/Instagram', sesgo:'positiva si el contenido es educativo y no excesivamente promocional. Rechaza discursos de venta disfrazados', emoji:'💎' },
+  { name:'Product Marketer Senior', age:34, genero:'M', pais:'AR', nivel:'product_mkt',  perfil:'Experto en messaging y posicionamiento. Evalúa si el copy conecta correctamente con el trabajo que el usuario contrata el producto para hacer (JTBD).', red:'LinkedIn/Twitter', sesgo:'muy crítico con promesas vagas. Busca especificidad y evidencia concreta de outcomes', emoji:'🔎' },
+  { name:'Community Manager B2B',   age:26, genero:'F', pais:'MX', nivel:'community',    perfil:'Gestiona comunidades de negocio. Evalúa si el contenido generará conversación auténtica o será ignorado en el feed.', red:'LinkedIn/Instagram', sesgo:'positiva si hay pregunta o punto de vista controversial. Negativa si es contenido genérico de "tips"', emoji:'💬' },
+  // ── PERFILES LATAM ADICIONALES (5) ────────────────────────────
+  { name:'CMO de Startup Colombia', age:32, genero:'M', pais:'CO', nivel:'latam_cmo_co', perfil:'Marketing de growth en Bogotá. Evalúa si el contenido es relevante para el mercado colombiano o es una traducción genérica.', red:'LinkedIn/Instagram', sesgo:'rechaza contenido que se sienta "importado" sin localización real para LATAM', emoji:'🇨🇴' },
+  { name:'Director Mktg Digital Chile', age:39, genero:'F', pais:'CL', nivel:'latam_mkt_cl', perfil:'Empresa mediana Santiago. Muy orientada a datos y performance. Evalúa cada pieza por su potencial de conversión medible.', red:'LinkedIn', sesgo:'positiva si hay datos de benchmarks de industria. Negativa si el contenido es solo inspiracional', emoji:'🇨🇱' },
+  { name:'Gerente Mktg Argentina',  age:35, genero:'M', pais:'AR', nivel:'latam_mkt_ar', perfil:'Buenos Aires. Muy sofisticado en marketing de contenidos. Valora originalidad y storytelling con datos.', red:'LinkedIn/Instagram', sesgo:'muy influenciado por tendencias globales. Rechaza contenido que ya "está quemado" en otros mercados', emoji:'🇦🇷' },
+  { name:'Head de Mktg Perú',       age:37, genero:'F', pais:'PE', nivel:'latam_mkt_pe', perfil:'Lima. Empresa industrial/manufactura. Necesita marketing que funcione para compradores B2B conservadores.', red:'LinkedIn/Facebook', sesgo:'positiva si hay casos de éxito de industria similar en Perú o LATAM documentados', emoji:'🇵🇪' },
+  { name:'Director Mktg México B2B', age:43, genero:'M', pais:'MX', nivel:'latam_mkt_mx', perfil:'CDMX. Empresa de 500+ empleados. Balance entre branding y performance. Comité de aprobación de 3 personas para cada campaña.', red:'LinkedIn', sesgo:'proceso de aprobación largo. Rechaza lo que genere riesgo de imagen para la empresa', emoji:'🇲🇽' },
 ];
 
 async function runAgentSocialSim(id, output) {
@@ -2251,14 +2273,14 @@ async function runAgentSocialSim(id, output) {
     initOpinionOffice();
   }
 
-  // Selección inteligente: 16 personas representativas del total de 32
-  const selected = selectRepresentativePersonas(16);
+  // Selección inteligente: 25 personas representativas del total de 50
+  const selected = selectRepresentativePersonas(25);
 
   output.className = 'agent-output show';
   output.innerHTML = `<div style="font-size:12px;color:#818CF8;font-family:Inter,sans-serif;padding:8px 0">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
       <div class="agent-spinner" style="border-top-color:#818CF8"></div>
-      <span>Simulando reacciones — <strong style="color:#A78BFA">${selected.length} personas IA</strong> de ${PERSONAS_SIM.length} disponibles…</span>
+      <span>Simulando reacciones — <strong style="color:#A78BFA">${selected.length} personas IA</strong> de ${PERSONAS_SIM.length} disponibles · 5 PhDs incluidos…</span>
     </div>
     <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
       <div id="sim-fill" style="height:100%;background:linear-gradient(90deg,#818CF8,#A78BFA);width:3%;border-radius:2px;transition:width .3s"></div>
@@ -2352,7 +2374,7 @@ async function runAgentSocialSim(id, output) {
             <span style="color:#F59E0B">🤔 ${neutral.length} neutros</span>
             <span style="color:#EF4444">❌ ${negative.length} negativos</span>
           </div>
-          <div style="font-size:10px;color:#4A5568;margin-top:3px">${selected.length} de ${PERSONAS_SIM.length} personas simuladas</div>
+          <div style="font-size:10px;color:#4A5568;margin-top:3px">${selected.length} de ${PERSONAS_SIM.length} perfiles simulados · 5 PhDs de marketing incluidos</div>
         </div>
       </div>
 
@@ -2425,12 +2447,18 @@ async function runAgentSocialSim(id, output) {
   updateOpinionOffice(reactions);
 }
 
-/* Helper: selecciona N personas representativas del pool de 32 */
+/* Helper: selecciona N personas representativas del pool de 50 */
 function selectRepresentativePersonas(n) {
   const pool = [...PERSONAS_SIM];
   const selected = [];
-  // Ensure distribution across categories
-  const categories = ['enterprise','pyme','startup','freelance','creador','micro','estudiante','profesional','medio','entry','investor','agro','media','gobierno'];
+  // Incluir siempre los 5 PhDs de marketing (análisis profundo garantizado)
+  const phdNiveles = ['phd_consumidor','phd_marketing','phd_marca','phd_behavioral','phd_neuro'];
+  phdNiveles.forEach(niv => {
+    const match = pool.find(p=>p.nivel===niv);
+    if (match) { selected.push(match); pool.splice(pool.indexOf(match),1); }
+  });
+  // Distribución por categorías generales
+  const categories = ['enterprise','pyme','startup','freelance','creador','micro','estudiante','profesional','medio','entry','investor','agro','media','gobierno','cmo_corp','vp_producto','ecommerce','comms','growth','microinfluencer','product_mkt','community','latam_cmo_co','latam_mkt_cl','latam_mkt_ar','latam_mkt_pe','latam_mkt_mx'];
   categories.forEach(cat => {
     const match = pool.find(p=>p.nivel===cat);
     if (match && selected.length < n) {
@@ -2438,7 +2466,7 @@ function selectRepresentativePersonas(n) {
       pool.splice(pool.indexOf(match),1);
     }
   });
-  // Fill remaining slots randomly
+  // Completar slots restantes aleatoriamente
   while (selected.length < n && pool.length > 0) {
     const idx = Math.floor(Math.random()*pool.length);
     selected.push(pool.splice(idx,1)[0]);
