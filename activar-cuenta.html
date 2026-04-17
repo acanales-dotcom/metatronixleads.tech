@@ -9,45 +9,24 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      background: #0A0E18;
-      font-family: 'Inter', sans-serif;
+      background: #0A0E18; font-family: 'Inter', sans-serif; padding: 20px;
     }
-    .wrap {
-      width: 100%; max-width: 420px; padding: 20px;
-    }
+    .wrap { width: 100%; max-width: 460px; }
     .card {
-      background: #111827;
-      border: 1px solid rgba(0,255,136,.2);
-      border-radius: 16px;
-      padding: 36px 32px;
+      background: #111827; border: 1px solid rgba(0,255,136,.2);
+      border-radius: 16px; padding: 36px 32px;
       box-shadow: 0 0 40px rgba(0,255,136,.06);
     }
     .logo {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px; font-weight: 600;
-      color: #00ff88; letter-spacing: .16em;
-      text-transform: uppercase;
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 28px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+      color: #00ff88; letter-spacing: .18em; text-transform: uppercase;
+      display: flex; align-items: center; gap: 8px; margin-bottom: 24px;
     }
-    .logo-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #00ff88;
-      box-shadow: 0 0 8px #00ff88;
-    }
-    h1 {
-      font-size: 22px; font-weight: 700;
-      color: #F1F5F9; margin-bottom: 6px;
-    }
-    .sub {
-      font-size: 13px; color: #64748B; margin-bottom: 28px; line-height: 1.5;
-    }
-    .field { margin-bottom: 16px; }
-    label {
-      display: block; font-size: 11px; font-weight: 700;
-      color: #94A3B8; letter-spacing: .06em; text-transform: uppercase;
-      margin-bottom: 6px;
-    }
+    .logo-dot { width: 7px; height: 7px; border-radius: 50%; background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+    h1 { font-size: 20px; font-weight: 700; color: #F1F5F9; margin-bottom: 6px; }
+    .sub { font-size: 13px; color: #64748B; margin-bottom: 24px; line-height: 1.5; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 10px; font-weight: 700; color: #94A3B8; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 5px; }
     input {
       width: 100%; padding: 10px 14px;
       background: #1E293B; border: 1px solid #334155;
@@ -55,213 +34,331 @@
       font-family: 'Inter', sans-serif; font-size: 14px;
       outline: none; transition: border-color .15s;
     }
-    input:focus { border-color: #00ff88; box-shadow: 0 0 0 3px rgba(0,255,136,.1); }
-    input[readonly] { color: #64748B; cursor: default; }
-    .hint { font-size: 11px; color: #475569; margin-top: 5px; }
+    input:focus { border-color: #00ff88; box-shadow: 0 0 0 3px rgba(0,255,136,.08); }
+    input[readonly] { color: #64748B; }
     .btn {
-      width: 100%; padding: 12px;
+      width: 100%; padding: 11px;
       background: #00ff88; color: #0A0E18;
       border: none; border-radius: 8px;
       font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700;
-      cursor: pointer; transition: all .15s; margin-top: 8px;
+      cursor: pointer; transition: all .15s; margin-top: 6px;
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .btn:hover:not(:disabled) { background: #00e67a; transform: translateY(-1px); }
     .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-    .msg {
-      margin-top: 16px; padding: 10px 14px; border-radius: 8px;
-      font-size: 13px; line-height: 1.5; display: none;
+    .btn-sec {
+      width: 100%; padding: 10px;
+      background: transparent; color: #64748B;
+      border: 1px solid #334155; border-radius: 8px;
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .15s; margin-top: 8px;
     }
-    .msg.ok  { background: rgba(0,255,136,.08); border: 1px solid rgba(0,255,136,.25); color: #00ff88; }
-    .msg.err { background: rgba(239,68,68,.08);  border: 1px solid rgba(239,68,68,.25);  color: #F87171; }
+    .btn-sec:hover { border-color: #475569; color: #94A3B8; }
+    /* Messages */
+    .msg { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 13px; line-height: 1.6; display: none; }
     .msg.show { display: block; }
-    .spinner {
-      width: 16px; height: 16px; border: 2px solid rgba(10,14,24,.3);
-      border-top-color: #0A0E18; border-radius: 50%;
-      animation: spin .7s linear infinite;
+    .msg.ok  { background: rgba(0,255,136,.07); border: 1px solid rgba(0,255,136,.2); color: #86efac; }
+    .msg.err { background: rgba(239,68,68,.07); border: 1px solid rgba(239,68,68,.2); color: #fca5a5; }
+    .msg.warn { background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2); color: #fcd34d; }
+    .msg code { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: rgba(0,0,0,.3); padding: 1px 5px; border-radius: 3px; }
+    /* Steps box */
+    .steps-box {
+      display: none; margin-top: 14px;
+      background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.2);
+      border-radius: 8px; padding: 14px 16px;
     }
+    .steps-box.show { display: block; }
+    .steps-title { font-size: 11px; font-weight: 700; color: #F59E0B; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
+    .step { display: flex; gap: 10px; margin-bottom: 8px; font-size: 12px; color: #cbd5e1; line-height: 1.5; }
+    .step-num { width: 20px; height: 20px; border-radius: 50%; background: rgba(245,158,11,.2); color: #F59E0B; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .step a { color: #00ff88; text-decoration: none; }
+    .step code { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: rgba(0,0,0,.4); padding: 1px 5px; border-radius: 3px; color: #a5f3fc; }
+    /* Spinner */
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(10,14,24,.3); border-top-color: #0A0E18; border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .divider {
-      border: none; border-top: 1px solid #1E293B;
-      margin: 24px 0;
-    }
-    .footer-note {
-      font-size: 11px; color: #334155; text-align: center; line-height: 1.6;
-    }
-    .footer-note a { color: #00ff88; text-decoration: none; }
-    /* Success state */
-    .success-state { display: none; text-align: center; }
-    .success-icon { font-size: 48px; margin-bottom: 16px; }
-    .success-title { font-size: 20px; font-weight: 700; color: #F1F5F9; margin-bottom: 8px; }
-    .success-sub { font-size: 13px; color: #64748B; margin-bottom: 24px; }
-    .btn-portal {
-      display: inline-block; padding: 12px 28px;
-      background: #00ff88; color: #0A0E18;
-      border-radius: 8px; font-weight: 700; font-size: 14px;
-      text-decoration: none; transition: all .15s;
-    }
-    .btn-portal:hover { background: #00e67a; transform: translateY(-1px); }
+    /* Divider */
+    .divider { border: none; border-top: 1px solid #1E293B; margin: 20px 0; }
+    .link { font-size: 12px; color: #475569; text-align: center; }
+    .link a { color: #00ff88; text-decoration: none; }
+    /* Success */
+    #success-state { display: none; text-align: center; }
+    .s-icon { font-size: 52px; margin-bottom: 14px; }
+    .s-title { font-size: 20px; font-weight: 700; color: #F1F5F9; margin-bottom: 6px; }
+    .s-sub { font-size: 13px; color: #64748B; margin-bottom: 20px; }
+    .btn-portal { display: inline-block; padding: 11px 28px; background: #00ff88; color: #0A0E18; border-radius: 8px; font-weight: 700; font-size: 14px; text-decoration: none; }
+    /* Status row */
+    .status-row { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #475569; margin-bottom: 18px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.green { background: #10B981; box-shadow: 0 0 6px #10B981; }
+    .status-dot.yellow { background: #F59E0B; box-shadow: 0 0 6px #F59E0B; }
+    .status-dot.red { background: #EF4444; }
+    .tab-btns { display: flex; gap: 6px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid #334155; border-radius: 6px; color: #64748B; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .12s; font-family: 'Inter', sans-serif; }
+    .tab-btn.active { background: rgba(0,255,136,.1); border-color: rgba(0,255,136,.3); color: #00ff88; }
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <!-- Logo -->
-    <div class="logo">
-      <div class="logo-dot"></div>
-      MetaTronix Portal
-    </div>
+    <div class="logo"><div class="logo-dot"></div>MetaTronix Portal</div>
 
     <!-- Form state -->
     <div id="form-state">
-      <h1>Activar tu cuenta</h1>
-      <p class="sub">Crea tu contraseña de acceso al portal interno. Solo funciona una vez por cuenta.</p>
+      <h1 id="card-title">Acceder al portal</h1>
+      <p class="sub" id="card-sub">Ingresa tu contraseña para entrar. Si es tu primera vez, se creará tu cuenta.</p>
 
-      <form id="setup-form">
-        <div class="field">
-          <label>Correo</label>
-          <input type="email" id="email" value="acanales@ibanormexico.com" readonly>
-        </div>
-        <div class="field">
-          <label>Contraseña nueva</label>
-          <input type="password" id="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
-          <div class="hint">Usa letras, números y al menos un carácter especial.</div>
-        </div>
-        <div class="field">
-          <label>Confirmar contraseña</label>
-          <input type="password" id="password2" placeholder="Repite la contraseña" autocomplete="new-password">
-        </div>
-        <button type="submit" class="btn" id="submit-btn">
-          Activar cuenta
-        </button>
-      </form>
+      <div id="status-row" class="status-row" style="display:none">
+        <div class="status-dot" id="st-dot"></div>
+        <span id="st-text"></span>
+      </div>
+
+      <!-- Tabs: Login / Crear cuenta -->
+      <div class="tab-btns">
+        <button class="tab-btn active" id="tab-login" onclick="setTab('login')">Tengo contraseña</button>
+        <button class="tab-btn"        id="tab-new"   onclick="setTab('new')">Primera vez</button>
+      </div>
+
+      <!-- LOGIN TAB -->
+      <div id="pane-login">
+        <form id="login-form">
+          <div class="field">
+            <label>Correo</label>
+            <input type="email" value="acanales@ibanormexico.com" readonly>
+          </div>
+          <div class="field">
+            <label>Contraseña</label>
+            <input type="password" id="l-pass" placeholder="Tu contraseña" autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn" id="l-btn">Entrar al portal</button>
+        </form>
+      </div>
+
+      <!-- NUEVA CUENTA TAB -->
+      <div id="pane-new" style="display:none">
+        <form id="new-form">
+          <div class="field">
+            <label>Correo</label>
+            <input type="email" value="acanales@ibanormexico.com" readonly>
+          </div>
+          <div class="field">
+            <label>Contraseña nueva</label>
+            <input type="password" id="n-pass" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+          </div>
+          <div class="field">
+            <label>Confirmar contraseña</label>
+            <input type="password" id="n-pass2" placeholder="Repite la contraseña" autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn" id="n-btn">Crear cuenta y entrar</button>
+        </form>
+      </div>
 
       <div class="msg" id="msg"></div>
 
+      <!-- Pasos manuales Supabase -->
+      <div class="steps-box" id="steps-box">
+        <div class="steps-title">⚠️ Pasos en Supabase Dashboard</div>
+        <div class="step"><div class="step-num">1</div><div>Entra a <a href="https://supabase.com/dashboard/project/hodrfonbpmqulkyzrzpq/auth/users" target="_blank">supabase.com/dashboard → Authentication → Users</a></div></div>
+        <div class="step"><div class="step-num">2</div><div>Busca <code>acanales@ibanormexico.com</code> → clic en los 3 puntos <code>···</code> → <strong>Send password recovery</strong> o <strong>Confirm email</strong></div></div>
+        <div class="step"><div class="step-num">3</div><div>Si ves la opción <strong>"Send magic link"</strong> — úsala. Eso te manda un link directo sin necesitar contraseña.</div></div>
+        <div class="step"><div class="step-num">4</div><div>O en la misma pantalla de usuario, busca <strong>"Reset password"</strong> para establecer una contraseña directamente desde el dashboard.</div></div>
+      </div>
+
       <hr class="divider">
-      <p class="footer-note">
-        ¿Ya tienes contraseña? <a href="/index.html">Ir al login →</a>
-      </p>
+      <p class="link">¿Problemas? <a href="https://supabase.com/dashboard/project/hodrfonbpmqulkyzrzpq/auth/users" target="_blank">Abrir Supabase Dashboard →</a></p>
     </div>
 
     <!-- Success state -->
-    <div class="success-state" id="success-state">
-      <div class="success-icon">✅</div>
-      <div class="success-title">¡Cuenta activada!</div>
-      <div class="success-sub">Tu cuenta está lista. Serás redirigido al portal en unos segundos.</div>
+    <div id="success-state">
+      <div class="s-icon">✅</div>
+      <div class="s-title">¡Acceso exitoso!</div>
+      <div class="s-sub">Bienvenido al portal. Redirigiendo...</div>
       <a href="/home.html" class="btn-portal">Ir al portal →</a>
     </div>
-
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script>
+const EMAIL = 'acanales@ibanormexico.com';
+const SUPA_URL = window.MTX_CONFIG?.SUPABASE_URL || 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+const SUPA_KEY = window.MTX_CONFIG?.SUPABASE_ANON_KEY || '';
+const db = supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+/* ── Redirigir si ya hay sesión ── */
 (async () => {
-  const SUPABASE_URL      = window.MTX_CONFIG?.SUPABASE_URL      || 'https://hodrfonbpmqulkyzrzpq.supabase.co';
-  const SUPABASE_ANON_KEY = window.MTX_CONFIG?.SUPABASE_ANON_KEY || '';
-  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true }
-  });
-
-  // Si ya hay sesión activa, redirigir directo
   const { data: { session } } = await db.auth.getSession();
-  if (session) { window.location.href = '/home.html'; return; }
-
-  const form    = document.getElementById('setup-form');
-  const btn     = document.getElementById('submit-btn');
-  const msgEl   = document.getElementById('msg');
-
-  function showMsg(text, type) {
-    msgEl.textContent = text;
-    msgEl.className   = `msg ${type} show`;
+  if (session?.user) {
+    await ensureProfile(session.user);
+    window.location.href = '/home.html';
   }
-  function hideMsg() { msgEl.className = 'msg'; }
+})();
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideMsg();
+/* ── Tabs ── */
+function setTab(tab) {
+  document.getElementById('pane-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('pane-new').style.display   = tab === 'new'   ? 'block' : 'none';
+  document.getElementById('tab-login').className = 'tab-btn' + (tab === 'login' ? ' active' : '');
+  document.getElementById('tab-new').className   = 'tab-btn' + (tab === 'new'   ? ' active' : '');
+  hideMsg();
+}
 
-    const email = document.getElementById('email').value.trim();
-    const pass1 = document.getElementById('password').value;
-    const pass2 = document.getElementById('password2').value;
+/* ── Helpers ── */
+function showMsg(text, type) {
+  const el = document.getElementById('msg');
+  el.innerHTML = text;
+  el.className = `msg ${type} show`;
+}
+function hideMsg() {
+  document.getElementById('msg').className = 'msg';
+  document.getElementById('steps-box').className = 'steps-box';
+}
+function setStatus(color, text) {
+  const row = document.getElementById('status-row');
+  row.style.display = 'flex';
+  document.getElementById('st-dot').className = `status-dot ${color}`;
+  document.getElementById('st-text').textContent = text;
+}
+function setBusy(btnId, busy, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = busy;
+  btn.innerHTML = busy ? '<div class="spinner"></div> Procesando...' : label;
+}
 
-    // Validaciones
-    if (pass1.length < 8) { showMsg('La contraseña debe tener al menos 8 caracteres.', 'err'); return; }
-    if (pass1 !== pass2)  { showMsg('Las contraseñas no coinciden.', 'err'); return; }
-
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Activando...';
-
-    try {
-      // 1. Intentar signUp (crea cuenta nueva)
-      const { data: signUpData, error: signUpErr } = await db.auth.signUp({
-        email,
-        password: pass1,
-        options: {
-          data: { full_name: 'Alejandro Canales', role: 'superadmin' }
-        }
-      });
-
-      if (signUpErr) {
-        // Si ya existe la cuenta, intentar actualizar la contraseña
-        if (signUpErr.message.toLowerCase().includes('already registered') ||
-            signUpErr.message.toLowerCase().includes('user already exists')) {
-
-          // Intentar login con la contraseña actual para verificar si era contraseña conocida
-          // En este caso informamos que deben recuperar contraseña
-          showMsg('Esta cuenta ya existe. Si no recuerdas tu contraseña, contacta al administrador del sistema para un reset directo en Supabase Dashboard → Authentication → Users.', 'err');
-          btn.disabled = false;
-          btn.textContent = 'Activar cuenta';
-          return;
-        }
-        throw signUpErr;
-      }
-
-      const userId = signUpData?.user?.id;
-
-      if (!userId) {
-        showMsg('Cuenta creada pero requiere confirmación de email. Contacta al admin para confirmar manualmente en Supabase Dashboard.', 'ok');
-        btn.disabled = false;
-        btn.textContent = 'Activar cuenta';
-        return;
-      }
-
-      // 2. Crear/actualizar perfil con rol superadmin
-      await db.from('profiles').upsert({
-        id:         userId,
-        email:      email,
-        full_name:  'Alejandro Canales',
-        role:       'superadmin',
+/* ── Crear / actualizar perfil ── */
+async function ensureProfile(user) {
+  try {
+    const { data: existing } = await db.from('profiles').select('id').eq('id', user.id).single();
+    if (!existing) {
+      await db.from('profiles').insert({
+        id:                   user.id,
+        email:                EMAIL,
+        full_name:            user.user_metadata?.full_name || 'Alejandro Canales',
+        role:                 'superadmin',
         claude_enabled:       true,
         claude_monthly_limit: 999,
-        created_at: new Date().toISOString(),
-        last_seen:  new Date().toISOString(),
-      }, { onConflict: 'id' });
-
-      // 3. Hacer login automático
-      const { error: loginErr } = await db.auth.signInWithPassword({ email, password: pass1 });
-      if (loginErr) {
-        // Cuenta creada pero login falló — puede necesitar confirmación de email
-        showMsg('✅ Cuenta creada. Para activarla sin confirmación de email, ve a Supabase Dashboard → Authentication → Users → encuentra acanales@ibanormexico.com → "Confirm email" → luego ingresa normalmente.', 'ok');
-        btn.disabled = false;
-        btn.textContent = 'Activar cuenta';
-        return;
-      }
-
-      // 4. Éxito total — mostrar estado de éxito
-      document.getElementById('form-state').style.display    = 'none';
-      document.getElementById('success-state').style.display = 'block';
-      setTimeout(() => { window.location.href = '/home.html'; }, 2500);
-
-    } catch (err) {
-      showMsg('Error: ' + (err.message || 'Error desconocido'), 'err');
-      btn.disabled = false;
-      btn.textContent = 'Activar cuenta';
+        created_at:           new Date().toISOString(),
+        last_seen:            new Date().toISOString(),
+      });
+    } else {
+      await db.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', user.id);
     }
+  } catch (_) {}
+}
+
+/* ── Success ── */
+function showSuccess() {
+  document.getElementById('form-state').style.display  = 'none';
+  document.getElementById('success-state').style.display = 'block';
+  setTimeout(() => { window.location.href = '/home.html'; }, 2000);
+}
+
+/* ── LOGIN FORM ── */
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pass = document.getElementById('l-pass').value;
+  if (!pass) { showMsg('Escribe tu contraseña.', 'err'); return; }
+
+  setBusy('l-btn', true, 'Entrar al portal');
+  hideMsg();
+  setStatus('yellow', 'Verificando credenciales...');
+
+  const { data, error } = await db.auth.signInWithPassword({ email: EMAIL, password: pass });
+
+  if (!error && data?.user) {
+    setStatus('green', 'Sesión iniciada ✓');
+    await ensureProfile(data.user);
+    showSuccess();
+    return;
+  }
+
+  const errMsg = error?.message || '';
+  setBusy('l-btn', false, 'Entrar al portal');
+
+  if (errMsg.toLowerCase().includes('email not confirmed')) {
+    setStatus('yellow', 'Email pendiente de confirmar');
+    showMsg('Tu cuenta existe pero el email no está confirmado.', 'warn');
+    document.getElementById('steps-box').className = 'steps-box show';
+    return;
+  }
+
+  if (errMsg.toLowerCase().includes('invalid login') || errMsg.toLowerCase().includes('invalid credentials')) {
+    setStatus('red', 'Credenciales incorrectas');
+    showMsg('Contraseña incorrecta. ¿Es tu primera vez? Cambia a la pestaña <strong>"Primera vez"</strong> para crear tu cuenta.', 'err');
+    return;
+  }
+
+  setStatus('red', 'Error');
+  showMsg('Error: ' + errMsg, 'err');
+});
+
+/* ── NUEVA CUENTA FORM ── */
+document.getElementById('new-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pass1 = document.getElementById('n-pass').value;
+  const pass2 = document.getElementById('n-pass2').value;
+
+  if (pass1.length < 8)  { showMsg('La contraseña debe tener al menos 8 caracteres.', 'err'); return; }
+  if (pass1 !== pass2)   { showMsg('Las contraseñas no coinciden.', 'err'); return; }
+
+  setBusy('n-btn', true, 'Crear cuenta y entrar');
+  hideMsg();
+  setStatus('yellow', 'Creando cuenta...');
+
+  // Intentar signUp
+  const { data: su, error: suErr } = await db.auth.signUp({
+    email: EMAIL,
+    password: pass1,
+    options: { data: { full_name: 'Alejandro Canales', role: 'superadmin' } }
   });
-})();
+
+  // Si ya existe, intentar login directo con esta contraseña
+  if (suErr?.message?.toLowerCase().includes('already registered') ||
+      suErr?.message?.toLowerCase().includes('user already exists')) {
+    setStatus('yellow', 'Cuenta existente — probando login...');
+    const { data: li, error: liErr } = await db.auth.signInWithPassword({ email: EMAIL, password: pass1 });
+    if (!liErr && li?.user) {
+      await ensureProfile(li.user);
+      showSuccess(); return;
+    }
+    setBusy('n-btn', false, 'Crear cuenta y entrar');
+    setStatus('red', 'Cuenta existente');
+    showMsg('La cuenta ya existe pero esta contraseña no es la correcta. Ve a la pestaña <strong>"Tengo contraseña"</strong> e intenta con tu contraseña anterior.', 'warn');
+    document.getElementById('steps-box').className = 'steps-box show';
+    return;
+  }
+
+  if (suErr) {
+    setBusy('n-btn', false, 'Crear cuenta y entrar');
+    setStatus('red', 'Error en registro');
+    showMsg('Error al crear cuenta: ' + suErr.message, 'err');
+    return;
+  }
+
+  // signUp exitoso — intentar login inmediato
+  if (su?.user) {
+    setStatus('yellow', 'Iniciando sesión...');
+    const { data: li, error: liErr } = await db.auth.signInWithPassword({ email: EMAIL, password: pass1 });
+
+    if (!liErr && li?.user) {
+      await ensureProfile(li.user);
+      showSuccess(); return;
+    }
+
+    // Login falla — probablemente requiere confirmación de email
+    setBusy('n-btn', false, 'Crear cuenta y entrar');
+    setStatus('yellow', 'Cuenta creada — confirmar email');
+    showMsg('✅ Cuenta creada. Sigue los pasos abajo para confirmar tu email en Supabase Dashboard y luego regresa a la pestaña "Tengo contraseña" con la contraseña que acabas de elegir.', 'ok');
+    document.getElementById('steps-box').className = 'steps-box show';
+    return;
+  }
+
+  // No hay user ni error claro
+  setBusy('n-btn', false, 'Crear cuenta y entrar');
+  setStatus('red', 'Respuesta inesperada');
+  showMsg('Respuesta inesperada de Supabase. Sigue los pasos manuales abajo.', 'warn');
+  document.getElementById('steps-box').className = 'steps-box show';
+});
 </script>
 </body>
 </html>
