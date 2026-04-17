@@ -158,7 +158,7 @@
 }
 .agent-card-meta { flex:1; min-width:0; }
 .agent-name { font-family:var(--font-head); font-size:1rem; letter-spacing:.04em; color:var(--navy); line-height:1; margin-bottom:4px; }
-.agent-desc { display:none; }
+.agent-desc { font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:2px; }
 .agent-status {
   display:inline-flex; align-items:center; gap:4px;
   font-size:10px; font-weight:700; padding:2px 7px;
@@ -170,7 +170,7 @@
 .agent-status.idle   { background:#F8FAFC; color:#94A3B8; }
 
 /* Agent models badges */
-.agent-models { display:flex; gap:4px; flex-wrap:wrap; padding:8px 18px; border-bottom:1px solid var(--border); background:var(--surface); }
+.agent-models { display:none; }
 .model-tag {
   font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px;
   background:#ECFDF5; color:#059669; letter-spacing:.02em;
@@ -667,7 +667,7 @@ const AGENTS = [
     icon: '🔍',
     iconBg: 'linear-gradient(135deg,#ECFDF5,#D1FAE5)',
     name: 'PROSPECTOR',
-    desc: 'Identifica y cualifica prospectos de alto valor antes del primer contacto. Genera listas ICPs, señales de compra y el mensaje de apertura perfecto para cada canal.',
+    desc: 'Encuentra a los clientes ideales antes de llamar. Te da la lista de prospectos, las señales de que están listos para comprar y el mensaje perfecto para abrir la conversación.',
     models: ['CRM_LLM', 'ICP Scoring', 'Outreach'],
     inputLabel: '¿Qué tipo de prospecto o segmento quieres atacar?',
     inputPlaceholder: 'Ej: Directores de Ventas en empresas retail México 100-500 empleados que usan Salesforce pero se quejan del costo',
@@ -678,7 +678,7 @@ const AGENTS = [
     icon: '⚖️',
     iconBg: 'linear-gradient(135deg,#F0FDF4,#BBFCCB)',
     name: 'CALIFICADOR',
-    desc: 'Aplica BANT, MEDDIC y señales de intención para score cada lead. Decide en 5 minutos si el prospecto merece avanzar o se regresa a nurturing.',
+    desc: 'Analiza cada prospecto y te dice en minutos si vale la pena seguir invirtiendo tiempo en él o si es mejor enfocarte en otro. Sin corazonadas, con criterios claros.',
     models: ['CRM_LLM', 'BANT', 'MEDDIC'],
     inputLabel: 'Información del lead a calificar',
     inputPlaceholder: 'Ej: Empresa: RetailMax, 200 empleados, Director de TI interesado, presupuesto no definido, pain: su CRM actual falla con el equipo de campo',
@@ -689,7 +689,7 @@ const AGENTS = [
     icon: '🧩',
     iconBg: 'linear-gradient(135deg,#F0FDFA,#CCFBF1)',
     name: 'DESCUBRIDOR',
-    desc: 'Genera el mapa de dolor del prospecto con preguntas de descubrimiento de alto impacto. Usa SPIN Selling y Challenger Sale para revelar el problema que el cliente no sabía que tenía.',
+    desc: 'Te da las preguntas exactas para que el cliente descubra por sí mismo el problema que tiene. Cuando entiende su propio dolor, la venta se cierra sola.',
     models: ['CRM_LLM', 'SPIN Selling', 'Challenger'],
     inputLabel: 'Contexto del prospecto para preparar la sesión de discovery',
     inputPlaceholder: 'Ej: Director de Ventas de empresa fintech, 150 vendedores, pain detectado: bajo adoption de su CRM actual, demo en 48 horas',
@@ -700,7 +700,7 @@ const AGENTS = [
     icon: '🎤',
     iconBg: 'linear-gradient(135deg,#F0FDF4,#D1FAE5)',
     name: 'PRESENTADOR',
-    desc: 'Prepara el script de demo perfecto, personalizado al dolor del prospecto. Estructura la presentación para que el cliente vea su futuro mejor antes de escuchar el precio.',
+    desc: 'Arma la presentación ideal para cada cliente, usando lo que ya sabes de sus problemas. El cliente ve el beneficio antes de escuchar el precio.',
     models: ['CRM_LLM', 'Demo Script', 'Storytelling'],
     inputLabel: 'Información del prospecto y sus pain points detectados',
     inputPlaceholder: 'Ej: CFO de empresa retail, dolor: no sabe qué vendedores van a cerrar este mes, quiere forecast confiable, demo en 30 minutos',
@@ -711,7 +711,7 @@ const AGENTS = [
     icon: '🤝',
     iconBg: 'linear-gradient(135deg,#FFFBEB,#FEF3C7)',
     name: 'NEGOCIADOR',
-    desc: 'Desarma objeciones de precio, competencia y timing con frameworks probados. Genera respuestas palabra por palabra para las objeciones más comunes sin perder el deal.',
+    desc: 'Cuando el cliente dice "está caro", "hay otras opciones" o "lo pensaré", te da la respuesta exacta palabra por palabra para no perder el deal.',
     models: ['CRM_LLM', 'Objeciones', 'Negociación'],
     inputLabel: '¿Qué objeción enfrentas o qué situación de negociación tienes?',
     inputPlaceholder: 'Ej: El prospecto dice "necesito pensarlo" después de la demo. O: "Salesforce nos ofrece 40% de descuento si firmamos esta semana"',
@@ -722,7 +722,7 @@ const AGENTS = [
     icon: '🏆',
     iconBg: 'linear-gradient(135deg,#FFF7ED,#FFEDD5)',
     name: 'CERRADOR',
-    desc: 'Genera las técnicas de cierre exactas para este deal. Trial close, urgencia real, concesiones estratégicas y el email o mensaje de cierre que hace que firmen hoy.',
+    desc: 'Te dice exactamente qué hacer y qué decir en las últimas horas antes de que el cliente firme. Incluye el mensaje de cierre listo para enviar.',
     models: ['CRM_LLM', 'Técnicas Cierre', 'Urgencia'],
     inputLabel: 'Estado actual del deal — ¿qué falta para cerrar?',
     inputPlaceholder: 'Ej: Deal $180K MXN, 3 semanas en propuesta, stakeholder dice que le gusta pero el board debe aprobar. ¿Cómo acelero?',
@@ -733,7 +733,7 @@ const AGENTS = [
     icon: '🎯',
     iconBg: 'linear-gradient(135deg,#0A1E12,#0D2416)',
     name: 'ORQUESTADOR',
-    desc: 'Única interfaz con el Director de Ventas. Recibe el estado del pipeline en lenguaje natural, diagnostica cuellos de botella y genera el plan de ataque semanal.',
+    desc: 'Tu director de ventas virtual. Cuéntale cómo va tu semana y te da el plan de ataque: qué deal atacar primero, qué está en riesgo y qué hacer hoy.',
     models: ['CRM_LLM', 'Pipeline Review', 'Forecast'],
     inputLabel: 'Estado del pipeline o pregunta de estrategia comercial',
     inputPlaceholder: 'Ej: Tengo 8 deals en pipeline por $2.3M MXN, 3 en negociación, cierre del trimestre en 18 días. ¿Qué hago primero?',
@@ -745,7 +745,7 @@ const AGENTS = [
     icon: '📋',
     iconBg: 'linear-gradient(135deg,#0A1E12,#0F2B18)',
     name: 'PROPUESTA IA',
-    desc: 'Genera propuestas comerciales personalizadas listas para enviar. Incluye sección ejecutiva, ROI proyectado, hoja de ruta de implementación y CTA de cierre.',
+    desc: 'Crea la propuesta comercial completa y lista para enviar en minutos: resumen ejecutivo, retorno de inversión proyectado y los pasos de implementación.',
     models: ['CRM_LLM', 'Propuesta Comercial', 'ROI Builder'],
     inputLabel: 'Datos del prospecto y deal para generar la propuesta',
     inputPlaceholder: 'Ej: Cliente: RetailMax, 200 vendedores, pain: forecast manual. Producto: MetaTronix Growth. Precio ofertado: $799 USD/mes. Tomador de decisión: Director de Ventas.',
@@ -756,7 +756,7 @@ const AGENTS = [
     icon: '📬',
     iconBg: 'linear-gradient(135deg,#0A1A1E,#0C2429)',
     name: 'SEGUIMIENTO IA',
-    desc: 'Genera secuencias de seguimiento multicanal (email + WhatsApp) para cada etapa del pipeline. Nunca más un "solo quería saber cómo van" que mata el deal.',
+    desc: 'Escribe por ti los mensajes de seguimiento por email o WhatsApp para cada momento del proceso. Nunca más el clásico "solo paso a saludar" que espanta clientes.',
     models: ['CRM_LLM', 'Email · WhatsApp', 'Sequences'],
     inputLabel: 'Situación del deal y canal de seguimiento',
     inputPlaceholder: 'Ej: Prospecté a un Director de Ventas hace 5 días, abrió mi email pero no respondió. O: Lead frío de 3 semanas que necesito reactivar.',
@@ -767,7 +767,7 @@ const AGENTS = [
     icon: '📊',
     iconBg: 'linear-gradient(135deg,#1C1917,#292524)',
     name: 'WBR — PIPELINE AI',
-    desc: 'Weekly Business Review: analiza los 5 bloques de input metrics (Cazador, Estratega, Ejecutor, Success, Aprendizaje), detecta alertas rojas y genera la Decisión de la Semana.',
+    desc: 'Tu revisión semanal de ventas automática. Le das los números de la semana y te dice qué está rojo, qué está bien y cuál es la decisión más importante que debes tomar.',
     models: ['CRM_LLM', 'WBR Framework', 'Input Metrics'],
     inputLabel: 'Datos de la semana para el WBR (pega los números de cada bloque o describe el estado)',
     inputPlaceholder: 'Ej: Cazador: 18 cuentas detectadas, precisión 65%, 3 rescates. Ejecutor: 22 secuencias, 12% respuesta, 6 reuniones. Deals en pipeline: $3.8M, 14 activos, cierre en 18 días.',

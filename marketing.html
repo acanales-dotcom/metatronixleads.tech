@@ -160,7 +160,7 @@
 }
 .agent-card-meta { flex:1; min-width:0; }
 .agent-name { font-family:var(--font-head); font-size:1rem; letter-spacing:.04em; color:var(--navy); line-height:1; margin-bottom:4px; }
-.agent-desc { display:none; }
+.agent-desc { font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:2px; }
 .agent-status {
   display:inline-flex; align-items:center; gap:4px;
   font-size:10px; font-weight:700; padding:2px 7px;
@@ -172,7 +172,7 @@
 .agent-status.idle   { background:#F8FAFC; color:#94A3B8; }
 
 /* Agent models badges */
-.agent-models { display:flex; gap:4px; flex-wrap:wrap; padding:8px 18px; border-bottom:1px solid var(--border); background:var(--surface); }
+.agent-models { display:none; }
 .model-tag {
   font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px;
   background:#EFF6FF; color:#2563EB; letter-spacing:.02em;
@@ -708,7 +708,7 @@ const AGENTS = [
     icon: '🔭',
     iconBg: 'linear-gradient(135deg,#EFF6FF,#DBEAFE)',
     name: 'OBSERVADOR DE MERCADO',
-    desc: 'Escucha señales de audiencia, tendencias culturales y movimientos competitivos. Produce briefing semanal de oportunidades y riesgos accionables.',
+    desc: 'Monitorea qué está pasando en tu mercado, qué hace la competencia y qué quiere tu audiencia. Te avisa antes de que las tendencias te pasen por encima.',
     models: ['CRM_LLM', 'Señales Audiencia', 'Análisis Competitivo'],
     inputLabel: '¿Qué oportunidad o señal de mercado quieres analizar?',
     inputPlaceholder: 'Ej: Tendencias IA para retail LATAM Q2 2026, o: Movimientos recientes de Salesforce y HubSpot en México',
@@ -719,7 +719,7 @@ const AGENTS = [
     icon: '✍️',
     iconBg: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)',
     name: 'NARRADOR',
-    desc: 'Define la narrativa central del mes y la fragmenta en todos los canales: copy ads, posts, emails, landing pages y scripts de video. Una sola voz, cero disonancia.',
+    desc: 'Crea el mensaje principal del mes y lo adapta para cada canal: anuncios, redes sociales, emails y videos. Una sola historia contada de mil formas consistentes.',
     models: ['CRM_LLM', 'Narrativa Central', 'Multi-Canal'],
     inputLabel: 'Oportunidad del Observador o contexto de marca para este período',
     inputPlaceholder: 'Ej: Lanzamos QuantumTron para retail — necesito narrativa del mes + copy para todos los canales',
@@ -730,7 +730,7 @@ const AGENTS = [
     icon: '🎬',
     iconBg: 'linear-gradient(135deg,#FFF7ED,#FFEDD5)',
     name: 'DIRECTOR DE PRODUCCIÓN',
-    desc: 'Convierte la narrativa en briefs tan precisos que los agentes de video e imagen no pueden malinterpretarlos. Define emoción, jerarquía visual, formato y el único trabajo de cada pieza.',
+    desc: 'Traduce la estrategia en instrucciones claras para crear cada pieza visual o de video. Sin ambigüedad: cada creativo sabe exactamente qué hacer y por qué.',
     models: ['CRM_LLM', 'Brief Estructurado', 'Video IA · Imagen IA'],
     inputLabel: 'Copy o narrativa del Narrador + tipo de pieza visual necesaria',
     inputPlaceholder: 'Ej: Necesito 3 briefs para reel vertical, imagen de LinkedIn y thumbnail YouTube. Narrativa: QuantumTron transforma datos en decisiones.',
@@ -741,7 +741,7 @@ const AGENTS = [
     icon: '📡',
     iconBg: 'linear-gradient(135deg,#ECFEFF,#CFFAFE)',
     name: 'MOTOR DE DISTRIBUCIÓN',
-    desc: 'Toda la ejecución técnica en un mecanismo: SEO, SEM, paid media, email y redes. Decide dónde, cuándo y con cuánto presupuesto. Optimiza mientras ejecuta.',
+    desc: 'Distribuye tu contenido donde está tu audiencia y optimiza el presupuesto en tiempo real. Cubre SEO, anuncios pagados, email y redes sociales al mismo tiempo.',
     models: ['CRM_LLM', 'Paid Media', 'SEO · SEM · Email'],
     inputLabel: 'Piezas aprobadas + presupuesto + objetivo de campaña',
     inputPlaceholder: 'Ej: Campaña awareness QuantumTron, presupuesto $30K MXN, objetivo 500 demos calificadas, plazo 30 días',
@@ -752,7 +752,7 @@ const AGENTS = [
     icon: '⚡',
     iconBg: 'linear-gradient(135deg,#FEFCE8,#FEF08A)',
     name: 'CONVERSOR',
-    desc: 'Todo lo que ocurre después del primer clic. Landing pages, nurturing, onboarding y retención. Obsesionado con reducir la distancia entre atención y cliente pagando.',
+    desc: 'Se asegura de que el cliente que llegó a tu página termine comprando. Optimiza landing pages, correos de bienvenida y el recorrido completo hasta la conversión.',
     models: ['CRM_LLM', 'CRO', 'A/B Testing · Funnel'],
     inputLabel: '¿Qué parte del funnel quieres optimizar?',
     inputPlaceholder: 'Ej: Landing page de QuantumTron tiene 12% conversión. Analiza los 3 puntos de fricción principales y genera variantes A/B.',
@@ -763,7 +763,7 @@ const AGENTS = [
     icon: '🧠',
     iconBg: 'linear-gradient(135deg,#FDF4FF,#FAE8FF)',
     name: 'SISTEMA DE APRENDIZAJE',
-    desc: 'Después de cada campaña: autopsia completa. ROI real vs estimado, creativos ganadores, mensajes resonantes. No entrega reportes: modifica los prompts de los otros mecanismos.',
+    desc: 'Analiza cada campaña al terminar: qué funcionó, qué no y por qué. No solo reporta, aprende y mejora automáticamente las estrategias de los otros agentes.',
     models: ['CRM_LLM', 'Autopsia', 'LTV/CAC · ROAS'],
     inputLabel: 'Datos de la campaña completada para analizar',
     inputPlaceholder: 'Ej: Campaña Q1 — inversión $50K MXN, 320 leads, 28 cierres, ROAS 2.8x. ¿Qué funcionó? ¿Qué modificar?',
@@ -774,7 +774,7 @@ const AGENTS = [
     icon: '🎯',
     iconBg: 'linear-gradient(135deg,#1C1917,#292524)',
     name: 'ORQUESTADOR',
-    desc: 'Única interfaz con el humano. Recibe instrucciones en lenguaje natural, descompone, asigna a los mecanismos y sintetiza respuestas unificadas. Memoria de ciclo completo.',
+    desc: 'Tu director de marketing virtual. Cuéntale qué necesitas y coordina a todos los demás agentes para ejecutarlo. Una sola conversación, todo el equipo trabajando.',
     models: ['CRM_LLM', 'Todos los Mecanismos', 'Campaign Brief'],
     inputLabel: 'Instrucción o consulta de campaña en lenguaje natural',
     inputPlaceholder: 'Ej: "Lanza campaña awareness para QuantumTron en LinkedIn y Meta, presupuesto $80K MXN, objetivo 200 demos en 45 días" — o consulta el estado de una campaña activa',
@@ -786,7 +786,7 @@ const AGENTS = [
     icon: '🎬',
     iconBg: 'linear-gradient(135deg,#0A0E1A,#0D1629)',
     name: 'VIDEO IA — Wan2.1',
-    desc: 'Genera videos desde texto con Wan2.1-T2V-1.3B. Infraestructura compartida — recibe briefs del Director de Producción. Requiere GPU RTX 3060+ o token HuggingFace.',
+    desc: 'Convierte tu texto o brief en un video listo para publicar. Escribe lo que quieres mostrar y el agente lo produce automáticamente.',
     models: ['Wan2.1-T2V-1.3B', 'HF Inference API', 'RTX 3060+'],
     inputLabel: 'Prompt del video (en inglés para mejores resultados)',
     inputPlaceholder: 'A professional sales team celebrating a deal in a modern office, cinematic lighting, 4K quality...',
@@ -800,7 +800,7 @@ const AGENTS = [
     icon: '🖼',
     iconBg: 'linear-gradient(135deg,#0D0719,#160B2B)',
     name: 'IMAGEN IA — FLUX.2',
-    desc: 'Genera imágenes fotorrealistas con FLUX.2-dev-NVFP4. Infraestructura compartida — recibe briefs del Director de Producción. Requiere GPU RTX 4070+ o token HuggingFace.',
+    desc: 'Crea imágenes profesionales a partir de una descripción. Desde fotos de producto hasta creativos para anuncios, todo sin necesitar a un diseñador.',
     models: ['FLUX.2-dev-NVFP4', 'HF Inference API', 'RTX 4070+'],
     inputLabel: 'Prompt de la imagen (en inglés para mejores resultados)',
     inputPlaceholder: 'A CEO shaking hands with a tech executive in a modern glass office, photorealistic, 8K, sharp focus...',
@@ -814,7 +814,7 @@ const AGENTS = [
     icon: '🧬',
     iconBg: 'linear-gradient(135deg,#1E1B4B,#312E81)',
     name: 'SIMULACIÓN SOCIAL',
-    desc: 'Simula la reacción de tu audiencia antes de publicar. 32 personas IA con perfiles LATAM — predice engagement, objeciones y probabilidad de conversión.',
+    desc: 'Antes de publicar, 32 perfiles virtuales de tu audiencia LATAM reaccionan a tu campaña. Predice si va a gustar, qué objeciones van a surgir y si va a convertir.',
     models: ['CRM_LLM', 'Multi-persona', 'Oficina Virtual'],
     inputLabel: 'Contenido o campaña a simular',
     inputPlaceholder: 'Ej: "Lanzamos MetaTronix CRM con IA por $299/mes. Implementación en 1 semana. Sin contratos." — post para LinkedIn dirigido a directores de ventas LATAM',
