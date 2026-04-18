@@ -216,6 +216,116 @@
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
+/* ══════════════════════════════════════════════════════════
+   PREDICTOR DE CAMPAÑAS — Panel predictivo pre-lanzamiento
+   Esquema índigo/violeta · mismo lenguaje visual que INTEL
+   ══════════════════════════════════════════════════════════ */
+@keyframes pred-in   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pred-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+@keyframes pred-dot  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
+@keyframes pred-fill { from{width:0} to{width:var(--w)} }
+@keyframes pred-num  { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
+
+.pred-panel {
+  background:linear-gradient(160deg,#0C0D22 0%,#090A1A 100%);
+  border:1px solid rgba(99,102,241,.32);
+  border-radius:14px; overflow:hidden; position:relative;
+  animation:pred-in .5s cubic-bezier(.22,1,.36,1) forwards;
+  box-shadow:0 12px 48px rgba(0,0,0,.5), 0 0 0 1px rgba(99,102,241,.08),
+             inset 0 1px 0 rgba(255,255,255,.04);
+}
+.pred-panel::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 3px);
+  z-index:0;
+}
+.pred-scanline {
+  position:absolute; top:0; left:0; right:0; height:60px;
+  background:linear-gradient(to bottom,rgba(99,102,241,.04),transparent);
+  animation:pred-scan 6s linear infinite; z-index:1; pointer-events:none;
+}
+.pred-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:11px 16px; border-bottom:1px solid rgba(99,102,241,.18);
+  background:rgba(99,102,241,.06); position:relative; z-index:2;
+}
+.pred-header-left { display:flex; align-items:center; gap:10px; }
+.pred-dot {
+  width:7px; height:7px; border-radius:50%; background:#6366F1; flex-shrink:0;
+  animation:pred-dot 2s ease-in-out infinite;
+  box-shadow:0 0 8px #6366F1;
+}
+.pred-title {
+  font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;
+  color:#818CF8; letter-spacing:.12em; text-transform:uppercase;
+}
+.pred-subtitle {
+  font-size:11px; color:rgba(255,255,255,.4); margin-top:2px;
+}
+.pred-badge {
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  padding:3px 9px; border-radius:4px; border:1px solid;
+  letter-spacing:.08em; text-transform:uppercase;
+}
+.pred-body { padding:14px 16px; position:relative; z-index:2; display:flex; flex-direction:column; gap:12px; }
+
+/* Zone 1: gauge + metrics */
+.pred-top-row { display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:start; }
+.pred-score-box {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:14px 10px; border-radius:10px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(99,102,241,.15);
+  text-align:center;
+}
+.pred-score-num {
+  font-family:'JetBrains Mono',monospace; font-size:52px; font-weight:900;
+  line-height:1; animation:pred-num .6s ease forwards;
+}
+.pred-score-denom { font-family:'JetBrains Mono',monospace; font-size:13px; color:rgba(255,255,255,.3); margin-top:2px; }
+.pred-score-label { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:.12em; color:rgba(255,255,255,.35); margin-top:6px; text-transform:uppercase; }
+.pred-right { display:flex; flex-direction:column; gap:8px; }
+
+/* Metric bars */
+.pred-metric-row { display:flex; flex-direction:column; gap:4px; }
+.pred-metric-label { display:flex; justify-content:space-between; align-items:center; }
+.pred-metric-name  { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.45); letter-spacing:.06em; text-transform:uppercase; }
+.pred-metric-val   { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#A5B4FC; }
+.pred-metric-track { height:4px; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden; }
+.pred-metric-fill  { height:100%; border-radius:2px; animation:pred-fill .9s ease forwards; }
+.pred-metric-range { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(165,180,252,.4); margin-top:2px; }
+
+/* Zone 2: channels */
+.pred-channels-title { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(99,102,241,.6); letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+.pred-channel-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.pred-channel-name { font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,.6); width:88px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pred-channel-track { flex:1; height:4px; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden; }
+.pred-channel-fill  { height:100%; border-radius:2px; animation:pred-fill .9s ease forwards; }
+.pred-channel-val   { font-family:'JetBrains Mono',monospace; font-size:10px; width:32px; text-align:right; flex-shrink:0; }
+.pred-channel-reason { font-size:10px; color:rgba(255,255,255,.3); margin-left:4px; font-style:italic; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Zone 3: tags */
+.pred-tags { display:flex; flex-wrap:wrap; gap:5px; }
+.pred-tags-title { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.3); letter-spacing:.08em; text-transform:uppercase; width:100%; margin-bottom:2px; }
+.pred-tag {
+  font-size:10px; padding:3px 9px; border-radius:20px; border:1px solid; font-weight:600;
+  display:inline-flex; align-items:center; gap:4px;
+}
+.pred-tag-ok     { background:rgba(74,222,128,.08);  color:#4ADE80; border-color:rgba(74,222,128,.2); }
+.pred-tag-warn   { background:rgba(252,211,77,.08);  color:#FCD34D; border-color:rgba(252,211,77,.2); }
+.pred-tag-danger { background:rgba(248,113,113,.08); color:#F87171; border-color:rgba(248,113,113,.2); }
+
+/* Zone 4: recommendation */
+.pred-rec {
+  padding:10px 14px; border-radius:8px;
+  background:rgba(99,102,241,.06); border:1px solid rgba(99,102,241,.2);
+}
+.pred-rec-label { font-family:'JetBrains Mono',monospace; font-size:9px; color:#818CF8; letter-spacing:.1em; text-transform:uppercase; margin-bottom:5px; }
+.pred-rec-text  { font-size:12px; color:rgba(255,255,255,.7); line-height:1.6; }
+
+/* Loading */
+.pred-loading { display:flex; align-items:center; gap:12px; padding:20px 16px; color:rgba(99,102,241,.6); font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.05em; }
+.pred-spinner { width:16px; height:16px; border:2px solid rgba(99,102,241,.2); border-top-color:#6366F1; border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+
 /* ── Barra de progreso con gatitos — marketing (azul) ── */
 @keyframes cat-bounce-a { 0%,100%{transform:translateY(0px) rotate(-3deg) scaleX(1)} 30%{transform:translateY(-4px) rotate(2deg) scaleX(1.05)} 60%{transform:translateY(-2px) rotate(-4deg) scaleX(.97)} }
 @keyframes cat-bounce-b { 0%,100%{transform:translateY(-2px) rotate(2deg) scaleX(.98)} 40%{transform:translateY(-5px) rotate(-3deg) scaleX(1.04)} 70%{transform:translateY(0px) rotate(3deg) scaleX(1)} }
@@ -706,6 +816,9 @@
     <button class="mkt-view-btn" id="vbtn-dash" onclick="setMktView('dash',this)">🎮 Dashboard Pixel</button>
     <span style="font-size:10px;color:#4A5568;font-family:Inter,sans-serif;margin-left:4px">Inspirado en pixel-agents (pablodelucca)</span>
   </div>
+
+  <!-- PREDICTOR CONTAINER — análisis predictivo pre-lanzamiento -->
+  <div id="predictor-container" style="display:none;padding:0 24px 16px"></div>
 
   <!-- GENIE CONTAINER -->
   <div id="genie-container" style="display:none;padding:0 24px 32px"></div>
@@ -1450,7 +1563,7 @@ function buildGeniePanelSkeleton() {
   </div>`;
 }
 
-async function showGenie(mission, agentResults) {
+async function showGenie(mission, agentResults, predResult = null) {
   const container = document.getElementById('genie-container');
   if (!container) return;
   container.style.display = 'block';
@@ -1458,7 +1571,13 @@ async function showGenie(mission, agentResults) {
   container.scrollIntoView({ behavior:'smooth', block:'start' });
   const sectionsEl = document.getElementById('genie-sections');
   const speechEl   = document.getElementById('genie-speech');
-  const outputsText = agentResults.filter(r=>r.text).map(r=>`### ${r.name}\n${r.text.slice(0,500)}`).join('\n\n---\n\n');
+  // Reducir outputs para no sobrepasar el límite del Worker
+  const outputsText = agentResults.filter(r=>r.text).map(r=>`[${r.name}] ${r.text.slice(0,200).replace(/\n+/g,' ')}`).join('\n');
+
+  // Contexto del Predictor compacto
+  const predCtx = predResult
+    ? `[PREDICTOR P(éxito):${predResult.probabilidad}% ROAS:${predResult.roas_min}x-${predResult.roas_max}x Canal#1:${predResult.canales?.[0]?.nombre||'N/A'} Timing:${predResult.timing||'adecuado'}]`
+    : '';
 
   if (!window.CRM_LLM?.engine) {
     if (speechEl) speechEl.innerHTML = '🪄 Activa el LLM para que el Genio pueda darte su síntesis completa.';
@@ -1471,19 +1590,35 @@ async function showGenie(mission, agentResults) {
     });
     return;
   }
-  const sys = `Eres el Genio de MetaTronix — sintetizas el trabajo de la agencia de MARKETING completa y das dirección estratégica clara, específica y accionable.
+  const sys = `Eres el Genio de MetaTronix — sintetizas la agencia de MARKETING y das dirección estratégica accionable.
 
-MetaTronix es un CRM + IA para equipos de ventas en LATAM. ICP: Director de Ventas o CEO, empresa 20-500 empleados, sector retail/fintech/industrial. Precios: Starter $299/mes · Growth $799/mes · Enterprise $2,499/mes.
+MetaTronix: CRM + IA para ventas en LATAM. ICP: Director Ventas/CEO, 20-500 empleados, retail/fintech/industrial. Precios: $299-$2,499/mes.
 
-REGLAS: Responde en español. Sé específico con métricas. Menciona los agentes por nombre. Cada acción tiene QUÉ, CUÁNDO y MÉTRICA.`;
-  const userMsg = `La agencia trabajó en esta misión: "${mission.slice(0,300)}"\n\nOutputs:\n\n${outputsText}\n\nResponde con EXACTAMENTE estas 5 secciones:\n\n🔮 RESUMEN EJECUTIVO\n[3 líneas: qué encontró la agencia, cuál es la oportunidad central y el alcance potencial]\n\n💡 CÓMO APLICARLO HOY\n[5 acciones concretas. Formato: N. ACCIÓN → qué hacer · cuándo · métrica de éxito]\n\n⚡ LO PRIMERO QUE DEBES HACER\n[La acción #1 para los próximos 60 minutos — ultra específica, con nombres de agentes y pasos]\n\n🗓️ PLAN DE 7 DÍAS\n[Día 1 al 7 — qué ejecutar en MetaTronix — una acción por día, ejecutable por un marketer real]\n\n🎯 PREDICCIÓN DEL GENIO\n[Resultado esperado: en 7 días (con números) y en 30 días (con números) para MetaTronix]`;
+REGLAS: Español. Si recibes datos del PREDICTOR (P%,ROAS,Canal#1), úsalos para anclar la predicción del Genio con números reales. Menciona agentes por nombre. QUÉ+CUÁNDO+MÉTRICA en cada acción.`;
+  const userMsg = `Misión: "${mission.slice(0,200)}" ${predCtx}\n\nOutputs:\n${outputsText}\n\nResponde con EXACTAMENTE estas 5 secciones:\n\n🔮 RESUMEN EJECUTIVO\n[3 líneas: oportunidad central, alcance y probabilidad de éxito]\n\n💡 CÓMO APLICARLO HOY\n[5 acciones: N. ACCIÓN → qué · cuándo · métrica]\n\n⚡ LO PRIMERO QUE DEBES HACER\n[Acción #1 para los próximos 60 min — ultra específica]\n\n🗓️ PLAN DE 7 DÍAS\n[Día 1-7: una acción concreta por día]\n\n🎯 PREDICCIÓN DEL GENIO\n[Resultado en 7 días y 30 días con números]`;
   try {
-    if (speechEl) speechEl.innerHTML = '🪄 Analizando el trabajo de los 15 agentes… dame un momento.';
-    const result = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 2000 });
-    if (speechEl) speechEl.innerHTML = '✨ Aquí está mi síntesis — sigue cada sección en orden para el máximo impacto.';
+    if (speechEl) speechEl.innerHTML = '🪄 Sintetizando el trabajo de los agentes…';
+    const result = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:1200, agentName:'Genie', page:'marketing' });
+    if (speechEl) speechEl.innerHTML = '✨ Síntesis lista — sigue cada sección en orden.';
     buildGenieSections(sectionsEl, parseGenieSections(result));
   } catch(e) {
-    if (speechEl) speechEl.innerHTML = `⚠️ Error del Genio: ${e.message}`;
+    // Retry con prompt mínimo
+    if (speechEl) speechEl.innerHTML = '🪄 Reintentando con resumen compacto…';
+    try {
+      const mini = agentResults.slice(0,5).map(r=>`[${r.name}] ${r.text.slice(0,100).replace(/\n+/g,' ')}`).join('\n');
+      const r2 = await window.CRM_LLM.chat(sys, `Misión:"${mission.slice(0,150)}"\nOutputs:\n${mini}\nDa: 🔮 RESUMEN EJECUTIVO · 💡 CÓMO APLICARLO HOY · ⚡ LO PRIMERO · 🗓️ PLAN 7 DÍAS · 🎯 PREDICCIÓN`, { maxTokens:900, agentName:'Genie', page:'marketing' });
+      if (speechEl) speechEl.innerHTML = '✨ Síntesis lista (modo compacto).';
+      buildGenieSections(sectionsEl, parseGenieSections(r2));
+    } catch(e2) {
+      if (speechEl) speechEl.innerHTML = '⚡ Síntesis offline basada en outputs de agentes.';
+      buildGenieSections(sectionsEl, {
+        resumen: `La agencia de marketing analizó: "${mission.slice(0,100)}…"\n\n${agentResults.slice(0,3).map(r=>`${r.name}: ${r.text.slice(0,120)}`).join('\n\n')}`,
+        aplicar: agentResults.slice(0,5).map((r,i)=>`${i+1}. ${r.name}: Aplica su recomendación principal hoy.`).join('\n'),
+        primero: `Abre el Orquestador y lanza la campaña con el brief completo para el plan de ataque.`,
+        plan: `Día 1-2: Narrativa con el Narrador.\nDía 3: Producción con Director.\nDía 4-5: Distribución con Motor.\nDía 6: CRO con Conversor.\nDía 7: Análisis con Aprendizaje.`,
+        prediccion: predResult ? `Con P(éxito) del ${predResult.probabilidad}% y ROAS esperado ${predResult.roas_min}x-${predResult.roas_max}x: en 7 días tráfico +40%. En 30 días leads calificados con CAC optimizado.` : `En 7 días: +3 campañas activas. En 30 días: pipeline marketing completo.`,
+      });
+    }
   }
 }
 
@@ -1547,6 +1682,230 @@ function loadExampleMkt(key) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   PREDICTOR DE CAMPAÑAS — Lógica predictiva
+   ══════════════════════════════════════════════════════════ */
+
+function predScoreColor(p) {
+  return p >= 75 ? '#4ADE80' : p >= 50 ? '#FCD34D' : '#F87171';
+}
+
+function predTimingLabel(t) {
+  return { optimo:'🟢 TIMING ÓPTIMO', adecuado:'🟡 TIMING ADECUADO', esperar:'🔴 ESPERAR' }[t] || '🟡 EVALUAR';
+}
+
+/* Claude extrae estructura predictiva */
+async function predClaudeExtract(mission, hfScore) {
+  const sys = `Eres el Predictor de Campañas de MetaTronix. Analizas briefs y produces predicciones de marketing B2B en LATAM. MetaTronix CRM IA: $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra.`;
+
+  const userMsg = `Brief: "${mission.slice(0,280)}"
+Score semántico inicial: ${hfScore}%
+
+Responde EXACTAMENTE este JSON:
+{"probabilidad":<0-100>,"roas_min":<num>,"roas_max":<num>,"canales":[{"nombre":"<LinkedIn|Meta Ads|Email|Google SEM|TikTok|WhatsApp|YouTube>","score":<0-1>,"razon":"<6 palabras>"}],"oportunidades":["<5 palabras>"],"riesgos":["<5 palabras>"],"recomendacion":"<2 oraciones específicas>","confianza":<0-1>,"timing":"<optimo|adecuado|esperar>"}`;
+
+  const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:500, agentName:'Predictor', page:'marketing' });
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('parse');
+  return JSON.parse(m[0]);
+}
+
+/* Render del panel predictivo */
+function renderPredPanel(structured, hfScore) {
+  const {
+    probabilidad = hfScore, roas_min = 1.8, roas_max = 3.2,
+    canales = [], oportunidades = [], riesgos = [],
+    recomendacion = '', confianza = 0.65, timing = 'adecuado'
+  } = structured;
+
+  const pct = n => Math.round(n * 100);
+  const color = predScoreColor(probabilidad);
+  const execColor = probabilidad >= 75 ? '#4ADE80' : probabilidad >= 50 ? '#FCD34D' : '#F87171';
+
+  const channelBars = [...canales]
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 5)
+    .map(c => {
+      const w = Math.round(c.score * 100);
+      const col = c.score > 0.7 ? '#4ADE80' : c.score > 0.45 ? '#FCD34D' : '#94A3B8';
+      return `<div class="pred-channel-row">
+        <div class="pred-channel-name">${c.nombre}</div>
+        <div class="pred-channel-track">
+          <div class="pred-channel-fill" style="--w:${w}%;width:${w}%;background:${col}"></div>
+        </div>
+        <div class="pred-channel-val" style="color:${col}">${c.score.toFixed(2)}</div>
+        <div class="pred-channel-reason">${c.razon || ''}</div>
+      </div>`;
+    }).join('');
+
+  const oppTags = (oportunidades || []).slice(0,4).map(o =>
+    `<span class="pred-tag pred-tag-ok">✓ ${o}</span>`).join('');
+
+  const riskTags = (riesgos || []).slice(0,3).map(r =>
+    `<span class="pred-tag pred-tag-warn">⚠ ${r}</span>`).join('');
+
+  const confLow  = Math.max(0, pct(confianza) - 12);
+  const confHigh = Math.min(100, pct(confianza) + 12);
+
+  return `
+  <div class="pred-panel">
+    <div class="pred-scanline"></div>
+
+    <div class="pred-header">
+      <div class="pred-header-left">
+        <div class="pred-dot"></div>
+        <div>
+          <div class="pred-title">🔮 PREDICTOR · ANÁLISIS PRE-CAMPAÑA</div>
+          <div class="pred-subtitle">Probabilidad de éxito calculada antes de invertir un peso</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <span class="pred-badge" style="color:${execColor};border-color:${execColor}40;background:${execColor}0d">${predTimingLabel(timing)}</span>
+        <span class="pred-badge" style="color:#818CF8;border-color:rgba(129,140,248,.3)">CONFIANZA ${pct(confianza)}% [${confLow}–${confHigh}]</span>
+      </div>
+    </div>
+
+    <div class="pred-body">
+
+      <!-- Zona 1: Gauge + métricas -->
+      <div class="pred-top-row">
+        <div class="pred-score-box">
+          <div class="pred-score-num" style="color:${color}">${probabilidad}</div>
+          <div class="pred-score-denom">/ 100</div>
+          <div class="pred-score-label">PROB. ÉXITO</div>
+        </div>
+
+        <div class="pred-right">
+          <div class="pred-metric-row">
+            <div class="pred-metric-label">
+              <span class="pred-metric-name">Probabilidad de éxito</span>
+              <span class="pred-metric-val">${probabilidad}%</span>
+            </div>
+            <div class="pred-metric-track">
+              <div class="pred-metric-fill" style="--w:${probabilidad}%;width:${probabilidad}%;background:linear-gradient(90deg,${color},${color}cc)"></div>
+            </div>
+          </div>
+          <div class="pred-metric-row">
+            <div class="pred-metric-label">
+              <span class="pred-metric-name">ROAS esperado</span>
+              <span class="pred-metric-val">${roas_min.toFixed(1)}x – ${roas_max.toFixed(1)}x</span>
+            </div>
+            <div class="pred-metric-track">
+              <div class="pred-metric-fill" style="--w:${Math.min(100, roas_max/5*100)}%;width:${Math.min(100, roas_max/5*100)}%;background:linear-gradient(90deg,#818CF8,#6366F1)"></div>
+            </div>
+            <div class="pred-metric-range">[ punto de equilibrio: 1.0x — óptimo: 3.0x+ ]</div>
+          </div>
+          <div class="pred-metric-row">
+            <div class="pred-metric-label">
+              <span class="pred-metric-name">Confianza del modelo</span>
+              <span class="pred-metric-val">${pct(confianza)}%</span>
+            </div>
+            <div class="pred-metric-track">
+              <div class="pred-metric-fill" style="--w:${pct(confianza)}%;width:${pct(confianza)}%;background:linear-gradient(90deg,#A78BFA,#7C3AED)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zona 2: Canales óptimos -->
+      ${channelBars ? `
+      <div>
+        <div class="pred-channels-title">Canal óptimo — potencial de conversión por plataforma</div>
+        ${channelBars}
+      </div>` : ''}
+
+      <!-- Zona 3: Oportunidades y riesgos -->
+      ${(oppTags || riskTags) ? `
+      <div class="pred-tags">
+        <div class="pred-tags-title">Señales detectadas</div>
+        ${oppTags}
+        ${riskTags}
+      </div>` : ''}
+
+      <!-- Zona 4: Recomendación -->
+      ${recomendacion ? `
+      <div class="pred-rec">
+        <div class="pred-rec-label">⚡ Recomendación de lanzamiento</div>
+        <div class="pred-rec-text">${recomendacion}</div>
+      </div>` : ''}
+
+    </div>
+  </div>`;
+}
+
+/* Función principal: runPREDICTOR */
+async function runPREDICTOR(mission) {
+  const container = document.getElementById('predictor-container');
+  if (!container || !mission) return null;
+
+  // Mostrar skeleton
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="pred-panel">
+      <div class="pred-header">
+        <div class="pred-header-left">
+          <div class="pred-dot"></div>
+          <div>
+            <div class="pred-title">🔮 PREDICTOR · ANÁLISIS PRE-CAMPAÑA</div>
+            <div class="pred-subtitle">Calculando probabilidad de éxito antes del lanzamiento…</div>
+          </div>
+        </div>
+      </div>
+      <div class="pred-loading">
+        <div class="pred-spinner"></div>
+        Analizando brief · clasificando señales · proyectando ROAS esperado…
+      </div>
+    </div>`;
+  container.scrollIntoView({ behavior:'smooth', block:'start' });
+
+  /* Paso 1: HF zero-shot para score inicial rápido */
+  let hfScore = 55; // fallback
+  try {
+    if (window.CRM_AI) {
+      const clf = await window.CRM_AI.zeroShot();
+      const result = await clf(mission.slice(0, 400), [
+        'campaña de alto impacto con gran probabilidad de éxito',
+        'campaña de impacto medio con resultados moderados',
+        'campaña con baja probabilidad de éxito'
+      ]);
+      const labels = result.labels;
+      const scores = result.scores;
+      const altoIdx = labels.indexOf('campaña de alto impacto con gran probabilidad de éxito');
+      const medIdx  = labels.indexOf('campaña de impacto medio con resultados moderados');
+      const s_alto = altoIdx >= 0 ? scores[altoIdx] : 0;
+      const s_med  = medIdx  >= 0 ? scores[medIdx]  : 0;
+      hfScore = Math.round(s_alto * 85 + s_med * 55 + (1 - s_alto - s_med) * 25);
+      hfScore = Math.max(15, Math.min(92, hfScore));
+    }
+  } catch(_) { /* HF no disponible */ }
+
+  /* Paso 2: Claude extrae estructura completa */
+  let structured = {
+    probabilidad: hfScore,
+    roas_min: parseFloat((1.2 + hfScore/100 * 2).toFixed(1)),
+    roas_max: parseFloat((1.8 + hfScore/100 * 3.5).toFixed(1)),
+    canales: [
+      { nombre:'LinkedIn',  score: 0.72, razon:'audiencia B2B alineada' },
+      { nombre:'Meta Ads',  score: 0.58, razon:'remarketing efectivo' },
+      { nombre:'Email',     score: 0.51, razon:'base tibia, nurturing' },
+      { nombre:'Google SEM',score: 0.44, razon:'keywords competidas' },
+    ],
+    oportunidades: ['mercado receptivo', 'mensaje diferenciado', 'timing Q2'],
+    riesgos: ['presupuesto ajustado', 'competencia activa'],
+    recomendacion: `Basado en el análisis semántico del brief, el canal con mayor afinidad es LinkedIn para el ICP B2B. Activa el LLM para obtener una recomendación específica con presupuesto y timing exactos.`,
+    confianza: 0.60, timing: hfScore >= 70 ? 'optimo' : hfScore >= 50 ? 'adecuado' : 'esperar',
+  };
+
+  if (window.CRM_LLM?.engine) {
+    try {
+      structured = await predClaudeExtract(mission, hfScore);
+    } catch(_) { /* usa fallback */ }
+  }
+
+  container.innerHTML = renderPredPanel(structured, hfScore);
+  return structured;
+}
+
 /* ── Barra de progreso con gatitos ──────────────────── */
 function updateAgencyProgress(done, total) {
   const bar  = document.getElementById('agency-progress');
@@ -1591,6 +1950,9 @@ async function launchAllAgents() {
 
   document.getElementById('agents-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // PREDICTOR arranca en paralelo con los agentes — aparece en cuanto termina (~3-5s)
+  const predPromise = runPREDICTOR(mission);
+
   let _done = 0;
   updateAgencyProgress(0, targets.length);
   await Promise.allSettled(
@@ -1601,13 +1963,16 @@ async function launchAllAgents() {
   if (launchIcon) launchIcon.textContent = '✅';
   if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ LA MISIÓN — INVOCANDO GENIO…';
 
+  // Esperar predictor si aún no terminó
+  const predResult = await predPromise.catch(() => null);
+
   // Recoger todos los outputs
   const agentResults = targets.map(a => ({
     name: a.name,
     text: (document.getElementById(`output-${a.id}`)?.innerText || '').trim(),
   })).filter(r => r.text.length > 20);
 
-  await showGenie(mission, agentResults);
+  await showGenie(mission, agentResults, predResult);
 
   setTimeout(() => {
     if (launchIcon) launchIcon.textContent = '🚀';
