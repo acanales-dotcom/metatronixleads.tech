@@ -17,7 +17,7 @@ window.MTX_CONFIG = {
 
   /* ── Asset cache buster — bumpar al hacer deploy ──────────── */
   /* Formato: AAAAMMDDNN (NN = número de deploy del día)         */
-  ASSET_V:     '202604171',
+  ASSET_V:     '202604181',
 };
 
 /* ── Registro del Service Worker ─────────────────────────── */
