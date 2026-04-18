@@ -2546,7 +2546,14 @@ function scoreColor(s) {
 
 /* ── Claude extrae estructura semántica ── */
 async function intelClaudeExtract(mission, agentSummaries, agentScores) {
-  const sys = `Eres el motor de análisis INTEL de MetaTronix. Tu función es procesar salidas de agentes de ventas y devolver SOLO JSON válido, sin texto adicional. Nunca expliques, nunca comentes. Solo JSON.`;
+  const sys = `Eres el motor de análisis INTEL de MetaTronix. Tu función es procesar salidas de agentes de ventas y devolver SOLO JSON válido, sin texto adicional. Nunca expliques, nunca comentes. Solo JSON.
+
+PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — OBLIGATORIO:
+- SOLO extrae lo EXPLÍCITAMENTE presente en los textos de los agentes recibidos
+- NUNCA inventes scores, riesgos ni recomendaciones que no deriven directamente del input
+- Para campos ausentes en el input: usa null en el JSON, NUNCA un valor inventado
+- La confianza de cada campo debe reflejar cuánto del input lo sustenta (0.0–1.0)
+- Si el input es ambiguo o contradictorio, indica ambiguity:true en el JSON de salida`;
 
   const scoresText = agentScores.map(a =>
     `${a.name}: relevancia=${a.relevance.toFixed(2)}, texto="${a.text.slice(0,120)}"`
@@ -3167,7 +3174,17 @@ REGLAS:
 - Cuando existan riesgos críticos o contradicciones del INTEL, mencionarlos explícitamente en el Resumen Ejecutivo.
 - Menciona a los agentes por nombre cuando cites su output.
 - Cada acción debe tener: QUÉ, CUÁNDO y MÉTRICA de éxito.
-- El plan de 7 días debe ser ejecutable por un vendedor real de MetaTronix.`;
+- El plan de 7 días debe ser ejecutable por un vendedor real de MetaTronix.
+
+PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
+1. SOLO basa tu síntesis en los outputs de los agentes EXPLÍCITAMENTE recibidos en este contexto
+2. NUNCA inventes deals, nombres de clientes, montos ni fechas que no aparezcan en el input
+3. HECHO vs ANÁLISIS: "Los agentes reportan X" para hechos; "Esto podría indicar Y" para análisis
+4. INCERTIDUMBRE: si un dato del input es vago, indícalo — "El agente reporta X aunque sin detalle preciso"
+5. FORECAST: toda proyección numérica debe indicar su base — "Bajo el ritmo actual reportado, estimado..."
+6. AMBIGÜEDAD: si hay contradicción entre agentes, señálala explícitamente en lugar de elegir uno
+7. PLAN DE 7 DÍAS: basa cada acción en lo que los agentes realmente recomendaron — no improvises
+8. Añade al final: "⚠ Síntesis basada en outputs de agentes IA — validar con datos reales del CRM antes de ejecutar"`;
 
   // Contexto INTEL ultra-compacto (≤ 80 chars) para no inflar el prompt
   const intelCtx = intelScores
@@ -3833,7 +3850,18 @@ document.addEventListener('DOMContentLoaded', init);
       const resp=await fetch(proxyUrl+'/groq',{method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
         body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:2048,
-          system:`Eres MetaVentaX, Director Comercial IA de IBANOR SA de CV / MetaTronix. Especialidad: pipeline de ventas, leads, conversión, estrategia comercial B2B en México. Responde en español con datos precisos y recomendaciones accionables. Formato: HTML semántico (h2,h3,p,ul,table,strong). Sin DOCTYPE.`,
+          system:`Eres MetaVentaX, Director Comercial IA de IBANOR SA de CV / MetaTronix. Especialidad: pipeline de ventas, leads, conversión, estrategia comercial B2B en México. Responde en español con datos precisos y recomendaciones accionables. Formato: HTML semántico (h2,h3,p,ul,table,strong). Sin DOCTYPE.
+
+PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
+1. SOLO afirma lo EXPLÍCITAMENTE presente en los datos de esta conversación
+2. NUNCA inventes cifras de pipeline, tasas de conversión ni forecast — dato ausente = "Sin dato disponible"
+3. HECHO vs ANÁLISIS: "Los datos muestran X" para hechos; "Esto podría indicar Y" para análisis
+4. INCERTIDUMBRE: si no es certeza, usa "aparentemente", "podría ser", "requiere verificación del equipo de ventas"
+5. FORECAST: cualquier proyección debe indicar su supuesto base y confianza — "Bajo supuesto de tasa actual, estimado..."
+6. CAUSALIDAD: nunca la atribuyas sin evidencia directa — "correlación posible, no causalidad confirmada"
+7. AMBIGÜEDAD: si la consulta es incompleta, solicita el dato faltante — no rellenes con benchmarks del sector
+8. RECOMENDACIONES COMERCIALES: termina con "⚠ Verificar con datos del CRM antes de implementar estrategia"
+9. KPIs DE VENTAS: añade "† Basado en información proporcionada — validar contra CRM antes de decisiones"`,
           messages:[{role:'user',content:q}],stream:true}),signal:AbortSignal.timeout(90000)});
       if(!resp.ok){const e=await resp.json().catch(()=>({error:resp.statusText}));throw new Error(e.error||'Error '+resp.status);}
       const reader=resp.body.getReader();const dec=new TextDecoder();let buf='';let html='';let iT=0;let oT=0;out.innerHTML='';

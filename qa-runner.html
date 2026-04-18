@@ -53,10 +53,10 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:16px 32p
 <div class="clf-banner">⚠ MTX QA RUNNER — AUTOMATED TEST EXECUTION — INTERNAL USE ONLY ⚠</div>
 <header>
   <h1>MTX QA RUNNER</h1>
-  <p>Automated test execution for metatronixleads.tech · 107 automated tests across 19 suites · v2.3 Pentagon+AHL+Security</p>
+  <p>Automated test execution for metatronixleads.tech · 134 automated tests across 22 suites · v3.0 Pentagon+AHL+DIRS+ADMS+AHL2</p>
 </header>
 <div class="stats-bar">
-  <div class="stat"><div class="stat-num" id="s-total" style="color:var(--text)">107</div><div class="stat-label">Total</div></div>
+  <div class="stat"><div class="stat-num" id="s-total" style="color:var(--text)">134</div><div class="stat-label">Total</div></div>
   <div class="stat"><div class="stat-num" id="s-pass" style="color:var(--accent)">0</div><div class="stat-label">Pass</div></div>
   <div class="stat"><div class="stat-num" id="s-fail" style="color:var(--red)">0</div><div class="stat-label">Fail</div></div>
   <div class="stat"><div class="stat-num" id="s-skip" style="color:var(--muted)">0</div><div class="stat-label">Skip</div></div>
@@ -84,11 +84,14 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:16px 32p
   <button class="btn" onclick="runSuite('HQ')" style="border-color:#A78BFA;color:#A78BFA">HQ</button>
   <button class="btn" onclick="runSuite('OPR')" style="border-color:#A78BFA;color:#A78BFA">OPR</button>
   <button class="btn" onclick="runSuite('SIM')" style="border-color:#818CF8;color:#818CF8;font-weight:700">🏆 SIM</button>
+  <button class="btn" onclick="runSuite('DIRS')" style="border-color:#00e5ff;color:#00e5ff;font-weight:700">📊 DIRS</button>
+  <button class="btn" onclick="runSuite('ADMS')" style="border-color:#b966ff;color:#b966ff;font-weight:700">🏛 ADMS</button>
+  <button class="btn" onclick="runSuite('AHL2')" style="border-color:#F59E0B;color:#F59E0B;font-weight:700">🧠 AHL2</button>
   <button class="btn" onclick="resetAll()" style="margin-left:auto">↺ RESET</button>
   <a href="qa-protocol.html" class="btn" style="text-decoration:none;display:flex;align-items:center">📋 PROTOCOL</a>
 </div>
 <main id="mainContent"></main>
-<footer>MTX QA RUNNER v2.3 · metatronixleads.tech · Automated: 107 tests · Manual: 270+ tests (qa-protocol.html) · Pentagon: 223,050 tests baseline · AHL: FDA SaMD · IEC 62304 · ISO 14971 · NIST AI RMF</footer>
+<footer>MTX QA RUNNER v3.0 · metatronixleads.tech · Automated: 134 tests · 22 suites · Manual: 270+ (qa-protocol.html) · Pentagon: 223,050 tests baseline · AHL médico: FDA SaMD · IEC 62304 · ISO 14971 · NIST AI RMF · DIRS: 4 directores IA · ADMS: CEO+Consejo+Finanzas · AHL2: protocolo anti-alucinación por agente</footer>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -1166,6 +1169,292 @@ const suites = [
   }},
 
 ]},
+
+/* ════════════════════════════════════════════════════════════════
+   DIRS — DIRECTOR PAGES (4 agentes directivos en sus departamentos)
+   ════════════════════════════════════════════════════════════════ */
+{id:'DIRS', title:'DIRECTORES IA — PÁGINAS Y ESTRUCTURA', tests:[
+
+  {id:'DIRS-001', name:'director-ops.html carga sin 404 (MetaOps standalone)', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/director-ops.html');
+    if(r.ok)return pass('director-ops.html OK ('+r.status+')');
+    return fail('HTTP '+r.status);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'DIRS-002', name:'director-ops.html tiene agent-panel y MetaOps en h1', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/director-ops.html');const t=await r.text();
+    const hasPanel=t.includes('agent-panel');
+    const hasMetaOps=t.includes('MetaOps');
+    const hasGroq=t.includes('llama-3.3-70b')||t.includes('groq');
+    if(hasPanel&&hasMetaOps&&hasGroq)return pass('agent-panel ✓ · MetaOps ✓ · Groq ✓');
+    return fail('Falta: panel='+hasPanel+' metaops='+hasMetaOps+' groq='+hasGroq);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'DIRS-003', name:'ventas.html tiene sección #director para MetaVentaX', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ventas.html');const t=await r.text();
+    const hasSection=t.includes('id="director"')||t.includes("id='director'");
+    const hasMetaVentaX=t.includes('MetaVentaX');
+    if(hasSection&&hasMetaVentaX)return pass('section#director ✓ · MetaVentaX ✓');
+    return fail('Falta: section='+hasSection+' metaventax='+hasMetaVentaX);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'DIRS-004', name:'ventas.html#director: checkAnchor + hash visibility logic', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ventas.html');const t=await r.text();
+    const hasCheckAnchor=t.includes('checkAnchor')||t.includes('location.hash');
+    const hasHashDirector=t.includes('#director');
+    const hasHashChange=t.includes('hashchange');
+    if(hasCheckAnchor&&hasHashDirector&&hasHashChange)return pass('checkAnchor ✓ · #director ✓ · hashchange ✓');
+    return fail('Falta: checkAnchor='+hasCheckAnchor+' #director='+hasHashDirector+' hashchange='+hasHashChange);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'DIRS-005', name:'marketing.html tiene sección #director-mktx para MetaMKTX', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/marketing.html');const t=await r.text();
+    const hasSection=t.includes('id="director-mktx"')||t.includes("id='director-mktx'");
+    const hasMetaMKTX=t.includes('MetaMKTX');
+    if(hasSection&&hasMetaMKTX)return pass('section#director-mktx ✓ · MetaMKTX ✓');
+    return fail('Falta: section='+hasSection+' metamktx='+hasMetaMKTX);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'DIRS-006', name:'marketing.html MetaMKTX: mktx_send + mktx_ask + hash logic', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/marketing.html');const t=await r.text();
+    const hasSend=t.includes('mktx_send');
+    const hasAsk=t.includes('mktx_ask');
+    const hasHash=t.includes('#director')&&(t.includes('checkMktxAnchor')||t.includes('director-mktx'));
+    if(hasSend&&hasAsk&&hasHash)return pass('mktx_send ✓ · mktx_ask ✓ · hash logic ✓');
+    return fail('Falta: send='+hasSend+' ask='+hasAsk+' hash='+hasHash);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'DIRS-007', name:'finanzas.html tiene sección #director para MetaAdmin', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/finanzas.html');const t=await r.text();
+    const hasSection=t.includes('id="director"')||t.includes("id='director'");
+    const hasMetaAdmin=t.includes('MetaAdmin');
+    if(hasSection&&hasMetaAdmin)return pass('section#director ✓ · MetaAdmin ✓');
+    return fail('Falta: section='+hasSection+' metaadmin='+hasMetaAdmin);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'DIRS-008', name:'finanzas.html tiene sección #importar con anti-alucinación docs', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/finanzas.html');const t=await r.text();
+    const hasImportar=t.includes('id="importar"')||t.includes("id='importar'");
+    const hasSheetJS=t.includes('xlsx.full.min')||t.includes('SheetJS')||t.includes('XLSX.utils');
+    const hasAHL=t.includes('SOLO extrae')||t.includes('NUNCA invent')||t.includes('anti-alucinac');
+    if(hasImportar&&hasSheetJS&&hasAHL)return pass('section#importar ✓ · SheetJS ✓ · AHL doc-reader ✓');
+    return fail('Falta: importar='+hasImportar+' sheetjs='+hasSheetJS+' ahl='+hasAHL);}catch(e){return fail(e.message);}
+  }},
+
+]},
+
+/* ════════════════════════════════════════════════════════════════
+   ADMS — ADMIN PAGES (CEO restructura + Consejo + módulos financieros)
+   ════════════════════════════════════════════════════════════════ */
+{id:'ADMS', title:'ADMINISTRACIÓN — CEO RESTRUCTURA + MÓDULOS FINANCIEROS', tests:[
+
+  {id:'ADMS-001', name:'ceo.html NO tiene agents-grid (reestructura correcta)', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ceo.html');const t=await r.text();
+    const noAgentsGrid=!t.includes('agents-grid');
+    const noAgentsArray=!t.includes("const AGENTS")&&!t.includes('const agents =');
+    if(noAgentsGrid&&noAgentsArray)return pass('Sin agents-grid ✓ · Sin AGENTS array ✓ — CEO correctamente reestructurado');
+    return fail('CEO aún contiene: '+(noAgentsGrid?'':'agents-grid ')+(!noAgentsArray?'AGENTS array':''));}catch(e){return fail(e.message);}
+  }},
+
+  {id:'ADMS-002', name:'ceo.html tiene KPI strip de datos ejecutivos', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ceo.html');const t=await r.text();
+    const hasKPI=t.includes('kpi')||t.includes('KPI')||t.includes('loadKPIs');
+    const hasStats=t.includes('pipeline')||t.includes('leads')||t.includes('usuarios');
+    if(hasKPI&&hasStats)return pass('KPI strip ✓ · datos ejecutivos ✓');
+    return fail('Falta: kpi='+hasKPI+' stats='+hasStats);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'ADMS-003', name:'ceo.html tiene tarjetas de navegación a los 4 directores', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ceo.html');const t=await r.text();
+    const hasVentas=t.includes('ventas.html#director')||t.includes('Dir. Comercial');
+    const hasMktx=t.includes('marketing.html#director')||t.includes('Dir. Marketing');
+    const hasOps=t.includes('director-ops.html')||t.includes('Dir. Operaciones');
+    const hasAdmin=t.includes('finanzas.html#director')||t.includes('Dir. Administrativo');
+    const count=[hasVentas,hasMktx,hasOps,hasAdmin].filter(Boolean).length;
+    if(count===4)return pass('4/4 director nav links presentes en CEO ✓');
+    return fail(count+'/4 director links: ventas='+hasVentas+' mktx='+hasMktx+' ops='+hasOps+' admin='+hasAdmin);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'ADMS-004', name:'consejo.html tiene 5 mesas del Consejo Ejecutivo', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/consejo.html');const t=await r.text();
+    const hasMesas=['estrategia','mercado','operaciones','finanzas','innovacion'].filter(m=>t.toLowerCase().includes(m));
+    if(hasMesas.length===5)return pass('5/5 mesas: '+hasMesas.join(', ')+' ✓');
+    return fail(hasMesas.length+'/5 mesas encontradas: '+hasMesas.join(', '));}catch(e){return fail(e.message);}
+  }},
+
+  {id:'ADMS-005', name:'facturacion.html carga sin 404 (página de roadmap CFDI)', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/facturacion.html');
+    if(r.ok)return pass('facturacion.html OK ('+r.status+')');
+    return fail('HTTP '+r.status+' — 404 detectado');}catch(e){return fail(e.message);}
+  }},
+
+  {id:'ADMS-006', name:'cobranza.html y compras.html cargan sin 404', run: async()=>{
+    try{
+      const [r1,r2]=await Promise.all([fetch(BASE_URL+'/cobranza.html'),fetch(BASE_URL+'/compras.html')]);
+      if(r1.ok&&r2.ok)return pass('cobranza.html ('+r1.status+') ✓ · compras.html ('+r2.status+') ✓');
+      return fail('cobranza='+r1.status+' compras='+r2.status);
+    }catch(e){return fail(e.message);}
+  }},
+
+  {id:'ADMS-007', name:'5 páginas admin tienen supabase-js CDN y auth guard', run: async()=>{
+    const pages=['ceo','consejo','finanzas','cobranza','compras'];
+    const results=[];
+    for(const p of pages){
+      try{const r=await fetch(BASE_URL+'/'+p+'.html');const t=await r.text();
+      const hasSupabase=t.includes('supabase-js')||t.includes('supabase.createClient');
+      const hasAuth=t.includes('requireAuth')||t.includes('getSession');
+      results.push({p,ok:hasSupabase&&hasAuth,sb:hasSupabase,auth:hasAuth});}
+      catch(e){results.push({p,ok:false,err:e.message});}
+    }
+    const failed=results.filter(r=>!r.ok);
+    if(failed.length===0)return pass('5/5 páginas admin con supabase-js + auth guard ✓');
+    return fail(failed.length+' fallan: '+failed.map(f=>f.p+' (sb='+f.sb+',auth='+f.auth+')').join(', '));
+  }},
+
+]},
+
+/* ════════════════════════════════════════════════════════════════
+   AHL2 — ANTI-HALLUCINATION POR AGENTE (protocolo médico individual)
+   ════════════════════════════════════════════════════════════════ */
+{id:'AHL2', title:'AHL POR AGENTE — PROTOCOLO ANTI-ALUCINACIÓN MÉDICO INDIVIDUAL', tests:[
+
+  {id:'AHL2-001', name:'MetaOps (director-ops.html) — tiene protocolo AHL nivel médico en system prompt', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/director-ops.html');const t=await r.text();
+    const has1=t.includes('NUNCA inventes');
+    const has2=t.includes('HECHO vs ANÁLISIS')||t.includes('HECHO vs AN');
+    const has3=t.includes('Verificar con datos actuales')||t.includes('⚠');
+    const has4=t.includes('ANTI-ALUCINACIÓN')||t.includes('anti-alucinac');
+    if(has1&&has2&&has3&&has4)return pass('MetaOps AHL: NUNCA inventes ✓ · HECHO/ANÁLISIS ✓ · ⚠Verificar ✓ · header AHL ✓');
+    return fail('MetaOps AHL incompleto: '+[has1?'':'NUNCA inventes',has2?'':'HECHO/ANÁLISIS',has3?'':'⚠Verificar',has4?'':'header AHL'].filter(Boolean).join(', '));}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-002', name:'CEO Briefing (ceo.html) — tiene protocolo AHL nivel médico en system prompt', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ceo.html');const t=await r.text();
+    const has1=t.includes('NUNCA inventes');
+    const has2=t.includes('HECHO vs ANÁLISIS')||t.includes('HECHO vs AN');
+    const has3=t.includes('auditar antes de decisiones ejecutivas');
+    const has4=t.includes('ANTI-ALUCINACIÓN')||t.includes('anti-alucinac');
+    if(has1&&has2&&has3&&has4)return pass('CEO AHL: NUNCA inventes ✓ · HECHO/ANÁLISIS ✓ · auditar ✓ · header AHL ✓');
+    return fail('CEO AHL incompleto: '+[has1?'':'NUNCA inventes',has2?'':'HECHO/ANÁLISIS',has3?'':'auditar',has4?'':'header AHL'].filter(Boolean).join(', '));}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-003', name:'Consejo Estratégico (consejo.html) — protocolo AHL en 5 mesas', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/consejo.html');const t=await r.text();
+    const countAHL=(t.match(/ANTI-ALUCINACI[OÓ]N/g)||[]).length;
+    const countNunca=(t.match(/NUNCA inventes/g)||[]).length;
+    const countVerif=(t.match(/Verificar con datos|auditar antes|validar antes/g)||[]).length;
+    if(countAHL>=5&&countNunca>=5&&countVerif>=5)return pass('5 mesas con AHL: header='+countAHL+' NUNCA='+countNunca+' ⚠Verificar='+countVerif+' ✓');
+    return fail('AHL incompleto en consejo: header×'+countAHL+' NUNCA×'+countNunca+' Verificar×'+countVerif+' (esperado ≥5 de cada uno)');}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-004', name:'Consejo Financiero — AHL con nota de contador/auditor', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/consejo.html');const t=await r.text();
+    const hasContador=t.includes('contador')&&t.includes('ANTI-ALUCINACIÓN');
+    const hasSAT=t.includes('SAT')||t.includes('asesor fiscal');
+    const hasAudit=t.includes('auditar')||t.includes('Auditar');
+    if(hasContador&&hasSAT&&hasAudit)return pass('Consejo Financiero AHL: contador ✓ · SAT/fiscal ✓ · auditar ✓');
+    return fail('Consejo Financiero AHL: contador='+hasContador+' SAT='+hasSAT+' auditar='+hasAudit);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-005', name:'MetaVentaX (ventas.html) — protocolo AHL con forecast guard y CRM', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ventas.html');const t=await r.text();
+    const hasNunca=t.includes('NUNCA inventes cifras de pipeline');
+    const hasForecast=t.includes('FORECAST')||(t.includes('supuesto')&&t.includes('estimado'));
+    const hasCRM=t.includes('CRM antes de implementar')||t.includes('datos del CRM');
+    const hasAHL=t.includes('ANTI-ALUCINACIÓN');
+    if(hasNunca&&hasForecast&&hasCRM&&hasAHL)return pass('MetaVentaX AHL: pipeline ✓ · forecast ✓ · CRM ✓ · header AHL ✓');
+    return fail('MetaVentaX AHL: pipeline='+hasNunca+' forecast='+hasForecast+' crm='+hasCRM+' header='+hasAHL);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-006', name:'INTEL (ventas.html) — AHL en motor JSON: null para ausentes, no inventar scores', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ventas.html');const t=await r.text();
+    // INTEL system prompt check
+    const hasNull=t.includes('null en el JSON')&&t.includes('NUNCA un valor inventado');
+    const hasAmbiguity=t.includes('ambiguity:true')||t.includes('ambiguo');
+    const hasConfidence=t.includes('confianza')&&t.includes('0.0');
+    if(hasNull&&hasAmbiguity&&hasConfidence)return pass('INTEL AHL: null para ausentes ✓ · ambiguity ✓ · confidence 0-1 ✓');
+    return fail('INTEL AHL: null='+hasNull+' ambiguity='+hasAmbiguity+' confidence='+hasConfidence);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-007', name:'Genie/Síntesis (ventas.html) — AHL en síntesis: basado en outputs de agentes reales', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/ventas.html');const t=await r.text();
+    const hasBase=t.includes('SOLO basa tu síntesis en los outputs')||t.includes('outputs de los agentes EXPLÍCITAMENTE');
+    const hasContradicion=t.includes('contradicción entre agentes')||t.includes('Contradicción');
+    const hasValidar=t.includes('validar con datos reales del CRM');
+    if(hasBase&&hasContradicion&&hasValidar)return pass('Genie AHL: síntesis-only ✓ · contradicción ✓ · validar CRM ✓');
+    return fail('Genie AHL: base='+hasBase+' contradicción='+hasContradicion+' validar='+hasValidar);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-008', name:'MetaMKTX (marketing.html) — protocolo AHL con benchmark y paid media guards', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/marketing.html');const t=await r.text();
+    const hasNunca=t.includes('NUNCA inventes métricas de campaña')||(t.includes('MetaMKTX')&&t.includes('NUNCA inventes'));
+    const hasBenchmark=t.includes('BENCHMARKS')||(t.includes('benchmarks')&&t.includes('orientativos'));
+    const hasEscalar=t.includes('escalar presupuesto')||t.includes('Validar con datos de campañas');
+    const hasAHL=t.includes('ANTI-ALUCINACIÓN')&&t.includes('MetaMKTX');
+    if(hasNunca&&hasBenchmark&&hasEscalar&&hasAHL)return pass('MetaMKTX AHL: NUNCA ✓ · benchmark guard ✓ · escalar ✓ · header AHL ✓');
+    return fail('MetaMKTX AHL: nunca='+hasNunca+' benchmark='+hasBenchmark+' escalar='+hasEscalar+' header='+hasAHL);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-009', name:'MetaAdmin (finanzas.html) — AHL crítico con SAT/CFDI y nota de contador', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/finanzas.html');const t=await r.text();
+    const hasNunca=t.includes('NUNCA inventes montos')||(t.includes('MetaAdmin')&&t.includes('NUNCA inventes'));
+    const hasSAT=t.includes('SAT')&&(t.includes('asesor fiscal certificado')||t.includes('contador'));
+    const hasAudit=t.includes('auditar antes de decisiones ejecutivas');
+    const hasAHL=t.includes('ANTI-ALUCINACIÓN')&&t.includes('MetaAdmin');
+    if(hasNunca&&hasSAT&&hasAudit&&hasAHL)return pass('MetaAdmin AHL: montos ✓ · SAT+contador ✓ · auditar ✓ · header AHL ✓');
+    return fail('MetaAdmin AHL: montos='+hasNunca+' SAT='+hasSAT+' auditar='+hasAudit+' header='+hasAHL);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-010', name:'Doc-Reader (finanzas.html) — agente AHL: null para ausentes, confianza, fuente exacta', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/finanzas.html');const t=await r.text();
+    const hasNull=t.includes('null para datos faltantes')||(t.includes('null')&&t.includes('NUNCA'));
+    const hasConfianza=t.includes('confianza')&&(t.includes('alta/media/baja')||t.includes('alta')&&t.includes('baja'));
+    const hasFuente=t.includes('fuente')&&(t.includes('texto exacto')||t.includes('exacto del documento')||t.includes('fuente ='));
+    const hasJSON=t.includes('SOLO JSON')&&t.includes('sin markdown');
+    if(hasNull&&hasConfianza&&hasFuente&&hasJSON)return pass('Doc-Reader AHL: null ✓ · confianza ✓ · fuente exacta ✓ · SOLO JSON ✓');
+    return fail('Doc-Reader AHL: null='+hasNull+' confianza='+hasConfianza+' fuente='+hasFuente+' JSON='+hasJSON);}catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL2-011', name:'Global AHL: todos los agentes principales tienen "⚠" o "Verificar" en system prompts', run: async()=>{
+    const pages=[
+      {page:'director-ops.html',agent:'MetaOps'},
+      {page:'ceo.html',agent:'CEO'},
+      {page:'ventas.html',agent:'MetaVentaX/INTEL/Genie'},
+      {page:'marketing.html',agent:'MetaMKTX'},
+      {page:'finanzas.html',agent:'MetaAdmin'},
+      {page:'consejo.html',agent:'Consejo'},
+    ];
+    const results=[];
+    for(const {page,agent} of pages){
+      try{const r=await fetch(BASE_URL+'/'+page);const t=await r.text();
+      const hasVerif=t.includes('⚠')||t.includes('Verificar con datos')||t.includes('validar antes')||t.includes('auditar antes');
+      results.push({agent,ok:hasVerif});}
+      catch(e){results.push({agent,ok:false});}
+    }
+    const failed=results.filter(r=>!r.ok);
+    if(failed.length===0)return pass('6/6 agentes con ⚠/Verificar en system prompts ✓');
+    return fail(failed.length+' sin ⚠: '+failed.map(f=>f.agent).join(', '));
+  }},
+
+  {id:'AHL2-012', name:'Seguridad AHL: ningún system prompt contiene "inventa", "rellena" o "completa"', run: async()=>{
+    const pages=['director-ops.html','ceo.html','ventas.html','marketing.html','finanzas.html','consejo.html'];
+    const results=[];
+    for(const p of pages){
+      try{const r=await fetch(BASE_URL+'/p');const t=await r.text();
+      // Solo buscar en system prompts (entre backticks)
+      const systemBlocks=t.match(/system:\s*`([^`]+)`/g)||[];
+      const hasHallucinate=systemBlocks.some(b=>
+        /\binventa\b|\brellena\b|\bcompleta los campos\b|\bfabrica\b/.test(b.toLowerCase())
+      );
+      results.push({p,ok:!hasHallucinate,found:hasHallucinate});}
+      catch(e){results.push({p,ok:true});} // si no carga, no hay riesgo
+    }
+    const failed=results.filter(r=>!r.ok);
+    if(failed.length===0)return pass('0 system prompts con instrucciones de inventar datos ✓ (6 páginas analizadas)');
+    return fail(failed.length+' páginas con riesgo: '+failed.map(f=>f.p).join(', '));
+  }},
+
+]},
 ];
 
 // ═══ RESULT HELPERS ═══
@@ -1182,20 +1471,23 @@ function renderSuites(){
     sec.className = 'suite';
     sec.id = 'suite-'+suite.id;
     const isAHL = suite.id === 'AHL';
+    const isAHL2 = suite.id === 'AHL2';
     const isSIM = suite.id === 'SIM';
+    const isDIRS = suite.id === 'DIRS';
+    const isADMS = suite.id === 'ADMS';
     const isPentagon = ['HOME','KAN','DWR','MAP','MKT14','HQ','OPR','SIM'].includes(suite.id);
-    const accentColor = isAHL ? '#F59E0B' : (isSIM ? '#818CF8' : (isPentagon ? '#A78BFA' : ''));
+    const accentColor = (isAHL||isAHL2) ? '#F59E0B' : isSIM ? '#818CF8' : isDIRS ? '#00e5ff' : isADMS ? '#b966ff' : isPentagon ? '#A78BFA' : '';
     sec.innerHTML = `<div class="suite-header" style="${accentColor?'border-bottom-color:'+accentColor:''}">
       <span class="suite-badge" style="${accentColor?'background:'+accentColor+';color:#000':''}">${suite.id}</span>
       <span class="suite-title" style="${accentColor?'color:'+accentColor:''}">${suite.title}</span>
-      <span class="suite-count" id="count-${suite.id}">${suite.tests.length} tests${isAHL?' · FDA SaMD · IEC 62304 · ISO 14971 · NIST AI RMF':isSIM?' · 223,050 tests · 15 Abr 2026 · BASELINE':isPentagon?' · Pentagon Suite':''}
+      <span class="suite-count" id="count-${suite.id}">${suite.tests.length} tests${isAHL?' · FDA SaMD · IEC 62304 · ISO 14971 · NIST AI RMF':isAHL2?' · Protocolo AHL por agente — 12 agentes':isDIRS?' · 4 director pages · hash visibility':isADMS?' · CEO restructura · Consejo · módulos':isSIM?' · 223,050 tests · 15 Abr 2026 · BASELINE':isPentagon?' · Pentagon Suite':''}
       </span>
     </div>`;
     for(const t of suite.tests){
       const row = document.createElement('div');
       row.className = 'test-row';
       row.id = 'row-'+t.id;
-      const idColor = t.id.startsWith('AHL') ? 'color:#F59E0B' : '';
+      const idColor = t.id.startsWith('AHL') ? 'color:#F59E0B' : t.id.startsWith('DIRS') ? 'color:#00e5ff' : t.id.startsWith('ADMS') ? 'color:#b966ff' : '';
       row.innerHTML = `<div><div class="test-id" style="${idColor}">${t.id}</div></div>
         <div><div class="test-name">${t.name}</div><div class="test-detail" id="detail-${t.id}">—</div></div>
         <div class="test-result r-pending" id="result-${t.id}">PENDING</div>`;

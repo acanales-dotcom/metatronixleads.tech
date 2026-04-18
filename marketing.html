@@ -4740,4 +4740,191 @@ function startOpinionSimulation() {
 }
 
 init();
+
+/* ══════════════════════════════════════════════════════════
+   MetaMKTX — Director de Marketing IA (hash: #director)
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  let _mktxStreaming = false;
+
+  function checkMktxAnchor() {
+    const sec = document.getElementById('director-mktx');
+    if (!sec) return;
+    sec.style.display = (window.location.hash === '#director') ? 'block' : 'none';
+  }
+
+  window.addEventListener('hashchange', checkMktxAnchor);
+  document.addEventListener('DOMContentLoaded', checkMktxAnchor);
+  setTimeout(checkMktxAnchor, 400);
+
+  window.mktx_ask = function(p) {
+    const inp = document.getElementById('mktx-inp');
+    if (inp) { inp.value = p; inp.focus(); }
+    window.mktx_send();
+  };
+
+  window.mktx_send = async function() {
+    if (_mktxStreaming) return;
+    const inp = document.getElementById('mktx-inp');
+    const out = document.getElementById('mktx-out');
+    const btn = document.getElementById('mktx-btn');
+    const tok = document.getElementById('mktx-tok');
+    if (!inp || !out) return;
+    const q = inp.value.trim(); if (!q) return;
+
+    _mktxStreaming = true;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin-cyan"></span>';
+    out.innerHTML = '<div style="color:var(--text-faint);display:flex;align-items:center;gap:8px;padding:24px"><span class="spin-cyan"></span> MetaMKTX procesando...</div>';
+    inp.value = '';
+
+    try {
+      const session = await getSession();
+      const jwt = session?.access_token || '';
+      const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL || '').replace(/\/+$/, '');
+      if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado');
+
+      const resp = await fetch(proxyUrl + '/groq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 2048,
+          system: `Eres MetaMKTX, Director de Marketing IA de IBANOR SA de CV / MetaTronix.
+Especialidad: estrategia de marketing digital B2B, posicionamiento de marca, generación de demanda, content marketing, SEO, campañas pagadas, y análisis de mercado en México y LATAM.
+Respondes en español con estrategias accionables, KPIs medibles y recomendaciones basadas en datos.
+Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.
+
+PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
+1. SOLO afirma lo EXPLÍCITAMENTE presente en los datos de esta conversación
+2. NUNCA inventes métricas de campaña, tasas de conversión, CPL ni ROI — dato ausente = "Sin dato disponible"
+3. HECHO vs ANÁLISIS: "Los datos muestran X" para hechos; "Esto podría indicar Y" para análisis
+4. INCERTIDUMBRE: si no es certeza, usa "aparentemente", "podría ser", "requiere validación con el equipo"
+5. BENCHMARKS: al usar benchmarks del sector, indica la fuente y que son orientativos — "Según industria B2B (referencia orientativa)"
+6. CAUSALIDAD: nunca la atribuyas sin evidencia directa — "correlación posible, no causalidad confirmada"
+7. FORECAST: toda proyección de leads o conversiones debe indicar su supuesto base
+8. AMBIGÜEDAD: si la consulta es incompleta, solicita el dato faltante — no rellenes con promedios del sector
+9. RECOMENDACIONES: termina cada estrategia con "⚠ Validar con datos de campañas reales antes de escalar presupuesto"
+10. KPIs DE MARKETING: añade "† Basado en información proporcionada — medir contra resultados reales de campañas"`,
+          messages: [{ role: 'user', content: q }],
+          stream: true,
+        }),
+        signal: AbortSignal.timeout(90000),
+      });
+
+      if (!resp.ok) { const e = await resp.json().catch(() => ({ error: resp.statusText })); throw new Error(e.error || 'Error ' + resp.status); }
+
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = ''; let html = ''; let iT = 0; let oT = 0;
+      out.innerHTML = '';
+
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const d = line.slice(5).trim(); if (d === '[DONE]') break;
+          try {
+            const j = JSON.parse(d);
+            if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') html += j.delta.text;
+            if (j.type === 'message_start') iT = j.message?.usage?.input_tokens || 0;
+            if (j.type === 'message_delta') oT = j.usage?.output_tokens || 0;
+          } catch {}
+        }
+        out.innerHTML = html; out.scrollTop = out.scrollHeight;
+      }
+      out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta.</em>';
+      if (tok) tok.textContent = `${iT}↑ ${oT}↓ tokens`;
+    } catch (e) {
+      out.innerHTML = `<span style="color:#ff4646">Error: ${escHtml(e.message)}</span>`;
+    } finally {
+      _mktxStreaming = false;
+      btn.disabled = false;
+      btn.innerHTML = '▶ Enviar';
+    }
+  };
+})();
 </script>
+
+<!-- ══════════════════════════════════════════════════════════
+     MetaMKTX — Director de Marketing IA — Panel HTML
+     Mostrado solo cuando hash = #director
+     ══════════════════════════════════════════════════════════ -->
+<style>
+  .mktx-root { display:flex; flex-direction:column; gap:20px; padding:28px; max-width:960px; margin:0 auto; }
+  .mktx-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; }
+  .mktx-header h1 { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; margin:0; color:#00e5ff; }
+  .mktx-header p { color:var(--text-muted); font-size:13px; margin:4px 0 0; }
+  .mktx-badge { font-size:10px; background:rgba(0,229,255,.1); color:#00e5ff; padding:3px 12px; border-radius:20px; border:1px solid rgba(0,229,255,.25); font-weight:700; }
+  .mktx-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .mktx-chips { display:flex; flex-wrap:wrap; gap:6px; padding:14px 20px; border-bottom:1px solid var(--border); }
+  .mktx-chip { padding:5px 13px; border-radius:20px; font-size:11px; font-weight:600; background:rgba(255,255,255,.04); border:1px solid var(--border); color:var(--text-muted); cursor:pointer; transition:.15s; }
+  .mktx-chip:hover { border-color:#00e5ff; color:#00e5ff; }
+  .mktx-row { display:flex; gap:8px; padding:12px 20px; border-bottom:1px solid var(--border); }
+  .mktx-inp { flex:1; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:8px; padding:9px 14px; color:var(--text); font-size:13px; font-family:inherit; resize:none; min-height:44px; }
+  .mktx-inp:focus { outline:none; border-color:#00e5ff; }
+  .mktx-btn { padding:9px 18px; border-radius:8px; font-size:12px; font-weight:700; background:#00e5ff; color:#000; border:none; cursor:pointer; transition:opacity .15s; align-self:flex-end; }
+  .mktx-btn:hover:not(:disabled) { opacity:.85; } .mktx-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .mktx-out { min-height:200px; max-height:460px; overflow-y:auto; padding:16px 20px; font-size:13px; line-height:1.8; color:var(--text); }
+  .mktx-out h2,.mktx-out h3 { font-family:'Bebas Neue',sans-serif; color:#00e5ff; margin:8px 0 4px; }
+  .mktx-out p { margin:4px 0; } .mktx-out ul { margin:4px 0 4px 16px; }
+  .mktx-out strong { color:#fff; }
+  .mktx-out table { width:100%; border-collapse:collapse; margin:8px 0; font-size:12px; }
+  .mktx-out th { padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); color:#00e5ff; font-weight:700; }
+  .mktx-out td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.05); }
+  .mktx-foot { display:flex; justify-content:space-between; align-items:center; padding:8px 20px; border-top:1px solid var(--border); }
+  .spin-cyan { display:inline-block; width:13px; height:13px; border:2px solid rgba(0,229,255,.2); border-top-color:#00e5ff; border-radius:50%; animation:gspin .7s linear infinite; }
+</style>
+
+<section id="director-mktx" style="display:none">
+  <div class="mktx-root">
+    <div class="mktx-header">
+      <div>
+        <h1>🎯 MetaMKTX — Director de Marketing IA</h1>
+        <p>Estrategia de marketing digital · Generación de demanda · Brand · Campañas · IBANOR SA de CV</p>
+      </div>
+      <span class="mktx-badge">Groq — llama-3.3-70b</span>
+    </div>
+
+    <div class="mktx-panel">
+      <div class="mktx-chips">
+        <button class="mktx-chip" onclick="mktx_ask('Diagnóstico de marketing: estado actual y principales oportunidades')">→ Diagnóstico de marketing</button>
+        <button class="mktx-chip" onclick="mktx_ask('Estrategia de generación de demanda B2B para MetaTronix en México')">→ Generación de demanda</button>
+        <button class="mktx-chip" onclick="mktx_ask('Plan de contenidos y SEO para el próximo trimestre')">→ Plan de contenidos & SEO</button>
+        <button class="mktx-chip" onclick="mktx_ask('KPIs de marketing digital que debemos medir esta semana')">→ KPIs de marketing</button>
+        <button class="mktx-chip" onclick="mktx_ask('Estrategia de posicionamiento de marca MetaTronix vs competidores CRM')">→ Posicionamiento de marca</button>
+        <button class="mktx-chip" onclick="mktx_ask('Campañas de paid media: estructura y presupuesto recomendado para B2B SaaS')">→ Campañas paid media</button>
+        <button class="mktx-chip" onclick="mktx_ask('Roadmap de marketing para los próximos 6 meses')">→ Roadmap de marketing</button>
+      </div>
+      <div class="mktx-row">
+        <textarea class="mktx-inp" id="mktx-inp" placeholder="Consulta al Director de Marketing IA…" rows="2"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();mktx_send()}"></textarea>
+        <button class="mktx-btn" id="mktx-btn" onclick="mktx_send()">▶ Enviar</button>
+      </div>
+      <div class="mktx-out" id="mktx-out">
+        <div style="color:var(--text-faint);font-style:italic;text-align:center;padding:40px">MetaMKTX listo · Director de Marketing IA</div>
+      </div>
+      <div class="mktx-foot">
+        <button style="font-size:11px;color:var(--text-faint);background:none;border:none;cursor:pointer"
+          onclick="document.getElementById('mktx-out').innerHTML='<div style=\'color:var(--text-faint);font-style:italic;text-align:center;padding:40px\'>MetaMKTX listo</div>';document.getElementById('mktx-tok').textContent=''">✕ Limpiar</button>
+        <span id="mktx-tok" style="font-size:10px;color:var(--text-faint);font-family:monospace"></span>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="font-size:22px">💡</span>
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:2px">Conectar con otros directores</div>
+        <div style="font-size:12px;color:var(--text-muted)">MetaMKTX trabaja en coordinación con Ventas, Operaciones y Administración</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/ventas.html#director" style="background:rgba(0,255,136,.1);color:#00ff88;border:1px solid rgba(0,255,136,.25);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;text-decoration:none">📈 Dir. Comercial</a>
+        <a href="/director-ops.html" style="background:rgba(255,180,0,.1);color:#ffb400;border:1px solid rgba(255,180,0,.25);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;text-decoration:none">⚙️ Dir. Operaciones</a>
+        <a href="/finanzas.html#director" style="background:rgba(185,102,255,.1);color:#b966ff;border:1px solid rgba(185,102,255,.25);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;text-decoration:none">💼 Dir. Administrativo</a>
+      </div>
+    </div>
+  </div>
+</section>
