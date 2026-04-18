@@ -402,6 +402,28 @@
 .camp-post-score-fill { height:100%; border-radius:2px; }
 .camp-post-score-val { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#4ADE80; flex-shrink:0; }
 .camp-post-razon { font-size:9px; color:rgba(255,255,255,.3); font-style:italic; }
+
+/* Visual asset section per post */
+.camp-visual-section {
+  margin-top:6px; padding:7px 9px; border-radius:6px;
+  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07);
+}
+.camp-visual-top { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+.camp-visual-badge {
+  font-size:9px; font-weight:700; padding:2px 7px; border-radius:3px;
+  letter-spacing:.04em; flex-shrink:0;
+}
+.camp-visual-prompt {
+  font-family:'JetBrains Mono',monospace; font-size:8.5px; color:rgba(255,255,255,.4);
+  line-height:1.6; word-break:break-word;
+}
+.camp-visual-copy {
+  font-size:9px; font-weight:700; padding:2px 8px; border-radius:3px; border:none;
+  background:rgba(255,255,255,.06); color:rgba(255,255,255,.45); cursor:pointer;
+  margin-left:auto; white-space:nowrap; transition:all .2s; flex-shrink:0;
+}
+.camp-visual-copy:hover { background:rgba(6,182,212,.15); color:#22D3EE; }
+
 .camp-network-picker { padding:20px; text-align:center; }
 .camp-network-q { font-size:13px; color:rgba(255,255,255,.7); margin-bottom:14px; line-height:1.6; }
 .camp-network-grid { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
@@ -1823,8 +1845,9 @@ Red social objetivo: ${network}
 Canales débiles: ${weakChannels}
 Contexto agentes: ${agentCtx}
 
-Responde EXACTAMENTE este JSON con 7 posts (cada uno con score 90-100, avg_score mín 95):
-{"campaign_name":"<4-6 palabras>","campaign_score":<95-100>,"score_delta":<diferencia vs ${origScore}>,"strategy":"<2 oraciones max>","avg_score":<promedio real de los 7 scores>,"posts":[{"platform":"${network}","format":"<Carrusel|Video|Reel|Story|Post texto|Artículo|Imagen>","hook":"<máx 60 chars>","copy":"<máx 120 chars>","score":<90-100>,"razon":"<6-8 palabras>"},{"platform":"${network}","format":"","hook":"","copy":"","score":96,"razon":""},{"platform":"${network}","format":"","hook":"","copy":"","score":95,"razon":""},{"platform":"${network}","format":"","hook":"","copy":"","score":97,"razon":""},{"platform":"${network}","format":"","hook":"","copy":"","score":95,"razon":""},{"platform":"${network}","format":"","hook":"","copy":"","score":96,"razon":""},{"platform":"${network}","format":"","hook":"","copy":"","score":98,"razon":""}]}`;
+Responde EXACTAMENTE este JSON. Cada post incluye visual_type (imagen_ia|video_ia|foto_real según formato y red) y visual_prompt (prompt en inglés listo para copiar en Midjourney/DALL-E/Sora/Kling, máx 100 chars, incluye dimensiones y estilo).
+
+{"campaign_name":"<4-6 palabras>","campaign_score":<95-100>,"score_delta":<diferencia vs ${origScore}>,"strategy":"<2 oraciones>","avg_score":<promedio real ≥95>,"posts":[{"platform":"${network}","format":"<Carrusel|Video|Reel|Story|Post texto|Artículo|Imagen>","hook":"<máx 60 chars>","copy":"<máx 120 chars>","score":<90-100>,"razon":"<6-8 palabras>","visual_type":"<imagen_ia|video_ia|foto_real>","visual_prompt":"<prompt inglés máx 100 chars>"},{"platform":"${network}","format":"","hook":"","copy":"","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":97,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":98,"razon":"","visual_type":"","visual_prompt":""}]}`;
 
   let structured = null;
   try {
@@ -1844,6 +1867,16 @@ Responde EXACTAMENTE este JSON con 7 posts (cada uno con score 90-100, avg_score
       'Tu competencia ya usa IA en ventas. ¿Tú?',
     ];
     const formats = ['Carrusel','Video corto','Post texto','Imagen','Reel','Story','Artículo'];
+    // Visual fallbacks: tipo + prompt por formato
+    const visualFallback = [
+      { visual_type:'imagen_ia',  visual_prompt:'Professional B2B carousel infographic, dark blue corporate style, sales funnel data, 1080x1080px, modern flat design' },
+      { visual_type:'video_ia',   visual_prompt:'Short vertical video 9:16, confident LATAM sales director at modern desk, CRM dashboard screen, cinematic lighting, 15s loop' },
+      { visual_type:'foto_real',  visual_prompt:'Real photo: professional team celebrating sales milestone in modern office, warm light, authentic candid moment, 1200x628px' },
+      { visual_type:'foto_real',  visual_prompt:'Stock photo: close-up laptop screen showing CRM analytics dashboard with green growth charts, shallow depth, 1080x1080' },
+      { visual_type:'video_ia',   visual_prompt:'Vertical Reel 9:16, animated CRM IA logo reveal with data particles, dark industrial aesthetic, 8s loop, #00ff88 accent' },
+      { visual_type:'imagen_ia',  visual_prompt:'Cinematic Story frame 9:16, Latin American executive smiling at phone, blurred city background, modern brand overlay, 1080x1920' },
+      { visual_type:'imagen_ia',  visual_prompt:'Thought leadership header image, abstract data visualization, corporate dark blue, 1200x628px LinkedIn optimal, professional' },
+    ];
     structured = {
       campaign_name: `Campaña ${network} MetaTronix`,
       campaign_score: 96,
@@ -1855,11 +1888,31 @@ Responde EXACTAMENTE este JSON con 7 posts (cada uno con score 90-100, avg_score
         hook, copy: 'MetaTronix CRM con IA: cierra más ventas con menos esfuerzo. Prueba gratis 14 días → metatronixleads.tech',
         score: 94 + (i % 5 === 0 ? 4 : i % 5),
         razon: 'Social proof + urgencia + CTA directo',
+        ...visualFallback[i],
       })),
     };
   }
 
   container.innerHTML = renderCampaignPanel(structured, origScore, network);
+}
+
+function visualBadgeHtml(vtype) {
+  const map = {
+    imagen_ia:  { icon:'🖼️', label:'IMAGEN IA',  bg:'rgba(167,139,250,.15)', color:'#A78BFA', border:'rgba(167,139,250,.3)' },
+    video_ia:   { icon:'🎬', label:'VIDEO IA',   bg:'rgba(248,113,113,.12)', color:'#F87171', border:'rgba(248,113,113,.3)' },
+    foto_real:  { icon:'📷', label:'FOTO REAL',  bg:'rgba(74,222,128,.12)',  color:'#4ADE80', border:'rgba(74,222,128,.3)'  },
+  };
+  const v = map[vtype] || map['imagen_ia'];
+  return `<span class="camp-visual-badge" style="background:${v.bg};color:${v.color};border:1px solid ${v.border}">${v.icon} ${v.label}</span>`;
+}
+
+function copyVisualPrompt(btn, text) {
+  navigator.clipboard?.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    btn.style.color = '#4ADE80';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1800);
+  }).catch(() => {});
 }
 
 function renderCampaignPanel(s, origScore, network) {
@@ -1873,6 +1926,9 @@ function renderCampaignPanel(s, origScore, network) {
   const postCards = posts.slice(0,7).map((p, i) => {
     const sc = p.score || 95;
     const scColor = sc >= 95 ? '#4ADE80' : sc >= 90 ? '#FCD34D' : '#F87171';
+    const vtype = p.visual_type || 'imagen_ia';
+    const vprompt = p.visual_prompt || '';
+    const vpromptId = `vp-${i}-${Date.now()}`;
     return `
     <div class="camp-post-card" style="animation:camp-in .4s ease both;animation-delay:${i*.07}s">
       <div class="camp-post-top">
@@ -1888,6 +1944,14 @@ function renderCampaignPanel(s, origScore, network) {
         <span class="camp-post-score-val">${sc}%</span>
       </div>
       <div class="camp-post-razon">💡 ${escHtml(p.razon||'')}</div>
+      ${vprompt ? `
+      <div class="camp-visual-section">
+        <div class="camp-visual-top">
+          ${visualBadgeHtml(vtype)}
+          <button class="camp-visual-copy" onclick="copyVisualPrompt(this,${JSON.stringify(vprompt)})">📋 Copiar prompt</button>
+        </div>
+        <div class="camp-visual-prompt">${escHtml(vprompt)}</div>
+      </div>` : ''}
     </div>`;
   }).join('');
 
