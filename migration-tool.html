@@ -338,23 +338,36 @@ async function createUser(email, name, role) {
   const userId = data?.user?.id;
 
   // Upsert profile — con doc_approval_required si existe
-  const payload = { email, full_name: name, role, is_active: true,
-    ...(userId ? { id: userId } : {}) };
+  // Guardar perfil — primero INSERT, si ya existe UPDATE
+  const profileData = { email, full_name: name, role, is_active: true,
+    doc_approval_required: isRouting };
+  if (userId) profileData.id = userId;
 
-  // Intentar con columna
-  let { error: pe } = await db.from('profiles').upsert(
-    { ...payload, doc_approval_required: isRouting }, { onConflict: 'email' }
-  );
-
-  if (pe?.message?.includes('doc_approval_required') || pe?.message?.includes('column')) {
-    // Sin columna
-    const { error: pe2 } = await db.from('profiles').upsert(payload, { onConflict: 'email' });
-    if (pe2) { log(`  ⚠ Profile: ${pe2.message}`, 'c-warn'); return false; }
-    log(`  ✅ Perfil guardado (sin columna doc_approval_required)`, 'c-ok');
-  } else if (pe) {
-    log(`  ⚠ Profile: ${pe.message}`, 'c-warn');
+  // Intento 1: upsert por id (primary key — siempre tiene constraint)
+  if (userId) {
+    let { error: pe } = await db.from('profiles').upsert(
+      { ...profileData, id: userId }, { onConflict: 'id' }
+    );
+    if (pe?.message?.includes('doc_approval_required') || pe?.message?.includes('column')) {
+      const { id: _, doc_approval_required: __, ...safeData } = profileData;
+      const { error: pe2 } = await db.from('profiles').upsert({ ...safeData, id: userId }, { onConflict: 'id' });
+      if (pe2) { log(`  ⚠ Profile upsert: ${pe2.message}`, 'c-warn'); }
+      else      { log(`  ✅ Perfil guardado (sin columna doc_approval_required)`, 'c-ok'); }
+    } else if (pe) {
+      // Si aun así falla, intentar INSERT limpio
+      const { error: pe3 } = await db.from('profiles').insert({ ...profileData, id: userId });
+      if (pe3) log(`  ⚠ Profile insert: ${pe3.message}`, 'c-warn');
+      else     log(`  ✅ Perfil insertado correctamente`, 'c-ok');
+    } else {
+      log(`  ✅ Perfil guardado. doc_approval_required=${isRouting}`, 'c-ok');
+    }
   } else {
-    log(`  ✅ Perfil guardado. doc_approval_required=${isRouting}`, 'c-ok');
+    // Sin userId — UPDATE por email
+    const { error: pe } = await db.from('profiles').update(
+      { full_name: name, role, is_active: true }
+    ).eq('email', email);
+    if (pe) log(`  ⚠ Profile update by email: ${pe.message}`, 'c-warn');
+    else    log(`  ✅ Perfil actualizado por email`, 'c-ok');
   }
   return true;
 }
