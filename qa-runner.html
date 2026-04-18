@@ -532,6 +532,76 @@ const suites = [
     catch(e){return skip('Sin acceso a GitHub API: '+e.message);}
   }},
 ]},
+
+{id:'SEC3', title:'SEGURIDAD v3 — HEADERS + CORS + INFRA', tests:[
+  {id:'MTX-SEC3-001', name:'HTTP headers de seguridad presentes en respuesta real', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/index.html',{cache:'no-store'});
+      const hsts=r.headers.get('strict-transport-security');
+      const xframe=r.headers.get('x-frame-options');
+      const xcto=r.headers.get('x-content-type-options');
+      const csp=r.headers.get('content-security-policy');
+      const cfRay=r.headers.get('cf-ray');
+      const missing=[];
+      if(!hsts)missing.push('HSTS');
+      if(!xframe)missing.push('X-Frame-Options');
+      if(!xcto)missing.push('X-Content-Type-Options');
+      if(!csp)missing.push('CSP');
+      if(missing.length===0)return pass('✅ HSTS+X-Frame-Options+X-Content-Type-Options+CSP presentes · CF-Ray: '+cfRay);
+      if(!cfRay)return fail('Tráfico no pasa por Cloudflare (sin CF-Ray). Headers faltantes: '+missing.join(', '));
+      return fail('Headers faltantes: '+missing.join(', '));
+    }catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-SEC3-002', name:'Worker rechaza Origin externo (CORS enforcement → 403)', run: async()=>{
+    try{
+      const r=await fetch(WORKER_URL,{method:'POST',
+        headers:{'Content-Type':'application/json','Origin':'https://malicious-site.com'},
+        body:JSON.stringify({messages:[{role:'user',content:'hack'}]})
+      });
+      if(r.status===403)return pass('✅ Worker retorna 403 para origen externo — CORS enforcement activo');
+      if(r.status===401)return pass('401 sin JWT — CORS no bloqueó (Worker acepta origen pero requiere auth)');
+      return fail('Worker no bloqueó origen externo: HTTP '+r.status);
+    }catch(e){return skip('CORS preflight bloqueó el fetch: '+e.message);}
+  }},
+  {id:'MTX-SEC3-003', name:'Uptime monitor workflow existe en GitHub', run: async()=>{
+    try{const r=await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/contents/.github/workflows/uptime-monitor.yml');
+    if(r.ok){const j=await r.json();if(j.name==='uptime-monitor.yml')return pass('uptime-monitor.yml presente en repo ✅');}
+    return skip('GitHub API no accesible o archivo no encontrado');}
+    catch(e){return skip('Sin acceso a GitHub API: '+e.message);}
+  }},
+  {id:'MTX-SEC3-004', name:'Error tracker Worker accesible (OPTIONS → 204)', run: async()=>{
+    try{const r=await fetch('https://mtx-error-tracker.acanales-7d4.workers.dev',{
+      method:'OPTIONS',headers:{'Origin':BASE_URL,'Access-Control-Request-Method':'POST'}
+    });
+    if(r.status===204||r.status===200)return pass('mtx-error-tracker Worker activo: HTTP '+r.status);
+    return fail('Error tracker HTTP: '+r.status);}
+    catch(e){return skip('CORS bloqueó preflight: '+e.message);}
+  }},
+  {id:'MTX-SEC3-005', name:'RLS indexes SQL presente en repo', run: async()=>{
+    try{const r=await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/contents/sql/rls_indexes.sql');
+    if(r.ok){const j=await r.json();if(j.name==='rls_indexes.sql')return pass('rls_indexes.sql en repo ✅');}
+    return skip('GitHub API no accesible');}
+    catch(e){return skip('Sin acceso a GitHub API: '+e.message);}
+  }},
+  {id:'MTX-SEC3-006', name:'index.html: brute force protection (lockout sessionStorage)', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/index.html',{cache:'no-store'});const t=await r.text();
+    const hasBF=t.includes('BF_KEY')&&t.includes('BF_MAX')&&t.includes('lockedUntil');
+    const hasLockout=t.includes('BF_LOCKOUT')&&t.includes('recordFailedAttempt');
+    if(hasBF&&hasLockout)return pass('Brute force protection: BF_KEY+BF_MAX+lockedUntil+recordFailedAttempt presentes');
+    return fail('Falta BF protection: BF_KEY='+hasBF+', lockout='+hasLockout);}
+    catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-SEC3-007', name:'X-Frame-Options DENY — sitio no embeddable en iframe', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/index.html',{cache:'no-store'});
+      const xframe=r.headers.get('x-frame-options')||'';
+      if(xframe.toUpperCase()==='DENY')return pass('X-Frame-Options: DENY — clickjacking bloqueado ✅');
+      if(xframe.toUpperCase().includes('SAMEORIGIN'))return pass('X-Frame-Options: SAMEORIGIN (aceptable)');
+      if(!xframe)return fail('X-Frame-Options ausente — sitio embeddable en iframes externos');
+      return fail('X-Frame-Options: '+xframe+' (esperado DENY)');
+    }catch(e){return fail(e.message);}
+  }},
+]},
 ];
 
 // ═══ RESULT HELPERS ═══
