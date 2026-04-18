@@ -1908,12 +1908,29 @@ function visualBadgeHtml(vtype) {
 }
 
 function copyVisualPrompt(btn, text) {
-  navigator.clipboard?.writeText(text).then(() => {
+  // text may come from data-prompt attribute (preferred) or legacy argument
+  const prompt = btn.dataset.prompt || text || '';
+  const doCopy = (t) => {
     const orig = btn.textContent;
     btn.textContent = '✓ Copiado';
     btn.style.color = '#4ADE80';
     setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1800);
-  }).catch(() => {});
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(prompt).then(doCopy).catch(() => {
+      // Fallback para cuando clipboard API falla
+      const ta = document.createElement('textarea');
+      ta.value = prompt; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); doCopy();
+    });
+  } else {
+    // Fallback sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = prompt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); doCopy();
+  }
 }
 
 function renderCampaignPanel(s, origScore, network) {
@@ -1949,7 +1966,7 @@ function renderCampaignPanel(s, origScore, network) {
       <div class="camp-visual-section">
         <div class="camp-visual-top">
           ${visualBadgeHtml(vtype)}
-          <button class="camp-visual-copy" onclick="copyVisualPrompt(this,${JSON.stringify(vprompt)})">📋 Copiar prompt</button>
+          <button class="camp-visual-copy" data-prompt="${escHtml(vprompt)}" onclick="copyVisualPrompt(this)">📋 Copiar prompt</button>
         </div>
         <div class="camp-visual-prompt">${escHtml(vprompt)}</div>
       </div>` : ''}
@@ -2002,8 +2019,21 @@ function renderCampaignPanel(s, origScore, network) {
 function copyCampana() {
   const el = document.getElementById('campaign-container');
   if (!el) return;
-  navigator.clipboard?.writeText(el.innerText).catch(()=>{});
-  if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Propuesta de campaña copiada ✓');
+  const text = el.innerText;
+  const done = () => { if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Propuesta de campaña copiada ✓'); };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); done();
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); done();
+  }
 }
 
 function showCampaignProposal(mission, predResult, agentResults) {
