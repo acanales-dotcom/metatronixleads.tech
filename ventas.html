@@ -1012,6 +1012,9 @@
         <span class="kb-status" onclick="toggleKB()" id="kb-status-btn">
           🎯 Base de Ventas <span id="kb-status-dot">●</span>
         </span>
+        <span class="kb-status" onclick="runINTELStandalone()" style="background:rgba(245,158,11,.08);color:#F59E0B;border-color:rgba(245,158,11,.25)" title="Inteligencia Operacional — datos reales del pipeline">
+          🧠 INTEL <span style="color:#F59E0B;animation:intel-pulse 1.6s ease-in-out infinite;display:inline-block">●</span>
+        </span>
         <span id="usage-badge" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:10px;background:rgba(16,185,129,.08);color:#10B981;border:1px solid rgba(16,185,129,.2);font-family:var(--font-mono)" title="Usos de IA este mes"></span>
         <span id="gpu-badge" style="display:none;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(16,185,129,.1);color:#10B981;border:1px solid rgba(16,185,129,.2)"></span>
       </div>
@@ -1071,7 +1074,7 @@
         <span class="hq-title-dot"></span>
         AGENCIA DE VENTAS — PIPELINE COMMAND
       </div>
-      <div class="hq-meta">10 AGENTES ACTIVOS &nbsp;·&nbsp; SISTEMA EN LÍNEA &nbsp;·&nbsp; METATRONIX v3.0</div>
+      <div class="hq-meta">11 AGENTES ACTIVOS &nbsp;·&nbsp; SISTEMA EN LÍNEA &nbsp;·&nbsp; METATRONIX v3.0</div>
     </div>
 
     <!-- Row A: Los 7 Mecanismos de Ventas -->
@@ -1161,6 +1164,14 @@
         <div class="hq-slot-name">Pipeline AI</div>
         <div class="hq-slot-cat">Forecast</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="runINTELStandalone()" title="INTEL — Inteligencia Operacional en tiempo real" style="border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.04)">
+        <div class="hq-slot-tl" style="border-color:rgba(245,158,11,.4)"></div>
+        <div class="hq-slot-num" style="color:rgba(245,158,11,.6)">11</div>
+        <span class="hq-slot-icon">🧠</span>
+        <div class="hq-slot-name" style="color:#FCD34D">INTEL</div>
+        <div class="hq-slot-cat" style="color:rgba(245,158,11,.5)">Ops · IA</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot orange"></div></div>
       </div>
     </div>
 
@@ -1278,10 +1289,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=202604174"></script>
-<script src="/assets/agent.js?v=202604174"></script>
-<script src="/assets/salescoach.js?v=202604174"></script>
-<script src="/assets/teamchat.js?v=202604174"></script>
+<script src="/assets/app.js?v=202604175"></script>
+<script src="/assets/agent.js?v=202604175"></script>
+<script src="/assets/salescoach.js?v=202604175"></script>
+<script src="/assets/teamchat.js?v=202604175"></script>
 <script>
 /* ════════════════════════════════════════════════════════
    MetaTronix — Ventas IA
@@ -3365,6 +3376,335 @@ async function launchAllAgents() {
     if (launchIcon) launchIcon.textContent = '🚀';
     if (launchText) launchText.textContent = 'LANZAR TODA LA AGENCIA — 10 AGENTES EN PARALELO';
   }, 5000);
+}
+
+/* ══════════════════════════════════════════════════════
+   INTEL STANDALONE — Inteligencia Operacional en tiempo real
+   Fuente: Supabase (leads, activity_logs) + HF Sentiment + Claude
+   ══════════════════════════════════════════════════════ */
+
+const INTEL_STAGES = ['prospecto','calificado','demo','propuesta','negociacion','cerrado','perdido'];
+const INTEL_STAGE_LABELS = {
+  prospecto:'Prospecto', calificado:'Calificado', demo:'Demo',
+  propuesta:'Propuesta', negociacion:'Negociación', cerrado:'Cerrado', perdido:'Perdido',
+};
+const INTEL_FUNNEL_COLORS = {
+  prospecto:'#60A5FA', calificado:'#34D399', demo:'#A78BFA',
+  propuesta:'#FCD34D', negociacion:'#F97316', cerrado:'#4ADE80', perdido:'#F87171',
+};
+
+function intelStageKey(lead) {
+  const raw = ((lead.stage || lead.status || lead.etapa || 'prospecto') + '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');
+  return INTEL_STAGES.find(s => raw.includes(s)) || 'prospecto';
+}
+
+function generateDemoLeads() {
+  const stages = ['prospecto','prospecto','calificado','calificado','demo','propuesta','propuesta','negociacion','cerrado','perdido'];
+  return stages.map((stage,i) => ({
+    id: i+1, stage, value: Math.round(Math.random()*4000+200),
+    notes: i%3===0 ? 'Demo agendada, cliente interesado' : '',
+    created_at: new Date(Date.now()-(i*4+1)*24*60*60*1000).toISOString(),
+    updated_at: new Date(Date.now()-(i*2)*24*60*60*1000).toISOString(),
+  }));
+}
+
+async function runINTELStandalone() {
+  const container = document.getElementById('intel-container');
+  if (!container) return;
+
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="intel-panel">
+      <div class="intel-header">
+        <div class="intel-header-left">
+          <div class="intel-dot"></div>
+          <div>
+            <div class="intel-title">🧠 INTEL · INTELIGENCIA OPERACIONAL</div>
+            <div class="intel-subtitle">CONSULTANDO SUPABASE EN TIEMPO REAL…</div>
+          </div>
+        </div>
+        <span class="intel-badge">MODO STANDALONE</span>
+      </div>
+      <div class="intel-loading">
+        <div class="intel-spinner"></div>
+        Cargando pipeline, equipo y métricas operacionales…
+      </div>
+    </div>`;
+  container.scrollIntoView({ behavior:'smooth', block:'start' });
+
+  const db = getDB();
+  let leads = [], activityLogs = [], profiles = [];
+  let usingDemo = false;
+
+  /* ── 1. Fetch from Supabase ── */
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+    const [leadsRes, logsRes, profilesRes] = await Promise.all([
+      db ? db.from('leads').select('id,stage,status,value,amount,deal_value,notes,description,created_at,updated_at,name,company').order('created_at',{ascending:false}).limit(500) : {data:[]},
+      db ? db.from('activity_logs').select('id,user_id,action,created_at').gte('created_at',thirtyDaysAgo).order('created_at',{ascending:false}).limit(1000) : {data:[]},
+      db ? db.from('profiles').select('id,full_name,role,last_seen').neq('role',null).limit(50) : {data:[]},
+    ]);
+    leads       = leadsRes.data       || [];
+    activityLogs = logsRes.data       || [];
+    profiles    = profilesRes.data    || [];
+    if (leads.length === 0) { leads = generateDemoLeads(); usingDemo = true; }
+  } catch(_) { leads = generateDemoLeads(); usingDemo = true; }
+
+  /* ── 2. Pipeline Metrics ── */
+  const now = Date.now();
+  const byStage = {};
+  INTEL_STAGES.forEach(s => byStage[s] = []);
+  leads.forEach(l => byStage[intelStageKey(l)].push(l));
+
+  const activeLeads = leads.filter(l => !['cerrado','perdido'].includes(intelStageKey(l)));
+  const totalValue  = activeLeads.reduce((s,l) => s + (parseFloat(l.value||l.amount||l.deal_value||0)), 0);
+
+  const stuckLeads = activeLeads.filter(l => {
+    const up = new Date(l.updated_at||l.created_at||0).getTime();
+    return (now - up) > 14*24*60*60*1000;
+  });
+
+  const thisMonthStart = new Date(); thisMonthStart.setDate(1); thisMonthStart.setHours(0,0,0,0);
+  const closedThisMonth   = byStage.cerrado.filter(l => new Date(l.updated_at||l.created_at) >= thisMonthStart);
+  const newLeadsThisMonth = leads.filter(l => new Date(l.created_at) >= thisMonthStart);
+  const lostThisMonth     = byStage.perdido.filter(l => new Date(l.updated_at||l.created_at) >= thisMonthStart);
+
+  const totalFunnel = leads.filter(l => intelStageKey(l) !== 'perdido').length;
+  const conversionRate = totalFunnel > 0 ? Math.round((byStage.cerrado.length / totalFunnel)*100) : 0;
+
+  const weekAgo      = new Date(now - 7*24*60*60*1000).toISOString();
+  const weekActivity = activityLogs.filter(a => a.created_at >= weekAgo);
+  const actByType    = {};
+  activityLogs.forEach(a => { const k = a.action||'other'; actByType[k] = (actByType[k]||0)+1; });
+
+  /* ── 3. Pipeline Health Score ── */
+  let health = 40;
+  health += Math.min(25, conversionRate);                                              // conversión
+  health += Math.round((1 - Math.min(stuckLeads.length/(activeLeads.length||1), 1)) * 20); // fluidez
+  health += Math.min(15, Math.round(weekActivity.length / 4));                         // actividad
+  if (byStage.calificado.length > 0) health += 5;                                     // calificación activa
+  health = Math.min(100, Math.max(0, health));
+
+  /* ── 4. Anomaly Detection ── */
+  const anomalies = [];
+  if (stuckLeads.length > 0) anomalies.push({
+    type:'stuck', sev: stuckLeads.length > 5 ? 'critico':'alto',
+    icon: stuckLeads.length > 5 ? '🔴':'🟠',
+    msg: `${stuckLeads.length} deal${stuckLeads.length>1?'s':''} sin movimiento >14 días — riesgo de enfriamiento`,
+  });
+  const propVsDemo = byStage.propuesta.length - byStage.demo.length;
+  if (propVsDemo > 3) anomalies.push({
+    type:'bottleneck', sev:'medio', icon:'🟡',
+    msg: `Cuello de botella en Propuesta: ${byStage.propuesta.length} deals acumulados — acelera el cierre`,
+  });
+  if (weekActivity.length < 8 && leads.length > 3) anomalies.push({
+    type:'activity', sev:'medio', icon:'🟡',
+    msg: `Actividad baja esta semana: ${weekActivity.length} acciones — equipo en pausa`,
+  });
+  const noNotes = activeLeads.filter(l => !l.notes && !l.description).length;
+  if (noNotes > 2) anomalies.push({
+    type:'quality', sev:'bajo', icon:'⚪',
+    msg: `${noNotes} leads activos sin notas — calidad de datos deficiente para pronóstico`,
+  });
+  if (lostThisMonth.length > closedThisMonth.length && lostThisMonth.length > 0) anomalies.push({
+    type:'loss', sev:'alto', icon:'🔴',
+    msg: `Más deals perdidos que cerrados este mes (${lostThisMonth.length} vs ${closedThisMonth.length}) — auditar causas`,
+  });
+
+  /* ── 5. HF Sentiment on lead notes ── */
+  let sentiment = null;
+  try {
+    if (window.CRM_AI) {
+      const leadsWithNotes = activeLeads.filter(l => l.notes||l.description).slice(0, 6);
+      if (leadsWithNotes.length > 0) {
+        const sentModel = await window.CRM_AI.sentiment();
+        const results = await Promise.all(
+          leadsWithNotes.map(l => sentModel((l.notes||l.description||'').slice(0,200)).catch(()=>null))
+        );
+        const valid = results.filter(Boolean);
+        const pos = valid.filter(r => (Array.isArray(r)?r[0]:r)?.label === 'POSITIVE').length;
+        sentiment = { analyzed: valid.length, positive: pos, negative: valid.length - pos,
+          score: valid.length > 0 ? Math.round((pos/valid.length)*100) : 50 };
+      }
+    }
+  } catch(_) {}
+
+  /* ── 6. Claude AI Operational Insight ── */
+  let insight = null;
+  if (window.CRM_LLM?.engine) {
+    try {
+      const pipeCtx = INTEL_STAGES.filter(s=>s!=='perdido')
+        .map(s=>`${INTEL_STAGE_LABELS[s]}:${byStage[s].length}`).join(' | ');
+      const sys = `Eres INTEL, motor de inteligencia operacional de MetaTronix. Responde SOLO JSON válido sin markdown.`;
+      const msg = `Pipeline: ${pipeCtx}. Activos:${activeLeads.length}. Cerrados mes:${closedThisMonth.length}. Atascados:${stuckLeads.length}. Valor:$${Math.round(totalValue).toLocaleString()} USD. Actividad semana:${weekActivity.length}. Conversión:${conversionRate}%.
+JSON:{"diagnosis":"diagnóstico ejecutivo en 2 frases","top_risk":"riesgo #1 a atender hoy","top_opportunity":"mayor acelerador disponible","action_today":"acción concreta en próximas 2h","forecast_30d":"predicción de cierre próximos 30 días"}`;
+      const raw = await window.CRM_LLM.chat(sys, msg, { maxTokens:350, agentName:'INTEL', page:'ventas' });
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) insight = JSON.parse(m[0]);
+    } catch(_) {}
+  }
+
+  /* ── 7. Render ── */
+  container.innerHTML = buildINTELOperationalPanel({
+    leads, activeLeads, byStage, totalValue, stuckLeads,
+    conversionRate, closedThisMonth, newLeadsThisMonth, lostThisMonth,
+    weekActivity, actByType, health, anomalies, sentiment, insight,
+    profiles, usingDemo,
+  });
+}
+
+/* ── Render del panel INTEL Operacional ── */
+function buildINTELOperationalPanel({ leads, activeLeads, byStage, totalValue, stuckLeads,
+  conversionRate, closedThisMonth, newLeadsThisMonth, lostThisMonth,
+  weekActivity, actByType, health, anomalies, sentiment, insight, profiles, usingDemo }) {
+
+  const hc = health >= 70 ? '#4ADE80' : health >= 45 ? '#FCD34D' : '#F87171';
+  const pct = n => Math.round(n);
+
+  /* Funnel bars */
+  const funnelStages = INTEL_STAGES.filter(s => s !== 'perdido');
+  const maxCount = Math.max(...funnelStages.map(s => byStage[s].length), 1);
+  const funnelBars = funnelStages.map(s => {
+    const count = byStage[s].length;
+    const w = Math.round((count / maxCount) * 100);
+    const color = INTEL_FUNNEL_COLORS[s];
+    return `<div class="intel-weight-row">
+      <div class="intel-weight-name" style="color:${color}">${INTEL_STAGE_LABELS[s]}</div>
+      <div class="intel-weight-track">
+        <div class="intel-weight-fill" style="width:${w}%;background:${color}"></div>
+      </div>
+      <div class="intel-weight-val" style="color:${color}">${count}</div>
+    </div>`;
+  }).join('');
+
+  /* Anomaly alerts */
+  const alertsHTML = anomalies.map(a => `
+    <div class="intel-alert ${a.sev==='critico'||a.sev==='alto' ? 'intel-alert-contradiction':'intel-alert-risk'}">
+      <span class="intel-alert-icon">${a.icon}</span>
+      <div>${escHtml(a.msg)}</div>
+    </div>`).join('') || `<div style="font-size:11px;color:rgba(74,222,128,.7);padding:6px 0">✅ Sin anomalías detectadas — pipeline saludable</div>`;
+
+  /* Sentiment block */
+  const sentHTML = sentiment ? `
+    <div style="margin-top:10px;padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(245,158,11,.5);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">
+        SENTIMIENTO EN NOTAS — ${sentiment.analyzed} leads analizados
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:${sentiment.score>=60?'#4ADE80':sentiment.score>=40?'#FCD34D':'#F87171'}">${sentiment.score}%</div>
+        <div style="flex:1">
+          <div style="height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;margin-bottom:4px">
+            <div style="height:100%;width:${sentiment.score}%;background:linear-gradient(90deg,#F87171,#FCD34D,#4ADE80);border-radius:3px"></div>
+          </div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4)">🟢 ${sentiment.positive} positivos &nbsp; 🔴 ${sentiment.negative} negativos</div>
+        </div>
+      </div>
+    </div>` : '';
+
+  /* Claude insight block */
+  const insightHTML = insight ? `
+    <div style="margin-top:14px;padding:12px 14px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:10px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(245,158,11,.6);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px">🤖 DIAGNÓSTICO INTEL IA</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        ${[
+          ['📊 Diagnóstico',   insight.diagnosis],
+          ['⚠️ Riesgo #1',     insight.top_risk],
+          ['🚀 Oportunidad',   insight.top_opportunity],
+          ['⚡ Acción hoy',    insight.action_today],
+          ['🎯 Forecast 30d',  insight.forecast_30d],
+        ].map(([label, val]) => val ? `
+          <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px;line-height:1.5">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(245,158,11,.5);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;margin-top:1px;min-width:90px">${label}</span>
+            <span style="color:rgba(253,230,138,.85)">${escHtml(val)}</span>
+          </div>` : '').join('')}
+      </div>
+    </div>` : '';
+
+  /* Fallback insight if no Claude */
+  const fallbackInsightHTML = !insight ? `
+    <div style="margin-top:14px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px">
+      <div style="font-size:10px;color:rgba(255,255,255,.3);font-family:'JetBrains Mono',monospace;letter-spacing:.08em">
+        🤖 Activa el LLM para diagnóstico IA del pipeline en tiempo real
+      </div>
+    </div>` : '';
+
+  /* KPI row */
+  const kpiItems = [
+    { label:'Pipeline total',  val: totalValue > 0 ? `$${Math.round(totalValue).toLocaleString()} USD` : `${activeLeads.length} activos`, color:'#FCD34D' },
+    { label:'Cerrados mes',    val: closedThisMonth.length, color:'#4ADE80' },
+    { label:'Nuevos mes',      val: newLeadsThisMonth.length, color:'#60A5FA' },
+    { label:'Conversión',      val: `${conversionRate}%`, color: conversionRate>=20?'#4ADE80':conversionRate>=10?'#FCD34D':'#F87171' },
+    { label:'Atascados',       val: stuckLeads.length, color: stuckLeads.length>0?'#F87171':'#4ADE80' },
+    { label:'Act. semana',     val: weekActivity.length, color: weekActivity.length>=10?'#4ADE80':'#FCD34D' },
+  ];
+
+  const kpiHTML = kpiItems.map(k => `
+    <div style="padding:8px 10px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.12);border-radius:8px;text-align:center">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:${k.color};line-height:1">${k.val}</div>
+      <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">${k.label}</div>
+    </div>`).join('');
+
+  return `
+  <div class="intel-panel">
+    <div class="intel-scanline"></div>
+    <!-- Header -->
+    <div class="intel-header">
+      <div class="intel-header-left">
+        <div class="intel-dot"></div>
+        <div>
+          <div class="intel-title">🧠 INTEL · INTELIGENCIA OPERACIONAL</div>
+          <div class="intel-subtitle">DATOS EN TIEMPO REAL · ${leads.length} LEADS · ${usingDemo ? 'MODO DEMO' : 'SUPABASE LIVE'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="intel-badge" style="color:${hc};border-color:${hc}40">HEALTH ${health}/100</span>
+        <button onclick="runINTELStandalone()" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:6px;padding:3px 10px;color:#FCD34D;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;cursor:pointer">↻ REFRESH</button>
+      </div>
+    </div>
+
+    <div class="intel-body">
+
+      <!-- KPI Row -->
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:16px">
+        ${kpiHTML}
+      </div>
+
+      <!-- Score + Funnel -->
+      <div class="intel-top-row">
+        <!-- Health Score -->
+        <div class="intel-score-box">
+          <div class="intel-score-num" style="color:${hc}">${health}</div>
+          <div class="intel-score-denom">/ 100</div>
+          <div class="intel-score-label">PIPELINE HEALTH</div>
+        </div>
+        <!-- Funnel -->
+        <div>
+          <div class="intel-weights-title">Embudo de ventas — leads por etapa</div>
+          ${funnelBars}
+        </div>
+      </div>
+
+      ${sentHTML}
+
+      <!-- Anomaly Alerts -->
+      <div class="intel-alerts" style="margin-top:14px">
+        <div class="intel-alerts-title">Anomalías detectadas</div>
+        ${alertsHTML}
+      </div>
+
+      ${insightHTML}${fallbackInsightHTML}
+
+      <!-- Actions -->
+      <div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('orquestador')" style="font-size:11px">🎯 Plan de Ataque</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('pipeline_ai')" style="font-size:11px">📊 WBR Pipeline AI</button>
+        ${stuckLeads.length > 0 ? `<button class="btn btn-ghost btn-sm" onclick="toggleAgent('cerrador')" style="font-size:11px;color:#F87171;border-color:rgba(248,113,113,.3)">⚡ Cerrar ${stuckLeads.length} atascados</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('intel-container').style.display='none'" style="font-size:11px">✕ Cerrar</button>
+      </div>
+
+    </div>
+  </div>`;
 }
 
 /* ── INIT ────────────────────────────────────────────── */
