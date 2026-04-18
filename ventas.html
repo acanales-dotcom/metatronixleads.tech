@@ -196,6 +196,237 @@
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
 /* ═══════════════════════════════════════════════════════
+   INTEL — Agente de Inteligencia Operacional
+   Color scheme: amber (#F59E0B) · dark strategic
+   ═══════════════════════════════════════════════════════ */
+@keyframes intel-appear {
+  from { opacity:0; transform:translateY(28px) scale(.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes intel-scan {
+  0%  { transform:translateY(-100%); }
+  100%{ transform:translateY(500%); }
+}
+@keyframes intel-pulse {
+  0%,100%{ opacity:.5; } 50%{ opacity:1; }
+}
+@keyframes bar-fill {
+  from{ width:0; } to{ width:var(--w); }
+}
+@keyframes score-count {
+  from{ opacity:0; transform:scale(.7); }
+  to  { opacity:1; transform:scale(1); }
+}
+
+.intel-panel {
+  background: linear-gradient(145deg, #0C0F14 0%, #111620 50%, #0E1118 100%);
+  border: 1px solid rgba(245,158,11,.32);
+  border-radius: 14px; overflow: hidden; position: relative;
+  animation: intel-appear .5s cubic-bezier(.25,.46,.45,.94) forwards;
+  box-shadow: 0 0 50px rgba(245,158,11,.1), 0 20px 60px rgba(0,0,0,.45);
+}
+.intel-scanline {
+  position:absolute; left:0; right:0; height:60px; pointer-events:none;
+  background: linear-gradient(180deg,transparent,rgba(245,158,11,.03) 50%,transparent);
+  animation: intel-scan 5s linear infinite; z-index:0;
+}
+.intel-panel::before {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 3px);
+}
+
+/* Header */
+.intel-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 18px; border-bottom:1px solid rgba(245,158,11,.18);
+  background:rgba(245,158,11,.05); position:relative; z-index:1;
+}
+.intel-header-left {
+  display:flex; align-items:center; gap:10px;
+}
+.intel-dot {
+  width:8px; height:8px; border-radius:50%; background:#F59E0B;
+  animation: intel-pulse 1.6s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(245,158,11,.6);
+}
+.intel-title {
+  font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700;
+  color:#FCD34D; letter-spacing:.14em; text-transform:uppercase;
+}
+.intel-subtitle {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:rgba(252,211,77,.35); letter-spacing:.1em;
+}
+.intel-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:12px;
+  background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.25);
+  font-family:'JetBrains Mono',monospace; font-size:9px; color:#FCD34D;
+  letter-spacing:.08em;
+}
+
+/* Body */
+.intel-body { padding:16px 18px; position:relative; z-index:1; }
+
+/* Top row: score + consensus */
+.intel-top-row {
+  display:grid; grid-template-columns:140px 1fr; gap:14px; margin-bottom:16px;
+}
+
+/* Score gauge */
+.intel-score-box {
+  background: rgba(245,158,11,.07);
+  border: 1px solid rgba(245,158,11,.2);
+  border-radius: 10px; padding: 14px 10px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; position:relative; overflow:hidden;
+}
+.intel-score-num {
+  font-family:'JetBrains Mono',monospace; font-size:44px; font-weight:700;
+  line-height:1; letter-spacing:-.02em;
+  animation: score-count .6s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+.intel-score-denom {
+  font-family:'JetBrains Mono',monospace; font-size:11px;
+  color:rgba(252,211,77,.4); margin-top:2px;
+}
+.intel-score-label {
+  font-size:9px; font-family:'JetBrains Mono',monospace;
+  color:rgba(252,211,77,.45); letter-spacing:.1em; text-transform:uppercase;
+  margin-top:6px;
+}
+
+/* Right panel */
+.intel-right { display:flex; flex-direction:column; gap:10px; }
+
+.intel-metric-row {
+  display:flex; flex-direction:column; gap:4px;
+}
+.intel-metric-label {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:rgba(245,158,11,.5); letter-spacing:.1em; text-transform:uppercase;
+  display:flex; justify-content:space-between;
+}
+.intel-metric-track {
+  height:6px; background:rgba(255,255,255,.07); border-radius:3px; overflow:hidden;
+}
+.intel-metric-fill {
+  height:100%; border-radius:3px;
+  background: linear-gradient(90deg, #D97706, #F59E0B, #FCD34D);
+  animation: bar-fill .8s ease forwards;
+}
+
+/* Dimension chips */
+.intel-dims {
+  display:flex; flex-wrap:wrap; gap:5px; margin-top:4px;
+}
+.intel-dim-chip {
+  padding:2px 8px; border-radius:10px; font-size:10px;
+  font-family:Inter,sans-serif; font-weight:600;
+}
+.intel-dim-on  { background:rgba(245,158,11,.15); color:#FCD34D; border:1px solid rgba(245,158,11,.3); }
+.intel-dim-off { background:rgba(255,255,255,.04); color:rgba(255,255,255,.25); border:1px solid rgba(255,255,255,.08); text-decoration:line-through; }
+
+/* Agent weight bars */
+.intel-weights { margin-bottom:14px; }
+.intel-weights-title {
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  color:rgba(245,158,11,.5); letter-spacing:.12em; text-transform:uppercase;
+  margin-bottom:8px; display:flex; align-items:center; gap:8px;
+}
+.intel-weights-title::after {
+  content:''; flex:1; height:1px; background:rgba(245,158,11,.1);
+}
+.intel-weight-row {
+  display:flex; align-items:center; gap:8px; margin-bottom:5px;
+}
+.intel-weight-name {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:rgba(255,255,255,.55); width:100px; flex-shrink:0;
+  text-transform:uppercase; letter-spacing:.04em; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.intel-weight-track {
+  flex:1; height:5px; background:rgba(255,255,255,.06);
+  border-radius:3px; overflow:hidden;
+}
+.intel-weight-fill {
+  height:100%; border-radius:3px;
+  animation: bar-fill .7s ease forwards;
+}
+.intel-weight-val {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:rgba(255,255,255,.4); width:30px; text-align:right; flex-shrink:0;
+}
+
+/* Alerts */
+.intel-alerts { margin-bottom:14px; }
+.intel-alerts-title {
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  color:rgba(245,158,11,.5); letter-spacing:.12em; text-transform:uppercase;
+  margin-bottom:8px; display:flex; align-items:center; gap:8px;
+}
+.intel-alerts-title::after { content:''; flex:1; height:1px; background:rgba(245,158,11,.1); }
+
+.intel-alert {
+  display:flex; align-items:flex-start; gap:8px;
+  padding:8px 10px; border-radius:7px; margin-bottom:5px;
+  font-size:11px; font-family:Inter,sans-serif; line-height:1.5;
+}
+.intel-alert-contradiction {
+  background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.2); color:#FCA5A5;
+}
+.intel-alert-risk {
+  background:rgba(245,158,11,.07); border:1px solid rgba(245,158,11,.2); color:#FDE68A;
+}
+.intel-alert-icon { font-size:13px; flex-shrink:0; margin-top:1px; }
+.intel-alert-count {
+  display:inline-block; padding:1px 6px; border-radius:8px;
+  background:rgba(245,158,11,.2); color:#FCD34D;
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+  margin-left:4px; vertical-align:middle;
+}
+
+/* Confidence band */
+.intel-confidence {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px; border-radius:8px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+}
+.intel-conf-label {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:rgba(255,255,255,.35); letter-spacing:.08em; flex-shrink:0;
+}
+.intel-conf-track {
+  flex:1; height:4px; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden;
+}
+.intel-conf-fill {
+  height:100%; border-radius:2px;
+  background:linear-gradient(90deg,#6366F1,#8B5CF6);
+  animation: bar-fill .9s ease forwards;
+}
+.intel-conf-val {
+  font-family:'JetBrains Mono',monospace; font-size:10px;
+  color:#A5B4FC; font-weight:700; flex-shrink:0;
+}
+.intel-conf-interval {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:rgba(165,180,252,.4); flex-shrink:0;
+}
+
+/* Loading state */
+.intel-loading {
+  display:flex; align-items:center; gap:12px;
+  padding:20px; color:rgba(252,211,77,.6);
+  font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.06em;
+}
+.intel-spinner {
+  width:18px; height:18px; border:2px solid rgba(245,158,11,.2);
+  border-top-color:#F59E0B; border-radius:50%;
+  animation:spin .8s linear infinite; flex-shrink:0;
+}
+
+/* ═══════════════════════════════════════════════════════
    USAGE BLOCKER MODAL
    ═══════════════════════════════════════════════════════ */
 @keyframes blocker-in {
@@ -870,6 +1101,9 @@
     <button class="mkt-view-btn active" id="vbtn-grid" onclick="setMktView('grid',this)">⊞ Agentes</button>
     <span style="font-size:10px;color:#4A5568;font-family:Inter,sans-serif;margin-left:4px">Agencia de Ventas — 10 Agentes IA · Pipeline de Cierre Inevitable</span>
   </div>
+
+  <!-- INTEL CONTAINER — análisis operacional entre agentes y Genio -->
+  <div id="intel-container" style="display:none;padding:0 24px 16px"></div>
 
   <!-- GENIE CONTAINER — aparece después de que todos los agentes terminan -->
   <div id="genie-container" style="display:none;padding:0 24px 32px"></div>
@@ -2098,6 +2332,340 @@ async function runAgentSimVentas(id, output) {
 }
 
 /* ══════════════════════════════════════════════════════
+   INTEL — Inteligencia Operacional
+   ══════════════════════════════════════════════════════ */
+
+/* ── Utilidades matemáticas ── */
+function cosineSim(a, b) {
+  if (!a || !b || a.length !== b.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i]*b[i]; na += a[i]*a[i]; nb += b[i]*b[i]; }
+  return na && nb ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
+}
+
+function mean(arr) { return arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : 0; }
+
+async function getEmbedding(text, model) {
+  try {
+    const out = await model(text.slice(0, 256), { pooling:'mean', normalize:true });
+    return Array.from(out.data);
+  } catch(_) { return null; }
+}
+
+/* ── Fórmula determinista de Mission Score ──
+   consensus(30%) + relevancia_media(25%) + cobertura(20%) + riesgo_inverso(15%) + confianza(10%)
+*/
+function calcMissionScore({ consensusIndex, meanRelevance, coverageRatio, riskDensity, confidence }) {
+  const score =
+    consensusIndex  * 30 +
+    meanRelevance   * 25 +
+    coverageRatio   * 20 +
+    (1-riskDensity) * 15 +
+    confidence      * 10;
+  return Math.min(100, Math.max(0, Math.round(score)));
+}
+
+function scoreColor(s) {
+  if (s >= 70) return '#4ADE80';
+  if (s >= 45) return '#FCD34D';
+  return '#F87171';
+}
+
+/* ── Claude extrae estructura semántica ── */
+async function intelClaudeExtract(mission, agentSummaries, agentScores) {
+  const sys = `Eres el motor de análisis INTEL de MetaTronix. Tu función es procesar salidas de agentes de ventas y devolver SOLO JSON válido, sin texto adicional. Nunca expliques, nunca comentes. Solo JSON.`;
+
+  const scoresText = agentScores.map(a =>
+    `${a.name}: relevancia=${a.relevance.toFixed(2)}, texto="${a.text.slice(0,120)}"`
+  ).join('\n');
+
+  const userMsg = `Misión: "${mission.slice(0,200)}"
+
+Scores de relevancia por agente:
+${scoresText}
+
+Analiza y devuelve este JSON (sin markdown, sin explicaciones):
+{
+  "contradictions": [
+    {"agents": ["NombreA","NombreB"], "topic": "descripción breve del conflicto", "severity": "alta|media"}
+  ],
+  "critical_risks": [
+    {"risk": "descripción del riesgo", "agent_count": N, "severity": "critico|alto|medio"}
+  ],
+  "dimensions_covered": ["financiero","tecnico","timeline","competencia","politico","legal","stakeholders","pricing"],
+  "dimensions_missing": ["legal","stakeholders"],
+  "confidence": 0.72,
+  "intel_summary": "Una oración de 15 palabras max sobre el estado de la misión",
+  "top_agent": "NombredelAgenteConMasRelevancia",
+  "execution_risk": "alto|medio|bajo"
+}
+
+Reglas:
+- contradictions: máx 3, solo si hay conflicto real entre posiciones
+- critical_risks: máx 4, riesgos mencionados o implícitos en múltiples agentes
+- dimensions_covered: de las 8 dimensiones, marca solo las que algún agente cubrió
+- confidence: float 0.0-1.0 que refleja qué tan sólida es la evidencia total`;
+
+  try {
+    const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 600 });
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+  } catch(_) {}
+
+  // Fallback si Claude falla
+  return {
+    contradictions: [],
+    critical_risks: [{ risk: 'Análisis de riesgos no disponible', agent_count: 0, severity: 'medio' }],
+    dimensions_covered: ['financiero','tecnico','timeline','competencia'],
+    dimensions_missing: ['legal','stakeholders','politico','pricing'],
+    confidence: 0.60,
+    intel_summary: 'Análisis completado con datos parciales',
+    top_agent: agentScores[0]?.name || '',
+    execution_risk: 'medio',
+  };
+}
+
+/* ── Render del panel INTEL ── */
+function renderIntelPanel(scores, structured, agentScores) {
+  const { missionScore, consensusIndex, meanRelevance, coverageRatio, riskDensity } = scores;
+  const { contradictions, critical_risks, dimensions_covered, dimensions_missing,
+          confidence, intel_summary, top_agent, execution_risk } = structured;
+
+  const ALL_DIMS = ['financiero','tecnico','timeline','competencia','politico','legal','stakeholders','pricing'];
+  const covered = new Set((dimensions_covered||[]).map(d=>d.toLowerCase()));
+  const pct = n => Math.round(n*100);
+
+  const riskBadge = { alto:'🔴', critico:'🔴', medio:'🟡', bajo:'🟢' };
+  const execColor = { alto:'#F87171', medio:'#FCD34D', bajo:'#4ADE80' };
+
+  const agentBars = [...agentScores]
+    .sort((a,b) => b.relevance - a.relevance)
+    .map(a => {
+      const w = Math.round(a.relevance * 100);
+      const color = a.relevance > 0.7 ? '#4ADE80' : a.relevance > 0.45 ? '#FCD34D' : '#94A3B8';
+      return `<div class="intel-weight-row">
+        <div class="intel-weight-name">${a.name.slice(0,12)}</div>
+        <div class="intel-weight-track">
+          <div class="intel-weight-fill" style="--w:${w}%;background:${color};width:${w}%"></div>
+        </div>
+        <div class="intel-weight-val">${a.relevance.toFixed(2)}</div>
+      </div>`;
+    }).join('');
+
+  const dimChips = ALL_DIMS.map(d =>
+    covered.has(d)
+      ? `<span class="intel-dim-chip intel-dim-on">${d}</span>`
+      : `<span class="intel-dim-chip intel-dim-off">${d}</span>`
+  ).join('');
+
+  const contradictionHTML = (contradictions||[]).map(c => `
+    <div class="intel-alert intel-alert-contradiction">
+      <span class="intel-alert-icon">⚡</span>
+      <div><strong>${c.agents?.join(' ↔ ')||'Agentes'}</strong> — ${escHtml(c.topic||'')}
+        <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:rgba(252,165,165,.5);margin-left:6px">${c.severity||''}</span>
+      </div>
+    </div>`).join('');
+
+  const riskHTML = (critical_risks||[]).map(r => `
+    <div class="intel-alert intel-alert-risk">
+      <span class="intel-alert-icon">${riskBadge[r.severity]||'🟡'}</span>
+      <div>${escHtml(r.risk||'')}${r.agent_count>1?`<span class="intel-alert-count">${r.agent_count} agentes</span>`:''}</div>
+    </div>`).join('');
+
+  const confLow  = Math.max(0, Math.round((confidence||0.6)*100) - 14);
+  const confHigh = Math.min(100, Math.round((confidence||0.6)*100) + 14);
+
+  return `
+  <div class="intel-panel">
+    <div class="intel-scanline"></div>
+
+    <!-- Header -->
+    <div class="intel-header">
+      <div class="intel-header-left">
+        <div class="intel-dot"></div>
+        <div>
+          <div class="intel-title">🧠 INTEL · INTELIGENCIA OPERACIONAL</div>
+          <div class="intel-subtitle">ANÁLISIS SEMÁNTICO DE ${agentScores.length} AGENTES · METATRONIX v3.0</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="intel-badge" style="color:${execColor[execution_risk]||'#FCD34D'};border-color:${execColor[execution_risk]||'#FCD34D'}40">
+          RIESGO EJEC. ${(execution_risk||'medio').toUpperCase()}
+        </span>
+        <span class="intel-badge">${intel_summary||''}</span>
+      </div>
+    </div>
+
+    <div class="intel-body">
+
+      <!-- Zona 1: Score + Consenso -->
+      <div class="intel-top-row">
+        <!-- Score gauge -->
+        <div class="intel-score-box">
+          <div class="intel-score-num" style="color:${scoreColor(missionScore)}">${missionScore}</div>
+          <div class="intel-score-denom">/ 100</div>
+          <div class="intel-score-label">MISIÓN SCORE</div>
+        </div>
+
+        <!-- Right metrics -->
+        <div class="intel-right">
+          <div class="intel-metric-row">
+            <div class="intel-metric-label">
+              <span>Consenso de agentes</span>
+              <span style="color:#FCD34D">${pct(consensusIndex)}%</span>
+            </div>
+            <div class="intel-metric-track">
+              <div class="intel-metric-fill" style="--w:${pct(consensusIndex)}%;width:${pct(consensusIndex)}%"></div>
+            </div>
+          </div>
+          <div class="intel-metric-row">
+            <div class="intel-metric-label">
+              <span>Relevancia media al objetivo</span>
+              <span style="color:#FCD34D">${pct(meanRelevance)}%</span>
+            </div>
+            <div class="intel-metric-track">
+              <div class="intel-metric-fill" style="--w:${pct(meanRelevance)}%;width:${pct(meanRelevance)}%"></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(245,158,11,.5);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px">
+              Cobertura dimensional — ${(dimensions_covered||[]).length}/8
+            </div>
+            <div class="intel-dims">${dimChips}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zona 2: Peso por agente -->
+      <div class="intel-weights">
+        <div class="intel-weights-title">Peso por agente — relevancia para esta misión específica</div>
+        ${agentBars}
+      </div>
+
+      <!-- Zona 3: Alertas -->
+      ${contradictionHTML || riskHTML ? `
+      <div class="intel-alerts">
+        <div class="intel-alerts-title">Alertas de inteligencia</div>
+        ${contradictionHTML}
+        ${riskHTML}
+      </div>` : ''}
+
+      <!-- Zona 4: Confianza -->
+      <div class="intel-confidence">
+        <div class="intel-conf-label">CONFIANZA DEL SISTEMA</div>
+        <div class="intel-conf-track">
+          <div class="intel-conf-fill" style="--w:${pct(confidence||0.6)}%;width:${pct(confidence||0.6)}%"></div>
+        </div>
+        <div class="intel-conf-val">${pct(confidence||0.6)}%</div>
+        <div class="intel-conf-interval">[ ${confLow}% — ${confHigh}% ]</div>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+/* ── Función principal: runINTEL ── */
+async function runINTEL(mission, agentResults) {
+  const container = document.getElementById('intel-container');
+  if (!container || !agentResults.length) return null;
+
+  // Mostrar skeleton
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="intel-panel">
+      <div class="intel-header">
+        <div class="intel-header-left">
+          <div class="intel-dot"></div>
+          <div>
+            <div class="intel-title">🧠 INTEL · INTELIGENCIA OPERACIONAL</div>
+            <div class="intel-subtitle">ANALIZANDO ${agentResults.length} AGENTES…</div>
+          </div>
+        </div>
+      </div>
+      <div class="intel-loading">
+        <div class="intel-spinner"></div>
+        Calculando consenso semántico, ponderando agentes, detectando contradicciones…
+      </div>
+    </div>`;
+  container.scrollIntoView({ behavior:'smooth', block:'start' });
+
+  /* ── Paso 1: embeddings con HF (si disponible) ── */
+  let agentScores = agentResults.map((r, i) => ({
+    ...r,
+    relevance: 0.5 + (agentResults.length - i) / (agentResults.length * 2), // fallback lineal
+    embedding: null,
+  }));
+
+  let consensusIndex = 0.65; // fallback
+
+  try {
+    if (window.CRM_AI) {
+      const embModel = await window.CRM_AI.embeddings();
+      const missionEmb = await getEmbedding(mission, embModel);
+
+      if (missionEmb) {
+        // Embeddings de cada agente
+        const withEmbs = await Promise.all(agentResults.map(async r => ({
+          ...r,
+          embedding: await getEmbedding(r.text, embModel),
+        })));
+
+        // Relevancia = cosine_sim(agente, misión)
+        agentScores = withEmbs.map(r => ({
+          ...r,
+          relevance: r.embedding ? cosineSim(missionEmb, r.embedding) : 0.5,
+        }));
+
+        // Consenso = similitud promedio entre pares de agentes
+        const embs = withEmbs.map(r=>r.embedding).filter(Boolean);
+        if (embs.length >= 2) {
+          let simSum = 0, simCount = 0;
+          for (let i = 0; i < embs.length; i++)
+            for (let j = i+1; j < embs.length; j++) {
+              simSum += cosineSim(embs[i], embs[j]); simCount++;
+            }
+          consensusIndex = simCount ? simSum / simCount : 0.65;
+        }
+      }
+    }
+  } catch(_) { /* HF no disponible, usa fallbacks */ }
+
+  const meanRelevance = mean(agentScores.map(a => a.relevance));
+
+  /* ── Paso 2: Claude extrae estructura ── */
+  let structured = {
+    contradictions: [], critical_risks: [],
+    dimensions_covered: ['financiero','tecnico','timeline','competencia'],
+    dimensions_missing: ['legal','stakeholders','politico','pricing'],
+    confidence: 0.65, intel_summary: 'Análisis operacional completado',
+    top_agent: agentScores[0]?.name||'', execution_risk: 'medio',
+  };
+
+  if (window.CRM_LLM?.engine) {
+    structured = await intelClaudeExtract(mission, agentResults, agentScores);
+  }
+
+  /* ── Paso 3: Mission Score ── */
+  const coverageRatio = (structured.dimensions_covered?.length || 4) / 8;
+  const riskDensity   = Math.min((structured.critical_risks?.filter(r=>r.severity==='critico'||r.severity==='alto').length||0) / 4, 1);
+  const confidence    = structured.confidence || 0.65;
+
+  const missionScore = calcMissionScore({
+    consensusIndex, meanRelevance, coverageRatio, riskDensity, confidence
+  });
+
+  /* ── Paso 4: Render ── */
+  container.innerHTML = renderIntelPanel(
+    { missionScore, consensusIndex, meanRelevance, coverageRatio, riskDensity },
+    structured,
+    agentScores
+  );
+
+  // Retorna scores para el Genio
+  return { missionScore, consensusIndex, meanRelevance, structured, agentScores };
+}
+
+/* ══════════════════════════════════════════════════════
    USAGE CONTROL — Límite mensual de consultas IA
    ══════════════════════════════════════════════════════ */
 
@@ -2266,7 +2834,7 @@ function buildGeniePanelSkeleton() {
   </div>`;
 }
 
-async function showGenie(mission, agentResults) {
+async function showGenie(mission, agentResults, intelScores = null) {
   const container = document.getElementById('genie-container');
   if (!container) return;
 
@@ -2304,12 +2872,28 @@ MetaTronix es un CRM + IA para equipos de ventas en LATAM. Su proceso: Prospecci
 
 REGLAS:
 - Responde SIEMPRE en español. Sé específico, usa datos y nombres concretos.
+- Si recibes datos de INTEL (Mission Score, riesgos, contradicciones), úsalos para calibrar el tono: score <50 = advierte primero, score ≥80 = celebra y acelera.
+- Cuando existan riesgos críticos o contradicciones del INTEL, mencionarlos explícitamente en el Resumen Ejecutivo.
 - Menciona a los agentes por nombre cuando cites su output.
 - Cada acción debe tener: QUÉ, CUÁNDO y MÉTRICA de éxito.
 - El plan de 7 días debe ser ejecutable por un vendedor real de MetaTronix.`;
 
-  const userMsg = `La agencia trabajó en esta misión: "${mission.slice(0,300)}"
+  // Contexto INTEL para enriquecer el prompt del Genio
+  const intelCtx = intelScores ? `
+INTEL — Análisis Operacional Previo:
+• Mission Score: ${intelScores.missionScore}/100
+• Consenso entre agentes: ${Math.round(intelScores.consensusIndex * 100)}%
+• Relevancia media: ${Math.round(intelScores.meanRelevance * 100)}%
+• Agente más relevante: ${intelScores.agentScores?.[0]?.name || 'N/A'}
+• Riesgo de ejecución: ${intelScores.structured?.execution_risk || 'medio'}
+• Dimensiones cubiertas: ${(intelScores.structured?.dimensions_covered||[]).join(', ')}
+• Dimensiones sin cubrir: ${(intelScores.structured?.dimensions_missing||[]).join(', ')}
+${intelScores.structured?.critical_risks?.length ? `• Riesgos críticos detectados: ${intelScores.structured.critical_risks.map(r=>r.risk).join(' | ')}` : ''}
+${intelScores.structured?.contradictions?.length ? `• Contradicciones entre agentes: ${intelScores.structured.contradictions.map(c=>c.topic).join(' | ')}` : ''}
+` : '';
 
+  const userMsg = `La agencia trabajó en esta misión: "${mission.slice(0,300)}"
+${intelCtx}
 Outputs de los agentes:
 
 ${outputsText}
@@ -2464,8 +3048,12 @@ async function launchAllAgents() {
     text: (document.getElementById(`output-${a.id}`)?.innerText || '').trim(),
   })).filter(r => r.text.length > 20);
 
-  // Invocar al Genio
-  await showGenie(mission, agentResults);
+  // INTEL — análisis semántico antes del Genio
+  if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ — PROCESANDO INTEL…';
+  const intelScores = await runINTEL(mission, agentResults);
+
+  // Invocar al Genio con los scores INTEL
+  await showGenie(mission, agentResults, intelScores);
 
   setTimeout(() => {
     if (launchIcon) launchIcon.textContent = '🚀';
