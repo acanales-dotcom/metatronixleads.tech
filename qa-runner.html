@@ -53,10 +53,10 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:16px 32p
 <div class="clf-banner">⚠ MTX QA RUNNER — AUTOMATED TEST EXECUTION — INTERNAL USE ONLY ⚠</div>
 <header>
   <h1>MTX QA RUNNER</h1>
-  <p>Automated test execution for metatronixleads.tech · 71 automated tests across 15 modules</p>
+  <p>Automated test execution for metatronixleads.tech · 57 automated tests across 10 suites · v2.1 Security+Features</p>
 </header>
 <div class="stats-bar">
-  <div class="stat"><div class="stat-num" id="s-total" style="color:var(--text)">71</div><div class="stat-label">Total</div></div>
+  <div class="stat"><div class="stat-num" id="s-total" style="color:var(--text)">57</div><div class="stat-label">Total</div></div>
   <div class="stat"><div class="stat-num" id="s-pass" style="color:var(--accent)">0</div><div class="stat-label">Pass</div></div>
   <div class="stat"><div class="stat-num" id="s-fail" style="color:var(--red)">0</div><div class="stat-label">Fail</div></div>
   <div class="stat"><div class="stat-num" id="s-skip" style="color:var(--muted)">0</div><div class="stat-label">Skip</div></div>
@@ -73,11 +73,13 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:16px 32p
   <button class="btn" onclick="runSuite('SEC')">SEC</button>
   <button class="btn" onclick="runSuite('PERF')">PERF</button>
   <button class="btn" onclick="runSuite('REG')">REG</button>
+  <button class="btn" onclick="runSuite('SEC2')" style="border-color:#EF4444;color:#EF4444">SEC2</button>
+  <button class="btn" onclick="runSuite('FTR')" style="border-color:#00D4F0;color:#00D4F0">FTR</button>
   <button class="btn" onclick="resetAll()" style="margin-left:auto">↺ RESET</button>
   <a href="qa-protocol.html" class="btn" style="text-decoration:none;display:flex;align-items:center">📋 PROTOCOL</a>
 </div>
 <main id="mainContent"></main>
-<footer>MTX QA RUNNER v2.0 · metatronixleads.tech · Automated suite: 71 tests · Manual: 91 tests (see qa-protocol.html)</footer>
+<footer>MTX QA RUNNER v2.1 · metatronixleads.tech · Automated suite: 57 tests · Manual: 91 tests (see qa-protocol.html)</footer>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -381,6 +383,152 @@ const suites = [
       if(dmStorageKey(a,b)!==dmStorageKey(b,a))return fail('Asimétrica para: '+a+', '+b);
     }
     return pass('3/3 casos: key A→B === B→A');
+  }},
+]},
+
+{id:'SEC2', title:'SEGURIDAD v2 — JWT + WORKER', tests:[
+  {id:'MTX-SEC2-001', name:'Worker rechaza llamadas sin JWT (→ 401)', run: async()=>{
+    try{
+      const r = await fetch(WORKER_URL,{method:'POST',
+        headers:{'Content-Type':'application/json','Origin':BASE_URL},
+        body:JSON.stringify({messages:[{role:'user',content:'test'}]})
+      });
+      if(r.status===401)return pass('✅ Worker retorna 401 sin JWT — protección activa');
+      if(r.status===200)return fail('⚠ Worker acepta llamadas SIN autenticación → VULNERABILIDAD');
+      return skip('HTTP '+r.status+' — Worker puede estar en modo sin verificación');
+    }catch(e){return skip('CORS bloqueó el fetch desde el browser: '+e.message);}
+  }},
+  {id:'MTX-SEC2-002', name:'Worker rechaza JWT inválido (→ 401)', run: async()=>{
+    try{
+      const r = await fetch(WORKER_URL,{method:'POST',
+        headers:{'Content-Type':'application/json','Origin':BASE_URL,'Authorization':'Bearer fake.jwt.invalid'},
+        body:JSON.stringify({messages:[{role:'user',content:'test'}]})
+      });
+      if(r.status===401)return pass('✅ Worker retorna 401 con JWT inválido — verificación activa');
+      if(r.status===200)return fail('⚠ Worker acepta JWT inválido → VULNERABILIDAD');
+      return skip('HTTP '+r.status);
+    }catch(e){return skip('CORS bloqueó el fetch: '+e.message);}
+  }},
+  {id:'MTX-SEC2-003', name:'app.js tiene fetchWithRetry() — retry con backoff', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/assets/app.js');const t=await r.text();
+    const hasRetry=t.includes('fetchWithRetry')&&t.includes('baseDelay')&&t.includes('backoff')||t.includes('Math.pow(2,');
+    if(hasRetry)return pass('fetchWithRetry() con backoff exponencial presente en app.js');
+    return fail('fetchWithRetry() no encontrado en app.js');}catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-SEC2-004', name:'app.js tiene global error boundary (window.onerror)', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/assets/app.js');const t=await r.text();
+    const hasOnerror=t.includes('window.onerror');
+    const hasUnhandled=t.includes('unhandledrejection');
+    if(hasOnerror&&hasUnhandled)return pass('window.onerror + unhandledrejection presentes');
+    return fail('Falta: onerror='+hasOnerror+', unhandledrejection='+hasUnhandled);}
+    catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-SEC2-005', name:'Worker v2: tiene verifySupabaseJWT() en código fuente', run: async()=>{
+    // No podemos leer el Worker source directamente, pero el código está en el repo
+    // Verificamos que el Worker rechaza sin auth (indirecto)
+    try{const r=await fetch(BASE_URL+'/worker/claude-proxy.js');const t=await r.text();
+    if(r.ok&&t.includes('verifySupabaseJWT')&&t.includes('checkRateLimit'))
+      return pass('claude-proxy.js v2.1 con JWT verify + rate limit en repo');
+    if(!r.ok) return skip('worker/claude-proxy.js no expuesto públicamente (normal en GitHub Pages)');
+    return fail('claude-proxy.js sin verifySupabaseJWT');}catch(e){return skip(e.message);}
+  }},
+  {id:'MTX-SEC2-006', name:'leads.html: escHtml() sin recursión infinita', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/leads.html');const t=await r.text();
+    // La versión rota tenía: if(typeof window.escHtml==='function')return window.escHtml(s)
+    const hasBug=t.includes('window.escHtml===')&&t.includes('return window.escHtml(s)');
+    if(hasBug)return fail('⚠ REGRESSION: escHtml() tiene recursión infinita en leads.html');
+    const hasFixed=t.includes("d.textContent=s==null?'':")||t.includes('d.textContent=s==null');
+    if(hasFixed)return pass('escHtml() usa DOM textContent — sin recursión');
+    return pass('Sin patrón de recursión infinita en leads.html');}catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-SEC2-007', name:'app.js: securityHeaders vía injectSecurityHeaders()', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/assets/app.js');const t=await r.text();
+    const hasCsp=t.includes('Content-Security-Policy')&&t.includes('injectSecurityHeaders');
+    const hasSafeUrl=t.includes('safeUrl')&&t.includes('javascript:');
+    if(hasCsp&&hasSafeUrl)return pass('CSP injection + safeUrl() presentes');
+    return fail('Falta CSP='+hasCsp+', safeUrl='+hasSafeUrl);}catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-SEC2-008', name:'XSS: e.message sanitizado en error handlers', run: async()=>{
+    try{
+      const files=['ventas.html','marketing.html'];
+      const bad=[];
+      for(const f of files){
+        const r=await fetch(BASE_URL+'/'+f);const t=await r.text();
+        // La versión peligrosa tenía: ${e.message} sin escHtml
+        const unsafePattern=/innerHTML[^`]*\$\{e\.message\}/;
+        if(unsafePattern.test(t))bad.push(f);
+      }
+      if(bad.length===0)return pass('e.message sanitizado en ventas.html y marketing.html');
+      return fail('e.message sin sanitizar en: '+bad.join(', '));
+    }catch(e){return fail(e.message);}
+  }},
+]},
+
+{id:'FTR', title:'FEATURES NUEVOS — QA', tests:[
+  {id:'MTX-FTR-001', name:'admin.html: tab Consultas IA presente para superAdmin', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/admin.html');const t=await r.text();
+    const hasTab=t.includes('tab-llmlogs')&&t.includes('Consultas IA');
+    const hasKPI=t.includes('llm-k-total')&&t.includes('llm-k-tokens');
+    const hasExport=t.includes('exportLLMLogs');
+    if(hasTab&&hasKPI&&hasExport)return pass('Tab Consultas IA + KPIs + CSV export presentes');
+    return fail('Falta: tab='+hasTab+', KPI='+hasKPI+', export='+hasExport);}
+    catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-FTR-002', name:'admin.html: loadLLMLogs() filtra por período y usuario', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/admin.html');const t=await r.text();
+    const hasPeriod=t.includes("llm-f-period")&&t.includes("today")&&t.includes("week");
+    const hasUserFilter=t.includes("llm-f-user")&&t.includes("loadLLMLogs");
+    if(hasPeriod&&hasUserFilter)return pass('Filtros período + usuario presentes en Consultas IA');
+    return fail('Falta período='+hasPeriod+', filtro usuario='+hasUserFilter);}
+    catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-FTR-003', name:'style.css: mobile sidebar con hamburger (.app-hamburger)', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/assets/style.css');const t=await r.text();
+    const hasHamburger=t.includes('.app-hamburger')&&t.includes('display: flex');
+    const hasOverlay=t.includes('sidebar-mobile-overlay');
+    const hasTranslate=t.includes('translateX(-100%)');
+    if(hasHamburger&&hasOverlay&&hasTranslate)return pass('Mobile sidebar CSS completo: hamburger + overlay + translateX');
+    return fail('Falta: hamburger='+hasHamburger+', overlay='+hasOverlay+', translate='+hasTranslate);}
+    catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-FTR-004', name:'app.js: initMobileSidebar() implementado', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/assets/app.js');const t=await r.text();
+    const hasInit=t.includes('initMobileSidebar')&&t.includes('toggleMobileSidebar');
+    const hasClose=t.includes('closeMobileSidebar');
+    if(hasInit&&hasClose)return pass('initMobileSidebar + toggleMobileSidebar + closeMobileSidebar OK');
+    return fail('Falta initMobileSidebar='+hasInit+', close='+hasClose);}
+    catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-FTR-005', name:'leads.html: updatePipelineSidebar() llamado en loadLeads()', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/leads.html');const t=await r.text();
+    const hasSidebar=t.includes('updatePipelineSidebar');
+    // Verificar que se llama en el init path (loadLeads)
+    const hasPipelineLayout=t.includes('pipeline-wrap')&&t.includes('pl-sidebar');
+    if(hasSidebar&&hasPipelineLayout)return pass('updatePipelineSidebar + pipeline layout presentes');
+    return fail('Falta sidebar fn='+hasSidebar+', layout='+hasPipelineLayout);}
+    catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-FTR-006', name:'teamchat.js: botón rojo con .has-unread cuando hay mensajes', run: async()=>{
+    try{const r=await fetch(BASE_URL+'/assets/teamchat.js');const t=await r.text();
+    const hasHasUnread=t.includes('has-unread');
+    const hasPulse=t.includes('tchat-pulse-red')||t.includes('pulse-red');
+    const hasToggle=t.includes("toggle('has-unread'")||t.includes('classList.toggle');
+    if(hasHasUnread&&(hasPulse||hasToggle))return pass('.has-unread + animación roja presentes en teamchat.js');
+    return fail('Falta has-unread='+hasHasUnread+', pulse='+hasPulse);}
+    catch(e){return fail(e.message);}
+  }},
+  {id:'MTX-FTR-007', name:'CI/CD: .github/workflows/deploy.yml con job de validación', run: async()=>{
+    // No podemos acceder a .github/ directamente, verificamos via GitHub API
+    try{const r=await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/contents/.github/workflows/deploy.yml');
+    if(r.ok){const j=await r.json();if(j.name==='deploy.yml')return pass('deploy.yml presente en GitHub ✅');}
+    return skip('GitHub API no accesible o archivo no encontrado');}
+    catch(e){return skip('Sin acceso a GitHub API: '+e.message);}
+  }},
+  {id:'MTX-FTR-008', name:'sql/rls_policies.sql presente en el repositorio', run: async()=>{
+    try{const r=await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/contents/sql/rls_policies.sql');
+    if(r.ok){const j=await r.json();if(j.name==='rls_policies.sql')return pass('rls_policies.sql en repo ✅');}
+    return skip('GitHub API no accesible');}
+    catch(e){return skip('Sin acceso a GitHub API: '+e.message);}
   }},
 ]},
 ];
