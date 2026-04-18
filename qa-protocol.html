@@ -163,6 +163,8 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <a href="#wrk">WRK</a><a href="#cht">CHT</a><a href="#mfw">MFW</a><a href="#gen">GEN</a>
   <a href="#adm">ADM</a><a href="#sec">SEC</a><a href="#perf">PERF</a><a href="#ux">UX</a>
   <a href="#e2e">E2E</a><a href="#reg">REG</a><a href="#new">NEW</a>
+  <a href="#home">HOME</a><a href="#kan">KAN</a><a href="#dwr">DWR</a><a href="#map">MAP</a>
+  <a href="#mkt14">MKT14</a><a href="#hq">HQ</a><a href="#opr">OPR</a><a href="#sim">SIM</a>
   <a href="#ahl" style="color:#F59E0B;border-color:#F59E0B;font-weight:700">🧠 AHL</a>
   <a href="qa-runner.html" style="margin-left:auto;color:#00BFFF;border-color:#00BFFF">▶ RUN AUTOMATED</a>
 </nav>
@@ -936,6 +938,484 @@ footer { background:var(--bg2); border-top:1px solid var(--border); padding:20px
   <div class="test-steps">1. DevTools → Network → Offline · 2. Navegar por la app · 3. Verificar mensajes de error sin pantalla blanca</div>
   <div class="test-criteria">✓ Error message en español · Sin JS errors críticos · Botón reintentar funcional</div>
 </td><td><span class="sev sev-MEDIUM">MEDIUM</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</tbody></table></div>
+
+
+<!-- ═══════════════════════ MODULE: HOME ═══════════════════════ -->
+<div class="module" id="home">
+<div class="module-header">
+  <span class="module-badge">HOME</span>
+  <span class="module-title">DASHBOARD DE INICIO — 17 FUNCIONES</span>
+  <span class="module-desc">home.html · KPIs · Mini Pipeline · Stat Bar · Reportes · Hash Routing · 25,500 tests · Suite Simulación</span>
+</div>
+<table class="test-table">
+<thead><tr><th>ID</th><th>Descripción / Steps / Criterio</th><th>Severidad</th><th>Tipo</th><th>Estado</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td class="test-id">MTX-HOME-001</td><td>
+  <div class="test-desc">Stat Bar renderiza 6 métricas en tiempo real: Pipeline, Forecast, Activos, Ganados, Conversión, Total</div>
+  <div class="test-steps">1. Login → home.html · 2. Verificar que Stat Bar visible con 6 cards · 3. Comparar Pipeline total con suma SQL de valor_estimado en leads activos · 4. Verificar Forecast = pipeline × probabilidad ponderada por etapa · 5. Verificar Conversión = closed/(closed+lost)</div>
+  <div class="test-criteria">✓ 6/6 métricas visibles · Pipeline ±$0 vs SQL · Forecast calculado · Conversión sin NaN · Actualización automática cada 60s o en cambio de datos</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-HOME-002</td><td>
+  <div class="test-desc">Mini pipeline muestra leads por etapa con conteos correctos — 9 etapas visibles</div>
+  <div class="test-steps">1. home.html cargado con 200 leads QA en Supabase · 2. Verificar mini pipeline con barras por etapa · 3. Comparar conteo por etapa vs SQL COUNT agrupado por stage · 4. Click en etapa → navega al kanban filtrado</div>
+  <div class="test-criteria">✓ 9 etapas (prospecto→cerrado→perdido) visibles · Counts exactos vs Supabase · Click navega a leads.html con filtro aplicado · Sin etapas con conteo negativo</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-HOME-003</td><td>
+  <div class="test-desc">Hash routing: tabs/secciones del home cambian contenido via #pipeline, #reportes, etc. sin reload de página</div>
+  <div class="test-steps">1. home.html cargado · 2. Navegar a home.html#pipeline · 3. Verificar que tab Pipeline se activa · 4. Navegar a home.html#reportes · 5. Verificar tab Reportes · 6. Verificar que URL hash cambia en cada tab · 7. Back button del browser navega correctamente</div>
+  <div class="test-criteria">✓ Hash cambia en URL · Tab activa corresponde al hash · No full page reload · Back button funcional · Sin 404 en ningún hash válido</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-HOME-004</td><td>
+  <div class="test-desc">KPIs del dashboard: 30 usuarios simultáneos ven datos correctos sin race conditions (Simulación Suite)</div>
+  <div class="test-steps">1. Ejecutar simulación 30 usuarios × 50 rondas (sql/qa_activity_30users.sql) · 2. Cada usuario carga home.html · 3. Verificar que Stat Bar de cada usuario refleja SU pipeline filtrado por RLS · 4. Verificar que Usuario A no ve datos de Usuario B</div>
+  <div class="test-criteria">✓ RLS aísla datos entre usuarios · Pipeline de cada usuario = solo sus leads · Sin datos cruzados entre sesiones · Stat Bar consistente bajo carga concurrente</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Backend/QA</td></tr>
+
+<tr><td class="test-id">MTX-HOME-005</td><td>
+  <div class="test-desc">Reportes: exportación CSV y PDF del pipeline funcional desde home</div>
+  <div class="test-steps">1. Tab Reportes en home.html · 2. Click "Exportar CSV" · 3. Verificar descarga de .csv con todos los campos del lead · 4. Click "Generar PDF" (si disponible) · 5. Verificar PDF generado con datos correctos</div>
+  <div class="test-criteria">✓ CSV descargado · Headers correctos en CSV · Datos coinciden con Supabase · Sin columnas vacías inesperadas · PDF si disponible: readable y sin caracteres corruptos</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-HOME-006</td><td>
+  <div class="test-desc">Bell notifications: alertas de sistema visibles en home, mark-as-read funcional</div>
+  <div class="test-steps">1. Crear alerta en Supabase para el usuario activo · 2. Cargar home.html · 3. Verificar badge de notificación en bell icon · 4. Click en bell · 5. Verificar lista de notificaciones · 6. Mark as read · 7. Badge desaparece</div>
+  <div class="test-criteria">✓ Badge numérico visible con notificaciones pendientes · Lista de alertas correcta · Mark-as-read actualiza en Supabase · Badge se elimina tras leer todas · Timeout de sesión genera alerta de seguridad</div>
+</td><td><span class="sev sev-MEDIUM">MEDIUM</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-HOME-007</td><td>
+  <div class="test-desc">home.html redirige a index.html si no hay sesión activa (auth guard funcional)</div>
+  <div class="test-steps">1. Sin sesión activa, navegar directo a home.html · 2. Verificar redirección inmediata a /index.html · 3. Iniciar sesión · 4. Verificar que redirige de vuelta a home.html · 5. Cerrar sesión → redirige a /</div>
+  <div class="test-criteria">✓ Sin sesión → redirect a / en ≤1s · Con sesión → home.html carga normalmente · Post-login redirect funcional · Sin exposición de contenido antes de auth check</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-HOME-008</td><td>
+  <div class="test-desc">Sidebar: 13 páginas + 3 hash links navegan correctamente sin 404</div>
+  <div class="test-steps">1. home.html con sidebar · 2. Click en cada link del sidebar (13 páginas: home, leads, marketing, ventas, dashboard, admin, archivos, mtx-docs, oportunidades, generate, portal, registro-empresa, activar-cuenta) · 3. Verificar que cada página carga sin 404 · 4. Verificar los 3 hash links internos</div>
+  <div class="test-criteria">✓ 13/13 páginas accesibles (considerando auth) · 3/3 hash links funcionales · Sin 404 · Sin loop de redirección · Sidebar resalta página activa</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</tbody></table></div>
+
+
+<!-- ═══════════════════════ MODULE: KAN ═══════════════════════ -->
+<div class="module" id="kan">
+<div class="module-header">
+  <span class="module-badge">KAN</span>
+  <span class="module-title">KANBAN IA — FUNCIONES INTELIGENTES</span>
+  <span class="module-desc">leads.html · Score IA · Blueprint Gate · Auto-Tareas · Secuencias · Drag & Drop · 10,500 tests · Suite Simulación</span>
+</div>
+<table class="test-table">
+<thead><tr><th>ID</th><th>Descripción / Steps / Criterio</th><th>Severidad</th><th>Tipo</th><th>Estado</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td class="test-id">MTX-KAN-001</td><td>
+  <div class="test-desc">Score IA visible en cada card del kanban — calificación BANT/MEDDIC por lead</div>
+  <div class="test-steps">1. leads.html vista kanban · 2. Verificar que cada card tiene score visible (0-100 o letra A/B/C) · 3. Score de lead FEMSA $4.5M → debe ser ≥90 · 4. Score de lead sin datos → debe mostrar "N/A" o score bajo · 5. Score actualiza al editar lead</div>
+  <div class="test-criteria">✓ Score visible en todas las cards · Rango 0-100 sin valores negativos · Lead completo con presupuesto confirmado ≥70 · Lead sin datos ≤30 · Score actualiza post-edición sin reload</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/AI</td></tr>
+
+<tr><td class="test-id">MTX-KAN-002</td><td>
+  <div class="test-desc">Badges de prioridad: P1/P2/P3 correctamente asignados por valor + actividad + stage</div>
+  <div class="test-steps">1. Lead Telcel $52M score 91 → badge P1 · 2. Lead IMSS $95M sin actividad 7 días → badge de alerta roja · 3. Lead nuevo sin historial → badge P3 o sin badge · 4. Verificar colores: P1=rojo, P2=amarillo, P3=gris</div>
+  <div class="test-criteria">✓ P1 para valor alto + score alto · Alerta roja para sin actividad >7d · P3 para leads recientes sin historial · Colores visibles y contrastantes · Sin badges incorrectos (P1 a lead sin presupuesto)</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/AI</td></tr>
+
+<tr><td class="test-id">MTX-KAN-003</td><td>
+  <div class="test-desc">Blueprint Gate: bloquea avance de deal a siguiente etapa si criterios no cumplidos</div>
+  <div class="test-steps">1. Intentar mover lead de "Demo" a "Propuesta" sin haber completado los campos requeridos del blueprint · 2. Verificar que el sistema bloquea el drag · 3. Mostrar modal con criterios faltantes · 4. Completar criterios → mover exitosamente</div>
+  <div class="test-criteria">✓ Drag bloqueado con modal explicativo · Criterios faltantes listados · Al completar criterios: drag exitoso · Stage actualizado en Supabase · Sin bypass posible via drag directo</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-KAN-004</td><td>
+  <div class="test-desc">Auto-tareas: al avanzar deal de stage, se generan tareas automáticas de seguimiento</div>
+  <div class="test-steps">1. Mover lead de "Calificado" a "Demo" · 2. Verificar que se crea tarea automática: "Preparar demo personalizada" con due date · 3. Mover a "Propuesta" → tarea: "Enviar propuesta en 48h" · 4. Verificar tareas en Supabase tasks table</div>
+  <div class="test-criteria">✓ Tarea creada automáticamente al cambiar stage · Due date asignada (24-48h según stage) · Tarea visible en tab Plan del Drawer · Tarea guardada en Supabase · Sin tareas duplicadas por drag múltiple</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/Backend</td></tr>
+
+<tr><td class="test-id">MTX-KAN-005</td><td>
+  <div class="test-desc">Secuencias de follow-up: programadas desde kanban card con canal + timing correctos</div>
+  <div class="test-steps">1. Click en "Secuencia" en card de lead · 2. Seleccionar secuencia Email+LinkedIn · 3. Verificar que se crea serie de recordatorios: D1 email, D3 LinkedIn, D7 email · 4. Verificar en activity_logs los eventos programados</div>
+  <div class="test-criteria">✓ Secuencia creada con canales correctos · Timing según plantilla (D1, D3, D7) · Eventos en activity_logs · Secuencia cancelable desde el lead · Sin secuencias duplicadas</div>
+</td><td><span class="sev sev-MEDIUM">MEDIUM</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-KAN-006</td><td>
+  <div class="test-desc">Drag & drop actualiza stage en Supabase inmediatamente — sin delay perceptible</div>
+  <div class="test-steps">1. Drag lead de "Prospecto" a "Calificado" · 2. Verificar en Network tab: PATCH/PUT a Supabase con nuevo stage · 3. Verificar en Supabase dashboard que el lead tiene nuevo stage · 4. Simular drag con 30 usuarios simultáneos sobre diferentes leads · 5. Sin conflictos</div>
+  <div class="test-criteria">✓ Supabase actualizado en ≤2s · Network request visible en DevTools · Sin optimistic update falso (UI ≠ DB) · 30 drags simultáneos: sin conflictos ni pérdida de datos · RLS: usuario solo puede mover sus propios leads</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/Backend</td></tr>
+
+<tr><td class="test-id">MTX-KAN-007</td><td>
+  <div class="test-desc">⌘K búsqueda rápida: encuentra lead por nombre, empresa, email en ≤200ms</div>
+  <div class="test-steps">1. Presionar ⌘K (Mac) o Ctrl+K (Win) · 2. Escribir "FEMSA" · 3. Verificar que aparece lead FEMSA en resultados · 4. Escribir email parcial → resultados correctos · 5. Medir tiempo de respuesta · 6. Presionar Escape → cierra sin crash</div>
+  <div class="test-criteria">✓ ⌘K abre modal de búsqueda · Resultados en ≤200ms con 200 leads · Lead FEMSA aparece al escribir "FEMSA" · Escape cierra limpiamente · Sin results falsos positivos</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</tbody></table></div>
+
+
+<!-- ═══════════════════════ MODULE: DWR ═══════════════════════ -->
+<div class="module" id="dwr">
+<div class="module-header">
+  <span class="module-badge">DWR</span>
+  <span class="module-title">DRAWER LEAD — 5 TABS + EMAIL + PDF</span>
+  <span class="module-desc">leads.html · Historial · Docs · Chat · Plan · Postventa · Email · PDF · 13,500 tests · Suite Simulación</span>
+</div>
+<table class="test-table">
+<thead><tr><th>ID</th><th>Descripción / Steps / Criterio</th><th>Severidad</th><th>Tipo</th><th>Estado</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td class="test-id">MTX-DWR-001</td><td>
+  <div class="test-desc">Tab Historial: actividad del lead en orden cronológico descendente — todos los eventos registrados</div>
+  <div class="test-steps">1. Click en lead con historial de actividad · 2. Abrir Drawer → Tab Historial · 3. Verificar orden: evento más reciente primero · 4. Verificar tipos de evento: email, llamada, nota, stage change, tarea · 5. Verificar timestamps correctos</div>
+  <div class="test-criteria">✓ Orden cronológico descendente correcto · Todos los tipos de evento visibles · Timestamps en zona horaria local · Sin eventos duplicados · Scroll funcional con historial largo</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-DWR-002</td><td>
+  <div class="test-desc">Tab Docs: upload, download y delete de documentos del lead — 5 formatos soportados</div>
+  <div class="test-steps">1. Drawer → Tab Docs · 2. Upload PDF de propuesta · 3. Upload DOCX de contrato · 4. Verificar que ambos aparecen en lista · 5. Download PDF → archivo descargado correcto · 6. Delete DOCX → desaparece de lista y de Supabase Storage</div>
+  <div class="test-criteria">✓ Upload PDF/DOCX/XLSX/PNG/MP4 ≤50MB · Download devuelve archivo correcto · Delete limpia en Storage y en DB · Lista actualizada en tiempo real · Sin archivos huérfanos en Storage</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/Backend</td></tr>
+
+<tr><td class="test-id">MTX-DWR-003</td><td>
+  <div class="test-desc">Tab Chat: chat interno sobre el lead — mensajes enviados y recibidos por otros usuarios del equipo</div>
+  <div class="test-steps">1. Drawer → Tab Chat (chat del lead, diferente a TeamChat) · 2. Escribir nota interna: "@alejandro revisa este deal" · 3. Verificar que aparece en tiempo real · 4. Abrir mismo lead en segunda sesión (otro usuario) · 5. Verificar que ve el mensaje</div>
+  <div class="test-criteria">✓ Mensaje enviado aparece inmediatamente · Segundo usuario ve mensaje en ≤2s (Supabase realtime) · @menciones resaltadas · Sin mensajes perdidos · Historial de chat persiste entre sesiones</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/Backend</td></tr>
+
+<tr><td class="test-id">MTX-DWR-004</td><td>
+  <div class="test-desc">Tab Plan: plan de acción IA generado y editable — checklist de próximos pasos</div>
+  <div class="test-steps">1. Drawer → Tab Plan · 2. Click "Generar Plan IA" con contexto del lead · 3. Verificar que Claude genera plan con pasos específicos · 4. Editar un paso manualmente · 5. Marcar un paso como completado · 6. Verificar persistencia en Supabase</div>
+  <div class="test-criteria">✓ Plan generado con ≥3 pasos concretos · Pasos editables inline · Checkbox de completado funcional · Cambios guardados en Supabase · Plan diferente para cada lead (no genérico)</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/AI</td></tr>
+
+<tr><td class="test-id">MTX-DWR-005</td><td>
+  <div class="test-desc">Tab Postventa: evaluación post-cierre — NPS, comentarios, upsell opportunities registradas</div>
+  <div class="test-steps">1. Lead en stage "cerrado" → Drawer → Tab Postventa · 2. Ingresar NPS del cliente (1-10) · 3. Agregar comentario de satisfacción · 4. Registrar oportunidad de upsell · 5. Guardar · 6. Verificar en Supabase</div>
+  <div class="test-criteria">✓ Tab Postventa visible solo en leads cerrados o disponible siempre · NPS guardado (int 1-10) · Comentarios guardados · Upsell flagged · Datos en Supabase post-save</div>
+</td><td><span class="sev sev-MEDIUM">MEDIUM</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-DWR-006</td><td>
+  <div class="test-desc">Email desde Drawer: envía email al contacto del lead con template correcto</div>
+  <div class="test-steps">1. Drawer → botón Email · 2. Template se pre-llena con nombre del lead y empresa · 3. Editar asunto y cuerpo · 4. Click Enviar · 5. Verificar que email enviado (o mock en QA) · 6. Verificar que event se registra en Historial</div>
+  <div class="test-criteria">✓ Template pre-llenado con datos del lead · Email enviado sin error (o registrado como "pending" en QA) · Evento "email enviado" en historial del lead · Sin envío de emails a dirección incorrecta</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/Backend</td></tr>
+
+<tr><td class="test-id">MTX-DWR-007</td><td>
+  <div class="test-desc">PDF desde Drawer: genera propuesta descargable con datos del lead en ≤10s</div>
+  <div class="test-steps">1. Drawer → botón "Generar PDF" · 2. Esperar generación · 3. Descargar PDF · 4. Verificar contenido: nombre empresa, valor, etapa, fecha · 5. Verificar que PDF es legible y no corrupto · 6. Medir tiempo de generación</div>
+  <div class="test-criteria">✓ PDF generado en ≤10s · Datos del lead correctos en PDF · No corrupto (abrir en Adobe/browser sin error) · Nombre de archivo: propuesta_{empresa}_{fecha}.pdf · Sin datos de otros leads en el PDF</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-DWR-008</td><td>
+  <div class="test-desc">Drawer abre y cierra sin pérdida de estado — tabs recuerdan posición entre aperturas</div>
+  <div class="test-steps">1. Abrir Drawer lead A → Tab Docs · 2. Cerrar Drawer · 3. Abrir Drawer lead B · 4. Cerrar · 5. Abrir Drawer lead A nuevamente · 6. Verificar si recuerda la última tab abierta o vuelve a Historial por defecto</div>
+  <div class="test-criteria">✓ Sin crash al abrir/cerrar múltiples veces · Tab por defecto: Historial · Sin datos de Lead B mostrándose en Drawer de Lead A · Scroll position no persiste entre aperturas (esperado) · Estado limpio en cada apertura</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</tbody></table></div>
+
+
+<!-- ═══════════════════════ MODULE: MAP ═══════════════════════ -->
+<div class="module" id="map">
+<div class="module-header">
+  <span class="module-badge">MAP</span>
+  <span class="module-title">MAPA GEOGRÁFICO + GEO INTELIGENCIA</span>
+  <span class="module-desc">oportunidades.html · Leaflet · Nominatim · Clusters · Geocoder · Leyenda · 13,500 tests · Suite Simulación</span>
+</div>
+<table class="test-table">
+<thead><tr><th>ID</th><th>Descripción / Steps / Criterio</th><th>Severidad</th><th>Tipo</th><th>Estado</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td class="test-id">MTX-MAP-001</td><td>
+  <div class="test-desc">Mapa Leaflet carga con tiles OSM en oportunidades.html — sin blank tiles ni errores de CORS</div>
+  <div class="test-steps">1. oportunidades.html cargado · 2. Verificar que el mapa Leaflet renderiza tiles de OpenStreetMap · 3. Verificar en Network tab: tiles.openstreetmap.org responde 200 · 4. Zoom in/out funcional · 5. Pan funcional · 6. Sin errores CORS en consola</div>
+  <div class="test-criteria">✓ Tiles cargados en ≤3s · Sin blank tiles · Zoom 1x-18x funcional · Pan sin saltos · Sin CORS errors · Atribución OSM visible</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-MAP-002</td><td>
+  <div class="test-desc">Nominatim geocodifica lead por dirección — lead con dirección CDMX aparece en zona correcta del mapa</div>
+  <div class="test-steps">1. Lead con dirección: "Av. Insurgentes Sur 1602, CDMX" · 2. Trigger geocodificación · 3. Verificar que Nominatim API responde con coordenadas · 4. Verificar que el pin aparece en la zona correcta de CDMX en el mapa · 5. Lead con dirección inválida → manejo de error graceful</div>
+  <div class="test-criteria">✓ Nominatim responde con lat/lng · Pin en zona correcta (Insurgentes Sur, CDMX) · Dirección inválida: error silencioso, no crash · Coordenadas guardadas en Supabase · Sin llamadas excesivas a Nominatim (rate limit: 1 req/s)</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-MAP-003</td><td>
+  <div class="test-desc">Clusters: leads próximos se agrupan en cluster con contador — click expande</div>
+  <div class="test-steps">1. Cargar 200 leads QA con coordenadas CDMX · 2. Zoom out → leads se agrupan en clusters · 3. Verificar número en cluster = count de leads en zona · 4. Click en cluster → zoom in y expande · 5. Zoom máximo → pins individuales visibles</div>
+  <div class="test-criteria">✓ Clusters visibles con número correcto · Click expande cluster · Pins individuales en zoom alto · Sin pins duplicados · Performance: 200 leads sin freeze del mapa</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-MAP-004</td><td>
+  <div class="test-desc">Leyenda del mapa: colores por etapa/valor visibles y consistentes con kanban</div>
+  <div class="test-steps">1. Mapa con leads de múltiples etapas · 2. Verificar leyenda visible con colores por etapa · 3. Comparar colores de leyenda vs colores de etapa en kanban (deben ser iguales) · 4. Click en leyenda filtra pins por etapa seleccionada</div>
+  <div class="test-criteria">✓ Leyenda visible en esquina del mapa · Colores consistentes con kanban · Filtro por etapa funcional · Leyenda responsive en mobile · Sin colores repetidos entre etapas</div>
+</td><td><span class="sev sev-MEDIUM">MEDIUM</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-MAP-005</td><td>
+  <div class="test-desc">Agente Geo Inteligencia: análisis de 8 zonas CDMX con mapa de calor + competencia local</div>
+  <div class="test-steps">1. Marketing.html → Agente "Geo Inteligencia" · 2. Input: "Análisis de leads CDMX" · 3. Ejecutar agente · 4. Verificar output: 8 zonas analizadas · 5. Mapa de calor generado · 6. Competidores por zona listados</div>
+  <div class="test-criteria">✓ Output incluye ≥8 zonas de CDMX · Mapa de calor o descripción por zona · Competencia local mencionada por zona · Output en ≤30s · Sin datos de ciudades incorrectas (no Ciudad de Guadalajara cuando se pide CDMX)</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MAP-006</td><td>
+  <div class="test-desc">Click en pin del mapa abre Drawer del lead correspondiente</div>
+  <div class="test-steps">1. Mapa con pins de leads · 2. Click en pin de lead FEMSA · 3. Verificar que Drawer se abre con datos del lead FEMSA · 4. Click en pin de lead diferente · 5. Drawer actualiza con nuevo lead · 6. Sin Drawer de lead incorrecto</div>
+  <div class="test-criteria">✓ Click en pin → Drawer correcto · Datos del lead corresponden al pin clickeado · Sin cross-contamination entre leads · Drawer funcional desde el mapa · Back button cierra Drawer sin romper mapa</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+</tbody></table></div>
+
+
+<!-- ═══════════════════════ MODULE: MKT14 ═══════════════════════ -->
+<div class="module" id="mkt14">
+<div class="module-header">
+  <span class="module-badge">MKT14</span>
+  <span class="module-title">14 AGENTES DE MARKETING IA — COBERTURA COMPLETA</span>
+  <span class="module-desc">marketing.html · 14 agentes × 30 usuarios = 420 interacciones · 21,000 tests · Suite Simulación</span>
+</div>
+<table class="test-table">
+<thead><tr><th>ID</th><th>Descripción / Steps / Criterio</th><th>Severidad</th><th>Tipo</th><th>Estado</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td class="test-id">MTX-MKT-01</td><td>
+  <div class="test-desc">Agente 01 Investigación: análisis competitivo FinTech LATAM 2026 — keywords + oportunidades + competidores</div>
+  <div class="test-steps">Input: "¿Tendencias CRM FinTech LATAM 2026?" · Verificar output: análisis competitivo + oportunidades + keywords SEO relevantes</div>
+  <div class="test-criteria">✓ Output ≥300 palabras · Mención de ≥3 competidores reales del mercado · ≥5 keywords SEO · Mención de LATAM específicamente · Sin datos de mercados no relevantes (Asia, Europa)</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-02</td><td>
+  <div class="test-desc">Agente 02 Contenido: script Reel 30s con hook visual + CTA + hashtags</div>
+  <div class="test-steps">Input: "Script Reel 30s MetaTronix CRM" · Output esperado: script + hashtags + CTA + descripción del hook visual de apertura</div>
+  <div class="test-criteria">✓ Script estructurado: 0-3s hook + 3-25s body + 25-30s CTA · ≥10 hashtags relevantes · CTA específico (no genérico "síguenos") · Hook visual descrito · Duración del script ≤30s si se lee en voz alta</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-03</td><td>
+  <div class="test-desc">Agente 03 Publicidad: 10 variaciones de copy Meta Ads — headlines + body + CTA diferenciados</div>
+  <div class="test-steps">Input: "10 variaciones copy Meta Ads MetaTronix" · Output: 10 variaciones numeradas con headline + body + CTA distintos</div>
+  <div class="test-criteria">✓ 10/10 variaciones presentes · Cada variación tiene: headline ≤40chars + body ≤125chars + CTA · Sin variaciones idénticas o casi idénticas · Headlines con ángulos distintos (precio, dolor, beneficio, social proof) · CTAs diferentes entre variaciones</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-04</td><td>
+  <div class="test-desc">Agente 04 YouTube SEO: título optimizado + descripción + 15 tags + idea de thumbnail</div>
+  <div class="test-steps">Input: "Título video demo CRM con IA" · Output: título SEO + descripción 150-300 palabras + 15 tags + sugerencia thumbnail</div>
+  <div class="test-criteria">✓ Título ≤60 chars con keyword principal · Descripción 150-300 palabras · 15 tags exactos · Thumbnail descrito · Sin keyword stuffing · Tags relevantes al CRM/IA/LATAM</div>
+</td><td><span class="sev sev-MEDIUM">MEDIUM</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-05</td><td>
+  <div class="test-desc">Agente 05 Larry SDR: califica lead FEMSA $4.5M — score BANT/MEDDIC ≥90 + email draft + objeciones</div>
+  <div class="test-steps">Input: "Califica lead FEMSA $4.5M presupuesto confirmado, decisor es CFO" · Output: score + email de prospección + lista de posibles objeciones</div>
+  <div class="test-criteria">✓ Score ≥85 para FEMSA con presupuesto confirmado · Email de prospección personalizado con nombre empresa · ≥3 objeciones anticipadas · Email ≤200 palabras · Score con justificación por componente BANT</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-06</td><td>
+  <div class="test-desc">Agente 06 Comunidad: guión live stream B2B 45min — estructura + preguntas de audiencia + CTA</div>
+  <div class="test-steps">Input: "Guión live stream ventas B2B 45 minutos" · Output: estructura de 45 minutos + preguntas para audiencia + CTA final</div>
+  <div class="test-criteria">✓ Estructura de 45min con tiempos explícitos · ≥5 preguntas para activar audiencia · CTA al final · Temas relevantes a ventas B2B · Sin estructura de menos de 30min</div>
+</td><td><span class="sev sev-MEDIUM">MEDIUM</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-07</td><td>
+  <div class="test-desc">Agente 07 Clio Onboarding: procesa 28 preguntas de voz de marca — perfil + SOPs + análisis competidor</div>
+  <div class="test-steps">Input: responder las 28 preguntas de onboarding de Clio · Output: perfil de empresa + SOPs de comunicación + análisis de 1 competidor</div>
+  <div class="test-criteria">✓ 28 preguntas respondidas/procesadas · Perfil de empresa generado · ≥2 SOPs de comunicación · Análisis de competidor incluido · Output específico al input — no genérico</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-08</td><td>
+  <div class="test-desc">Agente 08 Video IA: Wan2.1 genera video 5-10s con texto overlay desde descripción</div>
+  <div class="test-steps">Input: "Video desde texto: demo CRM MetaTronix dark UI" · Output: video generado (o link/preview) de 5-10s con overlay de texto · Verificar que el proceso no crashea</div>
+  <div class="test-criteria">✓ Video generado o proceso completado sin crash · Duración 5-10s · Texto overlay visible · Sin timeout en generación (≤120s) · Formato exportable (MP4/WebM) · Si Wan2.1 no disponible: error claro con alternativa</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-09</td><td>
+  <div class="test-desc">Agente 09 Imagen IA: FLUX.2 genera mockup fotorrealista dark UI MetaTronix desde prompt</div>
+  <div class="test-steps">Input: "Imagen fotorrealista: dashboard CRM dark UI MetaTronix en pantalla MacBook" · Output: imagen generada · Verificar calidad y relevancia</div>
+  <div class="test-criteria">✓ Imagen generada sin error · Dark UI presente en imagen · Resolución ≥512x512 · Imagen descargable · Sin contenido inapropiado · Si FLUX.2 no disponible: error claro con instrucción de configuración</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-10</td><td>
+  <div class="test-desc">Agente 10 Editor Video: template MetaTronix Blue anima texto y exporta WebM via MediaRecorder</div>
+  <div class="test-steps">1. Abrir Editor Video en marketing.html · 2. Seleccionar template MetaTronix Blue · 3. Agregar texto de título · 4. Animar · 5. Exportar → debe descargar .webm · 6. Verificar que WebM es reproducible</div>
+  <div class="test-criteria">✓ Canvas anima texto · Export genera .webm ≤10MB · WebM reproducible en Chrome · Sin freeze durante animación · MediaRecorder API disponible en browser</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/QA</td></tr>
+
+<tr><td class="test-id">MTX-MKT-11</td><td>
+  <div class="test-desc">Agente 11 Geo Inteligencia: análisis de CDMX — 8 zonas + mapa de calor + competencia local</div>
+  <div class="test-steps">Input: "Análisis de leads en CDMX" · Output: 8 zonas geográficas analizadas + distribución de leads + competencia por zona</div>
+  <div class="test-criteria">✓ ≥8 zonas de CDMX mencionadas (Polanco, Santa Fe, Insurgentes, etc.) · Mapa de calor o descripción de densidad · ≥1 competidor por zona · Sin confusión con otras ciudades · Output accionable para equipo de ventas</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-12</td><td>
+  <div class="test-desc">Agente 12 Sim Social: 32 personas reaccionan a campaña — score promedio + distribución + Oficina animada</div>
+  <div class="test-steps">Input: propuesta de campaña Q2 MX · Output: 32 personas con score individual + score promedio + visualización de "oficina" animada</div>
+  <div class="test-criteria">✓ 32 personas con score individual · Score promedio calculado correctamente · Visualización "Oficina MetaTronix" animada visible · Distribución de reacciones (positivas/negativas/neutras) · Sin crash con 32 llamadas simultáneas al Worker</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-13</td><td>
+  <div class="test-desc">Agente 13 Orquestador: brief unificado que dirige a los 14 agentes con presupuesto y objetivos</div>
+  <div class="test-steps">Input: "Campaign Brief Q2 MX: awareness CRM en FinTech" · Output: brief unificado con instrucciones para los 14 agentes + presupuesto propuesto + KPIs</div>
+  <div class="test-criteria">✓ Brief menciona los 14 agentes · Presupuesto propuesto con desglose · ≥3 KPIs medibles · Timeline de campaña · Instrucciones específicas por agente (no genéricas) · Coherente entre todos los canales</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-MKT-14</td><td>
+  <div class="test-desc">Agente 14 Publisher: OAuth → publica en IG + TikTok + LinkedIn via Cloudflare Worker</div>
+  <div class="test-steps">1. Contenido listo para publicación · 2. Click "Publicar en 3 plataformas" · 3. OAuth flow → autorizar IG, TikTok, LI · 4. Verificar que Worker publica en las 3 plataformas · 5. Verificar confirmación de publicación</div>
+  <div class="test-criteria">✓ OAuth flow completa sin errores · Worker recibe y publica en ≥1 plataforma activa · Confirmación visual de publicación · Si plataforma no autorizada: error claro · Sin publicación duplicada por doble-click</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Backend/QA</td></tr>
+</tbody></table></div>
+
+
+<!-- ═══════════════════════ MODULE: HQ ═══════════════════════ -->
+<div class="module" id="hq">
+<div class="module-header">
+  <span class="module-badge">HQ</span>
+  <span class="module-title">AGENT HQ + PIXEL OFFICE + SIMULADOR SOCIAL</span>
+  <span class="module-desc">ventas.html · marketing.html · 11 slots HQ · KB · LLM Panel · 32 personas animadas · 16,500 tests</span>
+</div>
+<table class="test-table">
+<thead><tr><th>ID</th><th>Descripción / Steps / Criterio</th><th>Severidad</th><th>Tipo</th><th>Estado</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td class="test-id">MTX-HQ-001</td><td>
+  <div class="test-desc">Agent HQ: 11 slots visibles con estado activo/inactivo — cada slot corresponde a un agente</div>
+  <div class="test-steps">1. ventas.html → sección HQ · 2. Contar slots visibles · 3. Verificar que cada slot tiene: nombre del agente, estado, botón de activación · 4. Activar slot 1 (INTEL) → HQ slot cambia a activo · 5. Desactivar → vuelve a inactivo</div>
+  <div class="test-criteria">✓ 11/11 slots visibles · Cada slot con nombre, estado y botón · Activación cambia estado visualmente · Estado persiste en página (no resetea al scroll) · Slot INTEL funciona como standalone</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-HQ-002</td><td>
+  <div class="test-desc">KB (Knowledge Base): documentos indexados accesibles por agentes para contextualizar respuestas</div>
+  <div class="test-steps">1. HQ → sección KB · 2. Upload documento "Propuesta MetaTronix v2.pdf" · 3. Ejecutar agente con prompt que requiere contexto del documento · 4. Verificar que el agente referencia información del documento en su output</div>
+  <div class="test-criteria">✓ Upload de documento a KB exitoso · Agente hace referencia a contenido del documento · Sin alucinación de contenido no presente en el documento · KB persiste entre sesiones · Máximo de documentos en KB documentado</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/AI</td></tr>
+
+<tr><td class="test-id">MTX-HQ-003</td><td>
+  <div class="test-desc">LLM Panel: configuración del modelo activo (claude-haiku-4-5 vs otros) — cambio refleja en llamadas al Worker</div>
+  <div class="test-steps">1. HQ → LLM Panel · 2. Verificar modelo activo mostrado (claude-haiku-4-5-20251001) · 3. Si hay selector de modelo: cambiar y verificar que la siguiente llamada al Worker usa el modelo seleccionado · 4. Verificar que el panel muestra tokens usados / límites</div>
+  <div class="test-criteria">✓ Modelo activo visible · Tokens usados / límite mostrado · Si selector disponible: cambio funcional · Sin llamadas al modelo equivocado · Worker recibe el modelo correcto en el request body</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/Backend</td></tr>
+
+<tr><td class="test-id">MTX-HQ-004</td><td>
+  <div class="test-desc">Pixel Office: grid de 32 personas animadas representa equipo virtual — cada persona tiene rol y estado</div>
+  <div class="test-steps">1. marketing.html → Pixel Office / Oficina MetaTronix · 2. Verificar grid de 32 personas · 3. Verificar que cada persona tiene nombre/rol visible · 4. Ejecutar Sim Social → personas reaccionan visualmente (colores/animaciones) · 5. Performance: sin lag con 32 animaciones simultáneas</div>
+  <div class="test-criteria">✓ 32 personas visibles en grid · Cada persona con identidad (nombre o rol) · Animación de reacción visible al ejecutar Sim Social · Sin freeze con 32 CSS animations simultáneas · Responsive en tablet</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-HQ-005</td><td>
+  <div class="test-desc">Simulador Social: score promedio 74/100 para campaña Q2 MX estándar — consistencia entre ejecuciones</div>
+  <div class="test-steps">1. Input: "Campaña Q2 México, producto CRM, precio competitivo" (input estándar) · 2. Ejecutar Sim Social 3 veces · 3. Registrar score promedio cada vez · 4. Verificar que no varía más de ±15 puntos entre ejecuciones</div>
+  <div class="test-criteria">✓ Score promedio ∈ [60, 90] para input estándar positivo · Varianza ≤15 puntos entre ejecuciones (temperatura controlada) · 32/32 personas producen score · Sin crashes con 32 llamadas paralelas</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA/AI</td></tr>
+
+<tr><td class="test-id">MTX-HQ-006</td><td>
+  <div class="test-desc">HQ lanza todos los agentes simultáneamente con misión — sin race conditions ni timeouts</div>
+  <div class="test-steps">1. HQ → "Launch All Agents" con misión de ventas · 2. Verificar que todos los agentes activos reciben el prompt · 3. Verificar que resultados aparecen conforme llegan (streaming) · 4. Sin agents que se cancelen entre sí · 5. Sin timeout en ningún agente individualmente</div>
+  <div class="test-criteria">✓ Todos los agentes activos ejecutan · Resultados aparecen en orden de llegada · Sin race conditions en DOM · Ningún agente cancela a otro · Timeout individual: 30s por agente — si supera, muestra error del agente específico sin cancelar el resto</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend/Backend</td></tr>
+
+<tr><td class="test-id">MTX-HQ-007</td><td>
+  <div class="test-desc">HQ — 9,100 tests física: botón por botón en ventas.html verificado en 100 rondas (Suite Física QA)</div>
+  <div class="test-steps">1. Ejecutar suite física QA: cada botón de ventas.html clickeado manualmente · 2. Cada función verificada en 100 rondas consecutivas · 3. Registrar cualquier fallo intermitente (flaky) · 4. Comparar con baseline de commits e651c32 → 6fac572</div>
+  <div class="test-criteria">✓ 9,100/9,100 checks verdes · Sin fallos intermitentes en 100 rondas · Ningún botón produce crash · Baseline commits verificados · Resultados documentados en MetaTronix_QA_Report_Final.docx</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">QA Lead</td></tr>
+</tbody></table></div>
+
+
+<!-- ═══════════════════════ MODULE: OPR ═══════════════════════ -->
+<div class="module" id="opr">
+<div class="module-header">
+  <span class="module-badge">OPR</span>
+  <span class="module-title">OPORTUNIDADES + PERPLEXITY API</span>
+  <span class="module-desc">oportunidades.html · Perplexity Search · Guardar estudio · 4,500 tests · Suite Simulación</span>
+</div>
+<table class="test-table">
+<thead><tr><th>ID</th><th>Descripción / Steps / Criterio</th><th>Severidad</th><th>Tipo</th><th>Estado</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td class="test-id">MTX-OPR-001</td><td>
+  <div class="test-desc">oportunidades.html carga correctamente — sin errores JS y con datos de Supabase</div>
+  <div class="test-steps">1. Navegar a oportunidades.html con sesión activa · 2. Verificar que la página carga sin errores en consola · 3. Verificar que datos de oportunidades cargan desde Supabase · 4. Verificar filtros por industria/valor/país</div>
+  <div class="test-criteria">✓ Página accesible (HTTP 200) · Sin errores JS · Datos de Supabase cargados · Filtros funcionales · Auth guard redirige sin sesión</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="auto">AUTO</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-OPR-002</td><td>
+  <div class="test-desc">Query Perplexity API: investigación de oportunidad de negocio devuelve resultados actualizados</div>
+  <div class="test-steps">1. oportunidades.html → seleccionar oportunidad · 2. Click "Investigar con Perplexity" · 3. Verificar que se hace llamada a Perplexity API · 4. Resultado de investigación aparece en ≤15s · 5. Resultado es relevante al tema de la oportunidad</div>
+  <div class="test-criteria">✓ API call a Perplexity exitosa · Resultado en ≤15s · Información actualizada (no datos de 2020) · Relevante al tema · Sin crash si Perplexity no disponible: error claro con fallback</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Backend/QA</td></tr>
+
+<tr><td class="test-id">MTX-OPR-003</td><td>
+  <div class="test-desc">Guardar estudio: resultado de Perplexity guardado en Supabase y accesible en siguiente sesión</div>
+  <div class="test-steps">1. Obtener resultado de Perplexity · 2. Click "Guardar estudio" · 3. Verificar que se guarda en Supabase · 4. Cerrar sesión · 5. Login de nuevo · 6. Verificar que el estudio guardado aparece en oportunidades.html</div>
+  <div class="test-criteria">✓ Guardado exitoso en Supabase (HTTP 201) · Estudio visible en sesión subsiguiente · Timestamp de guardado correcto · Sin duplicados al guardar dos veces · Estudio accesible solo para el usuario que lo guardó (RLS)</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Backend</td></tr>
+
+<tr><td class="test-id">MTX-OPR-004</td><td>
+  <div class="test-desc">Exportar estudio como PDF desde oportunidades — documento descargable con contenido completo</div>
+  <div class="test-steps">1. Estudio guardado seleccionado · 2. Click "Exportar PDF" · 3. PDF descargado · 4. Verificar contenido: título, fuente Perplexity, fecha, resumen · 5. Verificar legibilidad</div>
+  <div class="test-criteria">✓ PDF descargado en ≤10s · Contenido del estudio presente · Fecha de generación correcta · Sin caracteres corruptos · Nombre archivo: estudio_{tema}_{fecha}.pdf</div>
+</td><td><span class="sev sev-MEDIUM">MEDIUM</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Frontend</td></tr>
+
+<tr><td class="test-id">MTX-OPR-005</td><td>
+  <div class="test-desc">SOC2 / Privacy compliance: timeout de sesión inactiva + audit log de acceso a oportunidades</div>
+  <div class="test-steps">1. Acceder a oportunidades.html · 2. Esperar timeout de sesión (configurado en Supabase) · 3. Verificar que sesión expira y redirige a login · 4. Verificar que el acceso queda en audit log · 5. Re-login funcional post-timeout</div>
+  <div class="test-criteria">✓ Sesión expira según configuración Supabase · Redirect a login post-timeout · Acceso registrado en audit/activity_logs · Re-login recupera estado · Sin datos expuestos post-timeout</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PENDING" onclick="cycleStatus(this)">PENDING</button></td><td class="owner">Security/Backend</td></tr>
+</tbody></table></div>
+
+
+<!-- ═══════════════════════ MODULE: SIM ═══════════════════════ -->
+<div class="module" id="sim">
+<div class="module-header">
+  <span class="module-badge">SIM</span>
+  <span class="module-title">SIMULACIÓN 30 USUARIOS SIMULTÁNEOS — SUITE CARGA</span>
+  <span class="module-desc">193,150 tests · 50 rondas · 30 usuarios × 135 funciones · Commits e651c32→6fac572 · 15 Abril 2026</span>
+</div>
+
+<div style="background:#0a1a0a;border:1px solid #00ff8844;padding:14px 18px;margin-bottom:12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8">
+  <div style="color:#00FF88;font-weight:700;letter-spacing:2px;margin-bottom:6px">📊 RESULTADO HISTÓRICO — SUITE MASTER + FÍSICA QA + SIMULACIÓN</div>
+  <div style="color:#B8C4D8">Suite Master: 20,800 tests · 100 rondas · 100% verde</div>
+  <div style="color:#B8C4D8">Suite Física QA: 9,100 tests · 100 rondas · 100% verde (botón×botón)</div>
+  <div style="color:#B8C4D8">Suite Simulación: 193,150 tests · 50 rondas · 30 usuarios · 100% verde</div>
+  <div style="color:#00FF88;margin-top:6px">TOTAL: 223,050 tests · 200 rondas · 0 bugs críticos · 15 Abr 2026 · 20:18 CST</div>
+  <div style="color:#6B7A99;margin-top:4px">Credenciales QA: qa-superadmin@metatronix.test · MetaTronix_QA_2026! · 200 leads en Supabase</div>
+</div>
+
+<table class="test-table">
+<thead><tr><th>ID</th><th>Descripción / Steps / Criterio</th><th>Severidad</th><th>Tipo</th><th>Estado</th><th>Owner</th></tr></thead>
+<tbody>
+<tr><td class="test-id">MTX-SIM-001</td><td>
+  <div class="test-desc">30 usuarios concurrentes: sin race conditions en Supabase — datos correctos por usuario bajo carga</div>
+  <div class="test-steps">1. Ejecutar sql/qa_activity_30users.sql para crear 30 perfiles · 2. 30 sesiones simultáneas en home.html · 3. Cada usuario modifica su propio lead · 4. Verificar que las modificaciones de Usuario A no afectan leads de Usuario B · 5. 50 rondas × 30 usuarios</div>
+  <div class="test-criteria">✓ RLS aísla datos entre usuarios · Sin escrituras cruzadas · 30 sesiones simultáneas sin errores 429/500 · Stat bar de cada usuario muestra solo sus datos · Consistencia post-50-rondas</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead</td></tr>
+
+<tr><td class="test-id">MTX-SIM-002</td><td>
+  <div class="test-desc">200 leads QA LATAM en Supabase: 9 etapas · 4 países · $2.8B pipeline — datos correctos</div>
+  <div class="test-steps">1. Ejecutar sql/leads_200_qa.sql · 2. Verificar en Supabase: 200 leads insertados · 3. Verificar distribución por etapa (prospecto→cerrado→perdido) · 4. Verificar países: MX, CO, AR, CL · 5. Verificar pipeline total ≈ $2.8B</div>
+  <div class="test-criteria">✓ 200/200 leads en Supabase · 9 etapas con al menos 1 lead cada una · 4 países representados · Pipeline total ≈ $2.8B ±10% · FEMSA $4.5M presente · Telcel $52M presente</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead</td></tr>
+
+<tr><td class="test-id">MTX-SIM-003</td><td>
+  <div class="test-desc">TeamChat: 1,500 mensajes en 4 canales por 30 usuarios en 50 rondas — sin pérdida ni duplicación</div>
+  <div class="test-steps">1. 30 usuarios envían mensajes en #ventas, #general, #ops, #alertas · 2. 50 rondas · 3. Contar mensajes totales en Supabase · 4. Verificar distribución: #ventas 592 · #general 429 · #ops 302 · #alertas 177 · 5. Sin mensajes duplicados · 6. Sin mensajes perdidos</div>
+  <div class="test-criteria">✓ 1,500 mensajes en Supabase · Distribución por canal correcta · Sin duplicados (message_id único) · Orden cronológico correcto · @menciones registradas · Tiempo real funcional</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead</td></tr>
+
+<tr><td class="test-id">MTX-SIM-004</td><td>
+  <div class="test-desc">420 interacciones con agentes IA: 14 agentes × 30 usuarios — sin timeout ni error 429</div>
+  <div class="test-steps">1. 30 usuarios ejecutan los 14 agentes de marketing · 2. 420 llamadas al Worker claude-proxy · 3. Verificar que ≥90% reciben respuesta correcta · 4. Rate limit: 30 req/min por usuario — 30 usuarios = 900 req/min total · 5. Verificar que Worker maneja la carga</div>
+  <div class="test-criteria">✓ ≥95% de 420 interacciones exitosas · Sin errores 500 del Worker · Rate limit por usuario respetado (30/min) · Worker no crashea bajo 900 req/min · Logs de todas las interacciones en activity_logs</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead/Backend</td></tr>
+
+<tr><td class="test-id">MTX-SIM-005</td><td>
+  <div class="test-desc">Suite Master 20,800 tests × 100 rondas: regresión completa de todas las funciones — baseline</div>
+  <div class="test-steps">1. Ejecutar suite master (qa-runner.html → Run All) · 2. 100 rondas consecutivas · 3. Registrar resultados · 4. Comparar vs baseline commit e651c32 · 5. Cualquier regresión vs baseline = FAIL</div>
+  <div class="test-criteria">✓ 100% verde en 100 rondas · Sin regresiones vs baseline e651c32 · Ningún test flaky (falla en ≥1/100 rondas) · Tiempo total de suite ≤ 5 min · Resultados documentados</div>
+</td><td><span class="sev sev-CRITICAL">CRITICAL</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead</td></tr>
+
+<tr><td class="test-id">MTX-SIM-006</td><td>
+  <div class="test-desc">Performance bajo carga: LCP ≤ 3s con 30 usuarios simultáneos en GitHub Pages + Cloudflare</div>
+  <div class="test-steps">1. 30 usuarios cargan home.html simultáneamente · 2. Medir LCP en cada cliente · 3. Verificar que GitHub Pages + Cloudflare CDN absorbe la carga · 4. Sin 503 Service Unavailable · 5. Sin degradación de tiempo de respuesta entre ronda 1 y ronda 50</div>
+  <div class="test-criteria">✓ LCP ≤ 3s bajo carga de 30 usuarios · Sin 503 · Service Worker cacheando assets estáticos · Tiempo de respuesta estable entre ronda 1 y 50 (±20%) · Cloudflare CDN activo y absorbiendo carga</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">DevOps/QA</td></tr>
+
+<tr><td class="test-id">MTX-SIM-007</td><td>
+  <div class="test-desc">Reinicio de suite: después de 50 rondas, el sistema regresa a estado limpio sin datos basura</div>
+  <div class="test-steps">1. Ejecutar 50 rondas completas de simulación · 2. Verificar estado de Supabase: no hay datos corruptos ni huérfanos · 3. Verificar que los 200 leads QA mantienen integridad · 4. Los 30 perfiles de usuario mantienen datos correctos · 5. TeamChat: mensajes ordenados y sin corrupción</div>
+  <div class="test-criteria">✓ 200 leads intactos post-50-rondas · 30 perfiles sin corrupción · 1,500 mensajes de chat íntegros · Sin foreign key violations en Supabase · Base de datos lista para siguiente ronda sin reset manual</div>
+</td><td><span class="sev sev-HIGH">HIGH</span></td><td><span class="manual">MANUAL</span></td><td><button class="status st-PASS" onclick="cycleStatus(this)">PASS</button></td><td class="owner">QA Lead</td></tr>
 </tbody></table></div>
 
 
