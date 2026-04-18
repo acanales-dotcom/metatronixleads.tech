@@ -1,0 +1,206 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# supabase-migration.yml
+# Ejecuta la migración de base de datos en Supabase (DDL + UPDATE de perfiles).
+# EJECUCIÓN: GitHub Actions → "Run workflow" → introduce service_role_key
+# El key se usa solo en memoria durante la ejecución, nunca queda en el repo.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Supabase — Migración de Usuarios y Permisos
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_role_key:
+        description: 'Supabase service_role key (Settings → API → service_role)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Solo verificar sin ejecutar cambios'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  migrate:
+    name: Ejecutar Migración SQL
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_URL: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SERVICE_KEY:  ${{ github.event.inputs.service_role_key }}
+
+    steps:
+      # ── 1. Verificar conectividad ──────────────────────────────
+      - name: "Verificar conexión a Supabase"
+        run: |
+          echo "🔌 Probando conexión..."
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1")
+          if [ "$HTTP" = "200" ]; then
+            echo "✅ Conexión OK (HTTP $HTTP)"
+          else
+            echo "❌ Error de conexión (HTTP $HTTP). Verifica el service_role key."
+            exit 1
+          fi
+
+      # ── 2. Dry-run: solo mostrar estado actual ─────────────────
+      - name: "Estado actual de profiles"
+        run: |
+          echo "📊 Usuarios existentes en profiles:"
+          curl -s \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=email,role,is_active&order=email" | \
+            python3 -c "import json,sys; [print(f'  {u[\"email\"]:45} | {u[\"role\"]:20} | activo:{u.get(\"is_active\",\"?\")}') for u in json.load(sys.stdin)]"
+
+      # ── 3. Agregar columna doc_approval_required ───────────────
+      - name: "DDL: Agregar columna doc_approval_required"
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        run: |
+          echo "🔧 Ejecutando ALTER TABLE via Supabase RPC..."
+
+          # Supabase expone pg_query a través de la Management API
+          # Usamos el endpoint de Edge Functions SQL si existe, o via REST admin
+          # El endpoint correcto para DDL con service_role es /rest/v1/rpc/exec_sql
+          # Si no existe la función, intentamos vía la API de administración
+
+          RESULT=$(curl -s -o /tmp/ddl_result.json -w "%{http_code}" \
+            -X POST \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "ALTER TABLE profiles ADD COLUMN IF NOT EXISTS doc_approval_required BOOLEAN NOT NULL DEFAULT FALSE; CREATE INDEX IF NOT EXISTS idx_profiles_doc_approval ON profiles (doc_approval_required) WHERE doc_approval_required = TRUE; ALTER TABLE documents ADD COLUMN IF NOT EXISTS admin_note TEXT;"
+            }' \
+            "$SUPABASE_URL/rest/v1/rpc/exec_sql" 2>/dev/null || echo "000")
+
+          echo "HTTP: $RESULT"
+          cat /tmp/ddl_result.json 2>/dev/null || true
+
+          # Si el endpoint no existe, usamos la Management API
+          if [ "$RESULT" != "200" ]; then
+            echo "⚠ exec_sql RPC no disponible. Intentando Management API..."
+
+            # Extraer project ref del URL
+            PROJECT_REF="hodrfonbpmqulkyzrzpq"
+
+            # Nota: la Management API requiere un PAT, no service_role
+            # Si tenemos SUPABASE_ACCESS_TOKEN podemos usarlo
+            echo "ℹ La DDL requiere acceso a Supabase Management API."
+            echo "  → Ejecuta manualmente en Dashboard → SQL Editor:"
+            echo "  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS doc_approval_required BOOLEAN NOT NULL DEFAULT FALSE;"
+            echo "  ALTER TABLE documents ADD COLUMN IF NOT EXISTS admin_note TEXT;"
+          fi
+
+      # ── 4. Actualizar perfiles de los 3 usuarios ───────────────
+      - name: "UPDATE: Configurar roles de nibarra y acanalesf"
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        run: |
+          echo "👤 Actualizando nibarra@ibanormexico.com → super_admin + doc_approval_required=true"
+          HTTP=$(curl -s -o /tmp/r1.json -w "%{http_code}" \
+            -X PATCH \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{"role":"super_admin","doc_approval_required":true,"is_active":true}' \
+            "$SUPABASE_URL/rest/v1/profiles?email=eq.nibarra%40ibanormexico.com")
+          echo "HTTP $HTTP:" && cat /tmp/r1.json
+
+          echo ""
+          echo "👤 Actualizando acanalesf@ibanormexico.com → admin_restringido + doc_approval_required=true"
+          HTTP=$(curl -s -o /tmp/r2.json -w "%{http_code}" \
+            -X PATCH \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{"role":"admin_restringido","doc_approval_required":true,"is_active":true}' \
+            "$SUPABASE_URL/rest/v1/profiles?email=eq.acanalesf%40ibanormexico.com")
+          echo "HTTP $HTTP:" && cat /tmp/r2.json
+
+          echo ""
+          echo "👤 Actualizando ncanales@ibanormexico.com → admin + doc_approval_required=false"
+          HTTP=$(curl -s -o /tmp/r3.json -w "%{http_code}" \
+            -X PATCH \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d '{"role":"admin","doc_approval_required":false,"is_active":true}' \
+            "$SUPABASE_URL/rest/v1/profiles?email=eq.ncanales%40ibanormexico.com")
+          echo "HTTP $HTTP:" && cat /tmp/r3.json
+
+      # ── 5. Crear usuarios en Auth (si no existen) ──────────────
+      - name: "AUTH: Crear usuarios si no existen"
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        run: |
+          create_user() {
+            local EMAIL="$1"
+            local NAME="$2"
+            local ROLE="$3"
+            local PASS="MetaTronix2026!"
+
+            echo "👤 Creando/verificando $EMAIL..."
+            HTTP=$(curl -s -o /tmp/auth_$ROLE.json -w "%{http_code}" \
+              -X POST \
+              -H "apikey: $SERVICE_KEY" \
+              -H "Authorization: Bearer $SERVICE_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"email\": \"$EMAIL\",
+                \"password\": \"$PASS\",
+                \"email_confirm\": true,
+                \"user_metadata\": {\"full_name\": \"$NAME\", \"role\": \"$ROLE\"}
+              }" \
+              "$SUPABASE_URL/auth/v1/admin/users")
+            echo "HTTP $HTTP"
+            cat /tmp/auth_$ROLE.json | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+if 'error' in d:
+    print('  ERROR:', d['error'])
+elif 'id' in d:
+    print('  ✅ Creado:', d.get('email'), '— ID:', d['id'])
+else:
+    print('  Respuesta:', json.dumps(d)[:200])
+" 2>/dev/null || cat /tmp/auth_$ROLE.json
+          }
+
+          create_user "ncanales@ibanormexico.com"  "Norma Canales"            "admin"
+          create_user "nibarra@ibanormexico.com"   "N. Ibarra"                "super_admin"
+          create_user "acanalesf@ibanormexico.com" "Alejandro Canales Farías" "admin_restringido"
+
+          echo ""
+          echo "📝 Contraseña temporal para todos: MetaTronix2026!"
+          echo "   Cambiar en primer acceso."
+
+      # ── 6. Verificación final ──────────────────────────────────
+      - name: "Verificar estado final"
+        run: |
+          echo ""
+          echo "══════════════════════════════════════════════"
+          echo "  ESTADO FINAL — PROFILES"
+          echo "══════════════════════════════════════════════"
+          curl -s \
+            -H "apikey: $SERVICE_KEY" \
+            -H "Authorization: Bearer $SERVICE_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=email,full_name,role,doc_approval_required,is_active&email=in.(ncanales%40ibanormexico.com,nibarra%40ibanormexico.com,acanalesf%40ibanormexico.com,acanales%40ibanormexico.com)&order=email" | \
+            python3 -c "
+import json,sys
+users = json.load(sys.stdin)
+if not users:
+    print('  ⚠ Sin resultados — los usuarios aún no tienen profile (crearán uno al iniciar sesión)')
+for u in users:
+    dr = u.get('doc_approval_required','?')
+    print(f'  {u.get(\"email\",\"?\"):45} | {u.get(\"role\",\"?\"):20} | routing:{dr} | activo:{u.get(\"is_active\",\"?\")}')
+" 2>/dev/null || echo "  (error al parsear respuesta)"
+
+          echo ""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "ℹ DRY RUN — no se ejecutaron cambios"
+          else
+            echo "✅ Migración completada"
+          fi
