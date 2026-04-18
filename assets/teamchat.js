@@ -231,6 +231,9 @@
         transition: all .15s; box-shadow: 0 4px 14px rgba(0,0,0,.5);
       }
       #tchat-btn:hover { background: rgba(0,212,240,.15); border-color: #00D4F0; transform: scale(1.08); }
+      #tchat-btn.has-unread { background: rgba(239,68,68,.18); border-color: #EF4444; box-shadow: 0 4px 18px rgba(239,68,68,.4); animation: tchat-pulse-red 2s ease-in-out infinite; }
+      #tchat-btn.has-unread:hover { background: rgba(239,68,68,.3); }
+      @keyframes tchat-pulse-red { 0%,100% { box-shadow: 0 4px 18px rgba(239,68,68,.4); } 50% { box-shadow: 0 4px 24px rgba(239,68,68,.7), 0 0 0 4px rgba(239,68,68,.1); } }
       #tchat-btn.dragging { cursor: grabbing; transform: scale(1.05); opacity: .9; }
       #tchat-badge {
         position: absolute; top: -3px; right: -3px;
@@ -600,7 +603,9 @@
   function updateTotalBadge() {
     const total = getTotalUnread();
     const badge = document.getElementById('tchat-badge');
-    if (badge) { badge.textContent = total; badge.classList.toggle('show', total > 0); }
+    const btn   = document.getElementById('tchat-btn');
+    if (badge) { badge.textContent = total || ''; badge.classList.toggle('show', total > 0); }
+    if (btn)   { btn.classList.toggle('has-unread', total > 0); }
   }
 
   /* ── System events ───────────────────────────────────────── */
