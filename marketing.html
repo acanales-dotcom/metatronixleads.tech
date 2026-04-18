@@ -216,6 +216,21 @@
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
+/* ── Barra de progreso con gatitos — marketing (azul) ── */
+@keyframes cat-bounce-a { 0%,100%{transform:translateY(0px) rotate(-3deg) scaleX(1)} 30%{transform:translateY(-4px) rotate(2deg) scaleX(1.05)} 60%{transform:translateY(-2px) rotate(-4deg) scaleX(.97)} }
+@keyframes cat-bounce-b { 0%,100%{transform:translateY(-2px) rotate(2deg) scaleX(.98)} 40%{transform:translateY(-5px) rotate(-3deg) scaleX(1.04)} 70%{transform:translateY(0px) rotate(3deg) scaleX(1)} }
+.ap-cat-a { animation:cat-bounce-a .38s ease-in-out infinite; display:inline-block; font-size:15px; line-height:1; }
+.ap-cat-b { animation:cat-bounce-b .38s ease-in-out infinite .16s; display:inline-block; font-size:15px; line-height:1; margin-left:-3px; }
+#agency-progress { display:none; margin-top:10px; background:rgba(2,132,199,.07); border:1px solid rgba(14,165,233,.2); border-radius:10px; padding:10px 14px; }
+.ap-inner { display:flex; align-items:center; gap:10px; }
+.ap-label { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:rgba(0,194,224,.6); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
+.ap-track-wrap { flex:1; position:relative; height:22px; }
+.ap-track { position:absolute; bottom:3px; left:0; right:0; height:3px; background:rgba(255,255,255,.08); border-radius:2px; overflow:hidden; }
+.ap-fill { height:100%; width:0%; border-radius:2px; background:linear-gradient(90deg,#0EA5E9,#0284C7); transition:width .35s ease; }
+.ap-cats { position:absolute; bottom:5px; left:0%; transform:translateX(-50%); transition:left .35s ease; display:flex; align-items:flex-end; pointer-events:none; }
+.ap-pct { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#0EA5E9; width:34px; text-align:right; flex-shrink:0; }
+.ap-count { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.3); white-space:nowrap; flex-shrink:0; }
+
 /* ═══════════════════════ USAGE BLOCKER ═════════════════ */
 @keyframes blocker-in { from{opacity:0;transform:scale(.94) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
 .usage-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);animation:fadeIn .2s ease; }
@@ -667,6 +682,21 @@
         <span id="launch-icon">🚀</span>
         <span id="launch-text">LANZAR TODA LA AGENCIA — 15 AGENTES EN PARALELO</span>
       </button>
+
+      <!-- Barra de progreso con gatitos -->
+      <div id="agency-progress">
+        <div class="ap-inner">
+          <div class="ap-label">Procesando</div>
+          <div class="ap-track-wrap">
+            <div class="ap-track"><div class="ap-fill" id="ap-fill"></div></div>
+            <div class="ap-cats" id="ap-cats">
+              <span class="ap-cat-a">🐱</span><span class="ap-cat-b">🐱</span>
+            </div>
+          </div>
+          <div class="ap-pct" id="ap-pct">0%</div>
+          <div class="ap-count" id="ap-count">0/0</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1517,6 +1547,23 @@ function loadExampleMkt(key) {
   }
 }
 
+/* ── Barra de progreso con gatitos ──────────────────── */
+function updateAgencyProgress(done, total) {
+  const bar  = document.getElementById('agency-progress');
+  const fill = document.getElementById('ap-fill');
+  const cats = document.getElementById('ap-cats');
+  const pct  = document.getElementById('ap-pct');
+  const cnt  = document.getElementById('ap-count');
+  if (!bar) return;
+  const p = total ? Math.round((done / total) * 100) : 0;
+  bar.style.display = 'block';
+  if (fill) fill.style.width = p + '%';
+  if (cats) cats.style.left = Math.max(4, Math.min(96, p)) + '%';
+  if (pct)  pct.textContent = p + '%';
+  if (cnt)  cnt.textContent = `${done}/${total}`;
+  if (p >= 100) setTimeout(() => { if (bar) bar.style.display = 'none'; }, 2000);
+}
+
 /* ── LAUNCH ALL AGENTS ───────────────────────────────── */
 async function launchAllAgents() {
   const mission = document.getElementById('mission-input')?.value.trim();
@@ -1543,7 +1590,12 @@ async function launchAllAgents() {
   });
 
   document.getElementById('agents-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  await Promise.allSettled(targets.map(a => runAgent(a.id)));
+
+  let _done = 0;
+  updateAgencyProgress(0, targets.length);
+  await Promise.allSettled(
+    targets.map(a => runAgent(a.id).finally(() => updateAgencyProgress(++_done, targets.length)))
+  );
 
   if (launchBtn)  { launchBtn.disabled = false; launchBtn.style.background = 'linear-gradient(135deg,#0369A1,#0284C7)'; }
   if (launchIcon) launchIcon.textContent = '✅';
