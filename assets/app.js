@@ -35,43 +35,7 @@ async function getCurrentUser() {
   return { ...user, profile: profile || {} };
 }
 
-// ── ROLES ── 6 niveles organizacionales ────────────────────────
-// super_admin   → CEO / DG — acceso total, ilimitado
-// admin         → Directores de área — acceso completo, 200/mes
-// admin_restringido → Gerentes / Coordinadores — área propia, 50/mes
-// user          → Vendedores / Agentes — propio pipeline, 20/mes
-// viewer        → Operativos / Soporte — lectura métricas, 5/mes
-// readonly      → Personal base — solo docs, sin IA
-const ADMIN_ROLES   = ['admin', 'admin_restringido', 'super_admin'];
-const ALL_ROLES     = ['super_admin','admin','admin_restringido','user','viewer','readonly'];
-
-// Límites de Claude por rol (consultas/mes)
-const ROLE_CLAUDE_LIMITS = {
-  super_admin:       -1,   // ilimitado
-  admin:            200,
-  admin_restringido: 50,
-  user:              20,
-  viewer:             5,
-  readonly:           0,   // sin acceso IA
-};
-
-// Acceso a mesas del Consejo Ejecutivo IA por rol
-// true = todas las mesas; array = solo esas mesas
-const ROLE_CONSEJO_ACCESS = {
-  super_admin:       true,           // 120 consejeros
-  admin:             true,           // todas las mesas de su área
-  admin_restringido: ['ceo','ventas','marketing','admin'],
-  user:              ['ceo'],        // solo mesa CEO
-  viewer:            ['ceo'],        // solo CEO, modo lectura
-  readonly:          [],             // sin acceso
-};
-
-function getRoleLevel(role) {
-  const order = { super_admin:6, admin:5, admin_restringido:4, user:3, viewer:2, readonly:1 };
-  return order[role] || 3;
-}
-
-function canUseAI(role) { return (ROLE_CLAUDE_LIMITS[role] || 0) !== 0; }
+const ADMIN_ROLES = ['admin', 'admin_restringido', 'super_admin'];
 
 async function requireAuth(adminOnly = false) {
   const user = await getCurrentUser();
@@ -89,47 +53,39 @@ async function requireAuth(adminOnly = false) {
 async function checkClaudeAccess(userId) {
   const db = getDB();
   const { data: p } = await db.from('profiles').select(
-    'role, claude_enabled, claude_monthly_limit, claude_usage_month, claude_reset_month, claude_pending_auth'
+    'claude_enabled, claude_monthly_limit, claude_usage_month, claude_reset_month, claude_pending_auth'
   ).eq('id', userId).single();
-  if (!p) return { allowed: true, used: 0, limit: 20 }; // fallback
-
-  // Límite efectivo: respeta rol organizacional como piso mínimo
-  const roleLimit = ROLE_CLAUDE_LIMITS[p.role] ?? 20;
-  if (roleLimit === 0) return { allowed: false, reason: 'role_no_ai', used: 0, limit: 0, role: p.role };
+  if (!p) return { allowed: true }; // fallback si falla
 
   // Resetear contador si cambió el mes
-  const thisMonth = new Date().toISOString().slice(0, 7);
+  const thisMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
   if (p.claude_reset_month !== thisMonth) {
     await db.from('profiles').update({
       claude_usage_month: 0,
       claude_reset_month: thisMonth,
       claude_pending_auth: false,
-    }).eq('id', userId).catch(() => {});
+    }).eq('id', userId);
     p.claude_usage_month = 0;
     p.claude_pending_auth = false;
   }
 
-  // Límite efectivo: el mayor entre el límite guardado en BD y el del rol
-  // Super_admin ignoramos límite (roleLimit === -1)
-  const effectiveLimit = roleLimit === -1 ? 99999
-    : Math.max(p.claude_monthly_limit || 0, roleLimit);
-
-  if (!p.claude_enabled) return { allowed: false, reason: 'disabled', role: p.role };
-  if (p.claude_pending_auth) return { allowed: false, reason: 'pending_auth', role: p.role };
-  if (p.claude_usage_month >= effectiveLimit) {
-    await db.from('profiles').update({ claude_pending_auth: true }).eq('id', userId).catch(() => {});
+  if (!p.claude_enabled) return { allowed: false, reason: 'disabled' };
+  if (p.claude_pending_auth) return { allowed: false, reason: 'pending_auth' };
+  if (p.claude_usage_month >= p.claude_monthly_limit) {
+    // Marcar como pendiente de autorización y alertar al superAdmin
+    await db.from('profiles').update({ claude_pending_auth: true }).eq('id', userId);
     const { data: { user } } = await db.auth.getUser();
     const name = user?.user_metadata?.full_name || user?.email || userId;
     addAlert({
       type: 'claude_limit_reached',
-      message: `${name} alcanzó su límite mensual de Claude (${effectiveLimit} usos). Autorización requerida.`,
+      message: `${name} alcanzó su límite mensual de Claude (${p.claude_monthly_limit} usos). Autorización requerida.`,
       for_super_admin: true,
       target_user_id: userId,
       target_user_name: name,
     });
-    return { allowed: false, reason: 'limit_reached', used: p.claude_usage_month, limit: effectiveLimit, role: p.role };
+    return { allowed: false, reason: 'limit_reached', used: p.claude_usage_month, limit: p.claude_monthly_limit };
   }
-  return { allowed: true, used: p.claude_usage_month, limit: effectiveLimit, role: p.role };
+  return { allowed: true, used: p.claude_usage_month, limit: p.claude_monthly_limit };
 }
 
 async function incrementClaudeUsage(userId) {
@@ -458,18 +414,15 @@ function renderHeader(user, activePage) {
       </div>`).join('')
     : '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Sin alertas</div>';
 
-  // Role badges para los 6 niveles
-  const ROLE_BADGES = {
-    super_admin:       '<span class="sidebar-role-badge" style="background:#7c3aed;color:#fff">CEO · Super Admin</span>',
-    admin:             '<span class="sidebar-role-badge" style="background:var(--accent);color:#000">Director</span>',
-    admin_restringido: '<span class="sidebar-role-badge" style="background:#0891b2;color:#fff">Gerente</span>',
-    user:              '<span class="sidebar-role-badge" style="background:#1e40af;color:#fff">Colaborador</span>',
-    viewer:            '<span class="sidebar-role-badge" style="background:#374151;color:#9ca3af">Operativo</span>',
-    readonly:          '<span class="sidebar-role-badge" style="background:#1f2937;color:#6b7280">Solo Lectura</span>',
-  };
-  const roleBadge = ROLE_BADGES[role] || '';
+  const roleBadge = isSuperAdmin
+    ? '<span class="sidebar-role-badge" style="background:#7c3aed;color:#fff">SuperAdmin</span>'
+    : isAdmin
+      ? '<span class="sidebar-role-badge" style="background:var(--accent);color:#fff">Admin</span>'
+      : isRestrictedAdmin
+        ? '<span class="sidebar-role-badge" style="background:var(--warning);color:#000">Visor</span>'
+        : '';
 
-  const _html = `
+  return `
   <style>
     body { padding-left: var(--sidebar-w, 220px); }
     /* Bell dropdown */
@@ -510,54 +463,6 @@ function renderHeader(user, activePage) {
       letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint);
     }
     .sidebar-divider { height:1px; background:var(--border); margin:6px 0; }
-
-    /* ── COMPANY SWITCHER ── */
-    .co-switcher {
-      margin:8px 10px 4px; border-radius:8px;
-      border:1px solid var(--border); overflow:hidden;
-    }
-    .co-current {
-      display:flex; align-items:center; gap:8px; padding:8px 10px;
-      cursor:pointer; background:rgba(255,255,255,.02);
-      transition:background .15s; user-select:none;
-    }
-    .co-current:hover { background:rgba(255,255,255,.05); }
-    .co-logo {
-      width:24px; height:24px; border-radius:5px; flex-shrink:0;
-      background:rgba(0,255,136,.12); border:1px solid rgba(0,255,136,.25);
-      display:flex; align-items:center; justify-content:center;
-      font-size:12px; font-weight:800; font-family:var(--font-mono);
-      color:var(--accent);
-    }
-    .co-info { flex:1; min-width:0; }
-    .co-name { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .co-plan { font-size:9px; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:.04em; }
-    .co-chevron { font-size:10px; color:var(--text-muted); transition:transform .2s; flex-shrink:0; }
-    .co-dropdown {
-      display:none; border-top:1px solid var(--border);
-      background:var(--bg-2, #10141F); max-height:200px; overflow-y:auto;
-    }
-    .co-dropdown.open { display:block; }
-    .co-option {
-      display:flex; align-items:center; gap:8px; padding:7px 10px;
-      cursor:pointer; transition:background .12s;
-    }
-    .co-option:hover { background:rgba(0,255,136,.06); }
-    .co-option.active { background:rgba(0,255,136,.04); }
-    .co-option-logo {
-      width:20px; height:20px; border-radius:4px; flex-shrink:0;
-      background:rgba(0,255,136,.1); border:1px solid rgba(0,255,136,.2);
-      display:flex; align-items:center; justify-content:center;
-      font-size:10px; font-weight:700; font-family:var(--font-mono); color:var(--accent);
-    }
-    .co-option-name { font-size:11px; color:var(--text); flex:1; }
-    .co-option-check { font-size:10px; color:var(--accent); }
-    .co-add {
-      display:flex; align-items:center; gap:6px; padding:7px 10px;
-      cursor:pointer; border-top:1px solid var(--border);
-      font-size:10px; color:var(--text-muted); transition:color .15s;
-    }
-    .co-add:hover { color:var(--accent); }
   </style>
   <aside class="app-sidebar">
 
@@ -572,90 +477,67 @@ function renderHeader(user, activePage) {
       </div>
     </a>
 
-    <!-- COMPANY SWITCHER -->
-    <div class="co-switcher" id="co-switcher-wrap">
-      <div class="co-current" onclick="toggleCoDropdown()" id="co-current-btn">
-        <div class="co-logo" id="co-logo">M</div>
-        <div class="co-info">
-          <div class="co-name" id="co-name">Cargando…</div>
-          <div class="co-plan" id="co-plan">plan · empresa</div>
-        </div>
-        <div class="co-chevron" id="co-chevron">▾</div>
-      </div>
-      <div class="co-dropdown" id="co-dropdown">
-        <div id="co-options-list"></div>
-        <div class="co-add" onclick="requestNewCompany()">
-          <span>＋</span> Agregar empresa
-        </div>
-      </div>
-    </div>
-
-    <!-- Navigation — diferenciada por nivel organizacional -->
+    <!-- Navigation — 5 primary modules + tools -->
     <nav class="sidebar-nav">
 
-      <!-- INICIO — siempre visible -->
+      <!-- PRIMARY 5 MODULES (always visible, top) -->
       <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}" id="nav-home">
         <span class="nav-icon">⌂</span>
         <span class="nav-label">Inicio</span>
       </a>
 
-      <!-- ═══ VENTAS — visible para user+ ═══ -->
-      ${getRoleLevel(role) >= 3 ? `
       <div class="sidebar-divider"></div>
+
+      <!-- VENTAS -->
       <div class="sidebar-section-label">Ventas</div>
       <a href="/leads.html" class="sidebar-nav-link ${activePage==='leads'?'active':''}">
         <span class="nav-icon">◈</span>
-        <span class="nav-label">${getRoleLevel(role) >= 5 ? 'Pipeline Global' : 'Mi Pipeline'}</span>
+        <span class="nav-label">Pipeline</span>
         <span class="nav-count" id="nav-count-pipeline">—</span>
-      </a>` : ''}
-      ${getRoleLevel(role) >= 4 ? `
+      </a>
       <a href="/home.html#cuentas" class="sidebar-nav-link ${activePage==='cuentas'?'active':''}">
         <span class="nav-icon">◉</span>
         <span class="nav-label">Cuentas</span>
       </a>
+      <a href="/home.html#actividad" class="sidebar-nav-link ${activePage==='actividad'?'active':''}">
+        <span class="nav-icon">◎</span>
+        <span class="nav-label">Actividad</span>
+        <span class="nav-count" id="nav-count-tasks" style="display:none">0</span>
+      </a>
       <a href="/home.html#reportes" class="sidebar-nav-link ${activePage==='reportes'?'active':''}">
         <span class="nav-icon">◇</span>
         <span class="nav-label">Reportes</span>
-      </a>` : ''}
-      ${getRoleLevel(role) >= 3 ? `
-      <a href="/home.html#actividad" class="sidebar-nav-link ${activePage==='actividad'?'active':''}">
-        <span class="nav-icon">◎</span>
-        <span class="nav-label">Mi Actividad</span>
-        <span class="nav-count" id="nav-count-tasks" style="display:none">0</span>
       </a>
       <a href="/ventas.html" class="sidebar-nav-link ${activePage==='ventas'?'active':''}">
         <span class="nav-icon">💰</span>
         <span class="nav-label">MetaVentax AI</span>
-      </a>` : ''}
+      </a>
 
-      <!-- ═══ MARKETING — admin_restringido+ ═══ -->
-      ${getRoleLevel(role) >= 4 ? `
       <div class="sidebar-divider"></div>
-      <div class="sidebar-section-label">Marketing</div>` : ''}
-      ${getRoleLevel(role) >= 5 ? `
+
+      <!-- MARKETING TOOLS -->
+      <div class="sidebar-section-label">Marketing</div>
       <a href="/oportunidades.html" class="sidebar-nav-link ${activePage==='oportunidades'?'active':''}">
         <span class="nav-icon">🔍</span>
-        <span class="nav-label">Intel. de Mercados</span>
-      </a>` : ''}
-      ${getRoleLevel(role) >= 4 ? `
+        <span class="nav-label">Inteligencia de Mercados</span>
+      </a>
       <a href="/marketing.html" class="sidebar-nav-link ${activePage==='marketing'?'active':''}">
         <span class="nav-icon">📣</span>
         <span class="nav-label">MetaMKTX</span>
-      </a>` : ''}
-      ${getRoleLevel(role) >= 5 ? `
-      <a href="/captureform.html" class="sidebar-nav-link" target="_blank">
+      </a>
+      <a href="/captureform.html" class="sidebar-nav-link" target="_blank" title="Formulario público de captura de leads">
         <span class="nav-icon">↗</span>
         <span class="nav-label">Formulario Web</span>
-      </a>` : ''}
+      </a>
 
-      <!-- ═══ DOCUMENTOS — viewer+ ═══ -->
       <div class="sidebar-divider"></div>
+
+      <!-- DOCUMENTOS -->
       <div class="sidebar-section-label">Documentos</div>
-      ${getRoleLevel(role) >= 4 ? `
       <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">
         <span class="nav-icon">📋</span>
         <span class="nav-label">Adm. de Venta</span>
-      </a>` : ''}
+      </a>
       <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
         <span class="nav-icon">📁</span>
         <span class="nav-label">Docs MetaTronix</span>
@@ -670,45 +552,54 @@ function renderHeader(user, activePage) {
         <span class="nav-label">Archivos IBANOR</span>
       </a>` : ''}
 
-      <!-- ═══ HERRAMIENTAS IA — viewer+ con acceso IA ═══ -->
-      ${canUseAI(role) ? `
       <div class="sidebar-divider"></div>
-      <div class="sidebar-section-label">Herramientas IA</div>
-      ${getRoleLevel(role) >= 4 ? `
+
+      <!-- HERRAMIENTAS -->
+      <div class="sidebar-section-label">Herramientas</div>
       <a href="/generate.html" class="sidebar-nav-link ${activePage==='generate'?'active':''}">
         <span class="nav-icon">✨</span>
         <span class="nav-label">Generador IA</span>
-      </a>` : ''}
-      <a href="/consejo.html" class="sidebar-nav-link ${activePage==='consejo'?'active':''}">
-        <span class="nav-icon">🏛</span>
-        <span class="nav-label">${isSuperAdmin ? 'Consejo Completo IA' : isAdmin ? 'Mesa de Directores IA' : 'Consejo Ejecutivo IA'}</span>
-        ${getRoleLevel(role) <= 2 ? '<span class="nav-count" style="font-size:9px;background:rgba(0,255,136,.1);color:var(--accent);border:1px solid rgba(0,255,136,.2)">5/mes</span>' : ''}
       </a>
-      ${getRoleLevel(role) >= 4 ? `
-      <a href="/marketing.html#social-sim" class="sidebar-nav-link">
-        <span class="nav-icon">🎭</span>
-        <span class="nav-label">Simulación Social</span>
-      </a>` : ''}` : ''}
 
-      <!-- ═══ CEO COMMAND CENTER — super_admin + admin ═══ -->
-      ${(isSuperAdmin || isAdmin) ? `
+      ${hasAdminAccess ? `
       <div class="sidebar-divider"></div>
-      <div class="sidebar-section-label">Dirección</div>
-      <a href="/ceo.html" class="sidebar-nav-link ${activePage==='ceo'?'active':''}" style="position:relative">
+      <div class="sidebar-section-label">Dirección & Admin</div>
+      <a href="/ceo.html" class="sidebar-nav-link ${activePage==='ceo'?'active':''}">
         <span class="nav-icon">🎯</span>
         <span class="nav-label">CEO Command Center</span>
-      </a>` : ''}
+      </a>
+      <a href="/consejo.html" class="sidebar-nav-link ${activePage==='consejo'?'active':''}">
+        <span class="nav-icon">🏛</span>
+        <span class="nav-label">Consejo Ejecutivo</span>
+      </a>
 
-      <!-- ═══ SISTEMA — admin+ ═══ -->
-      ${hasAdminAccess ? `
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-label">Administración</div>
+      <a href="/finanzas.html" class="sidebar-nav-link ${activePage==='finanzas'?'active':''}">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">Finanzas & Flujo</span>
+      </a>
+      <a href="/cobranza.html" class="sidebar-nav-link ${activePage==='cobranza'?'active':''}">
+        <span class="nav-icon">📞</span>
+        <span class="nav-label">Cobranza IA</span>
+      </a>
+      <a href="/compras.html" class="sidebar-nav-link ${activePage==='compras'?'active':''}">
+        <span class="nav-icon">🛒</span>
+        <span class="nav-label">Compras & POs</span>
+      </a>
+      <a href="/facturacion.html" class="sidebar-nav-link ${activePage==='facturacion'?'active':''}">
+        <span class="nav-icon">📄</span>
+        <span class="nav-label">Facturación</span>
+      </a>
+
       <div class="sidebar-divider"></div>
       <div class="sidebar-section-label">Sistema</div>
       <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">
         <span class="nav-icon">⚙</span>
-        <span class="nav-label">Administración</span>
+        <span class="nav-label">Panel Sistema</span>
       </a>` : ''}
       ${isSuperAdmin ? `
-      <a href="/security-audit.html" class="sidebar-nav-link ${activePage==='security-audit'?'active':''}">
+      <a href="/security-audit.html" class="sidebar-nav-link ${activePage==='security-audit'?'active':''}" style="color:var(--red)">
         <span class="nav-icon">🛡</span>
         <span class="nav-label">Seguridad & Auditoría</span>
       </a>
@@ -749,9 +640,6 @@ function renderHeader(user, activePage) {
       </button>
     </div>
   </aside>`;
-  // Auto-init company switcher once the HTML lands in the DOM
-  setTimeout(() => { if (typeof initCompanySwitcher === 'function') initCompanySwitcher(); }, 60);
-  return _html;
 }
 
 function toggleBellDropdown(e) {
@@ -799,129 +687,6 @@ function handleAlertClick(alertId, leadId) {
   }
   closeBellDropdown();
   if (leadId) window.location.href = '/leads.html';
-}
-
-/* ═══════════════════════════════════════════════════════════
-   MULTI-EMPRESA — Company Switcher
-   ═══════════════════════════════════════════════════════════ */
-
-// Active company state (persisted in localStorage)
-window.MTX_ACTIVE_COMPANY = localStorage.getItem('mtx_active_company') || null;
-
-async function initCompanySwitcher() {
-  const db = getDB();
-  if (!db) return;
-  try {
-    // Get current user's company_id
-    const { data: { user } } = await db.auth.getUser();
-    if (!user) return;
-
-    const { data: profile } = await db.from('profiles')
-      .select('company_id').eq('id', user.id).single();
-    const userCompanyId = profile?.company_id || 'metatronix';
-
-    // If no active company set, default to user's company
-    if (!window.MTX_ACTIVE_COMPANY) {
-      window.MTX_ACTIVE_COMPANY = userCompanyId;
-      localStorage.setItem('mtx_active_company', userCompanyId);
-    }
-
-    // Load all companies this user has access to
-    // super_admin sees all; others see only their company
-    const role = window._mtxCurrentUser?.profile?.role;
-    let companies = [];
-
-    if (role === 'super_admin') {
-      const { data } = await db.from('companies').select('*').eq('is_active', true).order('name');
-      companies = data || [];
-    } else {
-      const { data } = await db.from('companies')
-        .select('*').eq('id', userCompanyId).single();
-      companies = data ? [data] : [{ id: userCompanyId, name: userCompanyId, plan: 'pro' }];
-    }
-
-    window._mtxUserCompanies = companies;
-    renderCompanySwitcher(companies, window.MTX_ACTIVE_COMPANY);
-
-  } catch (_) {
-    // Fallback: show placeholder
-    const nameEl = document.getElementById('co-name');
-    const planEl = document.getElementById('co-plan');
-    if (nameEl) nameEl.textContent = 'MetaTronix';
-    if (planEl) planEl.textContent = 'enterprise';
-  }
-}
-
-function renderCompanySwitcher(companies, activeId) {
-  const active = companies.find(c => c.id === activeId) || companies[0];
-  if (!active) return;
-
-  const nameEl = document.getElementById('co-name');
-  const planEl = document.getElementById('co-plan');
-  const logoEl = document.getElementById('co-logo');
-  if (nameEl) nameEl.textContent = active.name;
-  if (planEl) planEl.textContent = (active.plan || 'pro').toUpperCase();
-  if (logoEl) logoEl.textContent = (active.name?.[0] || 'M').toUpperCase();
-
-  const list = document.getElementById('co-options-list');
-  if (!list) return;
-  list.innerHTML = companies.map(c => `
-    <div class="co-option ${c.id === activeId ? 'active' : ''}" onclick="switchCompany('${escHtml(c.id)}')">
-      <div class="co-option-logo">${(c.name?.[0] || 'E').toUpperCase()}</div>
-      <div class="co-option-name">${escHtml(c.name)}</div>
-      ${c.id === activeId ? '<span class="co-option-check">✓</span>' : ''}
-    </div>
-  `).join('');
-
-  // Hide switcher if only 1 company (no need to switch)
-  const wrap = document.getElementById('co-switcher-wrap');
-  if (wrap && companies.length <= 1) wrap.style.cursor = 'default';
-}
-
-function toggleCoDropdown() {
-  const companies = window._mtxUserCompanies || [];
-  if (companies.length <= 1) return; // single company — no dropdown
-  const dd = document.getElementById('co-dropdown');
-  const ch = document.getElementById('co-chevron');
-  if (!dd) return;
-  const isOpen = dd.classList.toggle('open');
-  if (ch) ch.style.transform = isOpen ? 'rotate(180deg)' : '';
-  // Close when clicking outside
-  if (isOpen) {
-    setTimeout(() => {
-      document.addEventListener('click', closeCoDropdown, { once: true });
-    }, 10);
-  }
-}
-
-function closeCoDropdown() {
-  const dd = document.getElementById('co-dropdown');
-  const ch = document.getElementById('co-chevron');
-  if (dd) dd.classList.remove('open');
-  if (ch) ch.style.transform = '';
-}
-
-function switchCompany(companyId) {
-  if (window.MTX_ACTIVE_COMPANY === companyId) { closeCoDropdown(); return; }
-  window.MTX_ACTIVE_COMPANY = companyId;
-  localStorage.setItem('mtx_active_company', companyId);
-  closeCoDropdown();
-  // Re-render switcher
-  renderCompanySwitcher(window._mtxUserCompanies || [], companyId);
-  // Dispatch event so pages can reload their data
-  window.dispatchEvent(new CustomEvent('mtx:company-changed', { detail: { companyId } }));
-  // Show toast
-  const c = (window._mtxUserCompanies || []).find(x => x.id === companyId);
-  if (typeof showToast === 'function') showToast(`Empresa: ${c?.name || companyId}`, 'success');
-}
-
-function getActiveCompany() {
-  return window.MTX_ACTIVE_COMPANY || localStorage.getItem('mtx_active_company') || 'metatronix';
-}
-
-function requestNewCompany() {
-  closeCoDropdown();
-  if (typeof showToast === 'function') showToast('Contacta a soporte para agregar una nueva empresa', 'info');
 }
 
 /* ═══════════════════════════════════════════════════════════

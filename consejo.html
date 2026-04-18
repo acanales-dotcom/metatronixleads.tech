@@ -2,1158 +2,662 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaTronix — Consejo Ejecutivo IA</title>
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Consejo Ejecutivo — MetaTronix</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=20260416">
+  <script src="/config.js?v=20260416"></script>
+  <script src="/assets/app.js?v=20260416"></script>
   <style>
-/* ── Reset & Tokens ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --m1: #00ff88;  /* Mesa 1: Estrategia */
+      --m2: #00e5ff;  /* Mesa 2: Mercado */
+      --m3: #ffb400;  /* Mesa 3: Operaciones */
+      --m4: #b966ff;  /* Mesa 4: Finanzas */
+      --m5: #ff6b6b;  /* Mesa 5: Innovación */
+    }
 
-:root {
-  --bg:       #050C12;
-  --s1:       #080F17;
-  --s2:       #0B1520;
-  --s3:       #0F1D2B;
-  --border:   rgba(255,255,255,.07);
-  --accent:   #00ff88;
-  --cyan:     #00C2E0;
-  --gold:     #F59E0B;
-  --danger:   #EF4444;
-  --text:     #E2E8F0;
-  --muted:    #7E8FA8;
-  --mono:     'JetBrains Mono', monospace;
-  --sans:     'DM Sans', sans-serif;
-  --bebas:    'Bebas Neue', sans-serif;
-}
+    .consejo-root { display:flex; flex-direction:column; gap:28px; padding:28px; max-width:1400px; margin:0 auto; }
 
-html, body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; height: 100%; overflow: hidden; }
+    /* Page header */
+    .page-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .page-header h1 { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:.06em; margin:0; }
+    .page-header p  { font-size:12px; color:var(--text-muted); margin:3px 0 0; }
 
-/* ── AUTH GATE ── */
-#auth-gate {
-  position: fixed; inset: 0; z-index: 9999;
-  background: var(--bg);
-  display: flex; align-items: center; justify-content: center;
-}
-.auth-spinner {
-  width: 36px; height: 36px; border-radius: 50%;
-  border: 2px solid rgba(0,255,136,.15);
-  border-top-color: var(--accent);
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+    /* Mesa tabs */
+    .mesa-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+    .mesa-tab {
+      padding:10px 20px; border-radius:8px; font-size:12px; font-weight:700; letter-spacing:.04em;
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text-muted); cursor:pointer; transition:.2s;
+      display:flex; align-items:center; gap:8px;
+    }
+    .mesa-tab:hover { border-color:var(--tab-color); color:var(--tab-color); }
+    .mesa-tab.active {
+      background:rgba(255,255,255,.04); border-color:var(--tab-color);
+      color:var(--tab-color); box-shadow:0 0 12px -4px var(--tab-color);
+    }
+    .mesa-tab .tab-dot { width:8px; height:8px; border-radius:50%; background:var(--tab-color); opacity:.6; }
+    .mesa-tab.active .tab-dot { opacity:1; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* ── PAGE SHELL ── */
-.consejo-shell { display: flex; flex-direction: column; height: 100vh; }
+    /* Mesa panel */
+    .mesa-pane { display:none; flex-direction:column; gap:20px; }
+    .mesa-pane.active { display:flex; }
 
-/* ── TOPBAR ── */
-.cns-topbar {
-  background: linear-gradient(90deg, var(--s1), var(--s2));
-  border-bottom: 1px solid var(--border);
-  padding: 10px 20px;
-  display: flex; align-items: center; gap: 14px;
-  flex-shrink: 0;
-}
-.cns-back {
-  padding: 5px 12px; border-radius: 6px;
-  border: 1px solid var(--border); background: rgba(255,255,255,.04);
-  color: var(--muted); font-family: var(--mono); font-size: 10px;
-  cursor: pointer; text-decoration: none; letter-spacing: .05em;
-  transition: all .15s;
-}
-.cns-back:hover { color: var(--text); border-color: rgba(255,255,255,.15); }
-.topbar-sep { width: 1px; height: 18px; background: var(--border); }
-.cns-logo { font-family: var(--bebas); font-size: 20px; color: var(--accent); letter-spacing: .12em; }
-.cns-title { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
-.cns-user-chip {
-  font-family: var(--mono); font-size: 10px; color: var(--muted);
-  background: rgba(255,255,255,.04); border: 1px solid var(--border);
-  padding: 4px 10px; border-radius: 20px;
-}
-.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse-dot 2s infinite; }
-@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+    /* Mesa card */
+    .mesa-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:12px;
+      overflow:hidden; display:flex; flex-direction:column;
+      min-height:500px;
+    }
+    .mesa-head {
+      padding:20px 24px; border-bottom:1px solid var(--border);
+      background:linear-gradient(135deg, rgba(0,0,0,.5) 0%, transparent 100%);
+      display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap;
+    }
+    .mesa-icon { font-size:32px; flex-shrink:0; }
+    .mesa-meta { flex:1; }
+    .mesa-name { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:.07em; }
+    .mesa-desc { font-size:12px; color:var(--text-muted); margin-top:4px; line-height:1.6; max-width:600px; }
+    .mesa-badge {
+      font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px;
+      border:1px solid; margin-top:6px; display:inline-block;
+    }
+    .mesa-access { font-size:11px; color:var(--text-faint); align-self:flex-start; margin-top:4px; white-space:nowrap; }
 
-/* ── PALANTIR BAR ── */
-.palantir-bar {
-  background: var(--s1); border-bottom: 1px solid var(--border);
-  padding: 8px 20px; display: flex; align-items: center; gap: 24px;
-  flex-shrink: 0;
-}
-.pstat {
-  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
-}
-.pstat-label { font-family: var(--mono); font-size: 8px; color: var(--muted); letter-spacing: .1em; white-space: nowrap; }
-.pstat-track { flex: 1; height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
-.pstat-fill { height: 100%; border-radius: 2px; transition: width .8s cubic-bezier(.4,0,.2,1); }
-.pstat-val { font-family: var(--mono); font-size: 10px; font-weight: 700; white-space: nowrap; }
-.pstat-sep { width: 1px; height: 20px; background: var(--border); }
+    .mesa-body { padding:20px 24px; display:flex; flex-direction:column; gap:16px; flex:1; }
 
-/* ── DIRECTOR TABS ── */
-.director-tabs {
-  background: var(--s1); border-bottom: 2px solid var(--border);
-  padding: 0 20px; display: flex; gap: 0;
-  overflow-x: auto; flex-shrink: 0;
-}
-.dtab {
-  padding: 11px 18px; font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
-  border: none; background: none; cursor: pointer;
-  border-bottom: 2px solid transparent; margin-bottom: -2px;
-  display: flex; align-items: center; gap: 6px; white-space: nowrap;
-  transition: all .2s;
-}
-.dtab:hover { color: var(--text); }
-.dtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    /* Agenda / agenda presets */
+    .agenda-section { display:flex; flex-direction:column; gap:8px; }
+    .agenda-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
+    .agenda-chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .agenda-chip {
+      padding:6px 14px; border-radius:6px; font-size:11px; font-weight:600;
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      color:var(--text-muted); cursor:pointer; transition:.15s;
+    }
+    .agenda-chip:hover { border-color:var(--mesa-color); color:var(--mesa-color); }
 
-/* ── MAIN LAYOUT ── */
-.cns-main {
-  display: grid; grid-template-columns: 1fr 380px; gap: 0;
-  flex: 1; min-height: 0;
-}
+    /* Context inputs */
+    .context-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media(max-width:700px){ .context-grid { grid-template-columns:1fr; } }
+    .form-group { display:flex; flex-direction:column; gap:5px; }
+    .form-label { font-size:10px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; }
+    .form-input, .form-select, .form-textarea {
+      background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:7px;
+      padding:9px 12px; color:var(--text); font-size:12px; font-family:inherit;
+      width:100%; box-sizing:border-box;
+    }
+    .form-textarea { min-height:90px; resize:vertical; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline:none; border-color:var(--mesa-color, var(--accent-dim)); }
 
-/* ── COUNCIL PANEL (left) ── */
-.council-panel {
-  background: var(--bg); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.council-header {
-  padding: 14px 20px 10px;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, var(--s1) 0%, transparent 100%);
-}
-.council-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
-.council-title { font-family: var(--bebas); font-size: 22px; color: var(--text); letter-spacing: .08em; }
-.council-badge {
-  font-family: var(--mono); font-size: 9px; color: var(--accent);
-  border: 1px solid rgba(0,255,136,.3); border-radius: 20px;
-  padding: 2px 8px; letter-spacing: .06em;
-}
-.council-subtitle { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .06em; }
+    /* Output */
+    .session-output {
+      flex:1; min-height:280px; max-height:500px; overflow-y:auto;
+      background:rgba(0,0,0,.4); border:1px solid var(--border); border-radius:8px;
+      padding:16px 20px; font-size:12px; line-height:1.8; color:var(--text);
+    }
+    .session-output.streaming { border-color:var(--mesa-color, var(--accent)); }
+    .session-output h2 { font-family:'Bebas Neue',sans-serif; color:var(--mesa-color, var(--accent)); letter-spacing:.06em; margin:10px 0 5px; font-size:20px; }
+    .session-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--text-muted); letter-spacing:.04em; margin:8px 0 4px; font-size:14px; }
+    .session-output p  { margin:4px 0; }
+    .session-output ul, .session-output ol { margin:4px 0 4px 18px; }
+    .session-output table { width:100%; border-collapse:collapse; margin:10px 0; font-size:11px; }
+    .session-output th { padding:6px 10px; text-align:left; border-bottom:1px solid var(--border); font-weight:700; }
+    .session-output td { padding:6px 10px; border-bottom:1px solid rgba(255,255,255,.04); }
+    .session-output strong { color:#fff; }
+    .session-placeholder { color:var(--text-faint); font-style:italic; text-align:center; padding:40px 20px; font-size:12px; }
 
-.council-grid-wrap { flex: 1; overflow-y: auto; padding: 16px; }
-.council-grid-wrap::-webkit-scrollbar { width: 4px; }
-.council-grid-wrap::-webkit-scrollbar-track { background: transparent; }
-.council-grid-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 2px; }
+    /* Actions */
+    .mesa-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn-mesa {
+      padding:9px 20px; border-radius:7px; font-size:12px; font-weight:700;
+      background:var(--mesa-color); color:#000; border:none; cursor:pointer;
+      transition:opacity .15s; display:inline-flex; align-items:center; gap:7px;
+    }
+    .btn-mesa:hover:not(:disabled) { opacity:.85; }
+    .btn-mesa:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-outline-sm {
+      padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600;
+      background:transparent; border:1px solid var(--border); color:var(--text-muted);
+      cursor:pointer; transition:.15s;
+    }
+    .btn-outline-sm:hover { border-color:var(--mesa-color, var(--accent)); color:var(--text); }
 
-.council-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-  gap: 8px;
-}
+    /* Blocked state */
+    .mesa-blocked {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      min-height:300px; gap:16px; color:var(--text-faint); text-align:center;
+    }
+    .mesa-blocked-icon { font-size:48px; opacity:.4; }
+    .mesa-blocked h3 { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:.06em; color:var(--text-muted); }
+    .mesa-blocked p { font-size:12px; max-width:320px; line-height:1.7; }
 
-/* ── ADVISOR CARDS ── */
-.advisor-card {
-  background: var(--s2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px 6px 8px;
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  cursor: pointer; transition: all .2s; position: relative;
-}
-.advisor-card:hover {
-  border-color: rgba(0,255,136,.25);
-  background: var(--s3);
-  transform: translateY(-1px);
-}
-.advisor-card.selected { border-color: rgba(0,255,136,.5); background: rgba(0,255,136,.04); }
-.advisor-card.speaking { border-color: rgba(0,255,136,.6); animation: card-speak .6s ease-in-out infinite alternate; }
-@keyframes card-speak { from { box-shadow: 0 0 0 rgba(0,255,136,0); } to { box-shadow: 0 0 12px rgba(0,255,136,.25); } }
+    /* Session notes */
+    .notes-bar {
+      background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:8px;
+      padding:12px 16px; font-size:12px; display:flex; align-items:center; gap:10px;
+    }
+    .notes-input {
+      flex:1; background:transparent; border:none; color:var(--text); font-family:inherit; font-size:12px;
+    }
+    .notes-input:focus { outline:none; }
 
-.advisor-avatar {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: var(--s3); border: 1.5px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; position: relative; transition: border-color .2s;
-}
-.speaking-ring {
-  position: absolute; inset: -3px; border-radius: 50%;
-  border: 1.5px solid var(--accent); opacity: 0;
-  animation: ring-pulse 1s ease-out infinite;
-}
-.advisor-card.speaking .speaking-ring { opacity: 1; }
-@keyframes ring-pulse { 0%{transform:scale(1);opacity:.8} 100%{transform:scale(1.35);opacity:0} }
-
-.advisor-name { font-family: var(--mono); font-size: 8px; font-weight: 700; color: var(--text); text-align: center; line-height: 1.2; }
-.advisor-role { font-size: 8px; color: var(--muted); text-align: center; line-height: 1.2; }
-.advisor-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(0,255,136,.35); }
-.advisor-card.speaking .advisor-dot { background: var(--accent); animation: pulse-dot 1s infinite; }
-
-/* ── CHAT PANEL (right) ── */
-.chat-panel {
-  background: var(--s1); display: flex; flex-direction: column; overflow: hidden;
-}
-.chat-header {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, var(--s2) 0%, transparent 100%);
-}
-.chat-header-title { font-family: var(--bebas); font-size: 15px; color: var(--accent); letter-spacing: .1em; }
-.chat-header-sub { font-family: var(--mono); font-size: 8px; color: var(--muted); letter-spacing: .08em; margin-top: 2px; }
-
-.chat-messages {
-  flex: 1; overflow-y: auto; padding: 14px 14px 6px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.chat-messages::-webkit-scrollbar { width: 3px; }
-.chat-messages::-webkit-scrollbar-track { background: transparent; }
-.chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,.07); border-radius: 2px; }
-
-/* Messages */
-.msg-welcome {
-  background: rgba(0,255,136,.04); border: 1px solid rgba(0,255,136,.12);
-  border-radius: 10px; padding: 12px; font-size: 12px; color: var(--muted); line-height: 1.6;
-}
-.msg-welcome strong { color: var(--accent); }
-.msg-user {
-  align-self: flex-end; max-width: 85%;
-  background: rgba(0,194,224,.08); border: 1px solid rgba(0,194,224,.2);
-  border-radius: 10px 10px 2px 10px; padding: 10px 12px;
-  font-size: 13px; color: var(--text); line-height: 1.5;
-}
-.msg-system {
-  align-self: center; font-family: var(--mono); font-size: 9px;
-  color: var(--accent); letter-spacing: .1em; opacity: .7;
-  padding: 4px 0;
-}
-.msg-advisor {
-  display: flex; gap: 8px; align-items: flex-start;
-}
-.msg-advisor-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: var(--s2); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; flex-shrink: 0; margin-top: 2px;
-}
-.msg-advisor-bubble {
-  background: var(--s2); border: 1px solid var(--border);
-  border-radius: 2px 10px 10px 10px; padding: 10px 12px;
-  max-width: calc(100% - 40px); flex: 1;
-}
-.msg-advisor-name { font-family: var(--mono); font-size: 9px; color: var(--accent); letter-spacing: .06em; margin-bottom: 5px; font-weight: 700; }
-.msg-advisor-bubble p { font-size: 12px; color: var(--text); line-height: 1.6; }
-.msg-advisor-score { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.mscore { font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 10px; }
-.mscore.conf { background: rgba(0,255,136,.08); color: var(--accent); border: 1px solid rgba(0,255,136,.2); }
-.mscore.risk { background: rgba(239,68,68,.08); color: #FCA5A5; border: 1px solid rgba(239,68,68,.2); }
-.mscore.time { background: rgba(245,158,11,.08); color: var(--gold); border: 1px solid rgba(245,158,11,.2); }
-
-.msg-synthesis {
-  background: rgba(0,255,136,.04); border: 1px solid rgba(0,255,136,.18);
-  border-radius: 10px; padding: 12px;
-}
-.msg-synthesis-title {
-  font-family: var(--mono); font-size: 10px; color: var(--accent);
-  letter-spacing: .08em; font-weight: 700;
-  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
-}
-.msg-synthesis p { font-size: 12px; color: var(--text); line-height: 1.6; margin-bottom: 10px; }
-
-.consensus-bar { display: flex; flex-direction: column; gap: 6px; }
-.cbar-row { display: flex; align-items: center; gap: 8px; }
-.cbar-label { font-family: var(--mono); font-size: 9px; color: var(--muted); min-width: 80px; }
-.cbar-track { flex: 1; height: 4px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
-.cbar-fill { height: 100%; border-radius: 2px; transition: width 1s cubic-bezier(.4,0,.2,1); }
-.cbar-val { font-family: var(--mono); font-size: 9px; color: var(--text); min-width: 30px; text-align: right; }
-
-/* Typing indicator */
-.typing-indicator { display: flex; gap: 8px; align-items: flex-start; }
-.typing-bubble {
-  background: var(--s2); border: 1px solid var(--border);
-  border-radius: 2px 10px 10px 10px; padding: 10px 14px;
-}
-.typing-dots { display: flex; gap: 4px; align-items: center; }
-.typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: typing-bounce .9s ease-in-out infinite; }
-.typing-dots span:nth-child(2) { animation-delay: .2s; }
-.typing-dots span:nth-child(3) { animation-delay: .4s; }
-@keyframes typing-bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
-
-/* Streaming bubble */
-.msg-stream { font-size: 12px; color: var(--text); line-height: 1.6; }
-.stream-cursor { display: inline-block; width: 2px; height: 13px; background: var(--accent); animation: blink .7s step-end infinite; vertical-align: text-bottom; }
-@keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
-
-/* Error/notice */
-.msg-error {
-  background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.2);
-  border-radius: 8px; padding: 10px; font-size: 12px; color: #FCA5A5;
-}
-
-/* ── INPUT AREA ── */
-.chat-input-area {
-  padding: 10px 14px 12px; border-top: 1px solid var(--border);
-  background: var(--s2);
-}
-.mode-row { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
-.mode-btn {
-  padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);
-  background: transparent; color: var(--muted); font-family: var(--mono); font-size: 9px;
-  cursor: pointer; transition: all .15s; letter-spacing: .04em;
-}
-.mode-btn:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
-.mode-btn.active { background: rgba(0,255,136,.08); border-color: rgba(0,255,136,.35); color: var(--accent); }
-
-.chat-input-label { font-family: var(--mono); font-size: 8px; color: var(--muted); letter-spacing: .08em; margin-bottom: 6px; }
-.chat-input-row { display: flex; gap: 8px; }
-.chat-textarea {
-  flex: 1; background: var(--s3); border: 1px solid var(--border);
-  border-radius: 8px; padding: 9px 12px; color: var(--text);
-  font-family: var(--sans); font-size: 13px; resize: none;
-  min-height: 54px; max-height: 120px; line-height: 1.5;
-  transition: border-color .15s;
-}
-.chat-textarea:focus { outline: none; border-color: rgba(0,255,136,.3); }
-.chat-textarea::placeholder { color: rgba(126,143,168,.5); font-size: 12px; }
-.chat-send {
-  background: rgba(0,255,136,.1); border: 1px solid rgba(0,255,136,.3);
-  border-radius: 8px; padding: 0 14px; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  transition: all .2s; min-width: 64px; color: var(--accent);
-}
-.chat-send:hover:not(:disabled) { background: rgba(0,255,136,.18); border-color: rgba(0,255,136,.5); }
-.chat-send:disabled { opacity: .5; cursor: not-allowed; }
-.chat-send .send-icon { font-size: 16px; }
-.chat-send span:last-child { font-family: var(--mono); font-size: 8px; letter-spacing: .05em; }
-
-/* ── USAGE PILL ── */
-.usage-pill {
-  font-family: var(--mono); font-size: 9px; color: var(--muted);
-  background: rgba(255,255,255,.03); border: 1px solid var(--border);
-  border-radius: 20px; padding: 3px 8px; white-space: nowrap;
-}
-
-/* ── FADE IN ── */
-@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-.fade-in { animation: fadeUp .35s ease forwards; }
-
-/* ── DEBATE PAIR ── */
-.debate-pair {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
-}
-.debate-side {
-  background: var(--s2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 9px 10px;
-}
-.debate-who { font-family: var(--mono); font-size: 8px; margin-bottom: 5px; font-weight: 700; letter-spacing: .04em; }
-.debate-who.pro { color: var(--accent); }
-.debate-who.contra { color: var(--danger); }
-.debate-side p { font-size: 11px; color: var(--muted); line-height: 1.5; }
-
-/* ── MOBILE ── */
-@media (max-width: 700px) {
-  .cns-main { grid-template-columns: 1fr; }
-  .council-panel { display: none; }
-  .chat-panel { flex: 1; }
-  .palantir-bar .pstat-sep:nth-child(4),
-  .palantir-bar .pstat:nth-child(5),
-  .palantir-bar .pstat:nth-child(6) { display: none; }
-}
+    .spin { display:inline-block; width:13px; height:13px; border:2px solid rgba(0,255,136,.25); border-top-color:var(--green); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
   </style>
 </head>
 <body>
 
-<!-- AUTH GATE -->
-<div id="auth-gate"><div class="auth-spinner"></div></div>
-
-<div class="consejo-shell" id="consejo-shell" style="display:none">
-
-  <!-- TOPBAR -->
-  <div class="cns-topbar">
-    <a href="/home.html" class="cns-back">← PORTAL</a>
-    <div class="topbar-sep"></div>
-    <div class="cns-logo">MTX</div>
-    <div class="cns-title">CONSEJO EJECUTIVO IA</div>
-    <div class="topbar-right">
-      <div class="live-dot"></div>
-      <div class="cns-user-chip" id="user-chip">—</div>
-      <div class="usage-pill" id="usage-pill" style="display:none"></div>
-    </div>
-  </div>
-
-  <!-- PALANTIR STATS -->
-  <div class="palantir-bar">
-    <div class="pstat">
-      <span class="pstat-label">CONSENSO</span>
-      <div class="pstat-track"><div class="pstat-fill" id="fill-consensus" style="width:72%;background:var(--accent)"></div></div>
-      <span class="pstat-val" id="stat-consensus" style="color:var(--accent)">72%</span>
-    </div>
-    <div class="pstat-sep"></div>
-    <div class="pstat">
-      <span class="pstat-label">PROB. ÉXITO</span>
-      <div class="pstat-track"><div class="pstat-fill" id="fill-success" style="width:65%;background:var(--cyan)"></div></div>
-      <span class="pstat-val" id="stat-success" style="color:var(--cyan)">65%</span>
-    </div>
-    <div class="pstat-sep"></div>
-    <div class="pstat">
-      <span class="pstat-label">RIESGO</span>
-      <div class="pstat-track"><div class="pstat-fill" id="fill-risk" style="width:28%;background:var(--danger)"></div></div>
-      <span class="pstat-val" id="stat-risk" style="color:var(--danger)">28%</span>
-    </div>
-    <div class="pstat-sep"></div>
-    <div class="pstat">
-      <span class="pstat-label">MOTOR IA</span>
-      <div class="pstat-track"><div class="pstat-fill" id="fill-ai" style="width:0%;background:var(--gold)"></div></div>
-      <span class="pstat-val" id="stat-ai" style="color:var(--gold)">—</span>
-    </div>
-  </div>
-
-  <!-- DIRECTOR TABS -->
-  <div class="director-tabs">
-    <button class="dtab active" onclick="switchDirector(this,'ceo')">
-      <span>🏛</span> CEO · DG
-    </button>
-    <button class="dtab" onclick="switchDirector(this,'ventas')">
-      <span>🎯</span> Ventas
-    </button>
-    <button class="dtab" onclick="switchDirector(this,'marketing')">
-      <span>📡</span> Marketing
-    </button>
-    <button class="dtab" onclick="switchDirector(this,'admin')">
-      <span>⚙️</span> Admin · Finanzas
-    </button>
-    <button class="dtab" onclick="switchDirector(this,'consejo')">
-      <span>⚡</span> Consejo Completo
-    </button>
-  </div>
-
-  <!-- MAIN LAYOUT -->
-  <div class="cns-main">
-
-    <!-- LEFT: ADVISOR GRID -->
-    <div class="council-panel">
-      <div class="council-header">
-        <div class="council-meta">
-          <div class="council-title" id="council-title">MESA DEL CEO & DIRECTOR GENERAL</div>
-          <div class="council-badge" id="council-badge">30 CONSEJEROS</div>
-        </div>
-        <div class="council-subtitle" id="council-subtitle">30 FUNDADORES Y EMPRESARIOS FORBES · SIMULACIÓN SOCIAL IA</div>
-      </div>
-      <div class="council-grid-wrap">
-        <div class="council-grid" id="council-grid"></div>
-      </div>
-    </div>
-
-    <!-- RIGHT: CHAT -->
-    <div class="chat-panel">
-      <div class="chat-header">
-        <div class="chat-header-title">¿QUÉ RETO VAMOS A TRABAJAR?</div>
-        <div class="chat-header-sub">EL CONSEJO RESPONDE EN TIEMPO REAL CON IA GENERATIVA</div>
-      </div>
-
-      <div class="chat-messages" id="chat-messages">
-        <div class="msg-welcome fade-in">
-          <strong>Bienvenido al Consejo Ejecutivo IA.</strong><br><br>
-          Plantea tu reto estratégico y 30 de los líderes empresariales más influyentes del mundo analizarán tu situación desde sus metodologías y experiencias reales.<br><br>
-          Elige el <strong>modo</strong> (Estratégico, Debate, Crisis o Forecast) y describe tu desafío con detalle.
-        </div>
-      </div>
-
-      <div class="chat-input-area">
-        <div class="mode-row">
-          <button class="mode-btn active" onclick="setMode(this,'estrategico')">🧠 Estratégico</button>
-          <button class="mode-btn" onclick="setMode(this,'debate')">⚡ Debate</button>
-          <button class="mode-btn" onclick="setMode(this,'crisis')">🔴 Crisis</button>
-          <button class="mode-btn" onclick="setMode(this,'forecast')">📊 Forecast</button>
-        </div>
-        <div class="chat-input-label">PLANTEA TU RETO — EL CONSEJO ANALIZA CON CLAUDE IA</div>
-        <div class="chat-input-row">
-          <textarea class="chat-textarea" id="reto-input" rows="2"
-            placeholder="Ej: Tengo 6 vendedores y $2M de pipeline. Quiero doblar revenue en 12 meses. ¿Cómo lo logro?"></textarea>
-          <button class="chat-send" id="send-btn" onclick="sendReto()">
-            <span class="send-icon">⚡</span>
-            <span>CONVOCAR</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
+<div id="app-root">
+  <div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>
 </div>
 
-<!-- Portal config & auth -->
-<script src="/assets/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/app.js?v=202604184"></script>
-
 <script>
-// ══════════════════════════════════════════════════════════════
-// CONSEJO EJECUTIVO IA — Mesa de Decisiones
-// Real Claude API + Supabase Auth
-// ══════════════════════════════════════════════════════════════
+'use strict';
+/* ═════════════════════════════════════════════════════
+   CONSEJO EJECUTIVO — 5 Mesas Estratégicas con Claude
+   ═════════════════════════════════════════════════════ */
 
-// ── STATE ────────────────────────────────────────────────────
-let currentMode    = 'estrategico';
-let currentDir     = 'ceo';
-let currentUser    = null;
-let _usage         = { used: 0, limit: 100, allowed: true };
-let isSending      = false;
+let _user = null;
+let _db   = null;
+let _role = '';
+let _streaming = false;
+let _activeTab = 0;
 
-// ── ADVISOR DATA ──────────────────────────────────────────────
-const DIRECTORS = {
-  ceo: {
-    title:    'MESA DEL CEO & DIRECTOR GENERAL',
-    subtitle: '30 FUNDADORES Y EMPRESARIOS FORBES · SIMULACIÓN SOCIAL IA',
-    badge:    '30 CONSEJEROS',
-    advisors: [
-      {e:'💡',n:'Steve Jobs',r:'Apple'},
-      {e:'🚀',n:'Elon Musk',r:'Tesla · SpaceX'},
-      {e:'📦',n:'Jeff Bezos',r:'Amazon'},
-      {e:'💰',n:'Warren Buffett',r:'Berkshire'},
-      {e:'🖥',n:'Bill Gates',r:'Microsoft'},
-      {e:'⚡',n:'Jensen Huang',r:'NVIDIA'},
-      {e:'🌊',n:'Ray Dalio',r:'Bridgewater'},
-      {e:'🎬',n:'Reed Hastings',r:'Netflix'},
-      {e:'☁️',n:'Marc Benioff',r:'Salesforce'},
-      {e:'🔄',n:'Satya Nadella',r:'Microsoft'},
-      {e:'🔍',n:'Larry Page',r:'Google'},
-      {e:'📱',n:'Mark Zuckerberg',r:'Meta'},
-      {e:'🐉',n:'Jack Ma',r:'Alibaba'},
-      {e:'✈️',n:'Richard Branson',r:'Virgin'},
-      {e:'🗡',n:'Peter Thiel',r:'PayPal · Palantir'},
-      {e:'🏪',n:'Sam Walton',r:'Walmart'},
-      {e:'📟',n:'Andy Grove',r:'Intel'},
-      {e:'☕',n:'Howard Schultz',r:'Starbucks'},
-      {e:'🔗',n:'Reid Hoffman',r:'LinkedIn'},
-      {e:'👟',n:'Tony Hsieh',r:'Zappos'},
-      {e:'🎭',n:'Bob Iger',r:'Disney'},
-      {e:'🌿',n:'Indra Nooyi',r:'PepsiCo'},
-      {e:'⚙️',n:'Sheryl Sandberg',r:'Meta Ops'},
-      {e:'🔁',n:'Lou Gerstner',r:'IBM'},
-      {e:'🎽',n:'Phil Knight',r:'Nike'},
-      {e:'🗄',n:'Larry Ellison',r:'Oracle'},
-      {e:'💻',n:'Michael Dell',r:'Dell'},
-      {e:'📰',n:'Arianna Huffington',r:'HuffPost'},
-      {e:'🚗',n:'Mary Barra',r:'General Motors'},
-      {e:'🤖',n:'Sam Altman',r:'OpenAI'},
-    ]
+const MESAS = [
+  {
+    id:    'estrategia',
+    name:  'Mesa de Estrategia Corporativa',
+    icon:  '🏛',
+    color: '#00ff88',
+    desc:  'Definición de dirección estratégica, objetivos anuales, posicionamiento competitivo, fusiones & adquisiciones, y agenda de crecimiento de IBANOR SA de CV / MetaTronix.',
+    badge: 'CEO · Dirección General',
+    access: ['super_admin', 'admin'],
+    agendaItems: [
+      'Plan estratégico 2026-2028',
+      'Análisis FODA actualizado',
+      'Iniciativas de crecimiento Q2',
+      'Evaluación de nuevos mercados',
+      'KPIs estratégicos vs. metas',
+      'Revisión de alianzas y socios',
+    ],
+    contextFields: [
+      { id:'ctx-sector', label:'Sector / Industria objetivo', type:'input', placeholder:'SaaS B2B · Manufactura · Retail...' },
+      { id:'ctx-horizon', label:'Horizonte de análisis', type:'select', options:['30 días','Trimestre Q2 2026','Semestre','Año 2026','3 años'] },
+    ],
+    system: `Eres el Consejero Estratégico Senior de IBANOR SA de CV / MetaTronix.
+Tu función: facilitar sesiones del Consejo Ejecutivo con análisis estratégico de máximo nivel.
+Perspectiva: McKinsey + Bain + visión de Silicon Valley. Mentalidad de founder.
+Idioma: español de negocios México.
+Formato: HTML semántico (h2, h3, p, ul, ol, table, strong). Sin DOCTYPE ni etiquetas de documento.
+Sé directo, usa datos concretos, cuantifica siempre que sea posible.`,
+    promptBuilder: (agenda, ctx) => `SESIÓN DEL CONSEJO EJECUTIVO — Mesa de Estrategia Corporativa
+Empresa: IBANOR SA de CV / MetaTronix
+Sector objetivo: ${ctx['ctx-sector']||'SaaS B2B / Tecnología'}
+Horizonte: ${ctx['ctx-horizon']||'2026'}
+
+AGENDA: ${agenda}
+
+Genera el análisis ejecutivo del Consejo con:
+<h2>🏛 Mesa de Estrategia — ${agenda}</h2>
+<h3>Diagnóstico Situacional</h3>
+<h3>Opciones Estratégicas (mínimo 3)</h3>
+<h3>Análisis de Impacto y Riesgo</h3>
+<h3>Recomendación del Consejo</h3>
+<h3>Plan de Implementación (90 días)</h3>
+<h3>Métricas de Éxito</h3>
+
+Nivel de profundidad: presentación para Consejo de Administración.`,
   },
-  ventas: {
-    title:    'MESA DEL DIRECTOR DE VENTAS',
-    subtitle: '30 LÍDERES COMERCIALES · METODOLOGÍAS PROBADAS',
-    badge:    '30 CONSEJEROS',
-    advisors: [
-      {e:'🎯',n:'Grant Cardone',r:'10X Sales'},
-      {e:'🤝',n:'Zig Ziglar',r:'Motivación'},
-      {e:'📊',n:'Neil Rackham',r:'SPIN Selling'},
-      {e:'⚡',n:'Aaron Ross',r:'Outbound'},
-      {e:'🔬',n:'Mark Roberge',r:'Sales Eng.'},
-      {e:'🧩',n:'Jill Konrath',r:'Ventas Complejas'},
-      {e:'💪',n:'Jordan Belfort',r:'Psicología'},
-      {e:'🧠',n:'Dan Pink',r:'Motivación'},
-      {e:'🏆',n:'Bryan Tracy',r:'Clásico'},
-      {e:'📈',n:'Jason Lemkin',r:'SaaS'},
-      {e:'📞',n:'Trish Bertuzzi',r:'Inbound'},
-      {e:'🎪',n:'Todd Caponi',r:'Transparencia'},
-      {e:'💼',n:'Jeb Blount',r:'Pipeline'},
-      {e:'🔑',n:'Marcus Sheridan',r:'Contenido'},
-      {e:'🧬',n:'Bob Moesta',r:'JTBD'},
-      {e:'🥊',n:'Matt Dixon',r:'Challenger'},
-      {e:'📋',n:'Brent Adamson',r:'Insight'},
-      {e:'🌐',n:'Max Altschuler',r:'Sales Hacker'},
-      {e:'🔄',n:'Mike Weinberg',r:'New Sales'},
-      {e:'💡',n:'Tom Hopkins',r:'Closing'},
-      {e:'🗝',n:'Brian Burns',r:'Complex'},
-      {e:'🎓',n:'Victor Antonio',r:'Objeciones'},
-      {e:'🌟',n:'Jeffrey Gitomer',r:'Relaciones'},
-      {e:'🏹',n:'Colleen Francis',r:'Revenue'},
-      {e:'💎',n:'Chet Holmes',r:'Dream 100'},
-      {e:'🚦',n:'Dave Kurlan',r:'Assessment'},
-      {e:'🧭',n:'Andy Paul',r:'Velocidad'},
-      {e:'🌊',n:'Josh Braun',r:'Prospección'},
-      {e:'📡',n:'Dave Brock',r:'Ejecución'},
-      {e:'🎯',n:'Tamara Schenk',r:'Enablement'},
-    ]
+  {
+    id:    'mercado',
+    name:  'Mesa de Mercado & Clientes',
+    icon:  '🌎',
+    color: '#00e5ff',
+    desc:  'Análisis de mercado, segmentación de clientes, propuesta de valor, pricing, canales de distribución, y voz del cliente para IBANOR SA de CV / MetaTronix.',
+    badge: 'Dirección Comercial · Marketing',
+    access: ['super_admin', 'admin', 'admin_restringido'],
+    agendaItems: [
+      'Análisis de mercado objetivo',
+      'Segmentación y buyer persona',
+      'Revisión de pricing y márgenes',
+      'Estrategia de canales 2026',
+      'NPS y satisfacción de clientes',
+      'Pipeline de oportunidades',
+    ],
+    contextFields: [
+      { id:'ctx-segment', label:'Segmento de cliente', type:'input', placeholder:'PyMEs · Enterprise · Gobierno...' },
+      { id:'ctx-geo', label:'Geografía', type:'select', options:['CDMX / Valle de México','Nacional México','Latinoamérica','Global'] },
+    ],
+    system: `Eres el Consejero de Mercado & Clientes de IBANOR SA de CV / MetaTronix.
+Tu función: análisis de mercado B2B, segmentación, go-to-market y estrategia comercial.
+Perspectiva: HBR + Gartner + metodología Jobs-to-be-Done.
+Idioma: español de negocios México.
+Formato: HTML semántico. Sin DOCTYPE ni etiquetas de documento.
+Cuantifica tamaño de mercado, tasas de conversión y ROI siempre que sea posible.`,
+    promptBuilder: (agenda, ctx) => `SESIÓN DEL CONSEJO — Mesa de Mercado & Clientes
+Empresa: IBANOR SA de CV / MetaTronix
+Segmento: ${ctx['ctx-segment']||'PyMEs / Empresas medianas'}
+Geografía: ${ctx['ctx-geo']||'Nacional México'}
+
+AGENDA: ${agenda}
+
+Genera el análisis con:
+<h2>🌎 Mesa de Mercado — ${agenda}</h2>
+<h3>Dimensionamiento del Mercado (TAM/SAM/SOM)</h3>
+<h3>Perfil del Cliente Ideal (ICP)</h3>
+<h3>Propuesta de Valor Diferencial</h3>
+<h3>Análisis Competitivo</h3>
+<h3>Estrategia de Penetración</h3>
+<h3>Hoja de Ruta Comercial</h3>
+
+Incluye datos del mercado mexicano. Sé específico con cifras.`,
   },
-  marketing: {
-    title:    'MESA DEL DIRECTOR DE MARKETING',
-    subtitle: '30 GENIOS DEL MARKETING · DESDE OGILVY HASTA LA ERA DIGITAL',
-    badge:    '30 CONSEJEROS',
-    advisors: [
-      {e:'🐒',n:'Seth Godin',r:'Purple Cow'},
-      {e:'📹',n:'Gary Vaynerchuk',r:'Social Media'},
-      {e:'🎩',n:'David Ogilvy',r:'Publicidad Clásica'},
-      {e:'📘',n:'Philip Kotler',r:'Académico'},
-      {e:'🎯',n:'Al Ries',r:'Posicionamiento'},
-      {e:'⚔️',n:'Jack Trout',r:'Marketing Wars'},
-      {e:'💰',n:'Dan Kennedy',r:'Directo'},
-      {e:'🏔',n:'Jay Abraham',r:'Apalancamiento'},
-      {e:'📊',n:'Neil Patel',r:'Digital'},
-      {e:'🔗',n:'Brian Halligan',r:'Inbound'},
-      {e:'🧲',n:'Dharmesh Shah',r:'HubSpot'},
-      {e:'🎭',n:'Ryan Holiday',r:'Growth Hacking'},
-      {e:'⏱',n:'Tim Ferriss',r:'Life Hacking'},
-      {e:'🔥',n:'Russell Brunson',r:'Funnels'},
-      {e:'✍️',n:'Joe Sugarman',r:'Copywriting'},
-      {e:'📝',n:'Claude Hopkins',r:'Publicidad Científica'},
-      {e:'🧠',n:'Eugene Schwartz',r:'Psicología'},
-      {e:'📖',n:'John Caples',r:'Titulares'},
-      {e:'🔬',n:'Bryan Eisenberg',r:'Conversión'},
-      {e:'✒️',n:'Joanna Wiebe',r:'Copy Hacker'},
-      {e:'📣',n:'Joe Pulizzi',r:'Contenido'},
-      {e:'🌊',n:'Ann Handley',r:'Escritura'},
-      {e:'🔍',n:'Rand Fishkin',r:'SEO'},
-      {e:'⚡',n:'Ryan Deiss',r:'Digital Marketer'},
-      {e:'🧬',n:'Nir Eyal',r:'Hábitos'},
-      {e:'🎪',n:'Robert Cialdini',r:'Influencia'},
-      {e:'🎯',n:'Derek Halpern',r:'Psicología Social'},
-      {e:'🔄',n:'Chris Goward',r:'A/B Testing'},
-      {e:'🎬',n:'Frank Kern',r:'Video Sales'},
-      {e:'📱',n:'Brendan Kane',r:'Viral Growth'},
-    ]
+  {
+    id:    'operaciones',
+    name:  'Mesa de Operaciones & Tecnología',
+    icon:  '⚙️',
+    color: '#ffb400',
+    desc:  'Eficiencia operacional, arquitectura tecnológica, automatización con IA, gestión de proyectos, KPIs de productividad y roadmap de producto de MetaTronix.',
+    badge: 'COO · CTO · Producto',
+    access: ['super_admin', 'admin', 'admin_restringido'],
+    agendaItems: [
+      'Diagnóstico de eficiencia operacional',
+      'Roadmap tecnológico 2026',
+      'Procesos candidatos a automatización',
+      'KPIs de productividad del equipo',
+      'Infraestructura y costos cloud',
+      'Calidad y deuda técnica',
+    ],
+    contextFields: [
+      { id:'ctx-team', label:'Tamaño del equipo', type:'select', options:['1-5 personas','6-15 personas','16-50 personas','50+ personas'] },
+      { id:'ctx-stack', label:'Stack tecnológico actual', type:'input', placeholder:'GitHub Pages · Supabase · Cloudflare · Claude API...' },
+    ],
+    system: `Eres el Consejero de Operaciones y Tecnología de IBANOR SA de CV / MetaTronix.
+Tu función: optimización operacional, arquitectura tecnológica y aceleración con IA.
+Perspectiva: CTO de startup + rigor operacional de Amazon.
+Idioma: español técnico-ejecutivo.
+Formato: HTML semántico. Sin DOCTYPE ni etiquetas de documento.
+Prioriza quick wins, automatización con IA y reducción de costos operativos.`,
+    promptBuilder: (agenda, ctx) => `SESIÓN DEL CONSEJO — Mesa de Operaciones & Tecnología
+Empresa: IBANOR SA de CV / MetaTronix
+Equipo: ${ctx['ctx-team']||'6-15 personas'}
+Stack: ${ctx['ctx-stack']||'GitHub Pages, Supabase, Cloudflare Workers, Claude API (Anthropic)'}
+
+AGENDA: ${agenda}
+
+Genera el análisis con:
+<h2>⚙️ Mesa de Operaciones — ${agenda}</h2>
+<h3>Estado Actual (as-is)</h3>
+<h3>Cuellos de Botella Identificados</h3>
+<h3>Oportunidades de Automatización con IA</h3>
+<h3>Arquitectura Recomendada (to-be)</h3>
+<h3>Plan de Implementación</h3>
+<h3>ROI Estimado</h3>
+
+Incluye estimaciones de tiempo y ahorro en horas/mes.`,
   },
-  admin: {
-    title:    'MESA DEL DIRECTOR DE ADMINISTRACIÓN',
-    subtitle: '30 LÍDERES DE OPERACIONES, FINANZAS Y GESTIÓN EJECUTIVA',
-    badge:    '30 CONSEJEROS',
-    advisors: [
-      {e:'🏦',n:'Jamie Dimon',r:'JPMorgan'},
-      {e:'🔧',n:'Tim Cook',r:'Apple Ops'},
-      {e:'📊',n:'Ruth Porat',r:'Google CFO'},
-      {e:'⚙️',n:'Andy Jassy',r:'AWS'},
-      {e:'🌐',n:'Werner Vogels',r:'CTO Amazon'},
-      {e:'💼',n:'Jack Welch',r:'GE'},
-      {e:'🧩',n:'Patrick Lencioni',r:'Equipos'},
-      {e:'🔑',n:'W.E. Deming',r:'Calidad'},
-      {e:'🏭',n:'Taiichi Ohno',r:'Toyota'},
-      {e:'📈',n:'Peter Drucker',r:'Management'},
-      {e:'🎯',n:'Michael Porter',r:'Estrategia'},
-      {e:'🌊',n:'Nassim Taleb',r:'Anti-frágil'},
-      {e:'📋',n:'Atul Gawande',r:'Checklists'},
-      {e:'💰',n:'Charlie Munger',r:'Inversión'},
-      {e:'🏹',n:'Ray Dalio',r:'Principios'},
-      {e:'🔄',n:'Larry Bossidy',r:'Ejecución'},
-      {e:'📚',n:'Ram Charan',r:'Estrategia'},
-      {e:'🧠',n:'Clayton Christensen',r:'Disrupción'},
-      {e:'📊',n:'Robert Kaplan',r:'BSC'},
-      {e:'🌟',n:'Tom Peters',r:'Excelencia'},
-      {e:'🔬',n:'Geoffrey Moore',r:'Adopción'},
-      {e:'⚡',n:'Ben Horowitz',r:'Hard Things'},
-      {e:'🗺',n:'Michael Hammer',r:'Reingeniería'},
-      {e:'🎓',n:'Dave Ramsey',r:'Finanzas'},
-      {e:'🔗',n:'Cathie Wood',r:'Innovación'},
-      {e:'💎',n:'David Swensen',r:'Portafolio'},
-      {e:'🏆',n:'Ken Blanchard',r:'Liderazgo'},
-      {e:'🌊',n:'George Soros',r:'Riesgo'},
-      {e:'📡',n:'Mary Meeker',r:'Tendencias'},
-      {e:'🚀',n:'Sundar Pichai',r:'Google'},
-    ]
+  {
+    id:    'finanzas',
+    name:  'Mesa de Finanzas & Riesgo',
+    icon:  '💰',
+    color: '#b966ff',
+    desc:  'Análisis financiero ejecutivo, gestión de riesgo, estructura de capital, flujo de caja, proyecciones y cumplimiento fiscal para IBANOR SA de CV.',
+    badge: 'CFO · Director Administrativo',
+    access: ['super_admin', 'admin'],
+    agendaItems: [
+      'Estado financiero del mes',
+      'Análisis de flujo de caja',
+      'Revisión de CXC y cobranza',
+      'Presupuesto vs. real Q2',
+      'Estructura de costos y márgenes',
+      'Cumplimiento fiscal SAT 2026',
+    ],
+    contextFields: [
+      { id:'ctx-periodo', label:'Período de análisis', type:'select', options:['Mes actual','Q2 2026','Semestre 1','Año 2026'] },
+      { id:'ctx-moneda', label:'Moneda principal', type:'select', options:['MXN (Pesos mexicanos)','USD','MXN + USD'] },
+    ],
+    system: `Eres el Consejero Financiero Senior de IBANOR SA de CV / MetaTronix.
+Tu función: análisis financiero ejecutivo, gestión de riesgo y estrategia de tesorería.
+Perspectiva: CFO experimentado con conocimiento profundo del mercado mexicano, SAT, CFDI, IVA.
+Idioma: español financiero-ejecutivo.
+Formato: HTML semántico con tablas financieras. Sin DOCTYPE ni etiquetas de documento.
+Cuantifica todo en pesos mexicanos. Identifica riesgos y mitigation strategies.`,
+    promptBuilder: (agenda, ctx) => `SESIÓN DEL CONSEJO — Mesa de Finanzas & Riesgo
+Empresa: IBANOR SA de CV / MetaTronix
+Período: ${ctx['ctx-periodo']||'Q2 2026'}
+Moneda: ${ctx['ctx-moneda']||'MXN'}
+
+AGENDA: ${agenda}
+
+Genera el análisis financiero ejecutivo con:
+<h2>💰 Mesa de Finanzas — ${agenda}</h2>
+<h3>Diagnóstico Financiero</h3>
+<h3>Indicadores Clave (tabla: KPI | Valor | Meta | Semáforo)</h3>
+<h3>Análisis de Riesgo Financiero</h3>
+<h3>Proyección y Escenarios</h3>
+<h3>Recomendaciones Financieras</h3>
+<h3>Acciones de Cumplimiento Fiscal</h3>
+
+Incluye contexto regulatorio México (SAT, CFDI 4.0, Buzón Tributario) cuando sea relevante.`,
   },
-  consejo: {
-    title:    'CONSEJO EJECUTIVO COMPLETO',
-    subtitle: '120 CONSEJEROS · TODOS LOS DIRECTORES · MÁXIMO PODER ANALÍTICO',
-    badge:    '120 CONSEJEROS',
-    advisors: [] // populated dynamically
-  }
-};
+  {
+    id:    'innovacion',
+    name:  'Mesa de Innovación & IA',
+    icon:  '🚀',
+    color: '#ff6b6b',
+    desc:  'Aceleración con inteligencia artificial, nuevos productos, tendencias tecnológicas, cultura de innovación y ventaja competitiva basada en IA para MetaTronix.',
+    badge: 'CEO · Product · Tech',
+    access: ['super_admin', 'admin', 'admin_restringido'],
+    agendaItems: [
+      'Hoja de ruta IA 2026',
+      'Nuevas capacidades de Claude API',
+      'Producto: próximas funcionalidades',
+      'Casos de uso IA no explorados',
+      'Cultura de innovación del equipo',
+      'Benchmark vs. competidores IA',
+    ],
+    contextFields: [
+      { id:'ctx-ai-area', label:'Área de foco IA', type:'select', options:['Ventas & CRM','Operaciones internas','Producto & UX','Finanzas & Admin','Todas las áreas'] },
+      { id:'ctx-budget', label:'Presupuesto de innovación', type:'select', options:['Sin presupuesto definido','< $50K USD/año','$50K-$200K USD/año','> $200K USD/año'] },
+    ],
+    system: `Eres el Chief Innovation Officer IA de IBANOR SA de CV / MetaTronix.
+Tu función: acelerar la transformación digital con IA, identificar disrupciones y construir ventaja competitiva.
+Perspectiva: Anthropic Research + Silicon Valley + mentalidad de Steve Jobs en su etapa de regreso a Apple.
+Idioma: español con terminología técnica de IA cuando sea necesario.
+Formato: HTML semántico. Sin DOCTYPE ni etiquetas de documento.
+Piensa en 10x, no en 10%. Sé visionario pero accionable.`,
+    promptBuilder: (agenda, ctx) => `SESIÓN DEL CONSEJO — Mesa de Innovación & IA
+Empresa: IBANOR SA de CV / MetaTronix (portal empresarial con Claude API integrado)
+Área de foco: ${ctx['ctx-ai-area']||'Todas las áreas'}
+Presupuesto disponible: ${ctx['ctx-budget']||'Sin definir'}
 
-// ── RENDER ────────────────────────────────────────────────────
-function renderGrid(dir) {
-  const data = DIRECTORS[dir];
-  const grid = document.getElementById('council-grid');
-  let advisors = data.advisors;
+AGENDA: ${agenda}
 
-  if (dir === 'consejo') {
-    advisors = [
-      ...DIRECTORS.ceo.advisors.slice(0,8),
-      ...DIRECTORS.ventas.advisors.slice(0,8),
-      ...DIRECTORS.marketing.advisors.slice(0,8),
-      ...DIRECTORS.admin.advisors.slice(0,6),
-    ];
-  }
+Genera la visión de innovación con:
+<h2>🚀 Mesa de Innovación — ${agenda}</h2>
+<h3>Tendencias que Definen el Próximo Año</h3>
+<h3>Oportunidades de IA No Aprovechadas</h3>
+<h3>Hoja de Ruta de Innovación (6 meses)</h3>
+<h3>Quick Wins (implementables en 30 días)</h3>
+<h3>Ventaja Competitiva a Construir</h3>
+<h3>Riesgos de No Innovar</h3>
 
-  grid.innerHTML = advisors.map((a, i) => `
-    <div class="advisor-card" id="card-${i}" onclick="selectAdvisor(${i})" title="${escHtml(a.n)} — ${escHtml(a.r)}">
-      <div class="advisor-avatar">
-        <div class="speaking-ring"></div>
-        ${a.e}
-      </div>
-      <div class="advisor-name">${escHtml(a.n.split(' ').slice(0,2).join(' '))}</div>
-      <div class="advisor-role">${escHtml(a.r.split('·')[0].trim())}</div>
-      <div class="advisor-dot"></div>
-    </div>
-  `).join('');
-}
-
-function switchDirector(btn, dir) {
-  currentDir = dir;
-  document.querySelectorAll('.dtab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const data = DIRECTORS[dir];
-  document.getElementById('council-title').textContent   = data.title;
-  document.getElementById('council-subtitle').textContent = data.subtitle;
-  document.getElementById('council-badge').textContent   = data.badge;
-  renderGrid(dir);
-  animateStat('fill-consensus','stat-consensus', rnd(60,90), '%', 'var(--accent)');
-  animateStat('fill-success',  'stat-success',  rnd(55,85), '%', 'var(--cyan)');
-  animateStat('fill-risk',     'stat-risk',     rnd(15,40), '%', 'var(--danger)');
-}
-
-function animateStat(fillId, labelId, val, suffix, color) {
-  const fill  = document.getElementById(fillId);
-  const label = document.getElementById(labelId);
-  if (fill)  { fill.style.width = val + '%'; if (color) fill.style.background = color; }
-  if (label) label.textContent = val + suffix;
-}
-
-function selectAdvisor(i) {
-  document.querySelectorAll('.advisor-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('card-' + i)?.classList.add('selected');
-}
-
-function setMode(btn, mode) {
-  currentMode = mode;
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
-function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-// ── CLAUDE PROMPT BUILDER ─────────────────────────────────────
-function buildPrompt(reto, dir, mode) {
-  const dirData = DIRECTORS[dir === 'consejo' ? 'ceo' : dir];
-  const topAdvisors = dirData.advisors.slice(0, 8).map(a => `${a.e} ${a.n} (${a.r})`).join(', ');
-
-  const modeInstructions = {
-    estrategico: 'Análisis estratégico profundo: visión a largo plazo, ventajas competitivas, recursos clave y ejecución sistemática.',
-    debate:      'Debate estructurado: presenta argumentos contrarios, puntos de fricción entre diferentes filosofías de gestión.',
-    crisis:      'Gestión de crisis: respuestas urgentes, decisiones bajo presión, comunicación en momentos críticos.',
-    forecast:    'Proyección y tendencias: análisis predictivo, escenarios futuros, datos y métricas clave para los próximos 1-3 años.'
-  };
-
-  const modeContext = modeInstructions[mode] || modeInstructions.estrategico;
-  const dirContext = {
-    ceo:      'CEO / Director General — visión empresarial global, liderazgo y estrategia corporativa',
-    ventas:   'Director de Ventas — metodologías de cierre, pipeline, equipos comerciales y revenue growth',
-    marketing:'Director de Marketing — posicionamiento, growth hacking, contenido y conversión',
-    admin:    'Director de Administración y Finanzas — operaciones, control financiero, gestión de riesgo y eficiencia'
-  }[dir] || 'Director Ejecutivo';
-
-  return `Eres un consejo ejecutivo de simulación social formado por los empresarios y líderes más exitosos del mundo.
-
-CONTEXTO DEL DIRECTIVO: ${dirContext}
-MODO DE ANÁLISIS: ${modeContext}
-CONSEJEROS PRINCIPALES: ${topAdvisors}
-
-RETO PLANTEADO: "${reto}"
-
-Responde EXACTAMENTE en este JSON (sin texto adicional, sin markdown):
-{
-  "responses": [
-    {
-      "emoji": "💡",
-      "advisor": "Steve Jobs",
-      "company": "Apple",
-      "advice": "Consejo específico de 2-3 oraciones desde la perspectiva auténtica de este empresario, usando su lenguaje y filosofía real",
-      "confidence": 87,
-      "risk": 22,
-      "timeframe": "3-6 meses"
-    },
-    {
-      "emoji": "🚀",
-      "advisor": "Elon Musk",
-      "company": "Tesla · SpaceX",
-      "advice": "Consejo diferente y complementario desde la perspectiva de este empresario",
-      "confidence": 79,
-      "risk": 45,
-      "timeframe": "6-12 meses"
-    },
-    {
-      "emoji": "📦",
-      "advisor": "Jeff Bezos",
-      "company": "Amazon",
-      "advice": "Consejo desde la perspectiva de este empresario",
-      "confidence": 88,
-      "risk": 18,
-      "timeframe": "2-4 meses"
-    },
-    {
-      "emoji": "💰",
-      "advisor": "Warren Buffett",
-      "company": "Berkshire Hathaway",
-      "advice": "Consejo conservador y basado en fundamentos desde la perspectiva de este empresario",
-      "confidence": 92,
-      "risk": 12,
-      "timeframe": "12+ meses"
-    },
-    {
-      "emoji": "⚡",
-      "advisor": "Jensen Huang",
-      "company": "NVIDIA",
-      "advice": "Consejo tecnológico y de escala desde la perspectiva de este empresario",
-      "confidence": 81,
-      "risk": 35,
-      "timeframe": "6-18 meses"
-    }
-  ],
-  "debate": {
-    "pro_emoji": "💡",
-    "pro_name": "Nombre del consejero A FAVOR",
-    "pro_text": "Argumento fuerte y específico a favor de la acción más riesgosa",
-    "contra_emoji": "💰",
-    "contra_name": "Nombre del consejero EN CONTRA",
-    "contra_text": "Argumento sólido en contra, con razón específica"
+Sé visionario. Cita capacidades reales de Claude API (Anthropic) cuando sea relevante.`,
   },
-  "synthesis": "Síntesis del consenso del consejo en 2-3 oraciones claras y accionables basadas en los 5 consejos",
-  "consensus_items": [
-    {"label": "Acción prioritaria 1", "value": 85},
-    {"label": "Acción prioritaria 2", "value": 72},
-    {"label": "Acción prioritaria 3", "value": 61},
-    {"label": "Acción prioritaria 4", "value": 44}
-  ],
-  "advisors_count": 24
-}
-
-IMPORTANTE: Los consejos deben ser específicos al reto planteado, no genéricos. Usa el lenguaje y filosofía real de cada empresario. Responde SOLO el JSON.`;
-}
-
-// ── SEND RETO ─────────────────────────────────────────────────
-async function sendReto() {
-  if (isSending) return;
-  const reto = document.getElementById('reto-input').value.trim();
-  if (!reto) return;
-
-  // Check usage
-  if (_usage && !_usage.allowed) {
-    appendMsg('error', '🔒 Has alcanzado tu límite mensual de consultas IA. Contacta al administrador.');
-    return;
-  }
-
-  isSending = true;
-  const btn = document.getElementById('send-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span style="font-size:13px;animation:spin .8s linear infinite;display:inline-block">⟳</span>';
-
-  const msgs = document.getElementById('chat-messages');
-  document.getElementById('reto-input').value = '';
-
-  // User message
-  const userDiv = document.createElement('div');
-  userDiv.className = 'msg-user fade-in';
-  userDiv.innerHTML = `<p>${escHtml(reto)}</p>`;
-  msgs.appendChild(userDiv);
-
-  // System status
-  const sysMsg = addSystemMsg(`CONSULTANDO ${DIRECTORS[currentDir].badge} · MODO: ${currentMode.toUpperCase()}`);
-  msgs.scrollTop = msgs.scrollHeight;
-
-  // Activate random speaking cards
-  const cards = document.querySelectorAll('.advisor-card');
-  const speakingCards = [...cards].sort(() => Math.random()-.5).slice(0, Math.min(8, cards.length));
-  speakingCards.forEach(c => c.classList.add('speaking'));
-
-  // Update palantir
-  setTimeout(() => {
-    animateStat('fill-ai','stat-ai', 100, '%', 'var(--gold)');
-    document.getElementById('stat-ai').textContent = 'ACTIVO';
-  }, 400);
-
-  // Typing indicator
-  const typingDiv = document.createElement('div');
-  typingDiv.className = 'typing-indicator fade-in';
-  typingDiv.id = 'typing-indicator';
-  typingDiv.innerHTML = `
-    <div class="msg-advisor-avatar">🧠</div>
-    <div class="typing-bubble">
-      <div class="typing-dots"><span></span><span></span><span></span></div>
-    </div>`;
-  msgs.appendChild(typingDiv);
-  msgs.scrollTop = msgs.scrollHeight;
-
-  // Build prompt
-  const prompt = buildPrompt(reto, currentDir, currentMode);
-
-  // Collect streaming response
-  let rawText = '';
-
-  try {
-    await new Promise((resolve, reject) => {
-      generateWithClaude(
-        [{ role: 'user', content: prompt }],
-        (chunk, full) => { rawText = full; },
-        (full) => { rawText = full; resolve(); },
-        (err) => reject(new Error(err))
-      );
-    });
-
-    // Parse JSON response
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Respuesta no válida del consejo');
-    const data = JSON.parse(jsonMatch[0]);
-
-    // Remove typing
-    document.getElementById('typing-indicator')?.remove();
-
-    // Show advisor responses with stagger
-    for (let i = 0; i < (data.responses || []).length; i++) {
-      await delay(400 + i * 300);
-      const r = data.responses[i];
-      const el = document.createElement('div');
-      el.className = 'msg-advisor fade-in';
-      el.innerHTML = `
-        <div class="msg-advisor-avatar">${escHtml(r.emoji || '💡')}</div>
-        <div class="msg-advisor-bubble">
-          <div class="msg-advisor-name">${escHtml(r.advisor)} · ${escHtml(r.company)}</div>
-          <p>${escHtml(r.advice)}</p>
-          <div class="msg-advisor-score">
-            <span class="mscore conf">⬆ Confianza ${r.confidence}%</span>
-            <span class="mscore risk">⚠ Riesgo ${r.risk}%</span>
-            <span class="mscore time">⏱ ${escHtml(r.timeframe)}</span>
-          </div>
-        </div>`;
-      msgs.appendChild(el);
-      msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    // Debate pair
-    if (data.debate) {
-      await delay(300);
-      const d = data.debate;
-      const debateEl = document.createElement('div');
-      debateEl.className = 'debate-pair fade-in';
-      debateEl.innerHTML = `
-        <div class="debate-side">
-          <div class="debate-who pro">${escHtml(d.pro_emoji)} ${escHtml(d.pro_name)} — A FAVOR</div>
-          <p>${escHtml(d.pro_text)}</p>
-        </div>
-        <div class="debate-side">
-          <div class="debate-who contra">${escHtml(d.contra_emoji)} ${escHtml(d.contra_name)} — EN CONTRA</div>
-          <p>${escHtml(d.contra_text)}</p>
-        </div>`;
-      msgs.appendChild(debateEl);
-      msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    // Synthesis
-    await delay(400);
-    const count = data.advisors_count || (data.responses?.length || 5) + rnd(10, 18);
-    const synth = document.createElement('div');
-    synth.className = 'msg-synthesis fade-in';
-    const items = (data.consensus_items || []).slice(0, 4);
-    const colors = ['var(--accent)', 'var(--cyan)', 'var(--gold)', 'var(--danger)'];
-    synth.innerHTML = `
-      <div class="msg-synthesis-title"><span>⚡</span> SÍNTESIS DEL CONSEJO · ${count}/30 RESPONDIERON</div>
-      <p>${escHtml(data.synthesis)}</p>
-      <div class="consensus-bar">
-        ${items.map((item, i) => `
-          <div class="cbar-row">
-            <span class="cbar-label">${escHtml(item.label)}</span>
-            <div class="cbar-track"><div class="cbar-fill" style="width:${item.value}%;background:${colors[i % colors.length]}"></div></div>
-            <span class="cbar-val">${item.value}%</span>
-          </div>`).join('')}
-      </div>`;
-    msgs.appendChild(synth);
-    msgs.scrollTop = msgs.scrollHeight;
-
-    // Update palantir with results
-    const avgConf = Math.round((data.responses || []).reduce((s,r) => s + (r.confidence||70), 0) / (data.responses?.length || 1));
-    const avgRisk = Math.round((data.responses || []).reduce((s,r) => s + (r.risk||30), 0) / (data.responses?.length || 1));
-    animateStat('fill-consensus','stat-consensus', items[0]?.value || 75, '%', 'var(--accent)');
-    animateStat('fill-success',  'stat-success',  avgConf, '%', 'var(--cyan)');
-    animateStat('fill-risk',     'stat-risk',     avgRisk, '%', 'var(--danger)');
-
-    // Increment usage
-    if (currentUser) { _postRunIncrement().catch(() => {}); }
-
-  } catch (err) {
-    document.getElementById('typing-indicator')?.remove();
-    // Fallback: show a helpful message
-    appendMsg('error', `⚠️ Error al consultar el consejo: ${escHtml(err.message)}. Verifica que el proxy Claude esté activo.`);
-  }
-
-  // Cleanup
-  speakingCards.forEach(c => c.classList.remove('speaking'));
-  btn.disabled = false;
-  btn.innerHTML = '<span class="send-icon">⚡</span><span>CONVOCAR</span>';
-  animateStat('fill-ai','stat-ai', 0, '', '');
-  document.getElementById('stat-ai').textContent = '—';
-  isSending = false;
-}
-
-// ── HELPERS ───────────────────────────────────────────────────
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-function addSystemMsg(text) {
-  const msgs = document.getElementById('chat-messages');
-  const el = document.createElement('div');
-  el.className = 'msg-system fade-in';
-  el.textContent = text;
-  msgs.appendChild(el);
-  return el;
-}
-
-function appendMsg(type, html) {
-  const msgs = document.getElementById('chat-messages');
-  const el = document.createElement('div');
-  el.className = `msg-${type} fade-in`;
-  el.innerHTML = html;
-  msgs.appendChild(el);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-async function _postRunIncrement() {
-  const db = getDB();
-  if (!db || !currentUser) return;
-  try {
-    const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const { data: row } = await db.from('claude_usage')
-      .select('id,used').eq('user_id', currentUser.id).eq('month', month).single();
-    if (row) {
-      await db.from('claude_usage').update({ used: row.used + 1, updated_at: now.toISOString() }).eq('id', row.id);
-    } else {
-      await db.from('claude_usage').insert({ user_id: currentUser.id, month, used: 1, limit: 100 });
-    }
-    _usage.used = (_usage.used || 0) + 1;
-    updateUsagePill();
-  } catch (_) {}
-}
-
-function updateUsagePill() {
-  const pill = document.getElementById('usage-pill');
-  if (!pill) return;
-  const { used, limit } = _usage;
-  if (!limit) { pill.style.display = 'none'; return; }
-  pill.style.display = '';
-  pill.textContent = `${used} / ${limit} consultas`;
-  const pct = (used / limit) * 100;
-  pill.style.color = pct >= 90 ? '#EF4444' : pct >= 70 ? '#F59E0B' : 'var(--muted)';
-}
-
-// ── AUTH & INIT ───────────────────────────────────────────────
-// Acceso a mesas por rol (mirrors ROLE_CONSEJO_ACCESS in app.js)
-const CONSEJO_ACCESS = {
-  super_admin:       true,
-  admin:             true,
-  admin_restringido: ['ceo','ventas','marketing','admin'],
-  user:              ['ceo'],
-  viewer:            ['ceo'],
-  readonly:          [],
-};
-
-const ROLE_DISPLAY = {
-  super_admin:'CEO · Super Admin', admin:'Director', admin_restringido:'Gerente',
-  user:'Colaborador', viewer:'Operativo', readonly:'Solo Lectura'
-};
-
-function applyRoleAccess(role) {
-  const access = CONSEJO_ACCESS[role] ?? ['ceo'];
-
-  // Si no tiene acceso en absoluto → redirigir
-  if (Array.isArray(access) && access.length === 0) {
-    document.getElementById('auth-gate').innerHTML = `
-      <div style="text-align:center;font-family:'JetBrains Mono',monospace;color:var(--muted)">
-        <div style="font-size:32px;margin-bottom:12px">🔒</div>
-        <div style="font-size:13px;color:var(--danger)">ACCESO RESTRINGIDO</div>
-        <div style="font-size:11px;margin-top:8px">Tu nivel organizacional no incluye acceso al Consejo IA</div>
-        <a href="/home.html" style="display:inline-block;margin-top:20px;padding:8px 20px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--accent);border-radius:6px;text-decoration:none;font-size:11px">← Volver al Portal</a>
-      </div>`;
-    return false;
-  }
-
-  // Ocultar tabs no permitidos
-  if (access !== true) {
-    document.querySelectorAll('.dtab').forEach(btn => {
-      const dir = btn.getAttribute('onclick')?.match(/'(\w+)'\)/)?.[1];
-      if (dir && !access.includes(dir)) {
-        btn.style.display = 'none';
-      }
-    });
-    // Asegurar que el tab activo sea uno permitido
-    const allowed = access[0] || 'ceo';
-    const firstTab = document.querySelector(`.dtab[onclick*="'${allowed}'"]`);
-    if (firstTab) {
-      document.querySelectorAll('.dtab').forEach(b => b.classList.remove('active'));
-      firstTab.classList.add('active');
-    }
-  }
-
-  // Viewer → modo lectura (deshabilita envío)
-  if (role === 'viewer') {
-    const sendBtn = document.getElementById('send-btn');
-    const textarea = document.getElementById('reto-input');
-    if (sendBtn) {
-      sendBtn.disabled = true;
-      sendBtn.title = 'Modo solo lectura — 5 consultas/mes disponibles para Operativos';
-      sendBtn.style.opacity = '.5';
-    }
-    if (textarea) {
-      textarea.placeholder = 'Modo visualización. Contacta a tu Director para aumentar permisos.';
-      textarea.disabled = true;
-    }
-  }
-
-  return true;
-}
+];
 
 async function init() {
-  const db = getDB();
-  if (!db) { window.location.href = '/index.html'; return; }
+  _user = await requireAuth(true);
+  if (!_user) return;
+  _role = _user?.profile?.role || '';
+  _db   = getDB();
+
+  document.getElementById('app-root').innerHTML = buildShell();
+  if (typeof renderHeader === 'function') {
+    document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'consejo');
+  }
+  if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+  switchTab(0);
+}
+
+function buildShell() {
+  return `
+  <div style="display:flex;min-height:100vh">
+    <div id="sidebar-slot"></div>
+    <main style="flex:1;overflow:auto">
+      <div class="consejo-root">
+
+        <!-- Header -->
+        <div class="page-header">
+          <div>
+            <h1>🏛 Consejo Ejecutivo</h1>
+            <p>5 mesas estratégicas · Análisis ejecutivo con Claude · IBANOR SA de CV / MetaTronix</p>
+          </div>
+          <div style="font-size:11px;color:var(--text-faint);text-align:right">
+            Rol: <strong style="color:var(--text)">${_role}</strong>
+          </div>
+        </div>
+
+        <!-- Mesa tabs -->
+        <div class="mesa-tabs" id="mesa-tabs">
+          ${MESAS.map((m,i) => `
+          <button class="mesa-tab" id="tab-${m.id}" style="--tab-color:${m.color}"
+                  onclick="switchTab(${i})">
+            <span class="tab-dot"></span>
+            ${m.icon} ${m.name.split(' ').slice(2).join(' ') || m.name}
+          </button>`).join('')}
+        </div>
+
+        <!-- Mesa panes -->
+        <div id="mesa-panes">
+          ${MESAS.map((m,i) => buildMesaPane(m,i)).join('')}
+        </div>
+
+      </div>
+    </main>
+  </div>`;
+}
+
+function buildMesaPane(mesa, idx) {
+  const hasAccess = mesa.access.includes(_role);
+
+  return `
+  <div class="mesa-pane" id="pane-${mesa.id}" style="--mesa-color:${mesa.color}">
+    <div class="mesa-card" style="--mesa-color:${mesa.color}">
+      <div class="mesa-head" style="border-top:3px solid ${mesa.color}">
+        <div class="mesa-icon">${mesa.icon}</div>
+        <div class="mesa-meta">
+          <div class="mesa-name" style="color:${mesa.color}">${mesa.name}</div>
+          <div class="mesa-desc">${mesa.desc}</div>
+          <div class="mesa-badge" style="color:${mesa.color};border-color:${mesa.color};opacity:.7">${mesa.badge}</div>
+        </div>
+        <div class="mesa-access">Acceso: ${mesa.access.join(' · ')}</div>
+      </div>
+
+      ${!hasAccess ? `
+      <div class="mesa-blocked">
+        <div class="mesa-blocked-icon">🔒</div>
+        <h3>Acceso Restringido</h3>
+        <p>Esta mesa requiere rol: <strong>${mesa.access.join(', ')}</strong>.<br>Tu rol actual: <strong>${_role}</strong>.</p>
+      </div>
+      ` : `
+      <div class="mesa-body">
+
+        <!-- Agenda presets -->
+        <div class="agenda-section">
+          <div class="agenda-label">Agenda de la Sesión</div>
+          <div class="agenda-chips">
+            ${mesa.agendaItems.map(item =>
+              `<button class="agenda-chip" style="--mesa-color:${mesa.color}"
+                onclick="selectAgenda('${mesa.id}','${item.replace(/'/g,"\\'")}')">${item}</button>`
+            ).join('')}
+          </div>
+        </div>
+
+        <!-- Context fields -->
+        <div class="context-grid">
+          ${mesa.contextFields.map(f => `
+          <div class="form-group">
+            <label class="form-label">${f.label}</label>
+            ${f.type==='select'
+              ? `<select class="form-select" id="${f.id}" style="border-color:var(--border)">
+                  ${(f.options||[]).map(o => `<option>${o}</option>`).join('')}
+                </select>`
+              : `<input class="form-input" id="${f.id}" placeholder="${f.placeholder||''}" style="border-color:var(--border)">`
+            }
+          </div>`).join('')}
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Tema de Sesión / Pregunta Específica</label>
+            <textarea class="form-textarea" id="agenda-${mesa.id}"
+              placeholder="Define el tema principal de esta sesión del consejo..."
+              style="--mesa-color:${mesa.color}"></textarea>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="session-output" id="out-${mesa.id}" style="--mesa-color:${mesa.color}">
+          <div class="session-placeholder">${mesa.icon} ${mesa.name}<br>Define el tema de la sesión y genera el análisis del Consejo.</div>
+        </div>
+
+        <!-- Notes bar -->
+        <div class="notes-bar">
+          <span style="font-size:11px;color:var(--text-faint);white-space:nowrap">📝 Acta:</span>
+          <input class="notes-input" id="notes-${mesa.id}" placeholder="Toma notas de la sesión aquí...">
+          <button class="btn-outline-sm" style="padding:5px 10px;font-size:11px" onclick="copyNotes('${mesa.id}')">📋</button>
+        </div>
+
+        <!-- Actions -->
+        <div class="mesa-actions">
+          <button class="btn-mesa" id="btn-${mesa.id}" onclick="runSession('${mesa.id}')"
+                  style="background:${mesa.color}">
+            ⚡ Iniciar Sesión
+          </button>
+          <button class="btn-outline-sm" onclick="clearSession('${mesa.id}')">✕ Limpiar</button>
+          <button class="btn-outline-sm" onclick="copyOutput('${mesa.id}')">📋 Copiar análisis</button>
+        </div>
+
+      </div>
+      `}
+    </div>
+  </div>`;
+}
+
+function switchTab(idx) {
+  _activeTab = idx;
+  MESAS.forEach((m,i) => {
+    const tab  = document.getElementById('tab-'+m.id);
+    const pane = document.getElementById('pane-'+m.id);
+    if (tab)  tab.classList.toggle('active', i===idx);
+    if (pane) pane.classList.toggle('active', i===idx);
+  });
+}
+
+function selectAgenda(mesaId, text) {
+  const el = document.getElementById('agenda-'+mesaId);
+  if (el) { el.value = text; el.focus(); }
+}
+
+function getCtx(mesa) {
+  const ctx = {};
+  (mesa.contextFields||[]).forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el) ctx[f.id] = el.value;
+  });
+  return ctx;
+}
+
+async function runSession(mesaId) {
+  if (_streaming) return;
+  const mesa = MESAS.find(m => m.id === mesaId);
+  if (!mesa) return;
+
+  const agendaEl = document.getElementById('agenda-'+mesaId);
+  const agenda   = agendaEl?.value.trim();
+  if (!agenda) { alert('Define el tema de la sesión o selecciona un punto de agenda.'); return; }
+
+  const out  = document.getElementById('out-'+mesaId);
+  const btn  = document.getElementById('btn-'+mesaId);
+  if (!out || !btn) return;
+
+  _streaming = true;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Procesando...';
+  out.classList.add('streaming');
+  out.innerHTML = `<div style="color:var(--text-faint);padding:24px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px"><span class="spin"></span> ${mesa.name} en sesión...</div>`;
+
+  const ctx = getCtx(mesa);
+  const prompt = mesa.promptBuilder(agenda, ctx);
 
   try {
-    const { data: { session } } = await db.auth.getSession();
-    if (!session) { window.location.href = '/index.html'; return; }
+    const session = await getSession();
+    const jwt = session?.access_token || '';
+    const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
+    if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado en config.js');
 
-    currentUser = session.user;
+    const resp = await fetch(proxyUrl, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:3000,
+        system: mesa.system,
+        messages:[{role:'user', content:prompt}],
+        stream:true,
+      }),
+      signal:AbortSignal.timeout(120000),
+    });
 
-    // Get profile with role
-    let displayName = currentUser.email?.split('@')[0] || 'Usuario';
-    let userRole = 'user';
-    try {
-      const { data: profile } = await db.from('profiles').select('full_name,role').eq('id', currentUser.id).single();
-      if (profile?.full_name) displayName = profile.full_name.split(' ')[0];
-      if (profile?.role) userRole = profile.role;
-    } catch (_) {}
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({error:resp.statusText}));
+      throw new Error(err.error || 'Error '+resp.status);
+    }
 
-    document.getElementById('user-chip').textContent = `${displayName.toUpperCase()} · ${ROLE_DISPLAY[userRole] || userRole}`;
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf=''; let html='';
+    out.innerHTML = '';
 
-    // Apply role-based access — stop if no access
-    if (!applyRoleAccess(userRole)) return;
-
-    // Load usage
-    try {
-      const result = await checkClaudeAccess(currentUser.id);
-      _usage = result;
-      updateUsagePill();
-      document.getElementById('usage-pill').style.display = '';
-    } catch (_) {}
-
-    // Show portal
-    document.getElementById('auth-gate').style.display = 'none';
-    document.getElementById('consejo-shell').style.display = 'flex';
-
-    // Render initial grid based on role
-    const access = CONSEJO_ACCESS[userRole];
-    const defaultDir = (Array.isArray(access) ? access[0] : null) || 'ceo';
-    renderGrid(defaultDir);
-
-    // Log activity
-    try {
-      await db.from('activity_logs').insert({
-        user_id: currentUser.id, action: 'page_view',
-        entity_type: 'page', entity_id: 'consejo',
-        metadata: { page: 'consejo.html', role: userRole }
-      });
-    } catch (_) {}
-
-  } catch (err) {
-    console.error('Auth error:', err);
-    window.location.href = '/index.html';
+    while(true) {
+      const {done,value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value,{stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for(const line of lines) {
+        if(!line.startsWith('data:')) continue;
+        const d = line.slice(5).trim();
+        if(d==='[DONE]') break;
+        try {
+          const j = JSON.parse(d);
+          if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html+=j.delta.text;
+        } catch {}
+      }
+      out.innerHTML = html;
+      out.scrollTop = out.scrollHeight;
+    }
+    out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta del modelo.</em>';
+  } catch(e) {
+    out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+  } finally {
+    _streaming = false;
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Iniciar Sesión';
+    out.classList.remove('streaming');
   }
 }
 
-// Keyboard shortcut: Enter to send
-document.getElementById('reto-input')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey && !isSending) {
-    e.preventDefault();
-    sendReto();
-  }
-});
+function clearSession(mesaId) {
+  const mesa = MESAS.find(m => m.id === mesaId);
+  const out  = document.getElementById('out-'+mesaId);
+  if (out) out.innerHTML = `<div class="session-placeholder">${mesa?.icon||''} ${mesa?.name||''}<br>Define el tema de la sesión y genera el análisis del Consejo.</div>`;
+  const agenda = document.getElementById('agenda-'+mesaId);
+  if (agenda) agenda.value = '';
+}
 
-// ── BOOT ──────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', init);
+function copyOutput(mesaId) {
+  const el = document.getElementById('out-'+mesaId);
+  if (!el) return;
+  // Copy text content
+  const text = el.innerText || el.textContent || '';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(`button[onclick="copyOutput('${mesaId}')"]`);
+    if (btn) { btn.textContent = '✓ Copiado'; setTimeout(()=>btn.textContent='📋 Copiar análisis', 2000); }
+  }).catch(() => alert('No se pudo copiar. Selecciona el texto manualmente.'));
+}
+
+function copyNotes(mesaId) {
+  const el = document.getElementById('notes-'+mesaId);
+  const text = el?.value || '';
+  if (!text) return;
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+init();
 </script>
 </body>
 </html>

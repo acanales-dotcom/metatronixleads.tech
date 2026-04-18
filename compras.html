@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Compras & POs — MetaTronix</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=20260416">
+  <script src="/config.js?v=20260416"></script>
+  <script src="/assets/app.js?v=20260416"></script>
+  <style>
+    .comp-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1400px; margin:0 auto; }
+
+    /* Tabs */
+    .tab-nav { display:flex; gap:4px; border-bottom:1px solid var(--border); padding-bottom:0; }
+    .tab-btn {
+      padding:8px 18px; font-size:12px; font-weight:700;
+      background:transparent; border:none; color:var(--text-muted);
+      cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;
+      transition:.15s;
+    }
+    .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .tab-btn:hover:not(.active) { color:var(--text); }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:flex; flex-direction:column; gap:20px; }
+
+    /* KPIs */
+    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+    .kpi-card  { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 18px; }
+    .kpi-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
+    .kpi-value { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:600; color:var(--text); margin:4px 0 2px; }
+    .kpi-value.accent-text { color:var(--accent); }
+    .kpi-sub   { font-size:11px; color:var(--text-muted); }
+
+    /* Card */
+    .data-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+    .data-card-head { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .data-card-title { font-weight:700; font-size:13px; display:flex; align-items:center; gap:8px; }
+
+    /* Data tables */
+    .data-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .data-table th { padding:8px 14px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); border-bottom:1px solid var(--border); white-space:nowrap; }
+    .data-table td { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.04); color:var(--text); vertical-align:middle; }
+    .data-table tr:last-child td { border-bottom:none; }
+    .data-table tr:hover td { background:rgba(255,255,255,.025); }
+    .amount-col { font-family:'JetBrains Mono',monospace; text-align:right; }
+
+    /* Status badges */
+    .st-borrador    { background:rgba(100,100,100,.15); color:var(--text-muted); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .st-pendiente   { background:rgba(255,180,0,.15); color:#ffb400; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .st-aprobada    { background:rgba(0,255,136,.1); color:var(--accent); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .st-rechazada   { background:rgba(255,70,70,.15); color:#ff4646; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .st-completada  { background:rgba(0,180,255,.12); color:#00b4ff; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .st-enviada     { background:rgba(150,80,255,.15); color:#a066ff; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .st-confirmada  { background:rgba(0,255,136,.1); color:var(--accent); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .st-cancelada   { background:rgba(255,70,70,.08); color:rgba(255,70,70,.6); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .st-aceptada    { background:rgba(0,255,136,.1); color:var(--accent); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+
+    /* Buttons */
+    .btn-primary {
+      background:var(--accent); color:#000; border:none; border-radius:6px;
+      padding:8px 18px; font-weight:700; font-size:12px; cursor:pointer;
+      transition:opacity .15s; display:inline-flex; align-items:center; gap:6px;
+    }
+    .btn-primary:hover:not(:disabled) { opacity:.85; }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-outline {
+      background:transparent; border:1px solid var(--border); border-radius:6px;
+      padding:7px 14px; font-size:12px; font-weight:600; color:var(--text-muted);
+      cursor:pointer; transition:.15s;
+    }
+    .btn-outline:hover { border-color:var(--accent-dim); color:var(--text); }
+    .btn-tiny {
+      padding:4px 10px; border-radius:5px; font-size:11px; font-weight:600;
+      border:1px solid var(--border); background:transparent; color:var(--text-muted);
+      cursor:pointer; white-space:nowrap; transition:.15s;
+    }
+    .btn-tiny:hover { border-color:var(--accent-dim); color:var(--text); }
+    .btn-tiny.primary { background:var(--accent); color:#000; border-color:transparent; }
+
+    /* Modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:#1a1a1a; border:1px solid var(--border); border-radius:12px;
+      padding:24px; width:100%; max-width:520px;
+      display:flex; flex-direction:column; gap:16px;
+      max-height:90vh; overflow-y:auto;
+    }
+    .modal-title { font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px; }
+    .form-group { display:flex; flex-direction:column; gap:6px; }
+    .form-label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+    .form-input, .form-select, .form-textarea {
+      background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:6px;
+      padding:9px 12px; color:var(--text); font-size:13px; font-family:inherit;
+      width:100%; box-sizing:border-box;
+    }
+    .form-textarea { min-height:80px; resize:vertical; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline:none; border-color:var(--accent-dim); }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .modal-actions { display:flex; justify-content:flex-end; gap:10px; }
+
+    /* Quote compare panel */
+    .compare-panel {
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      padding:20px;
+    }
+    .badge-ai { font-size:10px; background:rgba(0,255,136,.1); color:var(--accent); padding:2px 8px; border-radius:20px; font-weight:700; border:1px solid var(--accent-dim); }
+    .compare-output {
+      min-height:200px; max-height:400px; overflow-y:auto;
+      background:rgba(0,0,0,.3); border:1px solid var(--border); border-radius:8px;
+      padding:14px 16px; font-size:12px; line-height:1.7; color:var(--text);
+      margin-top:14px;
+    }
+    .compare-output.streaming { border-color:var(--accent-dim); }
+    .compare-output h2, .compare-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--accent); letter-spacing:.05em; margin:8px 0 4px; }
+    .compare-output table { width:100%; border-collapse:collapse; font-size:11px; margin:8px 0; }
+    .compare-output th { background:rgba(0,255,136,.07); color:var(--accent); padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); }
+    .compare-output td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.05); }
+    .compare-placeholder { color:var(--text-faint); font-style:italic; text-align:center; padding:24px; font-size:12px; }
+
+    /* Page header */
+    .page-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .page-title-block h1 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.05em; color:var(--text); margin:0; }
+    .page-title-block p  { font-size:12px; color:var(--text-muted); margin:2px 0 0; }
+
+    .empty-state { padding:32px; text-align:center; color:var(--text-faint); font-size:12px; }
+    .empty-state big { display:block; font-size:28px; margin-bottom:8px; }
+
+    .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(0,255,136,.3); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="app-root">
+  <div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>
+</div>
+
+<!-- Modal: Nueva Requisición -->
+<div class="modal-overlay" id="modal-req">
+  <div class="modal-box">
+    <div class="modal-title">📝 Nueva Requisición</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Folio</label>
+        <input class="form-input" id="req-folio" placeholder="REQ-2026-001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <select class="form-select" id="req-cat">
+          <option value="tecnología">Tecnología</option>
+          <option value="servicios">Servicios</option>
+          <option value="materiales">Materiales</option>
+          <option value="mantenimiento">Mantenimiento</option>
+          <option value="papelería">Papelería</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Título / Descripción</label>
+      <input class="form-input" id="req-title" placeholder="¿Qué necesitas comprar?">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Detalle</label>
+      <textarea class="form-textarea" id="req-desc" placeholder="Especificaciones, cantidad, marcas preferidas..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Monto Estimado (MXN)</label>
+        <input class="form-input" id="req-amount" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha Requerida</label>
+        <input class="form-input" id="req-needed" type="date">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modal-req')">Cancelar</button>
+      <button class="btn-primary" id="btn-save-req" onclick="saveRequisition()">Crear Requisición</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nueva OC -->
+<div class="modal-overlay" id="modal-po">
+  <div class="modal-box">
+    <div class="modal-title">📦 Nueva Orden de Compra</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Folio OC</label>
+        <input class="form-input" id="po-folio" placeholder="OC-2026-001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Proveedor</label>
+        <select class="form-select" id="po-supplier">
+          <option value="">— Seleccionar —</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Título</label>
+      <input class="form-input" id="po-title" placeholder="Descripción de la compra">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Total (con IVA)</label>
+        <input class="form-input" id="po-total" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Entrega Estimada</label>
+        <input class="form-input" id="po-delivery" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notas</label>
+      <textarea class="form-textarea" id="po-notes" placeholder="Condiciones, instrucciones de entrega..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modal-po')">Cancelar</button>
+      <button class="btn-primary" id="btn-save-po" onclick="savePO()">Crear OC</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo Proveedor -->
+<div class="modal-overlay" id="modal-supplier">
+  <div class="modal-box">
+    <div class="modal-title">🏭 Nuevo Proveedor</div>
+    <div class="form-group">
+      <label class="form-label">Nombre / Razón Social</label>
+      <input class="form-input" id="sup-name" placeholder="Proveedor SA de CV">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">RFC</label>
+        <input class="form-input" id="sup-rfc" placeholder="PRO2024ABC">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <select class="form-select" id="sup-cat">
+          <option value="tecnología">Tecnología</option>
+          <option value="servicios">Servicios</option>
+          <option value="materiales">Materiales</option>
+          <option value="logística">Logística</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="sup-email" type="email" placeholder="contacto@proveedor.mx">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input class="form-input" id="sup-phone" placeholder="55 1234 5678">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Días de Crédito</label>
+      <input class="form-input" id="sup-terms" type="number" min="0" value="30">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modal-supplier')">Cancelar</button>
+      <button class="btn-primary" id="btn-save-sup" onclick="saveSupplier()">Guardar Proveedor</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════
+   COMPRAS & POs — Procure-to-Pay con Claude copiloto
+   ═══════════════════════════════════════════════════ */
+
+let _user = null;
+let _db   = null;
+let _reqs = [];
+let _pos  = [];
+let _sups = [];
+let _quotes = [];
+let _aiStreaming = false;
+let _activeTab = 'requisiciones';
+
+const fmt  = n => new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(n||0);
+const fmtD = d => d ? new Date(d+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+const esc  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+async function init() {
+  _user = await requireAuth(true);
+  if (!_user) return;
+  _db = getDB();
+  document.getElementById('app-root').innerHTML = buildShell();
+  if (typeof renderHeader === 'function') {
+    document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'compras');
+  }
+  if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+
+  // default date
+  const d30 = new Date(Date.now()+30*864e5).toISOString().split('T')[0];
+  const el = document.getElementById('req-needed');
+  if (el) el.value = d30;
+  const pd = document.getElementById('po-delivery');
+  if (pd) pd.value = d30;
+
+  await loadAll();
+  switchTab('requisiciones');
+}
+
+function buildShell() {
+  return `
+  <div style="display:flex;min-height:100vh">
+    <div id="sidebar-slot"></div>
+    <main style="flex:1;overflow:auto">
+      <div class="comp-root">
+
+        <!-- Header -->
+        <div class="page-header">
+          <div class="page-title-block">
+            <h1>🛒 Compras & POs</h1>
+            <p>Requisiciones · Órdenes de Compra · Proveedores · Comparación de cotizaciones IA</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-outline" onclick="loadAll()" id="btn-refresh">↺ Actualizar</button>
+            <button class="btn-primary" id="btn-new" onclick="openNewModal()">+ Nuevo</button>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-strip" id="kpi-strip">
+          <div class="kpi-card"><div class="kpi-label">Cargando...</div><div class="kpi-value" style="color:var(--text-faint)">—</div></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('requisiciones')">📝 Requisiciones</button>
+          <button class="tab-btn" onclick="switchTab('pos')">📦 Órdenes de Compra</button>
+          <button class="tab-btn" onclick="switchTab('proveedores')">🏭 Proveedores</button>
+          <button class="tab-btn" onclick="switchTab('comparar')">⚡ Comparar Cotizaciones</button>
+        </div>
+
+        <!-- Tab: Requisiciones -->
+        <div class="tab-pane active" id="tab-requisiciones">
+          <div class="data-card">
+            <div class="data-card-head">
+              <div class="data-card-title">📝 Requisiciones</div>
+              <div style="display:flex;gap:8px">
+                <select class="btn-outline" style="padding:6px 10px;font-size:11px" onchange="filterReqs(this.value)">
+                  <option value="">Todos los estados</option>
+                  <option value="borrador">Borrador</option>
+                  <option value="pendiente">Pendiente aprobación</option>
+                  <option value="aprobada">Aprobada</option>
+                  <option value="rechazada">Rechazada</option>
+                  <option value="completada">Completada</option>
+                </select>
+              </div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Folio</th><th>Título</th><th>Categoría</th><th>Solicitada</th><th>Requerida</th><th class="amount-col">Estimado</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="req-tbody"><tr><td colspan="8" class="empty-state">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: POs -->
+        <div class="tab-pane" id="tab-pos">
+          <div class="data-card">
+            <div class="data-card-head">
+              <div class="data-card-title">📦 Órdenes de Compra</div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Folio</th><th>Título</th><th>Proveedor</th><th>Creada</th><th>Entrega</th><th class="amount-col">Total</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="po-tbody"><tr><td colspan="8" class="empty-state">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Proveedores -->
+        <div class="tab-pane" id="tab-proveedores">
+          <div class="data-card">
+            <div class="data-card-head">
+              <div class="data-card-title">🏭 Directorio de Proveedores</div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Nombre</th><th>RFC</th><th>Categoría</th><th>Email</th><th>Días Crédito</th><th>Calificación</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="sup-tbody"><tr><td colspan="8" class="empty-state">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Comparar Cotizaciones -->
+        <div class="tab-pane" id="tab-comparar">
+          <div class="compare-panel">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+              <div style="font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px">
+                ⚡ Comparador de Cotizaciones <span class="badge-ai">Claude IA</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center">
+                <select class="btn-outline" style="padding:7px 12px;font-size:12px" id="cmp-req-select">
+                  <option value="">— Seleccionar Requisición —</option>
+                </select>
+                <button class="btn-primary" id="btn-compare" onclick="compareQuotes()">Comparar con IA</button>
+              </div>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);margin:10px 0 0">
+              Selecciona una requisición para que Claude compare las cotizaciones recibidas y recomiende la mejor opción considerando precio, calidad y plazos.
+            </p>
+            <div class="compare-output" id="compare-out">
+              <div class="compare-placeholder">El análisis de Claude aparecerá aquí.<br>Selecciona una requisición con cotizaciones registradas.</div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+              <button class="btn-primary" id="btn-compare2" onclick="compareQuotes()">⚡ Analizar Cotizaciones</button>
+              <button class="btn-outline" onclick="clearCompare()">✕ Limpiar</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>`;
+}
+
+function switchTab(tab) {
+  _activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    const tabs = ['requisiciones','pos','proveedores','comparar'];
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  const pane = document.getElementById('tab-'+tab);
+  if (pane) pane.classList.add('active');
+
+  // Update new button context
+  const newBtn = document.getElementById('btn-new');
+  if (newBtn) {
+    const labels = { requisiciones:'+ Requisición', pos:'+ Orden de Compra', proveedores:'+ Proveedor', comparar:'' };
+    newBtn.textContent = labels[tab] || '+';
+    newBtn.style.display = tab === 'comparar' ? 'none' : '';
+  }
+}
+
+function openNewModal() {
+  if (_activeTab === 'requisiciones') openModal('modal-req');
+  else if (_activeTab === 'pos') { loadSupplierOptions(); openModal('modal-po'); }
+  else if (_activeTab === 'proveedores') openModal('modal-supplier');
+}
+
+async function loadAll() {
+  const btn = document.getElementById('btn-refresh');
+  if (btn) { btn.disabled=true; btn.textContent='⏳'; }
+  await Promise.all([loadReqs(), loadPOs(), loadSuppliers(), loadQuotes()]);
+  renderKPIs();
+  if (btn) { btn.disabled=false; btn.textContent='↺ Actualizar'; }
+}
+
+async function loadReqs() {
+  const companyId = _user?.profile?.company_id;
+  try {
+    const { data } = await _db.from('requisitions')
+      .select('id,folio,title,category,requested_date,needed_date,amount_estimated,status')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    _reqs = data || [];
+  } catch(e) { _reqs = []; }
+  renderReqs();
+  // populate comparar select
+  const sel = document.getElementById('cmp-req-select');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Seleccionar Requisición —</option>' +
+      _reqs.map(r => `<option value="${r.id}">${esc(r.folio)} — ${esc(r.title)}</option>`).join('');
+  }
+}
+
+async function loadPOs() {
+  const companyId = _user?.profile?.company_id;
+  try {
+    const { data } = await _db.from('purchase_orders')
+      .select('id,folio,title,supplier_id,created_at,delivery_date,total,status')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    _pos = data || [];
+  } catch(e) { _pos = []; }
+  renderPOs();
+}
+
+async function loadSuppliers() {
+  const companyId = _user?.profile?.company_id;
+  try {
+    const { data } = await _db.from('suppliers')
+      .select('id,name,rfc,category,email,phone,payment_terms,rating,status')
+      .eq('company_id', companyId)
+      .order('name', { ascending: true })
+      .limit(100);
+    _sups = data || [];
+  } catch(e) { _sups = []; }
+  renderSuppliers();
+}
+
+async function loadQuotes() {
+  const companyId = _user?.profile?.company_id;
+  try {
+    const { data } = await _db.from('supplier_quotes')
+      .select('id,requisition_id,supplier_id,total,validity_date,delivery_days,status,ai_analysis')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    _quotes = data || [];
+  } catch(e) { _quotes = []; }
+}
+
+function renderKPIs() {
+  const strip = document.getElementById('kpi-strip');
+  if (!strip) return;
+  const pendientes = _reqs.filter(r => r.status === 'pendiente').length;
+  const openPOs    = _pos.filter(p => !['completada','cancelada'].includes(p.status)).length;
+  const poVal      = _pos.filter(p => !['completada','cancelada'].includes(p.status)).reduce((s,p) => s+(p.total||0), 0);
+  strip.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Requisiciones</div>
+      <div class="kpi-value accent-text">${_reqs.length}</div>
+      <div class="kpi-sub">${pendientes} pendientes aprobación</div>
+    </div>
+    <div class="kpi-card ${pendientes?''}">
+      <div class="kpi-label">Pendientes Aprobación</div>
+      <div class="kpi-value ${pendientes?'warn-text':''}" style="${pendientes?'color:#ffb400':''}">${pendientes}</div>
+      <div class="kpi-sub">Requieren autorización</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">OCs Abiertas</div>
+      <div class="kpi-value accent-text">${openPOs}</div>
+      <div class="kpi-sub">${fmt(poVal)} comprometido</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Proveedores</div>
+      <div class="kpi-value">${_sups.filter(s=>s.status==='activo').length}</div>
+      <div class="kpi-sub">activos en directorio</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cotizaciones</div>
+      <div class="kpi-value">${_quotes.length}</div>
+      <div class="kpi-sub">en revisión</div>
+    </div>
+  `;
+}
+
+let _reqFilter = '';
+function filterReqs(val) { _reqFilter = val; renderReqs(); }
+
+function renderReqs() {
+  const tbody = document.getElementById('req-tbody');
+  if (!tbody) return;
+  const rows = _reqFilter ? _reqs.filter(r => r.status === _reqFilter) : _reqs;
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><big>📝</big>Sin requisiciones${_reqFilter?' en este estado':''}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const stCls = `st-${r.status||'borrador'}`;
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px">${esc(r.folio)}</td>
+      <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.title)}">${esc(r.title)}</td>
+      <td><span style="font-size:11px;color:var(--text-muted)">${esc(r.category||'—')}</span></td>
+      <td>${fmtD(r.requested_date)}</td>
+      <td>${fmtD(r.needed_date)}</td>
+      <td class="amount-col">${r.amount_estimated ? fmt(r.amount_estimated) : '—'}</td>
+      <td><span class="${stCls}">${r.status||'borrador'}</span></td>
+      <td>
+        <div style="display:flex;gap:6px">
+          ${r.status==='borrador' ? `<button class="btn-tiny primary" onclick="submitReq('${r.id}')">Enviar</button>` : ''}
+          ${r.status==='pendiente' ? `<button class="btn-tiny primary" onclick="approveReq('${r.id}')">Aprobar</button><button class="btn-tiny" style="color:#ff4646" onclick="rejectReq('${r.id}')">Rechazar</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPOs() {
+  const tbody = document.getElementById('po-tbody');
+  if (!tbody) return;
+  if (!_pos.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><big>📦</big>Sin órdenes de compra</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = _pos.map(p => {
+    const sup = _sups.find(s => s.id === p.supplier_id);
+    const stCls = `st-${p.status||'borrador'}`;
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px">${esc(p.folio)}</td>
+      <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.title)}</td>
+      <td>${esc(sup?.name||'—')}</td>
+      <td>${fmtD(p.created_at?.split('T')[0])}</td>
+      <td>${fmtD(p.delivery_date)}</td>
+      <td class="amount-col">${fmt(p.total)}</td>
+      <td><span class="${stCls}">${p.status||'borrador'}</span></td>
+      <td>
+        <div style="display:flex;gap:6px">
+          ${p.status==='enviada'||p.status==='confirmada' ? `<button class="btn-tiny primary" onclick="receivePO('${p.id}')">Recibir</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderSuppliers() {
+  const tbody = document.getElementById('sup-tbody');
+  if (!tbody) return;
+  if (!_sups.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><big>🏭</big>Sin proveedores registrados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = _sups.map(s => {
+    const stCls = s.status==='activo' ? 'st-aprobada' : 'st-cancelada';
+    const stars = s.rating ? '★'.repeat(Math.round(s.rating))+'☆'.repeat(5-Math.round(s.rating)) : '—';
+    return `<tr>
+      <td style="font-weight:600">${esc(s.name)}</td>
+      <td style="font-family:monospace;font-size:11px">${esc(s.rfc||'—')}</td>
+      <td>${esc(s.category||'—')}</td>
+      <td>${esc(s.email||'—')}</td>
+      <td style="text-align:center">${s.payment_terms||30}d</td>
+      <td style="color:#ffb400;letter-spacing:2px">${stars}</td>
+      <td><span class="${stCls}">${s.status}</span></td>
+      <td><button class="btn-tiny" onclick="toggleSupplierStatus('${s.id}','${s.status}')">
+        ${s.status==='activo'?'Inactivar':'Activar'}
+      </button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── Status actions ── */
+async function submitReq(id) {
+  await updateReqStatus(id, 'pendiente');
+}
+async function approveReq(id) {
+  const { error } = await _db.from('requisitions').update({ status:'aprobada', approved_by:_user.id, approved_at:new Date().toISOString() }).eq('id', id);
+  if (error) alert('Error: '+error.message);
+  else await loadReqs();
+}
+async function rejectReq(id) {
+  const note = prompt('Motivo de rechazo:');
+  if (note === null) return;
+  await _db.from('requisitions').update({ status:'rechazada', rejection_note:note }).eq('id', id);
+  await loadReqs();
+}
+async function updateReqStatus(id, status) {
+  const { error } = await _db.from('requisitions').update({ status }).eq('id', id);
+  if (error) alert('Error: '+error.message); else await loadReqs();
+}
+async function receivePO(id) {
+  if (!confirm('¿Confirmar recepción de esta orden de compra?')) return;
+  const { error } = await _db.from('purchase_orders').update({ status:'completada', received_at:new Date().toISOString() }).eq('id', id);
+  if (error) alert('Error: '+error.message); else await loadPOs();
+}
+async function toggleSupplierStatus(id, current) {
+  const newStatus = current === 'activo' ? 'inactivo' : 'activo';
+  const { error } = await _db.from('suppliers').update({ status:newStatus }).eq('id', id);
+  if (error) alert('Error: '+error.message); else await loadSuppliers();
+}
+
+/* ── Modals ── */
+function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
+function loadSupplierOptions() {
+  const sel = document.getElementById('po-supplier');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+    _sups.filter(s=>s.status==='activo').map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+}
+
+async function saveRequisition() {
+  const companyId = _user?.profile?.company_id;
+  const btn = document.getElementById('btn-save-req');
+  const title = document.getElementById('req-title')?.value.trim();
+  if (!title) { alert('Ingresa un título.'); return; }
+  const payload = {
+    company_id: companyId,
+    folio: document.getElementById('req-folio')?.value.trim() || 'REQ-'+Date.now(),
+    title,
+    category: document.getElementById('req-cat')?.value,
+    description: document.getElementById('req-desc')?.value.trim() || null,
+    amount_estimated: parseFloat(document.getElementById('req-amount')?.value) || null,
+    needed_date: document.getElementById('req-needed')?.value || null,
+    status: 'borrador',
+    requested_by: _user.id,
+  };
+  btn.disabled=true; btn.textContent='Guardando...';
+  const { error } = await _db.from('requisitions').insert(payload);
+  btn.disabled=false; btn.textContent='Crear Requisición';
+  if (error) { alert('Error: '+error.message); return; }
+  closeModal('modal-req');
+  await loadReqs();
+  renderKPIs();
+}
+
+async function savePO() {
+  const companyId = _user?.profile?.company_id;
+  const btn = document.getElementById('btn-save-po');
+  const title = document.getElementById('po-title')?.value.trim();
+  if (!title) { alert('Ingresa un título.'); return; }
+  const total = parseFloat(document.getElementById('po-total')?.value) || 0;
+  const payload = {
+    company_id: companyId,
+    folio: document.getElementById('po-folio')?.value.trim() || 'OC-'+Date.now(),
+    title,
+    supplier_id: document.getElementById('po-supplier')?.value || null,
+    total, subtotal: total/1.16, iva: total*0.16/1.16,
+    delivery_date: document.getElementById('po-delivery')?.value || null,
+    notes: document.getElementById('po-notes')?.value.trim() || null,
+    status: 'borrador',
+    items: [],
+    created_by: _user.id,
+  };
+  btn.disabled=true; btn.textContent='Guardando...';
+  const { error } = await _db.from('purchase_orders').insert(payload);
+  btn.disabled=false; btn.textContent='Crear OC';
+  if (error) { alert('Error: '+error.message); return; }
+  closeModal('modal-po');
+  await loadPOs();
+  renderKPIs();
+}
+
+async function saveSupplier() {
+  const companyId = _user?.profile?.company_id;
+  const btn = document.getElementById('btn-save-sup');
+  const name = document.getElementById('sup-name')?.value.trim();
+  if (!name) { alert('Ingresa el nombre del proveedor.'); return; }
+  const payload = {
+    company_id: companyId,
+    name,
+    rfc: document.getElementById('sup-rfc')?.value.trim() || null,
+    email: document.getElementById('sup-email')?.value.trim() || null,
+    phone: document.getElementById('sup-phone')?.value.trim() || null,
+    category: document.getElementById('sup-cat')?.value,
+    payment_terms: parseInt(document.getElementById('sup-terms')?.value) || 30,
+    status: 'activo',
+    created_by: _user.id,
+  };
+  btn.disabled=true; btn.textContent='Guardando...';
+  const { error } = await _db.from('suppliers').insert(payload);
+  btn.disabled=false; btn.textContent='Guardar Proveedor';
+  if (error) { alert('Error: '+error.message); return; }
+  closeModal('modal-supplier');
+  await loadSuppliers();
+  renderKPIs();
+}
+
+/* ── Comparar Cotizaciones con Claude ── */
+async function compareQuotes() {
+  if (_aiStreaming) return;
+  const reqId = document.getElementById('cmp-req-select')?.value;
+  const out   = document.getElementById('compare-out');
+  const btns  = [document.getElementById('btn-compare'), document.getElementById('btn-compare2')];
+  if (!out) return;
+
+  const req = _reqs.find(r => r.id === reqId);
+  const quotes = _quotes.filter(q => q.requisition_id === reqId);
+
+  if (!reqId || !req) { alert('Selecciona una requisición.'); return; }
+
+  _aiStreaming = true;
+  btns.forEach(b => { if(b){ b.disabled=true; b.innerHTML='<span class="spin"></span> Analizando...'; } });
+  out.classList.add('streaming');
+  out.innerHTML = '<div style="color:var(--text-faint);font-size:12px;padding:20px;text-align:center"><span class="spin"></span> Claude está analizando las cotizaciones...</div>';
+
+  const quoteData = quotes.length
+    ? quotes.map((q,i) => {
+        const sup = _sups.find(s => s.id === q.supplier_id);
+        return `Cotización ${i+1}: ${sup?.name||'Proveedor desconocido'} | Total: ${fmt(q.total)} | Entrega: ${q.delivery_days||'?'}d | Válida hasta: ${fmtD(q.validity_date)} | Estado: ${q.status}`;
+      }).join('\n')
+    : 'No hay cotizaciones registradas para esta requisición en el sistema.';
+
+  const prompt = `Eres el copiloto de compras de IBANOR SA de CV / MetaTronix.
+Analiza la siguiente requisición y sus cotizaciones de proveedores:
+
+REQUISICIÓN:
+- Folio: ${req.folio}
+- Título: ${req.title}
+- Categoría: ${req.category||'N/A'}
+- Monto Estimado: ${req.amount_estimated ? fmt(req.amount_estimated) : 'No definido'}
+- Fecha Requerida: ${fmtD(req.needed_date)}
+
+COTIZACIONES RECIBIDAS:
+${quoteData}
+
+Genera un análisis ejecutivo con:
+<h2>📊 Análisis de Cotizaciones — ${req.folio}</h2>
+<h3>Resumen Comparativo</h3>
+(tabla con: Proveedor | Precio | Plazo entrega | Calificación)
+<h3>Recomendación</h3>
+(cuál seleccionar y por qué — considera precio, plazo, confiabilidad)
+<h3>Puntos de Negociación</h3>
+(qué se puede mejorar antes de adjudicar)
+<h3>Ahorro Potencial</h3>
+(vs. presupuesto estimado)
+
+Si no hay cotizaciones, da recomendaciones para solicitar y evaluar propuestas.
+Sé concreto y accionable.`;
+
+  try {
+    const session = await getSession();
+    const jwt = session?.access_token || '';
+    const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
+    if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado');
+
+    const resp = await fetch(proxyUrl + '/groq', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        max_tokens:2048,
+        system:`Eres el Director de Compras IA de IBANOR SA de CV / MetaTronix.
+Analizas cotizaciones y das recomendaciones de compra ejecutivas, precisas y accionables.
+Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
+        messages:[{role:'user',content:prompt}],
+        stream:true,
+      }),
+      signal:AbortSignal.timeout(60000),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({error:resp.statusText}));
+      throw new Error(err.error||'Error '+resp.status);
+    }
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf=''; let html='';
+    out.innerHTML = '';
+
+    while(true) {
+      const {done,value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value,{stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for(const line of lines) {
+        if(!line.startsWith('data:')) continue;
+        const d = line.slice(5).trim();
+        if(d==='[DONE]') break;
+        try {
+          const j = JSON.parse(d);
+          if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html += j.delta.text;
+        } catch {}
+      }
+      out.innerHTML = html;
+      out.scrollTop = out.scrollHeight;
+    }
+    out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta.</em>';
+  } catch(e) {
+    out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+  } finally {
+    _aiStreaming = false;
+    out.classList.remove('streaming');
+    btns.forEach(b => { if(b){ b.disabled=false; b.textContent='⚡ Analizar Cotizaciones'; } });
+    btns[0] && (btns[0].textContent = 'Comparar con IA');
+  }
+}
+
+function clearCompare() {
+  const out = document.getElementById('compare-out');
+  if (out) out.innerHTML = '<div class="compare-placeholder">El análisis de Claude aparecerá aquí.<br>Selecciona una requisición con cotizaciones registradas.</div>';
+}
+
+// Close modals on backdrop click
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); });
+  });
+});
+
+init();
+</script>
+</body>
+</html>

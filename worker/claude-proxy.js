@@ -248,6 +248,127 @@ async function handleClaude(request, env, origin) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   HANDLER: Groq LLM Proxy (OpenAI-compat → Anthropic SSE)
+   Ruta: POST /groq
+   Body: { model, messages, max_tokens, system, stream }
+   Modelos soportados: llama-3.3-70b-versatile, llama-3.1-8b-instant
+   Secret requerido: GROQ_API_KEY
+   ═══════════════════════════════════════════════════════════ */
+const GROQ_ALLOWED_MODELS = [
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'mixtral-8x7b-32768',
+  'gemma2-9b-it',
+];
+
+async function handleGroq(request, env, origin) {
+  if (!env.GROQ_API_KEY) {
+    return jsonResp({ error: 'GROQ_API_KEY no configurada en el Worker. Agrégala en Cloudflare Workers → Settings → Variables.' }, 500, origin);
+  }
+
+  const { user, err } = await requireAuth(request, env, origin);
+  if (err) return err;
+
+  if (!checkRateLimit(user.id + '_groq')) {
+    return jsonResp({ error: `Límite de velocidad alcanzado (${RATE_LIMIT_MAX} requests/min).` }, 429, origin);
+  }
+
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResp({ error: 'Body JSON inválido.' }, 400, origin);
+  }
+
+  const model = body.model || 'llama-3.3-70b-versatile';
+  if (!GROQ_ALLOWED_MODELS.includes(model)) {
+    return jsonResp({ error: `Modelo Groq no permitido: ${model}. Válidos: ${GROQ_ALLOWED_MODELS.join(', ')}` }, 400, origin);
+  }
+
+  // Construir mensajes: si hay system prompt, añadir como primer mensaje
+  const messages = [];
+  if (body.system) messages.push({ role: 'system', content: body.system });
+  (body.messages || []).forEach(m => messages.push(m));
+
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        max_tokens:  body.max_tokens  || 2048,
+        temperature: body.temperature || 0.7,
+        stream:      true,
+      }),
+    });
+
+    if (!groqRes.ok) {
+      let errMsg = `Groq error ${groqRes.status}`;
+      try { const j = await groqRes.json(); errMsg = j.error?.message || errMsg; } catch {}
+      return jsonResp({ error: errMsg }, groqRes.status, origin);
+    }
+
+    /* ── Traducir SSE OpenAI → SSE Anthropic ──────────────────
+       Groq emite: data: {"choices":[{"delta":{"content":"txt"}}]}
+       Frontend espera: data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"txt"}}
+       ────────────────────────────────────────────────────────── */
+    const { readable, writable } = new TransformStream();
+    const writer  = writable.getWriter();
+    const enc     = new TextEncoder();
+    const dec     = new TextDecoder();
+
+    (async () => {
+      const reader = groqRes.body.getReader();
+      let buf = '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue;
+            const data = line.slice(5).trim();
+            if (data === '[DONE]') {
+              await writer.write(enc.encode('data: [DONE]\n\n'));
+              return;
+            }
+            try {
+              const chunk = JSON.parse(data);
+              const text  = chunk.choices?.[0]?.delta?.content;
+              if (text) {
+                const ev = { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } };
+                await writer.write(enc.encode(`data: ${JSON.stringify(ev)}\n\n`));
+              }
+            } catch { /* noop */ }
+          }
+        }
+      } finally {
+        await writer.close().catch(() => {});
+      }
+    })();
+
+    return new Response(readable, {
+      status: 200,
+      headers: {
+        ...corsHeaders(origin),
+        ...SECURITY_HEADERS,
+        'Content-Type':      'text/event-stream',
+        'Cache-Control':     'no-cache',
+        'X-Accel-Buffering': 'no',
+        'X-Model':           model,
+      },
+    });
+
+  } catch (e) {
+    return jsonResp({ error: e.message || 'Error interno Groq proxy.' }, 500, origin);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    ROUTER PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 export default {
@@ -270,9 +391,8 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
 
-    if (path === '/hf') {
-      return handleHF(request, env, origin);
-    }
+    if (path === '/hf')   return handleHF(request, env, origin);
+    if (path === '/groq') return handleGroq(request, env, origin);
 
     return handleClaude(request, env, origin);
   },

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Finanzas & Flujo — MetaTronix</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=20260416">
+  <script src="/config.js?v=20260416"></script>
+  <script src="/assets/app.js?v=20260416"></script>
+  <style>
+    /* ── Layout ── */
+    .fin-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1400px; margin:0 auto; }
+
+    /* ── KPI strip ── */
+    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+    .kpi-card  {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:16px 20px;
+      display:flex; flex-direction:column; gap:6px;
+      transition:border-color .2s;
+    }
+    .kpi-card:hover { border-color:var(--accent-dim); }
+    .kpi-card.danger { border-color:rgba(255,70,70,.4); }
+    .kpi-card.warn   { border-color:rgba(255,180,0,.4); }
+    .kpi-card.good   { border-color:rgba(0,255,136,.35); }
+    .kpi-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
+    .kpi-value { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600; color:var(--text); }
+    .kpi-sub   { font-size:11px; color:var(--text-muted); }
+    .kpi-value.danger-text { color:#ff4646; }
+    .kpi-value.warn-text   { color:#ffb400; }
+    .kpi-value.good-text   { color:var(--accent); }
+
+    /* ── Two-column main grid ── */
+    .fin-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    @media(max-width:900px){ .fin-grid { grid-template-columns:1fr; } }
+
+    /* ── Cards ── */
+    .fin-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;
+      overflow:hidden;
+    }
+    .fin-card-head {
+      padding:14px 20px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+    }
+    .fin-card-title { font-weight:700; font-size:13px; color:var(--text); display:flex; align-items:center; gap:8px; }
+    .fin-card-body  { padding:0; }
+
+    /* ── AR/AP Table ── */
+    .aging-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .aging-table th {
+      padding:8px 14px;
+      text-align:left;
+      font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--text-faint);
+      border-bottom:1px solid var(--border);
+    }
+    .aging-table td { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.04); color:var(--text); }
+    .aging-table tr:last-child td { border-bottom:none; }
+    .aging-table tr:hover td { background:rgba(255,255,255,.025); }
+    .badge-overdue { background:rgba(255,70,70,.15); color:#ff4646; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .badge-warn    { background:rgba(255,180,0,.15); color:#ffb400; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .badge-ok      { background:rgba(0,255,136,.1); color:var(--accent); padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+    .amount-col    { font-family:'JetBrains Mono',monospace; text-align:right; }
+
+    /* ── Aging buckets bar ── */
+    .aging-bar-wrap { padding:16px 20px; display:flex; flex-direction:column; gap:10px; }
+    .aging-bucket { display:flex; align-items:center; gap:10px; }
+    .aging-bucket-label { font-size:11px; color:var(--text-muted); width:80px; flex-shrink:0; }
+    .aging-bucket-bar-bg { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+    .aging-bucket-bar-fill { height:100%; border-radius:4px; transition:width .6s; }
+    .aging-bucket-amount { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text); width:90px; text-align:right; flex-shrink:0; }
+
+    /* ── Copiloto panel ── */
+    .copiloto-panel {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;
+      display:flex; flex-direction:column;
+    }
+    .copiloto-head {
+      padding:14px 20px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .copiloto-title { font-weight:700; font-size:13px; display:flex; align-items:center; gap:8px; }
+    .copiloto-badge { font-size:10px; background:rgba(0,255,136,.1); color:var(--accent); padding:2px 8px; border-radius:20px; font-weight:700; border:1px solid var(--accent-dim); }
+    .copiloto-body { padding:16px 20px; flex:1; display:flex; flex-direction:column; gap:12px; }
+    .copiloto-output {
+      flex:1; min-height:220px; max-height:400px; overflow-y:auto;
+      background:rgba(0,0,0,.3);
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:14px 16px;
+      font-size:12px; line-height:1.7; color:var(--text);
+    }
+    .copiloto-output.streaming { border-color:var(--accent-dim); }
+    .copiloto-output h2,
+    .copiloto-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--accent); letter-spacing:.05em; margin:8px 0 4px; }
+    .copiloto-output p  { margin:4px 0; }
+    .copiloto-output ul { margin:4px 0 4px 16px; }
+    .copiloto-output strong { color:var(--text); }
+    .copiloto-output table { width:100%; border-collapse:collapse; margin:8px 0; font-size:11px; }
+    .copiloto-output th { background:rgba(0,255,136,.07); color:var(--accent); padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); }
+    .copiloto-output td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.05); }
+    .copiloto-placeholder { color:var(--text-faint); font-style:italic; font-size:12px; padding:20px; text-align:center; }
+
+    .copiloto-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .btn-copiloto {
+      background:var(--accent); color:#000;
+      border:none; border-radius:6px;
+      padding:8px 16px; font-weight:700; font-size:12px;
+      cursor:pointer; transition:opacity .15s;
+      display:flex; align-items:center; gap:6px;
+    }
+    .btn-copiloto:hover:not(:disabled) { opacity:.85; }
+    .btn-copiloto:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-secondary-sm {
+      background:transparent; color:var(--text-muted);
+      border:1px solid var(--border); border-radius:6px;
+      padding:7px 14px; font-size:12px; font-weight:600;
+      cursor:pointer; transition:border-color .15s, color .15s;
+    }
+    .btn-secondary-sm:hover { border-color:var(--accent-dim); color:var(--text); }
+
+    /* ── Empty state ── */
+    .empty-state { padding:32px; text-align:center; color:var(--text-faint); font-size:12px; }
+    .empty-state big { display:block; font-size:28px; margin-bottom:8px; }
+
+    /* ── Add invoice modal ── */
+    .modal-overlay {
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.7);
+      z-index:1000; display:none;
+      align-items:center; justify-content:center;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:#1a1a1a;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:24px;
+      width:100%; max-width:480px;
+      display:flex; flex-direction:column; gap:16px;
+      max-height:90vh; overflow-y:auto;
+    }
+    .modal-title { font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px; }
+    .form-group { display:flex; flex-direction:column; gap:6px; }
+    .form-label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+    .form-input {
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--border);
+      border-radius:6px;
+      padding:9px 12px;
+      color:var(--text); font-size:13px;
+      width:100%; box-sizing:border-box;
+      font-family:inherit;
+    }
+    .form-input:focus { outline:none; border-color:var(--accent-dim); }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .modal-actions { display:flex; justify-content:flex-end; gap:10px; }
+
+    /* ── Page header ── */
+    .page-header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .page-title-block h1 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.05em; color:var(--text); margin:0; }
+    .page-title-block p  { font-size:12px; color:var(--text-muted); margin:2px 0 0; }
+
+    /* ── Section header ── */
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .section-title { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:.05em; color:var(--text); }
+
+    /* Loader */
+    .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(0,255,136,.3); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="app-root">
+  <div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>
+</div>
+
+<!-- Modal: Nueva Factura CXC -->
+<div class="modal-overlay" id="modal-invoice">
+  <div class="modal-box">
+    <div class="modal-title">📄 Nueva Factura por Cobrar</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Folio</label>
+        <input class="form-input" id="inv-folio" placeholder="F-2026-001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Moneda</label>
+        <select class="form-input" id="inv-currency">
+          <option value="MXN">MXN</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cliente</label>
+      <input class="form-input" id="inv-customer" placeholder="Nombre del cliente o empresa">
+    </div>
+    <div class="form-group">
+      <label class="form-label">RFC Cliente</label>
+      <input class="form-input" id="inv-rfc" placeholder="RFC opcional">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Total (con IVA)</label>
+        <input class="form-input" id="inv-total" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha Emisión</label>
+        <input class="form-input" id="inv-issue" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha Vencimiento</label>
+      <input class="form-input" id="inv-due" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">UUID CFDI (opcional)</label>
+      <input class="form-input" id="inv-uuid" placeholder="00000000-0000-0000-0000-000000000000">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary-sm" onclick="closeModal('modal-invoice')">Cancelar</button>
+      <button class="btn-copiloto" id="btn-save-invoice" onclick="saveInvoice()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════
+   FINANZAS & FLUJO — Panel Financiero con Copiloto IA
+   ═══════════════════════════════════════════════════ */
+
+let _user = null;
+let _db   = null;
+let _summary = {};
+let _arRows  = [];
+let _apRows  = [];
+let _copiloStreaming = false;
+
+const fmt = (n) => new Intl.NumberFormat('es-MX', {style:'currency', currency:'MXN', maximumFractionDigits:0}).format(n||0);
+const fmtD = (d) => d ? new Date(d+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+
+async function init() {
+  _user = await requireAuth(true);
+  if (!_user) return;
+  _db = getDB();
+
+  document.getElementById('app-root').innerHTML = buildShell();
+  if (typeof renderHeader === 'function') {
+    document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'finanzas');
+  }
+  if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+
+  // Set default dates
+  const today = new Date().toISOString().split('T')[0];
+  const due30  = new Date(Date.now() + 30*864e5).toISOString().split('T')[0];
+  document.getElementById('inv-issue').value = today;
+  document.getElementById('inv-due').value   = due30;
+
+  await loadAll();
+}
+
+function buildShell() {
+  return `
+  <div style="display:flex;min-height:100vh">
+    <div id="sidebar-slot"></div>
+    <main style="flex:1;overflow:auto">
+      <div class="fin-root">
+
+        <!-- Header -->
+        <div class="page-header">
+          <div class="page-title-block">
+            <h1>💰 Finanzas & Flujo</h1>
+            <p>Cuentas por cobrar · Cuentas por pagar · Flujo de caja · Copiloto financiero IA</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn-secondary-sm" onclick="loadAll()" id="btn-refresh">↺ Actualizar</button>
+            <button class="btn-copiloto" onclick="openModal('modal-invoice')">+ Nueva CXC</button>
+          </div>
+        </div>
+
+        <!-- KPI Strip -->
+        <div class="kpi-strip" id="kpi-strip">
+          ${kpiSkeleton()}
+        </div>
+
+        <!-- AR Aging Bar + AP Upcoming -->
+        <div class="fin-grid">
+          <div class="fin-card">
+            <div class="fin-card-head">
+              <div class="fin-card-title">📊 Antigüedad CXC</div>
+              <span style="font-size:11px;color:var(--text-faint)" id="ar-total-label">—</span>
+            </div>
+            <div class="aging-bar-wrap" id="aging-bar-wrap">
+              <div class="empty-state"><big>⏳</big>Cargando antigüedad...</div>
+            </div>
+          </div>
+
+          <div class="fin-card">
+            <div class="fin-card-head">
+              <div class="fin-card-title">🗓 CXP Próximos 30 Días</div>
+              <span style="font-size:11px;color:var(--text-faint)" id="ap-total-label">—</span>
+            </div>
+            <div class="fin-card-body">
+              <table class="aging-table" id="ap-table">
+                <thead>
+                  <tr><th>Proveedor</th><th>Folio</th><th>Vence</th><th class="amount-col">Total</th><th>Estado</th></tr>
+                </thead>
+                <tbody id="ap-tbody"><tr><td colspan="5" class="empty-state">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- AR List -->
+        <div class="fin-card">
+          <div class="fin-card-head">
+            <div class="fin-card-title">📋 Cuentas por Cobrar Activas</div>
+            <span style="font-size:11px;color:var(--text-faint)" id="ar-count-label">—</span>
+          </div>
+          <div class="fin-card-body">
+            <table class="aging-table">
+              <thead>
+                <tr><th>Cliente</th><th>Folio</th><th>Emisión</th><th>Vencimiento</th><th>Vencida</th><th class="amount-col">Total</th><th>Estado</th><th></th></tr>
+              </thead>
+              <tbody id="ar-tbody"><tr><td colspan="8" class="empty-state">Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Copiloto Financiero -->
+        <div class="copiloto-panel">
+          <div class="copiloto-head">
+            <div class="copiloto-title">🤖 Copiloto Financiero IA <span class="copiloto-badge">Claude</span></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-secondary-sm" onclick="clearCopiloto()" title="Limpiar">✕ Limpiar</button>
+            </div>
+          </div>
+          <div class="copiloto-body">
+            <div class="copiloto-output" id="copiloto-out">
+              <div class="copiloto-placeholder">El copiloto financiero analiza tu CXC, CXP y flujo de caja.<br>Genera un briefing ejecutivo con recomendaciones de acción.</div>
+            </div>
+            <div class="copiloto-actions">
+              <button class="btn-copiloto" id="btn-briefing" onclick="generateBriefing()">
+                ⚡ Briefing Ejecutivo
+              </button>
+              <button class="btn-copiloto" style="background:rgba(0,255,136,.1);color:var(--accent);border:1px solid var(--accent-dim)" id="btn-riesgo" onclick="generateRiskAlert()">
+                🚨 Alertas de Riesgo
+              </button>
+              <button class="btn-copiloto" style="background:rgba(0,180,255,.1);color:#00b4ff;border:1px solid rgba(0,180,255,.3)" id="btn-flujo" onclick="generateCashflowForecast()">
+                📈 Proyección 30 días
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>`;
+}
+
+function kpiSkeleton() {
+  return ['CXC Total','CXC Vencida','CXP Total','CXP Próx. 30d','Cobros Mes','Pagos Mes','Flujo Neto']
+    .map(l => `<div class="kpi-card"><div class="kpi-label">${l}</div><div class="kpi-value" style="color:var(--text-faint)">—</div></div>`)
+    .join('');
+}
+
+async function loadAll() {
+  const btn = document.getElementById('btn-refresh');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    await Promise.all([loadSummary(), loadAR(), loadAP()]);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↺ Actualizar'; }
+  }
+}
+
+async function loadSummary() {
+  const companyId = _user?.profile?.company_id;
+  if (!companyId) return;
+  try {
+    const { data, error } = await _db.rpc('get_financial_summary', { p_company_id: companyId });
+    if (error) throw error;
+    _summary = data || {};
+    renderKPIs();
+  } catch(e) {
+    console.warn('loadSummary:', e);
+    // Si la función no existe aún, mostrar ceros
+    _summary = { cxc_total:0, cxc_vencida:0, cxp_total:0, cxp_proxima30:0, cobros_mes:0, pagos_mes:0, flujo_neto_mes:0 };
+    renderKPIs();
+  }
+}
+
+function renderKPIs() {
+  const s = _summary;
+  const neto = (s.flujo_neto_mes||0);
+  const strip = document.getElementById('kpi-strip');
+  if (!strip) return;
+  strip.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">CXC Total</div>
+      <div class="kpi-value">${fmt(s.cxc_total)}</div>
+      <div class="kpi-sub">Por cobrar</div>
+    </div>
+    <div class="kpi-card ${(s.cxc_vencida||0)>0?'danger':''}">
+      <div class="kpi-label">CXC Vencida</div>
+      <div class="kpi-value ${(s.cxc_vencida||0)>0?'danger-text':''}">${fmt(s.cxc_vencida)}</div>
+      <div class="kpi-sub">Requiere acción</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">CXP Total</div>
+      <div class="kpi-value">${fmt(s.cxp_total)}</div>
+      <div class="kpi-sub">Por pagar</div>
+    </div>
+    <div class="kpi-card ${(s.cxp_proxima30||0)>0?'warn':''}">
+      <div class="kpi-label">CXP Próx. 30d</div>
+      <div class="kpi-value ${(s.cxp_proxima30||0)>0?'warn-text':''}">${fmt(s.cxp_proxima30)}</div>
+      <div class="kpi-sub">Vencen pronto</div>
+    </div>
+    <div class="kpi-card good">
+      <div class="kpi-label">Cobros Mes</div>
+      <div class="kpi-value good-text">${fmt(s.cobros_mes)}</div>
+      <div class="kpi-sub">Mes actual</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Pagos Mes</div>
+      <div class="kpi-value">${fmt(s.pagos_mes)}</div>
+      <div class="kpi-sub">Mes actual</div>
+    </div>
+    <div class="kpi-card ${neto>=0?'good':'danger'}">
+      <div class="kpi-label">Flujo Neto</div>
+      <div class="kpi-value ${neto>=0?'good-text':'danger-text'}">${fmt(neto)}</div>
+      <div class="kpi-sub">Cobros − Pagos mes</div>
+    </div>
+  `;
+}
+
+async function loadAR() {
+  const companyId = _user?.profile?.company_id;
+  if (!companyId) return;
+  try {
+    const { data, error } = await _db
+      .from('invoices_out')
+      .select('id,folio,customer_name,issue_date,due_date,total,currency,status,days_overdue,collection_priority')
+      .eq('company_id', companyId)
+      .not('status', 'in', '("pagada","cancelada")')
+      .order('due_date', { ascending: true })
+      .limit(50);
+    if (error) throw error;
+    _arRows = data || [];
+    renderAR();
+    renderAgingBars();
+  } catch(e) {
+    console.warn('loadAR:', e);
+    document.getElementById('ar-tbody').innerHTML = `<tr><td colspan="8" class="empty-state">Error cargando datos: ${e.message}</td></tr>`;
+  }
+}
+
+function renderAR() {
+  const tbody = document.getElementById('ar-tbody');
+  const label = document.getElementById('ar-count-label');
+  if (!tbody) return;
+  if (!_arRows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><big>✅</big>Sin cuentas por cobrar pendientes</td></tr>`;
+    if (label) label.textContent = '0 facturas';
+    return;
+  }
+  if (label) label.textContent = `${_arRows.length} facturas`;
+  tbody.innerHTML = _arRows.map(r => {
+    const over = r.days_overdue || 0;
+    const badge = over > 30 ? `<span class="badge-overdue">${over}d</span>`
+                : over > 0  ? `<span class="badge-warn">${over}d</span>`
+                : `<span class="badge-ok">Al día</span>`;
+    const st = r.status === 'vencida' ? `<span class="badge-overdue">Vencida</span>`
+             : r.status === 'enviada' ? `<span class="badge-warn">Enviada</span>`
+             : `<span class="badge-ok">${r.status}</span>`;
+    return `<tr>
+      <td style="font-weight:600">${escHtml(r.customer_name)}</td>
+      <td style="font-family:monospace;font-size:11px">${escHtml(r.folio)}</td>
+      <td>${fmtD(r.issue_date)}</td>
+      <td>${fmtD(r.due_date)}</td>
+      <td>${badge}</td>
+      <td class="amount-col">${fmt(r.total)}</td>
+      <td>${st}</td>
+      <td><button class="btn-secondary-sm" style="padding:4px 10px;font-size:11px" onclick="markPaid('${r.id}')">✓ Pagar</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAgingBars() {
+  const wrap = document.getElementById('aging-bar-wrap');
+  const label = document.getElementById('ar-total-label');
+  if (!wrap) return;
+  const buckets = [
+    { label:'Vigente', min:-Infinity, max:0, color:'#00ff88' },
+    { label:'1-30d',   min:1, max:30,  color:'#ffb400' },
+    { label:'31-60d',  min:31, max:60, color:'#ff8c00' },
+    { label:'61-90d',  min:61, max:90, color:'#ff4646' },
+    { label:'+90d',    min:91, max:Infinity, color:'#cc0000' },
+  ];
+  const totals = buckets.map(b => ({
+    ...b,
+    amount: _arRows.filter(r => {
+      const d = r.days_overdue || 0;
+      return d >= b.min && d <= b.max;
+    }).reduce((s,r) => s + (r.total||0), 0)
+  }));
+  const grand = totals.reduce((s,b) => s + b.amount, 0);
+  if (label) label.textContent = fmt(grand);
+  wrap.innerHTML = totals.map(b => {
+    const pct = grand > 0 ? Math.round(b.amount/grand*100) : 0;
+    return `<div class="aging-bucket">
+      <span class="aging-bucket-label">${b.label}</span>
+      <div class="aging-bucket-bar-bg">
+        <div class="aging-bucket-bar-fill" style="width:${pct}%;background:${b.color}"></div>
+      </div>
+      <span class="aging-bucket-amount">${fmt(b.amount)}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadAP() {
+  const companyId = _user?.profile?.company_id;
+  if (!companyId) return;
+  try {
+    const { data, error } = await _db
+      .from('invoices_in')
+      .select('id,folio_proveedor,supplier_name,due_date,total,currency,status')
+      .eq('company_id', companyId)
+      .not('status', 'in', '("pagada","rechazada")')
+      .lte('due_date', new Date(Date.now()+30*864e5).toISOString().split('T')[0])
+      .order('due_date', { ascending: true })
+      .limit(20);
+    if (error) throw error;
+    _apRows = data || [];
+    renderAP();
+  } catch(e) {
+    console.warn('loadAP:', e);
+    const tbody = document.getElementById('ap-tbody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function renderAP() {
+  const tbody = document.getElementById('ap-tbody');
+  const label = document.getElementById('ap-total-label');
+  if (!tbody) return;
+  if (!_apRows.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><big>✅</big>Sin vencimientos próximos</td></tr>`;
+    if (label) label.textContent = 'Sin vencimientos';
+    return;
+  }
+  const total = _apRows.reduce((s,r) => s + (r.total||0), 0);
+  if (label) label.textContent = fmt(total);
+  tbody.innerHTML = _apRows.map(r => {
+    const due = r.due_date ? new Date(r.due_date+'T12:00:00') : null;
+    const daysLeft = due ? Math.round((due - Date.now()) / 864e5) : null;
+    const badge = daysLeft !== null
+      ? (daysLeft < 0 ? `<span class="badge-overdue">${Math.abs(daysLeft)}d vencida</span>`
+         : daysLeft <= 7 ? `<span class="badge-warn">${daysLeft}d</span>`
+         : `<span class="badge-ok">${daysLeft}d</span>`)
+      : '—';
+    return `<tr>
+      <td style="font-weight:600">${escHtml(r.supplier_name)}</td>
+      <td style="font-size:11px;font-family:monospace">${escHtml(r.folio_proveedor||'—')}</td>
+      <td>${fmtD(r.due_date)}</td>
+      <td class="amount-col">${fmt(r.total)}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function markPaid(invoiceId) {
+  if (!confirm('¿Marcar esta factura como pagada?')) return;
+  const { error } = await _db
+    .from('invoices_out')
+    .update({ status: 'pagada', payment_date: new Date().toISOString().split('T')[0], updated_at: new Date().toISOString() })
+    .eq('id', invoiceId);
+  if (error) { alert('Error: ' + error.message); return; }
+  await loadAll();
+}
+
+/* ── Modal ── */
+function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
+async function saveInvoice() {
+  const btn = document.getElementById('btn-save-invoice');
+  const companyId = _user?.profile?.company_id;
+  if (!companyId) return;
+  const payload = {
+    company_id:    companyId,
+    folio:         document.getElementById('inv-folio').value.trim() || ('F-'+Date.now()),
+    customer_name: document.getElementById('inv-customer').value.trim(),
+    customer_rfc:  document.getElementById('inv-rfc').value.trim() || null,
+    total:         parseFloat(document.getElementById('inv-total').value) || 0,
+    subtotal:      (parseFloat(document.getElementById('inv-total').value)||0) / 1.16,
+    iva:           (parseFloat(document.getElementById('inv-total').value)||0) * .16 / 1.16,
+    currency:      document.getElementById('inv-currency').value,
+    issue_date:    document.getElementById('inv-issue').value,
+    due_date:      document.getElementById('inv-due').value || null,
+    uuid_cfdi:     document.getElementById('inv-uuid').value.trim() || null,
+    status:        'emitida',
+    created_by:    _user.id,
+  };
+  if (!payload.customer_name) { alert('Ingresa el nombre del cliente.'); return; }
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const { error } = await _db.from('invoices_out').insert(payload);
+  btn.disabled = false; btn.textContent = 'Guardar';
+  if (error) { alert('Error: ' + error.message); return; }
+  closeModal('modal-invoice');
+  await loadAll();
+}
+
+/* ── Copiloto Financiero ── */
+function setCopilotoLoading(busy) {
+  _copiloStreaming = busy;
+  ['btn-briefing','btn-riesgo','btn-flujo'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.disabled = busy;
+  });
+}
+
+function buildFinancialContext() {
+  return `
+RESUMEN FINANCIERO ACTUAL (${new Date().toLocaleDateString('es-MX')}):
+- CXC Total: ${fmt(_summary.cxc_total)} | Vencida: ${fmt(_summary.cxc_vencida)}
+- CXP Total: ${fmt(_summary.cxp_total)} | Próximos 30d: ${fmt(_summary.cxp_proxima30)}
+- Cobros del mes: ${fmt(_summary.cobros_mes)} | Pagos del mes: ${fmt(_summary.pagos_mes)}
+- Flujo neto del mes: ${fmt(_summary.flujo_neto_mes)}
+
+CUENTAS POR COBRAR ACTIVAS (${_arRows.length}):
+${_arRows.slice(0,10).map(r => `  - ${r.customer_name}: ${fmt(r.total)} | Vence: ${fmtD(r.due_date)} | ${r.days_overdue||0}d vencida`).join('\n') || '  Sin datos'}
+
+CXP PRÓXIMOS 30 DÍAS:
+${_apRows.slice(0,8).map(r => `  - ${r.supplier_name}: ${fmt(r.total)} | Vence: ${fmtD(r.due_date)}`).join('\n') || '  Sin vencimientos próximos'}
+  `.trim();
+}
+
+async function generateBriefing() {
+  const ctx = buildFinancialContext();
+  await streamCopiloto(
+    'Briefing Ejecutivo Financiero',
+    `Eres el copiloto financiero de una empresa mexicana (IBANOR SA de CV / MetaTronix).
+Analiza los siguientes datos financieros y genera un BRIEFING EJECUTIVO en español:
+
+${ctx}
+
+Estructura tu respuesta con:
+<h2>Estado Financiero del Día</h2>
+<h3>Semáforo de Liquidez</h3>
+<h3>Acciones Inmediatas (Top 3)</h3>
+<h3>Riesgos Identificados</h3>
+<h3>Recomendación Estratégica</h3>
+
+Sé directo, cuantifica cada punto. Usa tabla HTML cuando compare cifras.`
+  );
+}
+
+async function generateRiskAlert() {
+  const ctx = buildFinancialContext();
+  await streamCopiloto(
+    'Alertas de Riesgo Financiero',
+    `Analiza estos datos financieros de IBANOR SA de CV y genera alertas de riesgo priorizadas:
+
+${ctx}
+
+Devuelve:
+<h2>🚨 Alertas de Riesgo Financiero</h2>
+Por cada alerta incluye:
+- Nivel: CRÍTICO / ALTO / MEDIO
+- Descripción del riesgo
+- Impacto estimado en pesos
+- Acción correctiva específica con plazo
+
+Ordena por urgencia. Sé concreto y accionable.`
+  );
+}
+
+async function generateCashflowForecast() {
+  const ctx = buildFinancialContext();
+  await streamCopiloto(
+    'Proyección de Flujo 30 Días',
+    `Con base en los datos financieros de IBANOR SA de CV, proyecta el flujo de caja para los próximos 30 días:
+
+${ctx}
+
+Genera:
+<h2>📈 Proyección de Flujo — Próximos 30 Días</h2>
+<h3>Ingresos Esperados</h3>
+(lista las CXC con probabilidad de cobro)
+<h3>Egresos Comprometidos</h3>
+(lista los pagos obligatorios)
+<h3>Balance Proyectado Semana a Semana</h3>
+(tabla: Semana | Cobros Est. | Pagos Est. | Saldo)
+<h3>Recomendaciones de Gestión de Tesorería</h3>
+
+Usa cifras reales del contexto. Si no hay datos suficientes, indica los supuestos.`
+  );
+}
+
+async function streamCopiloto(title, prompt) {
+  if (_copiloStreaming) return;
+  const out = document.getElementById('copiloto-out');
+  if (!out) return;
+  setCopilotoLoading(true);
+  out.classList.add('streaming');
+  out.innerHTML = `<div style="color:var(--text-faint);font-size:12px;display:flex;align-items:center;gap:8px"><span class="spin"></span> ${title}...</div>`;
+
+  try {
+    const session = await getSession();
+    const jwt = session?.access_token || '';
+    const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL || '').replace(/\/+$/,'');
+    if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado en config.js');
+
+    const resp = await fetch(proxyUrl + '/groq', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+jwt },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 2048,
+        system: `Eres el Director Financiero IA de IBANOR SA de CV / MetaTronix.
+Generas análisis financieros ejecutivos en español de México, concisos y accionables.
+Usas formato HTML semántico (h2, h3, p, ul, table, strong).
+NO incluyas DOCTYPE, html, head, body, style.`,
+        messages: [{ role:'user', content: prompt }],
+        stream: true,
+      }),
+      signal: AbortSignal.timeout(60000),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }));
+      throw new Error(err.error || 'Error ' + resp.status);
+    }
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = ''; let html = ''; let ts = '';
+    out.innerHTML = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const d = line.slice(5).trim();
+        if (d === '[DONE]') break;
+        try {
+          const j = JSON.parse(d);
+          if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') {
+            ts += j.delta.text;
+          }
+        } catch { /* noop */ }
+      }
+      out.innerHTML = ts;
+      out.scrollTop = out.scrollHeight;
+    }
+    out.innerHTML = ts || '<em style="color:var(--text-faint)">Sin respuesta del modelo.</em>';
+  } catch(e) {
+    out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+  } finally {
+    setCopilotoLoading(false);
+    out.classList.remove('streaming');
+  }
+}
+
+function clearCopiloto() {
+  const out = document.getElementById('copiloto-out');
+  if (out) out.innerHTML = '<div class="copiloto-placeholder">El copiloto financiero analiza tu CXC, CXP y flujo de caja.<br>Genera un briefing ejecutivo con recomendaciones de acción.</div>';
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+init();
+</script>
+</body>
+</html>

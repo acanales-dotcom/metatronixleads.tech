@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Cobranza IA — MetaTronix</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=20260416">
+  <script src="/config.js?v=20260416"></script>
+  <script src="/assets/app.js?v=20260416"></script>
+  <style>
+    .cob-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1400px; margin:0 auto; }
+
+    /* KPIs */
+    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+    .kpi-card  { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 18px; }
+    .kpi-card.danger { border-color:rgba(255,70,70,.4); }
+    .kpi-card.warn   { border-color:rgba(255,180,0,.4); }
+    .kpi-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
+    .kpi-value { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:600; color:var(--text); margin:4px 0 2px; }
+    .kpi-value.danger-text { color:#ff4646; }
+    .kpi-value.warn-text   { color:#ffb400; }
+    .kpi-value.good-text   { color:var(--accent); }
+    .kpi-sub { font-size:11px; color:var(--text-muted); }
+
+    /* Filter bar */
+    .filter-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .filter-btn {
+      padding:6px 14px; border-radius:6px; font-size:12px; font-weight:700;
+      border:1px solid var(--border); background:transparent; color:var(--text-muted);
+      cursor:pointer; transition:.15s;
+    }
+    .filter-btn:hover { border-color:var(--accent-dim); color:var(--text); }
+    .filter-btn.active { background:var(--accent-dim); border-color:var(--accent-dim); color:var(--accent); }
+
+    /* Queue table */
+    .queue-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+    .queue-head { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .queue-title { font-weight:700; font-size:13px; display:flex; align-items:center; gap:8px; }
+    .queue-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .queue-table th { padding:8px 14px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); border-bottom:1px solid var(--border); white-space:nowrap; }
+    .queue-table td { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.04); color:var(--text); vertical-align:middle; }
+    .queue-table tr:last-child td { border-bottom:none; }
+    .queue-table tr:hover td { background:rgba(255,255,255,.025); }
+    .queue-table tr.selected td { background:rgba(0,255,136,.04); }
+
+    /* Priority badges */
+    .pri-urgente { background:rgba(255,0,0,.15); color:#ff3333; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; white-space:nowrap; }
+    .pri-alta    { background:rgba(255,100,0,.15); color:#ff6400; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; white-space:nowrap; }
+    .pri-normal  { background:rgba(255,180,0,.12); color:#ffb400; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; white-space:nowrap; }
+    .pri-baja    { background:rgba(100,100,100,.15); color:var(--text-muted); padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; white-space:nowrap; }
+
+    .days-badge-crit { color:#ff3333; font-weight:700; font-family:monospace; }
+    .days-badge-warn { color:#ffb400; font-weight:700; font-family:monospace; }
+    .amount-col { font-family:'JetBrains Mono',monospace; text-align:right; }
+
+    /* Checkbox */
+    .inv-check { width:14px; height:14px; accent-color:var(--accent); cursor:pointer; }
+
+    /* Action buttons inline */
+    .row-actions { display:flex; gap:6px; }
+    .btn-tiny {
+      padding:4px 10px; border-radius:5px; font-size:11px; font-weight:600;
+      border:1px solid var(--border); background:transparent; color:var(--text-muted);
+      cursor:pointer; white-space:nowrap; transition:.15s;
+    }
+    .btn-tiny:hover { border-color:var(--accent-dim); color:var(--text); }
+    .btn-tiny.primary { background:var(--accent); color:#000; border-color:transparent; }
+    .btn-tiny.primary:hover { opacity:.85; }
+    .btn-tiny.danger  { border-color:rgba(255,70,70,.3); color:#ff4646; }
+    .btn-tiny.danger:hover { background:rgba(255,70,70,.1); }
+
+    /* Message panel */
+    .msg-panel {
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      display:flex; flex-direction:column;
+    }
+    .msg-head { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .msg-title { font-weight:700; font-size:13px; display:flex; align-items:center; gap:8px; }
+    .badge-claude { font-size:10px; background:rgba(0,255,136,.1); color:var(--accent); padding:2px 8px; border-radius:20px; font-weight:700; border:1px solid var(--accent-dim); }
+    .msg-body { padding:16px 20px; display:flex; flex-direction:column; gap:14px; }
+
+    .msg-config { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+    @media(max-width:700px){ .msg-config { grid-template-columns:1fr; } }
+
+    .form-group { display:flex; flex-direction:column; gap:5px; }
+    .form-label { font-size:10px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; }
+    .form-select, .form-input {
+      background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:6px;
+      padding:8px 12px; color:var(--text); font-size:12px; font-family:inherit; width:100%; box-sizing:border-box;
+    }
+    .form-select:focus, .form-input:focus { outline:none; border-color:var(--accent-dim); }
+
+    .msg-output {
+      min-height:200px; max-height:360px; overflow-y:auto;
+      background:rgba(0,0,0,.3); border:1px solid var(--border); border-radius:8px;
+      padding:14px 16px; font-size:12px; line-height:1.8; color:var(--text);
+      white-space:pre-wrap;
+    }
+    .msg-output.streaming { border-color:var(--accent-dim); }
+    .msg-placeholder { color:var(--text-faint); font-style:italic; font-size:12px; text-align:center; padding:24px; }
+
+    .msg-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn-primary {
+      background:var(--accent); color:#000; border:none; border-radius:6px;
+      padding:8px 18px; font-weight:700; font-size:12px; cursor:pointer; transition:opacity .15s;
+      display:flex; align-items:center; gap:6px;
+    }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-primary:hover:not(:disabled) { opacity:.85; }
+    .btn-outline {
+      background:transparent; border:1px solid var(--border); border-radius:6px;
+      padding:7px 14px; font-size:12px; font-weight:600; color:var(--text-muted);
+      cursor:pointer; transition:.15s;
+    }
+    .btn-outline:hover { border-color:var(--accent-dim); color:var(--text); }
+
+    .selected-info { font-size:12px; color:var(--text-muted); padding:2px 0; }
+
+    /* Page header */
+    .page-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .page-title-block h1 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.05em; color:var(--text); margin:0; }
+    .page-title-block p  { font-size:12px; color:var(--text-muted); margin:2px 0 0; }
+
+    .empty-state { padding:32px; text-align:center; color:var(--text-faint); font-size:12px; }
+    .empty-state big { display:block; font-size:28px; margin-bottom:8px; }
+
+    .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(0,255,136,.3); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Contact log */
+    .contact-tag { display:inline-block; background:rgba(0,180,255,.1); color:#00b4ff; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; }
+  </style>
+</head>
+<body>
+
+<div id="app-root">
+  <div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════
+   COBRANZA IA — Cola de cobranza con Claude copiloto
+   ═══════════════════════════════════════════════════ */
+
+let _user = null;
+let _db   = null;
+let _invoices = [];
+let _selected = new Set();
+let _filter   = 'all';
+let _aiStreaming = false;
+
+const fmt = n => new Intl.NumberFormat('es-MX', {style:'currency', currency:'MXN', maximumFractionDigits:0}).format(n||0);
+const fmtD = d => d ? new Date(d+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+const esc  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+async function init() {
+  _user = await requireAuth(true);
+  if (!_user) return;
+  _db = getDB();
+  document.getElementById('app-root').innerHTML = buildShell();
+  if (typeof renderHeader === 'function') {
+    document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'cobranza');
+  }
+  if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+  await loadInvoices();
+}
+
+function buildShell() {
+  return `
+  <div style="display:flex;min-height:100vh">
+    <div id="sidebar-slot"></div>
+    <main style="flex:1;overflow:auto">
+      <div class="cob-root">
+
+        <!-- Header -->
+        <div class="page-header">
+          <div class="page-title-block">
+            <h1>📞 Cobranza IA</h1>
+            <p>Cola priorizada por antigüedad · Mensajes personalizados con Claude · Seguimiento de contactos</p>
+          </div>
+          <button class="btn-outline" onclick="loadInvoices()" id="btn-refresh">↺ Actualizar</button>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-strip" id="kpi-strip">
+          <div class="kpi-card"><div class="kpi-label">Cargando...</div><div class="kpi-value" style="color:var(--text-faint)">—</div></div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+          <span style="font-size:11px;color:var(--text-faint);font-weight:600">FILTRAR:</span>
+          <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">Todas</button>
+          <button class="filter-btn" data-filter="urgente" onclick="setFilter('urgente',this)">🔴 Urgente</button>
+          <button class="filter-btn" data-filter="alta" onclick="setFilter('alta',this)">🟠 Alta</button>
+          <button class="filter-btn" data-filter="normal" onclick="setFilter('normal',this)">🟡 Normal</button>
+          <button class="filter-btn" data-filter="vencida" onclick="setFilter('vencida',this)">+30d vencida</button>
+          <button class="btn-primary" style="margin-left:auto" id="btn-prioritize" onclick="prioritizeWithAI()">
+            ⚡ Priorizar con IA
+          </button>
+        </div>
+
+        <!-- Queue -->
+        <div class="queue-card">
+          <div class="queue-head">
+            <div class="queue-title">📋 Cola de Cobranza <span id="queue-count" style="font-weight:400;color:var(--text-faint);font-size:12px"></span></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="check-all" onchange="toggleAll(this)"> Seleccionar todo
+              </label>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="queue-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Prioridad</th>
+                  <th>Cliente</th>
+                  <th>Folio</th>
+                  <th>Vencimiento</th>
+                  <th>Días Vencida</th>
+                  <th class="amount-col">Saldo</th>
+                  <th>Último Contacto</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="queue-tbody">
+                <tr><td colspan="9" class="empty-state">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Mensaje AI panel -->
+        <div class="msg-panel">
+          <div class="msg-head">
+            <div class="msg-title">✉️ Generador de Mensajes <span class="badge-claude">Claude</span></div>
+            <div id="sel-info" class="selected-info">Selecciona facturas para generar mensajes personalizados</div>
+          </div>
+          <div class="msg-body">
+            <div class="msg-config">
+              <div class="form-group">
+                <label class="form-label">Tipo de Mensaje</label>
+                <select class="form-select" id="msg-type">
+                  <option value="recordatorio">📩 Recordatorio amable</option>
+                  <option value="urgente">⚠️ Aviso urgente</option>
+                  <option value="ultimatum">🚨 Último aviso</option>
+                  <option value="whatsapp">📱 WhatsApp informal</option>
+                  <option value="email_formal">📧 Email formal</option>
+                  <option value="negociacion">🤝 Propuesta de pago</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tono</label>
+                <select class="form-select" id="msg-tone">
+                  <option value="profesional">Profesional</option>
+                  <option value="amigable">Amigable</option>
+                  <option value="firme">Firme</option>
+                  <option value="ejecutivo">Ejecutivo</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Idioma</label>
+                <select class="form-select" id="msg-lang">
+                  <option value="español">Español</option>
+                  <option value="inglés">Inglés</option>
+                </select>
+              </div>
+            </div>
+            <div class="msg-output" id="msg-output">
+              <div class="msg-placeholder">El mensaje generado por Claude aparecerá aquí.<br>Selecciona facturas arriba y elige el tipo de mensaje.</div>
+            </div>
+            <div class="msg-actions">
+              <button class="btn-primary" id="btn-generate" onclick="generateMessage()">
+                🤖 Generar Mensaje
+              </button>
+              <button class="btn-outline" id="btn-mark-contact" onclick="markContacted()">
+                ✓ Marcar como contactado
+              </button>
+              <button class="btn-outline" onclick="copyMessage()" title="Copiar al portapapeles">
+                📋 Copiar
+              </button>
+              <button class="btn-outline" onclick="clearMsg()" style="margin-left:auto">✕ Limpiar</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>`;
+}
+
+async function loadInvoices() {
+  const btn = document.getElementById('btn-refresh');
+  if (btn) { btn.disabled=true; btn.textContent='⏳'; }
+  const companyId = _user?.profile?.company_id;
+  try {
+    const { data, error } = await _db
+      .from('invoices_out')
+      .select('id,folio,customer_name,customer_email,due_date,total,status,days_overdue,collection_priority,last_contact_at,ai_collection_note')
+      .eq('company_id', companyId)
+      .not('status','in','("pagada","cancelada")')
+      .lte('due_date', new Date().toISOString().split('T')[0])  // solo vencidas
+      .order('days_overdue', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    _invoices = data || [];
+  } catch(e) {
+    _invoices = [];
+    console.warn('loadInvoices:', e);
+  }
+  renderKPIs();
+  renderQueue();
+  if (btn) { btn.disabled=false; btn.textContent='↺ Actualizar'; }
+}
+
+function renderKPIs() {
+  const total    = _invoices.reduce((s,r) => s+(r.total||0), 0);
+  const urgente  = _invoices.filter(r => r.collection_priority==='urgente');
+  const alta     = _invoices.filter(r => r.collection_priority==='alta');
+  const v90      = _invoices.filter(r => (r.days_overdue||0) > 90);
+  const strip = document.getElementById('kpi-strip');
+  if (!strip) return;
+  strip.innerHTML = `
+    <div class="kpi-card danger">
+      <div class="kpi-label">Total Vencido</div>
+      <div class="kpi-value danger-text">${fmt(total)}</div>
+      <div class="kpi-sub">${_invoices.length} facturas</div>
+    </div>
+    <div class="kpi-card ${urgente.length?'danger':''}">
+      <div class="kpi-label">Urgente</div>
+      <div class="kpi-value ${urgente.length?'danger-text':''}">${urgente.length}</div>
+      <div class="kpi-sub">${fmt(urgente.reduce((s,r)=>s+(r.total||0),0))}</div>
+    </div>
+    <div class="kpi-card ${alta.length?'warn':''}">
+      <div class="kpi-label">Alta</div>
+      <div class="kpi-value ${alta.length?'warn-text':''}">${alta.length}</div>
+      <div class="kpi-sub">${fmt(alta.reduce((s,r)=>s+(r.total||0),0))}</div>
+    </div>
+    <div class="kpi-card ${v90.length?'danger':''}">
+      <div class="kpi-label">+90 Días</div>
+      <div class="kpi-value ${v90.length?'danger-text':''}">${v90.length}</div>
+      <div class="kpi-sub">Riesgo incobrabilidad</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Sin Contacto</div>
+      <div class="kpi-value">${_invoices.filter(r=>!r.last_contact_at).length}</div>
+      <div class="kpi-sub">Primer contacto pendiente</div>
+    </div>
+  `;
+}
+
+function getFiltered() {
+  if (_filter === 'all') return _invoices;
+  if (_filter === 'vencida') return _invoices.filter(r => (r.days_overdue||0) > 30);
+  return _invoices.filter(r => r.collection_priority === _filter);
+}
+
+function setFilter(f, btn) {
+  _filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderQueue();
+}
+
+function renderQueue() {
+  const rows = getFiltered();
+  const tbody = document.getElementById('queue-tbody');
+  const cnt   = document.getElementById('queue-count');
+  if (!tbody) return;
+  if (cnt) cnt.textContent = `(${rows.length})`;
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><big>✅</big>Sin facturas en esta categoría</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const d = r.days_overdue || 0;
+    const daysCls = d > 90 ? 'days-badge-crit' : d > 30 ? 'days-badge-warn' : '';
+    const priClass = r.collection_priority === 'urgente' ? 'pri-urgente'
+                   : r.collection_priority === 'alta'    ? 'pri-alta'
+                   : r.collection_priority === 'normal'  ? 'pri-normal'
+                   : 'pri-baja';
+    const priLabel = r.collection_priority || 'normal';
+    const lastC = r.last_contact_at
+      ? `<span class="contact-tag">${new Date(r.last_contact_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short'})}</span>`
+      : '<span style="color:var(--text-faint);font-size:11px">—</span>';
+    const checked = _selected.has(r.id) ? 'checked' : '';
+    const selCls  = _selected.has(r.id) ? 'selected' : '';
+    return `<tr class="${selCls}" id="row-${r.id}">
+      <td><input type="checkbox" class="inv-check" ${checked} onchange="toggleRow('${r.id}',this)"></td>
+      <td><span class="${priClass}">${priLabel}</span></td>
+      <td style="font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.customer_name)}">${esc(r.customer_name)}</td>
+      <td style="font-family:monospace;font-size:11px">${esc(r.folio)}</td>
+      <td>${fmtD(r.due_date)}</td>
+      <td><span class="${daysCls}">${d}d</span></td>
+      <td class="amount-col">${fmt(r.total)}</td>
+      <td>${lastC}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-tiny primary" onclick="selectAndGenerate('${r.id}')">✉ Mensaje</button>
+          <button class="btn-tiny" onclick="markPaid('${r.id}')">✓ Pagar</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  updateSelInfo();
+}
+
+function toggleRow(id, chk) {
+  if (chk.checked) _selected.add(id); else _selected.delete(id);
+  const row = document.getElementById('row-'+id);
+  if (row) row.classList.toggle('selected', chk.checked);
+  updateSelInfo();
+}
+
+function toggleAll(chk) {
+  getFiltered().forEach(r => {
+    if (chk.checked) _selected.add(r.id); else _selected.delete(r.id);
+    const cb = document.querySelector(`input[onchange*="${r.id}"]`);
+    if (cb) cb.checked = chk.checked;
+    const row = document.getElementById('row-'+r.id);
+    if (row) row.classList.toggle('selected', chk.checked);
+  });
+  updateSelInfo();
+}
+
+function updateSelInfo() {
+  const el = document.getElementById('sel-info');
+  if (!el) return;
+  if (!_selected.size) { el.textContent = 'Selecciona facturas para generar mensajes personalizados'; return; }
+  const selRows = _invoices.filter(r => _selected.has(r.id));
+  const total   = selRows.reduce((s,r) => s+(r.total||0), 0);
+  el.textContent = `${_selected.size} factura${_selected.size!==1?'s':''} seleccionada${_selected.size!==1?'s':''} · ${fmt(total)} total`;
+}
+
+function selectAndGenerate(id) {
+  _selected.clear();
+  _selected.add(id);
+  renderQueue();
+  generateMessage();
+  document.querySelector('.msg-panel')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+async function markPaid(id) {
+  if (!confirm('¿Marcar como pagada?')) return;
+  const { error } = await _db.from('invoices_out').update({
+    status:'pagada', payment_date: new Date().toISOString().split('T')[0], updated_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { alert('Error: '+error.message); return; }
+  _selected.delete(id);
+  await loadInvoices();
+}
+
+async function markContacted() {
+  if (!_selected.size) { alert('Selecciona al menos una factura.'); return; }
+  const now = new Date().toISOString();
+  const msg = document.getElementById('msg-output')?.textContent?.trim() || null;
+  for (const id of _selected) {
+    await _db.from('invoices_out').update({
+      last_contact_at: now,
+      ai_collection_note: msg ? msg.slice(0,500) : null,
+      updated_at: now,
+    }).eq('id', id);
+  }
+  _selected.clear();
+  await loadInvoices();
+}
+
+/* ── Priorizar: algoritmo JS determinista (cero tokens) ── */
+function calcPriority(daysOverdue, amount) {
+  const d = daysOverdue || 0;
+  const m = amount      || 0;
+  if (d > 90 || (d > 60 && m > 100000)) return 'urgente';
+  if (d > 60 || (d > 30 && m >  50000)) return 'alta';
+  if (d > 30)                            return 'normal';
+  return 'baja';
+}
+
+async function prioritizeWithAI() {
+  if (!_invoices.length) { alert('No hay facturas vencidas para priorizar.'); return; }
+  const btn = document.getElementById('btn-prioritize');
+  btn.disabled = true; btn.innerHTML = '⏳ Priorizando...';
+
+  try {
+    const updates = _invoices.map(r => ({
+      id:       r.id,
+      priority: calcPriority(r.days_overdue, r.total),
+    }));
+    // Actualizar solo los que cambian
+    const changed = updates.filter(u => {
+      const cur = _invoices.find(r => r.id === u.id)?.collection_priority || 'normal';
+      return cur !== u.priority;
+    });
+    for (const u of changed) {
+      await _db.from('invoices_out').update({ collection_priority: u.priority }).eq('id', u.id);
+    }
+    await loadInvoices();
+  } catch(e) {
+    alert('Error al priorizar: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.innerHTML = '⚡ Priorizar';
+  }
+}
+
+/* ── Plantillas de mensajes (cero tokens) ── */
+const MSG_TEMPLATES = {
+  recordatorio: (d) =>
+`Estimado(a) ${d.cliente}:
+
+Por medio del presente, le recordamos cordialmente que contamos con la siguiente factura pendiente de pago:
+
+  • Folio:       ${d.folio}
+  • Monto:       ${d.monto}
+  • Vencimiento: ${d.vencimiento}
+  • Días atraso: ${d.dias} día(s)
+
+Le agradecemos gestionar el pago a la brevedad. Para realizarlo:
+
+  Banco:       BANAMEX
+  CLABE:       002180700123456789
+  Beneficiario: IBANOR SA de CV
+  Referencia:  ${d.folio}
+
+Para cualquier aclaración comuníquese al 55 1234 5678 o a cobranza@ibanor.com.mx.
+
+Atentamente,
+Departamento de Cobranza — IBANOR SA de CV / MetaTronix`,
+
+  urgente: (d) =>
+`AVISO URGENTE DE PAGO
+
+${d.cliente}
+
+Le notificamos que la siguiente factura se encuentra VENCIDA y requiere pago inmediato:
+
+  ▸ Folio:       ${d.folio}
+  ▸ Monto:       ${d.monto}
+  ▸ Vencimiento: ${d.vencimiento}
+  ▸ Días atraso: ${d.dias}
+
+Solicitamos liquidar este adeudo en un plazo no mayor a 48 horas para evitar cargos adicionales.
+
+Datos de pago: BANAMEX | CLABE 002180700123456789 | Ref: ${d.folio}
+Si ya pagó, envíe comprobante a cobranza@ibanor.com.mx.
+
+Cobranza IBANOR SA de CV — Tel: 55 1234 5678`,
+
+  ultimatum: (d) =>
+`ÚLTIMO AVISO — ACCIÓN LEGAL INMINENTE
+
+${d.cliente}
+
+A pesar de nuestras comunicaciones previas, la siguiente obligación permanece sin liquidar:
+
+  Folio:       ${d.folio}
+  Importe:     ${d.monto}
+  Vencimiento: ${d.vencimiento}
+  Días atraso: ${d.dias}
+
+De no recibir el pago en 5 días hábiles, procederemos a:
+  1. Reportar el adeudo ante el Buró de Crédito
+  2. Iniciar proceso jurídico de recuperación
+  3. Aplicar intereses moratorios conforme a contrato
+
+Para evitar estas consecuencias realice su pago:
+  BANAMEX | CLABE 002180700123456789 | Ref: ${d.folio}
+
+O llame urgentemente al 55 1234 5678.
+
+Dirección Jurídica — IBANOR SA de CV`,
+
+  whatsapp: (d) =>
+`Hola ${d.cliente} 👋
+
+Te escribimos de IBANOR SA de CV. Tenemos pendiente la factura *${d.folio}* por *${d.monto}* con *${d.dias} días* de atraso.
+
+¿Cuándo podemos esperar el pago? 🙏
+
+Datos para transferir:
+🏦 BANAMEX
+📋 CLABE: 002180700123456789
+💼 IBANOR SA de CV — Ref: ${d.folio}
+
+Si ya pagaste, mándanos el comprobante aquí. ¡Gracias! 😊`,
+
+  email_formal: (d) =>
+`Asunto: Aviso de Pago Pendiente – Folio ${d.folio} – IBANOR SA de CV
+
+${d.cliente}:
+
+El Departamento de Finanzas y Cobranza de IBANOR SA de CV se dirige a usted para informarle sobre el saldo pendiente siguiente:
+
+  Número de Factura:  ${d.folio}
+  Importe Total:      ${d.monto}
+  Fecha de Vencimiento: ${d.vencimiento}
+  Días de Mora:       ${d.dias}
+
+Solicitamos respetuosamente que realice la liquidación del adeudo a la brevedad, a fin de mantener la continuidad de los servicios y la relación comercial vigente.
+
+Datos bancarios para su pago:
+  Institución:  Banco Nacional de México (BANAMEX)
+  Beneficiario: IBANOR SA de CV
+  CLABE:        002180700123456789
+  Referencia:   ${d.folio}
+
+Una vez realizado el depósito, agradeceremos enviar el comprobante a cobranza@ibanor.com.mx para su correcta aplicación en nuestros registros.
+
+Para cualquier aclaración comuníquese al 55 1234 5678.
+
+Sin otro particular, reiteramos las seguridades de nuestra más atenta consideración.
+
+Lic. María García López
+Directora de Cobranza y Crédito
+IBANOR SA de CV / MetaTronix
+cobranza@ibanor.com.mx | metatronixleads.tech`,
+
+  negociacion: (d) =>
+`Estimado ${d.cliente}:
+
+Con el objetivo de facilitar la regularización del adeudo, le presentamos la siguiente propuesta para la factura ${d.folio} por ${d.monto}:
+
+OPCIÓN A — Descuento por pago inmediato
+  Pago de contado en 5 días hábiles con 3% de descuento.
+
+OPCIÓN B — Plan de pagos a 3 meses (sin cargos)
+  • 40% al confirmar el convenio
+  • 30% a los 30 días
+  • 30% a los 60 días
+
+OPCIÓN C — Pago diferido 60 días
+  Pago total en 60 días con 2% mensual de interés moratorio.
+
+Para aceptar cualquier opción comuníquese antes del fin de semana:
+  Tel: 55 1234 5678 | cobranza@ibanor.com.mx
+
+Datos bancarios: BANAMEX | CLABE 002180700123456789 | Ref: ${d.folio}
+
+Gerencia de Cobranza — IBANOR SA de CV / MetaTronix`,
+};
+
+function generateMessage() {
+  if (!_selected.size) { alert('Selecciona al menos una factura.'); return; }
+  const selRows = _invoices.filter(r => _selected.has(r.id));
+  const tipo = document.getElementById('msg-type')?.value || 'recordatorio';
+  const out  = document.getElementById('msg-output');
+  if (!out) return;
+
+  const fn = MSG_TEMPLATES[tipo] || MSG_TEMPLATES.recordatorio;
+
+  const messages = selRows.map(r => {
+    const data = {
+      cliente:     r.customer_name,
+      folio:       r.folio,
+      monto:       fmt(r.total),
+      vencimiento: fmtD(r.due_date),
+      dias:        r.days_overdue || 0,
+    };
+    return fn(data);
+  });
+
+  out.textContent = messages.join('\n\n' + '─'.repeat(60) + '\n\n');
+  out.scrollTop = 0;
+}
+
+function copyMessage() {
+  const txt = document.getElementById('msg-output')?.textContent||'';
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.querySelector('.btn-outline[onclick="copyMessage()"]');
+    if (btn) { btn.textContent = '✓ Copiado'; setTimeout(()=>btn.textContent='📋 Copiar', 2000); }
+  }).catch(() => alert('No se pudo copiar. Selecciona y copia manualmente.'));
+}
+
+function clearMsg() {
+  const out = document.getElementById('msg-output');
+  if (out) out.innerHTML = '<div class="msg-placeholder">El mensaje generado por Claude aparecerá aquí.<br>Selecciona facturas arriba y elige el tipo de mensaje.</div>';
+}
+
+init();
+</script>
+</body>
+</html>

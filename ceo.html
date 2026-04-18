@@ -2,683 +2,716 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaTronix — CEO Command Center</title>
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>CEO Command Center — MetaTronix</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#050C12;--s1:#080F17;--s2:#0B1520;--s3:#0F1D2B;
-  --border:rgba(255,255,255,.07);--accent:#00ff88;--cyan:#00C2E0;
-  --gold:#F59E0B;--danger:#EF4444;--purple:#8B5CF6;
-  --text:#E2E8F0;--muted:#7E8FA8;
-  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;--bebas:'Bebas Neue',sans-serif;
-}
-html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;height:100%;overflow:hidden}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=20260416">
+  <script src="/config.js?v=20260416"></script>
+  <script src="/assets/app.js?v=20260416"></script>
+  <style>
+    :root {
+      --green:  #00ff88;
+      --cyan:   #00e5ff;
+      --gold:   #ffb400;
+      --purple: #b966ff;
+      --red:    #ff4646;
+    }
 
-/* ── AUTH GATE ── */
-#auth-gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-.auth-spinner{width:32px;height:32px;border-radius:50%;border:2px solid rgba(0,255,136,.15);border-top-color:var(--accent);animation:spin .8s linear infinite}
-.auth-msg{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em}
+    /* ── Layout ── */
+    .ceo-root { display:flex; flex-direction:column; gap:28px; padding:28px; max-width:1500px; margin:0 auto; }
 
-/* ── SHELL ── */
-.ceo-shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+    /* ── Page header ── */
+    .page-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .page-header h1 { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:.06em; margin:0; }
+    .page-header p  { font-size:12px; color:var(--text-muted); margin:3px 0 0; }
+    .live-dot { display:inline-block; width:8px; height:8px; background:var(--green); border-radius:50%; animation:pulse 2s ease-in-out infinite; margin-right:8px; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* ── TOPBAR ── */
-.ceo-topbar{background:linear-gradient(90deg,var(--s1),var(--s2));border-bottom:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0}
-.topbar-logo{font-family:var(--bebas);font-size:20px;color:var(--accent);letter-spacing:.12em}
-.topbar-pipe{width:1px;height:18px;background:var(--border)}
-.topbar-module{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
-.company-switcher{display:flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--muted);transition:all .15s}
-.company-switcher:hover{border-color:rgba(0,255,136,.25);color:var(--accent)}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
-.live-badge{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.06em}
-.live-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
-.user-chip{font-family:var(--mono);font-size:9px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border);padding:3px 10px;border-radius:20px}
-.topbar-nav a{font-family:var(--mono);font-size:9px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:4px;transition:all .15s;letter-spacing:.04em}
-.topbar-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+    /* ── KPI strip ── */
+    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+    .kpi-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:14px 18px;
+      position:relative; overflow:hidden;
+      transition:border-color .2s;
+    }
+    .kpi-card::after {
+      content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+      background:var(--kpi-color, var(--green)); opacity:.5;
+    }
+    .kpi-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
+    .kpi-value { font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:var(--kpi-color, var(--text)); margin:6px 0 2px; }
+    .kpi-sub   { font-size:11px; color:var(--text-muted); }
 
-/* ── KPI STRIP ── */
-.kpi-strip{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
-.kpi-tile{flex:1;min-width:100px;padding:10px 16px;border-right:1px solid var(--border);position:relative;cursor:default}
-.kpi-tile:last-child{border-right:none}
-.kpi-tile-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
-.kpi-tile-val{font-family:var(--bebas);font-size:22px;letter-spacing:.05em}
-.kpi-tile-delta{font-family:var(--mono);font-size:9px;margin-top:1px}
-.kpi-good{color:var(--accent)}.kpi-warn{color:var(--gold)}.kpi-bad{color:var(--danger)}.kpi-cyan{color:var(--cyan)}.kpi-purple{color:var(--purple)}
+    /* ── Agents grid ── */
+    .agents-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    @media(max-width:980px){ .agents-grid { grid-template-columns:1fr; } }
 
-/* ── MAIN GRID ── */
-.ceo-main{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);min-height:0}
+    /* ── Agent card ── */
+    .agent-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:12px;
+      display:flex; flex-direction:column;
+      overflow:hidden;
+      transition:border-color .2s, box-shadow .2s;
+    }
+    .agent-card:hover { border-color:var(--agent-color); box-shadow:0 0 20px -6px var(--agent-color); }
 
-/* ── AGENT PANEL ── */
-.agent-panel{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;min-height:0}
-.agent-header{padding:10px 14px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:linear-gradient(180deg,var(--s1) 0%,transparent 100%)}
-.agent-icon{font-size:18px;flex-shrink:0}
-.agent-meta{flex:1;min-width:0}
-.agent-name{font-family:var(--bebas);font-size:15px;letter-spacing:.08em}
-.agent-sub{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.06em;margin-top:1px}
-.agent-status{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid;flex-shrink:0}
-.status-ready{color:var(--accent);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.06)}
-.status-thinking{color:var(--gold);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)}
+    .agent-head {
+      padding:16px 20px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:12px;
+      background:linear-gradient(135deg, rgba(0,0,0,.4) 0%, transparent 100%);
+    }
+    .agent-icon {
+      width:42px; height:42px; border-radius:10px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px; flex-shrink:0;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .agent-meta { flex:1; min-width:0; }
+    .agent-name { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:.08em; color:var(--agent-color); }
+    .agent-role { font-size:11px; color:var(--text-muted); margin-top:1px; }
+    .agent-status {
+      font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px;
+      background:rgba(0,255,136,.08); color:var(--green); border:1px solid rgba(0,255,136,.2);
+    }
 
-/* Agent KPI mini-strip */
-.agent-kpis{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden}
-.akpi{flex:1;padding:6px 10px;border-right:1px solid var(--border);text-align:center}
-.akpi:last-child{border-right:none}
-.akpi-val{font-family:var(--bebas);font-size:16px}
-.akpi-lbl{font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:.06em;margin-top:1px}
+    .agent-body { padding:16px 20px; flex:1; display:flex; flex-direction:column; gap:12px; }
 
-/* Messages */
-.agent-messages{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px}
-.agent-messages::-webkit-scrollbar{width:3px}
-.agent-messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07);border-radius:2px}
-.msg-ai{background:var(--s2);border:1px solid var(--border);border-radius:4px 10px 10px 10px;padding:8px 10px;font-size:12px;line-height:1.6;color:var(--text);animation:fadeUp .3s ease}
-.msg-me{align-self:flex-end;background:rgba(0,194,224,.07);border:1px solid rgba(0,194,224,.15);border-radius:10px 4px 10px 10px;padding:7px 10px;font-size:12px;color:var(--text);max-width:85%;animation:fadeUp .2s ease}
-.msg-system-label{font-family:var(--mono);font-size:8px;color:var(--accent);letter-spacing:.1em;opacity:.6;align-self:center;padding:2px 0}
-.msg-stream-cursor{display:inline-block;width:2px;height:12px;background:var(--accent);animation:blink .7s step-end infinite;vertical-align:text-bottom;margin-left:1px}
+    /* Quick prompts */
+    .quick-prompts { display:flex; flex-wrap:wrap; gap:6px; }
+    .quick-chip {
+      padding:5px 12px; border-radius:20px; font-size:11px; font-weight:600;
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      color:var(--text-muted); cursor:pointer; transition:.15s; white-space:nowrap;
+    }
+    .quick-chip:hover { border-color:var(--agent-color); color:var(--agent-color); background:rgba(255,255,255,.06); }
 
-/* Input row */
-.agent-input-row{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border);background:var(--s2);flex-shrink:0}
-.agent-input{flex:1;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:var(--sans);font-size:12px;resize:none;line-height:1.4;transition:border-color .15s}
-.agent-input:focus{outline:none;border-color:rgba(0,255,136,.25)}
-.agent-input::placeholder{color:rgba(126,143,168,.4);font-size:11px}
-.agent-send{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);border-radius:6px;padding:0 12px;color:var(--accent);cursor:pointer;font-family:var(--mono);font-size:9px;letter-spacing:.06em;transition:all .15s;min-width:56px;display:flex;align-items:center;justify-content:center}
-.agent-send:hover:not(:disabled){background:rgba(0,255,136,.15)}
-.agent-send:disabled{opacity:.4;cursor:not-allowed}
+    /* Input */
+    .agent-input-wrap { display:flex; gap:8px; }
+    .agent-input {
+      flex:1; background:rgba(255,255,255,.04); border:1px solid var(--border);
+      border-radius:8px; padding:9px 14px; color:var(--text); font-size:12px;
+      font-family:inherit; resize:none; min-height:44px; max-height:100px;
+      transition:border-color .15s;
+    }
+    .agent-input:focus { outline:none; border-color:var(--agent-color); }
+    .agent-send {
+      padding:9px 16px; border-radius:8px; font-size:12px; font-weight:700;
+      background:var(--agent-color); color:#000; border:none;
+      cursor:pointer; transition:opacity .15s; white-space:nowrap;
+      align-self:flex-end;
+    }
+    .agent-send:hover:not(:disabled) { opacity:.85; }
+    .agent-send:disabled { opacity:.4; cursor:not-allowed; }
 
-/* Quick actions */
-.quick-actions{display:flex;gap:4px;padding:4px 10px;flex-wrap:wrap;border-bottom:1px solid var(--border);flex-shrink:0}
-.qa-btn{padding:3px 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--mono);font-size:8px;cursor:pointer;transition:all .15s;white-space:nowrap;letter-spacing:.03em}
-.qa-btn:hover{border-color:rgba(0,255,136,.3);color:var(--accent)}
+    /* Output */
+    .agent-output {
+      flex:1; min-height:180px; max-height:320px; overflow-y:auto;
+      background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:8px;
+      padding:14px 16px; font-size:12px; line-height:1.75; color:var(--text);
+    }
+    .agent-output.streaming { border-color:var(--agent-color); animation:glow-border 1.5s ease-in-out infinite; }
+    @keyframes glow-border { 0%,100%{border-color:var(--agent-color)} 50%{border-color:transparent} }
+    .agent-output h2,.agent-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--agent-color); letter-spacing:.05em; margin:8px 0 4px; }
+    .agent-output p  { margin:4px 0; }
+    .agent-output ul { margin:4px 0 4px 16px; }
+    .agent-output strong { color:#fff; }
+    .agent-output table { width:100%; border-collapse:collapse; margin:8px 0; font-size:11px; }
+    .agent-output th { padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); font-weight:700; }
+    .agent-output td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.05); }
+    .agent-placeholder { color:var(--text-faint); font-style:italic; text-align:center; padding:30px 16px; font-size:12px; }
 
-/* Typing dots */
-.typing-dots{display:inline-flex;gap:3px;align-items:center;padding:6px 0}
-.typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:typing-b .9s ease-in-out infinite}
-.typing-dots span:nth-child(2){animation-delay:.2s}
-.typing-dots span:nth-child(3){animation-delay:.4s}
-@keyframes typing-b{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+    .agent-footer { display:flex; justify-content:space-between; align-items:center; }
+    .agent-clear { font-size:11px; color:var(--text-faint); background:none; border:none; cursor:pointer; padding:2px 6px; }
+    .agent-clear:hover { color:var(--text-muted); }
+    .token-info { font-size:10px; color:var(--text-faint); font-family:monospace; }
 
-/* ── PANEL COLORS PER DIRECTOR ── */
-.panel-ventas .agent-name,.panel-ventas .akpi-val{color:var(--accent)}
-.panel-ventas .agent-status.status-ready{color:var(--accent)}
-.panel-marketing .agent-name,.panel-marketing .akpi-val{color:var(--cyan)}
-.panel-marketing .agent-status.status-ready{color:var(--cyan);border-color:rgba(0,194,224,.3);background:rgba(0,194,224,.06)}
-.panel-admin .agent-name,.panel-admin .akpi-val{color:var(--gold)}
-.panel-admin .agent-status.status-ready{color:var(--gold);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)}
-.panel-consejo .agent-name,.panel-consejo .akpi-val{color:var(--purple)}
-.panel-consejo .agent-status.status-ready{color:var(--purple);border-color:rgba(139,92,246,.3);background:rgba(139,92,246,.06)}
+    /* ── CEO Briefing full-width ── */
+    .ceo-briefing {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+    }
+    .briefing-head {
+      padding:16px 24px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+      background:linear-gradient(135deg, rgba(0,0,0,.4) 0%, transparent 100%);
+    }
+    .briefing-title { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:.06em; display:flex; align-items:center; gap:10px; }
+    .briefing-badge { font-size:10px; background:rgba(0,229,255,.08); color:var(--cyan); padding:3px 10px; border-radius:20px; border:1px solid rgba(0,229,255,.2); font-weight:700; }
+    .briefing-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
+    .briefing-output {
+      min-height:200px; max-height:500px; overflow-y:auto;
+      background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:8px;
+      padding:16px 20px; font-size:12px; line-height:1.8; color:var(--text);
+    }
+    .briefing-output.streaming { border-color:var(--cyan); }
+    .briefing-output h2 { font-family:'Bebas Neue',sans-serif; color:var(--cyan); letter-spacing:.06em; margin:10px 0 5px; font-size:18px; }
+    .briefing-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--gold); letter-spacing:.04em; margin:8px 0 4px; font-size:14px; }
+    .briefing-output p  { margin:4px 0; }
+    .briefing-output ul { margin:4px 0 4px 18px; }
+    .briefing-output table { width:100%; border-collapse:collapse; margin:10px 0; font-size:11px; }
+    .briefing-output th { background:rgba(0,229,255,.07); color:var(--cyan); padding:6px 10px; text-align:left; border-bottom:1px solid var(--border); }
+    .briefing-output td { padding:6px 10px; border-bottom:1px solid rgba(255,255,255,.04); }
+    .briefing-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn-brief {
+      padding:8px 18px; border-radius:7px; font-size:12px; font-weight:700;
+      background:var(--cyan); color:#000; border:none; cursor:pointer; transition:opacity .15s;
+      display:inline-flex; align-items:center; gap:6px;
+    }
+    .btn-brief:hover:not(:disabled) { opacity:.85; }
+    .btn-brief:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-brief.secondary { background:rgba(0,229,255,.1); color:var(--cyan); border:1px solid rgba(0,229,255,.25); }
+    .btn-brief.gold { background:var(--gold); color:#000; }
+    .btn-outline-sm {
+      padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600;
+      background:transparent; border:1px solid var(--border); color:var(--text-muted);
+      cursor:pointer; transition:.15s;
+    }
+    .btn-outline-sm:hover { border-color:var(--cyan); color:var(--text); }
 
-/* ── RESTRICTED ACCESS ── */
-.access-denied{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;text-align:center;padding:24px}
-.access-denied-icon{font-size:36px}
-.access-denied-title{font-family:var(--mono);font-size:11px;color:var(--danger)}
-.access-denied-msg{font-size:12px;color:var(--muted);line-height:1.6;max-width:280px}
-.access-denied-link{padding:6px 16px;border-radius:6px;border:1px solid rgba(0,255,136,.3);background:rgba(0,255,136,.06);color:var(--accent);text-decoration:none;font-family:var(--mono);font-size:9px}
-</style>
+    /* refresh info */
+    .refresh-info { font-size:11px; color:var(--text-faint); display:flex; align-items:center; gap:6px; }
+
+    .spin { display:inline-block; width:13px; height:13px; border:2px solid rgba(0,255,136,.25); border-top-color:var(--green); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .spin-cyan { border-color:rgba(0,229,255,.25); border-top-color:var(--cyan); }
+  </style>
 </head>
 <body>
 
-<div id="auth-gate">
-  <div class="auth-spinner"></div>
-  <div class="auth-msg">INICIALIZANDO CEO COMMAND CENTER…</div>
+<div id="app-root">
+  <div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>
 </div>
 
-<div class="ceo-shell" id="ceo-shell" style="display:none">
-
-  <!-- TOPBAR -->
-  <div class="ceo-topbar">
-    <div class="topbar-logo">MTX</div>
-    <div class="topbar-pipe"></div>
-    <div class="topbar-module">CEO COMMAND CENTER</div>
-    <div class="company-switcher" id="company-switcher" onclick="openCompanySwitcher()">
-      <span id="company-name">— cargando</span>
-      <span style="font-size:10px">▾</span>
-    </div>
-    <div class="topbar-right">
-      <div class="topbar-nav">
-        <a href="/home.html">Portal</a>
-        <a href="/consejo.html">Consejo IA</a>
-        <a href="/leads.html">CRM</a>
-        <a href="/admin.html">Admin</a>
-      </div>
-      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-      <div class="user-chip" id="user-chip">—</div>
-    </div>
-  </div>
-
-  <!-- KPI STRIP -->
-  <div class="kpi-strip" id="kpi-strip">
-    <div class="kpi-tile">
-      <div class="kpi-tile-label">Pipeline Total</div>
-      <div class="kpi-tile-val kpi-accent" id="kpi-pipeline">—</div>
-      <div class="kpi-tile-delta kpi-good" id="kpi-pipeline-d">cargando…</div>
-    </div>
-    <div class="kpi-tile">
-      <div class="kpi-tile-label">Deals Activos</div>
-      <div class="kpi-tile-val kpi-cyan" id="kpi-deals">—</div>
-      <div class="kpi-tile-delta kpi-cyan" id="kpi-deals-d">leads</div>
-    </div>
-    <div class="kpi-tile">
-      <div class="kpi-tile-label">Ganados (mes)</div>
-      <div class="kpi-tile-val kpi-good" id="kpi-won">—</div>
-      <div class="kpi-tile-delta kpi-good" id="kpi-won-d">cerrados</div>
-    </div>
-    <div class="kpi-tile">
-      <div class="kpi-tile-label">En Riesgo</div>
-      <div class="kpi-tile-val kpi-bad" id="kpi-risk">—</div>
-      <div class="kpi-tile-delta kpi-warn" id="kpi-risk-d">&gt;7 días sin mov.</div>
-    </div>
-    <div class="kpi-tile">
-      <div class="kpi-tile-label">Usuarios Activos</div>
-      <div class="kpi-tile-val kpi-purple" id="kpi-users">—</div>
-      <div class="kpi-tile-delta" id="kpi-users-d" style="color:var(--purple)">en el portal</div>
-    </div>
-    <div class="kpi-tile">
-      <div class="kpi-tile-label">Consultas IA Hoy</div>
-      <div class="kpi-tile-val kpi-good" id="kpi-ai">—</div>
-      <div class="kpi-tile-delta kpi-good" id="kpi-ai-d">agentes activos</div>
-    </div>
-  </div>
-
-  <!-- MAIN 2×2 GRID -->
-  <div class="ceo-main">
-
-    <!-- ── PANEL 1: DIRECTOR VENTAS ── -->
-    <div class="agent-panel panel-ventas" id="panel-ventas">
-      <div class="agent-header">
-        <div class="agent-icon">💰</div>
-        <div class="agent-meta">
-          <div class="agent-name">METAVENTAX AI</div>
-          <div class="agent-sub">DIRECTOR DE VENTAS · PIPELINE & REVENUE</div>
-        </div>
-        <div class="agent-status status-ready" id="status-ventas">LISTO</div>
-      </div>
-      <div class="agent-kpis" id="kpis-ventas">
-        <div class="akpi"><div class="akpi-val" id="av-pipeline">—</div><div class="akpi-lbl">Pipeline</div></div>
-        <div class="akpi"><div class="akpi-val" id="av-leads">—</div><div class="akpi-lbl">Leads</div></div>
-        <div class="akpi"><div class="akpi-val" id="av-won">—</div><div class="akpi-lbl">Ganados</div></div>
-        <div class="akpi"><div class="akpi-val" id="av-conv" style="color:var(--gold)">—</div><div class="akpi-lbl">Conversión</div></div>
-      </div>
-      <div class="quick-actions">
-        <button class="qa-btn" onclick="askAgent('ventas','¿Cuál es el estado actual del pipeline y qué deals debo priorizar esta semana?')">📊 Estado pipeline</button>
-        <button class="qa-btn" onclick="askAgent('ventas','¿Qué deals están en riesgo de perderse y qué acción tomar?')">⚠️ Deals en riesgo</button>
-        <button class="qa-btn" onclick="askAgent('ventas','Dame el forecast del mes y probabilidad de cerrar meta.')">🎯 Forecast mes</button>
-        <button class="qa-btn" onclick="askAgent('ventas','¿Qué estrategia de seguimiento recomiendas para los leads más calientes?')">🔥 Top leads</button>
-      </div>
-      <div class="agent-messages" id="msgs-ventas">
-        <div class="msg-ai">Soy tu Director de Ventas IA. Tengo acceso en tiempo real a tu pipeline, leads y métricas de conversión. ¿Qué necesitas analizar?</div>
-      </div>
-      <div class="agent-input-row">
-        <textarea class="agent-input" id="input-ventas" rows="1" placeholder="Pregunta sobre pipeline, forecast, deals…"></textarea>
-        <button class="agent-send" id="send-ventas" onclick="askAgent('ventas')">ENVIAR</button>
-      </div>
-    </div>
-
-    <!-- ── PANEL 2: DIRECTOR MARKETING ── -->
-    <div class="agent-panel panel-marketing" id="panel-marketing">
-      <div class="agent-header">
-        <div class="agent-icon">📣</div>
-        <div class="agent-meta">
-          <div class="agent-name">METAMKTX AI</div>
-          <div class="agent-sub">DIRECTOR DE MARKETING · CAMPAÑAS & AUDIENCIAS</div>
-        </div>
-        <div class="agent-status status-ready" id="status-marketing">LISTO</div>
-      </div>
-      <div class="agent-kpis" id="kpis-marketing">
-        <div class="akpi"><div class="akpi-val" id="am-oport">—</div><div class="akpi-lbl">Oportunidades</div></div>
-        <div class="akpi"><div class="akpi-val" id="am-fuentes">—</div><div class="akpi-lbl">Fuentes</div></div>
-        <div class="akpi"><div class="akpi-val" id="am-cpl" style="color:var(--cyan)">—</div><div class="akpi-lbl">CPL Prom.</div></div>
-        <div class="akpi"><div class="akpi-val" id="am-roi" style="color:var(--gold)">—</div><div class="akpi-lbl">ROI Aprox.</div></div>
-      </div>
-      <div class="quick-actions">
-        <button class="qa-btn" onclick="askAgent('marketing','¿Qué canales de captación de leads están funcionando mejor y cuáles debo potenciar?')">📈 Mejores canales</button>
-        <button class="qa-btn" onclick="askAgent('marketing','Dame ideas para una campaña de generación de leads para esta semana con $5K de presupuesto.')">💡 Campaña express</button>
-        <button class="qa-btn" onclick="askAgent('marketing','¿Cuál es mi buyer persona más rentable según los datos actuales?')">👤 Buyer persona</button>
-        <button class="qa-btn" onclick="askAgent('marketing','Analiza el embudo y dime en qué etapa pierdo más prospectos.')">🔻 Análisis embudo</button>
-      </div>
-      <div class="agent-messages" id="msgs-marketing">
-        <div class="msg-ai">Soy tu Director de Marketing IA. Analizo fuentes de leads, campañas y métricas de conversión. ¿Qué campaña o segmento necesitas revisar?</div>
-      </div>
-      <div class="agent-input-row">
-        <textarea class="agent-input" id="input-marketing" rows="1" placeholder="Campañas, audiencias, canales, ROI…"></textarea>
-        <button class="agent-send" id="send-marketing" onclick="askAgent('marketing')">ENVIAR</button>
-      </div>
-    </div>
-
-    <!-- ── PANEL 3: DIRECTOR ADMIN/OPS ── -->
-    <div class="agent-panel panel-admin" id="panel-admin">
-      <div class="agent-header">
-        <div class="agent-icon">⚙️</div>
-        <div class="agent-meta">
-          <div class="agent-name">METAOPS AI</div>
-          <div class="agent-sub">DIRECTOR DE OPERACIONES · EFICIENCIA & FINANZAS</div>
-        </div>
-        <div class="agent-status status-ready" id="status-admin">LISTO</div>
-      </div>
-      <div class="agent-kpis" id="kpis-admin">
-        <div class="akpi"><div class="akpi-val" id="ao-team">—</div><div class="akpi-lbl">Equipo</div></div>
-        <div class="akpi"><div class="akpi-val" id="ao-active" style="color:var(--gold)">—</div><div class="akpi-lbl">Activos Hoy</div></div>
-        <div class="akpi"><div class="akpi-val" id="ao-ai-queries">—</div><div class="akpi-lbl">Consultas IA</div></div>
-        <div class="akpi"><div class="akpi-val" id="ao-efficiency" style="color:var(--gold)">—</div><div class="akpi-lbl">Eficiencia</div></div>
-      </div>
-      <div class="quick-actions">
-        <button class="qa-btn" onclick="askAgent('admin','¿Qué miembros del equipo están más activos y quiénes necesitan seguimiento?')">👥 Actividad equipo</button>
-        <button class="qa-btn" onclick="askAgent('admin','Dame recomendaciones para mejorar la eficiencia operativa con el equipo actual.')">⚡ Eficiencia Musk</button>
-        <button class="qa-btn" onclick="askAgent('admin','¿Qué procesos podría automatizar con IA para reducir carga operativa?')">🤖 Automatización</button>
-        <button class="qa-btn" onclick="askAgent('admin','Analiza el uso de la plataforma y dime qué módulos tienen bajo adoption.')">📊 Adoption rate</button>
-      </div>
-      <div class="agent-messages" id="msgs-admin">
-        <div class="msg-ai">Soy tu Director de Operaciones IA. Monitoreo el equipo, uso de plataforma y eficiencia organizacional. Pregunta sobre cualquier proceso operativo.</div>
-      </div>
-      <div class="agent-input-row">
-        <textarea class="agent-input" id="input-admin" rows="1" placeholder="Equipo, eficiencia, procesos, finanzas…"></textarea>
-        <button class="agent-send" id="send-admin" onclick="askAgent('admin')">ENVIAR</button>
-      </div>
-    </div>
-
-    <!-- ── PANEL 4: CONSEJO EJECUTIVO ── -->
-    <div class="agent-panel panel-consejo" id="panel-consejo">
-      <div class="agent-header">
-        <div class="agent-icon">🏛</div>
-        <div class="agent-meta">
-          <div class="agent-name">CONSEJO EJECUTIVO IA</div>
-          <div class="agent-sub">30 CONSEJEROS FORBES · MODO CEO · DECISIÓN ESTRATÉGICA</div>
-        </div>
-        <div class="agent-status status-ready" id="status-consejo">LISTO</div>
-      </div>
-      <div class="agent-kpis">
-        <div class="akpi"><div class="akpi-val" style="color:var(--purple)">30</div><div class="akpi-lbl">Consejeros</div></div>
-        <div class="akpi"><div class="akpi-val" style="color:var(--purple)" id="ac-consensus">—</div><div class="akpi-lbl">Consenso</div></div>
-        <div class="akpi"><div class="akpi-val" style="color:var(--purple)" id="ac-mode">ESTRAT.</div><div class="akpi-lbl">Modo</div></div>
-        <div class="akpi"><div class="akpi-val" style="color:var(--gold)" id="ac-sessions">—</div><div class="akpi-lbl">Sesiones</div></div>
-      </div>
-      <div class="quick-actions">
-        <button class="qa-btn" onclick="askAgent('consejo','¿Cuál es la mejor estrategia para escalar revenue en los próximos 90 días?')">🚀 Escalar 90 días</button>
-        <button class="qa-btn" onclick="askAgent('consejo','¿Cuándo y cómo debería levantar mi próxima ronda o financiamiento?')">💰 Financiamiento</button>
-        <button class="qa-btn" onclick="askAgent('consejo','¿Qué decisión estratégica debería tomar esta semana para máximo impacto?')">⚡ Decisión clave</button>
-        <button class="qa-btn" onclick="askAgent('consejo','¿Cómo construyo una ventaja competitiva que sea defensible a 3 años?')">🏆 Ventaja competitiva</button>
-      </div>
-      <div class="agent-messages" id="msgs-consejo">
-        <div class="msg-ai">El Consejo Ejecutivo está disponible. 30 líderes Forbes analizarán tu decisión estratégica desde sus metodologías: Jobs, Musk, Bezos, Buffett y 26 más. Plantea tu reto.</div>
-      </div>
-      <div class="agent-input-row">
-        <textarea class="agent-input" id="input-consejo" rows="1" placeholder="Tu reto estratégico para el consejo…"></textarea>
-        <button class="agent-send" id="send-consejo" onclick="askAgent('consejo')">CONVOCAR</button>
-      </div>
-    </div>
-
-  </div><!-- /ceo-main -->
-</div><!-- /ceo-shell -->
-
-<script src="/assets/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/app.js?v=202604185"></script>
 <script>
-// ══════════════════════════════════════════════════════════════
-// CEO COMMAND CENTER — 4 Director Agents + Real Claude API
-// Restricted to: super_admin, admin
-// ══════════════════════════════════════════════════════════════
+'use strict';
+/* ═════════════════════════════════════════════════════
+   CEO COMMAND CENTER — 4 Director Agents + KPIs + Briefing
+   ═════════════════════════════════════════════════════ */
 
-let ceoUser   = null;
-let ceoRole   = null;
-let orgData   = {}; // loaded from Supabase
-const ALLOWED = ['super_admin', 'admin'];
+let _user = null;
+let _db   = null;
+let _kpis = {};
+let _refreshTimer = null;
+const _streaming = {};   // { agentId: bool }
 
-// ── AGENT SYSTEM PROMPTS ──────────────────────────────────────
-function buildAgentPrompt(agentType, question, data) {
-  const context = buildDataContext(data);
+const AGENTS = [
+  {
+    id:      'ventas',
+    name:    'MetaVentaX',
+    role:    'Director Comercial & Ventas IA',
+    icon:    '📈',
+    color:   '#00ff88',
+    system:  `Eres MetaVentaX, el Director Comercial IA de IBANOR SA de CV / MetaTronix.
+Tu especialidad: pipeline de ventas, leads, conversión, estrategia comercial B2B en México.
+Respondes en español, con datos precisos, recomendaciones accionables y métricas de negocio.
+Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
+    prompts: ['Estado del pipeline','Top 5 leads calientes','Forecast del mes','Estrategia de conversión','Análisis de objeciones'],
+  },
+  {
+    id:      'marketing',
+    name:    'MetaMKTX',
+    role:    'Director de Marketing & Crecimiento IA',
+    icon:    '🎯',
+    color:   '#00e5ff',
+    system:  `Eres MetaMKTX, el Director de Marketing IA de IBANOR SA de CV / MetaTronix.
+Tu especialidad: growth marketing, campañas digitales, posicionamiento de marca, generación de demanda B2B en México.
+Respondes en español con estrategias concretas, métricas de ROI y tácticas ejecutables.
+Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
+    prompts: ['Diagnóstico de canales','Plan de contenidos','Campaña generación leads','Análisis competitivo','ROI de marketing'],
+  },
+  {
+    id:      'ops',
+    name:    'MetaOps',
+    role:    'Director de Operaciones & Procesos IA',
+    icon:    '⚙️',
+    color:   '#ffb400',
+    system:  `Eres MetaOps, el Director de Operaciones IA de IBANOR SA de CV / MetaTronix.
+Tu especialidad: eficiencia operacional, procesos internos, KPIs de operación, mejora continua, supply chain y tecnología.
+Respondes en español con análisis de cuellos de botella, oportunidades de automatización y quick wins.
+Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
+    prompts: ['Diagnóstico operacional','Procesos a automatizar','KPIs de productividad','Reducción de costos','Roadmap tecnológico'],
+  },
+  {
+    id:      'admin',
+    name:    'MetaAdmin',
+    role:    'Director Administrativo & Financiero IA',
+    icon:    '💼',
+    color:   '#b966ff',
+    system:  `Eres MetaAdmin, el Director Administrativo y Financiero IA de IBANOR SA de CV / MetaTronix.
+Tu especialidad: flujo de caja, administración empresarial, cobranza, compras, cumplimiento fiscal México (SAT, CFDI, IVA), contratos.
+Respondes en español con análisis financiero ejecutivo, alertas de riesgo y recomendaciones de tesorería.
+Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
+    prompts: ['Estado financiero','Alertas de riesgo','Flujo de caja 30d','Prioridades de cobranza','Cumplimiento fiscal'],
+  },
+];
 
-  const AGENTS = {
-    ventas: {
-      persona: 'Eres el Director de Ventas IA de MetaTronix. Eres directo, orientado a números y resultados. Hablas como un VP de Ventas experimentado con metodología SPIN + Challenger Sales. Siempre das datos específicos cuando los tienes disponibles.',
-      focus: 'pipeline de ventas, leads, conversión, forecast, CRM, cierre de deals y estrategia comercial'
-    },
-    marketing: {
-      persona: 'Eres el Director de Marketing IA de MetaTronix. Piensas en términos de CAC, LTV, ROI y embudo de conversión. Combinas creatividad con datos duros. Tu estilo es el de David Ogilvy meets Neil Patel.',
-      focus: 'campañas, captación de leads, posicionamiento de marca, canales digitales, buyer personas y ROI de marketing'
-    },
-    admin: {
-      persona: 'Eres el Director de Operaciones IA de MetaTronix. Piensas como Tim Cook: eficiencia extrema, cero desperdicio, sistemas escalables. Cada recomendación tiene métricas de impacto y un plan de implementación.',
-      focus: 'eficiencia operativa, gestión del equipo, procesos, automatización, finanzas operativas y KPIs organizacionales'
-    },
-    consejo: {
-      persona: 'Eres el Consejo Ejecutivo IA formado por 30 líderes empresariales Forbes: Steve Jobs, Elon Musk, Jeff Bezos, Warren Buffett, Jensen Huang, Ray Dalio, entre otros. Para cada decisión, 5 consejeros responden desde su perspectiva única y luego hay una síntesis de consenso.',
-      focus: 'decisiones estratégicas de alto impacto, visión empresarial, crecimiento, financiamiento y ventaja competitiva'
-    }
-  };
+async function init() {
+  _user = await requireAuth(true);
+  if (!_user) return;
 
-  const agent = AGENTS[agentType] || AGENTS.ventas;
-
-  if (agentType === 'consejo') {
-    return `${agent.persona}
-
-DATOS DE LA EMPRESA:
-${context}
-
-PREGUNTA DEL CEO: "${question}"
-
-Responde como 4 consejeros distintos (con nombre, empresa y perspectiva real) + una síntesis de consenso. Usa formato:
-
-🏷️ **NOMBRE — EMPRESA**
-[2-3 oraciones con su perspectiva auténtica]
-▸ Confianza: X% | Riesgo: Y% | Plazo: Z
-
-[repite para 4 consejeros]
-
-⚡ **SÍNTESIS DEL CONSEJO**
-[2-3 oraciones de consenso con las 2-3 acciones más votadas]
-
-Sé específico al contexto de la empresa. Máximo 350 palabras.`;
+  // Solo admin y super_admin
+  const role = _user?.profile?.role;
+  if (!['admin','super_admin'].includes(role)) {
+    window.location.href = '/dashboard.html';
+    return;
   }
 
-  return `${agent.persona}
+  _db = getDB();
+  document.getElementById('app-root').innerHTML = buildShell();
+  if (typeof renderHeader === 'function') {
+    document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'ceo');
+  }
+  if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
 
-DATOS EN TIEMPO REAL DE LA EMPRESA:
-${context}
-
-PREGUNTA DEL CEO: "${question}"
-
-Responde como el ${agentType === 'ventas' ? 'Director de Ventas' : agentType === 'marketing' ? 'Director de Marketing' : 'Director de Operaciones'} IA.
-Sé directo y específico. Usa los datos disponibles. Incluye al menos 1 acción concreta e inmediata.
-Máximo 200 palabras. Sin relleno.`;
+  await loadKPIs();
+  _refreshTimer = setInterval(loadKPIs, 120_000); // auto-refresh cada 2 min
 }
 
-function buildDataContext(data) {
-  if (!data || !Object.keys(data).length) return 'Datos aún cargando — responde con tu mejor criterio experto.';
-
+function buildShell() {
   return `
-- Pipeline total: ${data.pipeline_total || '—'}
-- Deals activos: ${data.deals_count || '—'} leads en CRM
-- Ganados este mes: ${data.won_count || '—'} deals
-- En riesgo (sin movimiento +7 días): ${data.risk_count || '—'}
-- Equipo activo hoy: ${data.active_today || '—'} usuarios
-- Total usuarios portal: ${data.total_users || '—'}
-- Fuentes de leads: ${data.lead_sources || '—'}
-- Consultas IA (mes): ${data.ai_queries || '—'}
-`.trim();
+  <div style="display:flex;min-height:100vh">
+    <div id="sidebar-slot"></div>
+    <main style="flex:1;overflow:auto">
+      <div class="ceo-root">
+
+        <!-- Header -->
+        <div class="page-header">
+          <div>
+            <h1><span class="live-dot"></span>CEO Command Center</h1>
+            <p>Panel ejecutivo en tiempo real · Agentes directivos IA · MetaTronix / IBANOR SA de CV</p>
+          </div>
+          <div class="refresh-info">
+            <span id="last-refresh">Cargando...</span>
+            <button class="btn-outline-sm" onclick="loadKPIs()" style="padding:5px 12px;font-size:11px">↺</button>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-strip" id="kpi-strip">
+          ${['Pipeline','Deals Activos','Ganados Mes','En Riesgo','Usuarios','IA Queries'].map(l =>
+            `<div class="kpi-card"><div class="kpi-label">${l}</div><div class="kpi-value" style="color:var(--text-faint);font-size:18px">—</div></div>`
+          ).join('')}
+        </div>
+
+        <!-- Agents grid -->
+        <div class="agents-grid">
+          ${AGENTS.map(a => buildAgentCard(a)).join('')}
+        </div>
+
+        <!-- CEO Briefing -->
+        <div class="ceo-briefing">
+          <div class="briefing-head">
+            <div class="briefing-title">
+              🧠 Briefing Ejecutivo CEO <span class="briefing-badge">Claude — Análisis Estratégico</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-outline-sm" onclick="clearBriefing()">✕ Limpiar</button>
+            </div>
+          </div>
+          <div class="briefing-body">
+            <div class="briefing-output" id="briefing-out">
+              <div class="agent-placeholder">El briefing ejecutivo integra KPIs y contexto de todos los directores.<br>Selecciona el tipo de análisis para generar.</div>
+            </div>
+            <div class="briefing-actions">
+              <button class="btn-brief" id="btn-daily" onclick="generateBriefing('daily')">⚡ Briefing Diario</button>
+              <button class="btn-brief secondary" id="btn-strategy" onclick="generateBriefing('strategy')">🎯 Revisión Estratégica</button>
+              <button class="btn-brief gold" id="btn-risk" onclick="generateBriefing('risk')">🚨 Análisis de Riesgos</button>
+              <button class="btn-outline-sm" id="btn-week" onclick="generateBriefing('week')">📊 Cierre Semana</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>`;
 }
 
-// ── SEND/RECEIVE MESSAGES ─────────────────────────────────────
-const sending = { ventas: false, marketing: false, admin: false, consejo: false };
+function buildAgentCard(a) {
+  return `
+  <div class="agent-card" style="--agent-color:${a.color}">
+    <div class="agent-head">
+      <div class="agent-icon">${a.icon}</div>
+      <div class="agent-meta">
+        <div class="agent-name">${a.name}</div>
+        <div class="agent-role">${a.role}</div>
+      </div>
+      <div class="agent-status">● ACTIVO</div>
+    </div>
+    <div class="agent-body">
+      <div class="quick-prompts">
+        ${a.prompts.map(p => `<button class="quick-chip" onclick="askAgent('${a.id}','${p.replace(/'/g,"\\'")}')">→ ${p}</button>`).join('')}
+      </div>
+      <div class="agent-input-wrap">
+        <textarea class="agent-input" id="input-${a.id}"
+          placeholder="Pregunta al ${a.name}..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAgent('${a.id}')}"
+          rows="2"></textarea>
+        <button class="agent-send" id="send-${a.id}" onclick="sendAgent('${a.id}')" style="background:${a.color}">
+          ▶ Enviar
+        </button>
+      </div>
+      <div class="agent-output" id="out-${a.id}" style="--agent-color:${a.color}">
+        <div class="agent-placeholder">Listo para responder · ${a.name}</div>
+      </div>
+      <div class="agent-footer">
+        <button class="agent-clear" onclick="clearAgent('${a.id}')">✕ Limpiar</button>
+        <span class="token-info" id="tokens-${a.id}"></span>
+      </div>
+    </div>
+  </div>`;
+}
 
-async function askAgent(type, quickQ) {
-  if (sending[type]) return;
-  const input = document.getElementById(`input-${type}`);
-  const question = quickQ || input?.value?.trim();
-  if (!question) return;
-  if (input && !quickQ) input.value = '';
-
-  sending[type] = true;
-  const btn = document.getElementById(`send-${type}`);
-  const statusEl = document.getElementById(`status-${type}`);
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
-  if (statusEl) { statusEl.textContent = 'PENSANDO'; statusEl.className = 'agent-status status-thinking'; }
-
-  const msgs = document.getElementById(`msgs-${type}`);
-
-  // User bubble
-  const userDiv = document.createElement('div');
-  userDiv.className = 'msg-me';
-  userDiv.textContent = question;
-  msgs.appendChild(userDiv);
-  msgs.scrollTop = msgs.scrollHeight;
-
-  // Typing indicator
-  const typingDiv = document.createElement('div');
-  typingDiv.className = 'msg-ai';
-  typingDiv.id = `typing-${type}`;
-  typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-  msgs.appendChild(typingDiv);
-  msgs.scrollTop = msgs.scrollHeight;
+/* ── KPIs ── */
+async function loadKPIs() {
+  const companyId = _user?.profile?.company_id;
+  const strip = document.getElementById('kpi-strip');
+  if (!strip) return;
 
   try {
-    const prompt = buildAgentPrompt(type, question, orgData);
-    let responseDiv = null;
+    const [leadsRes, profilesRes, actRes] = await Promise.all([
+      _db.from('leads')
+        .select('id,status,pipeline_value,created_at')
+        .eq('company_id', companyId)
+        .limit(1000),
+      _db.from('profiles')
+        .select('id,role')
+        .eq('company_id', companyId),
+      _db.from('activity_logs')
+        .select('id,created_at')
+        .eq('company_id', companyId)
+        .gte('created_at', new Date(Date.now()-30*864e5).toISOString())
+        .like('action', '%claude%')
+        .limit(500),
+    ]);
 
-    await new Promise((resolve, reject) => {
-      generateWithClaude(
-        [{ role: 'user', content: prompt }],
-        (chunk, full) => {
-          // First chunk — replace typing with real response
-          if (!responseDiv) {
-            document.getElementById(`typing-${type}`)?.remove();
-            responseDiv = document.createElement('div');
-            responseDiv.className = 'msg-ai';
-            msgs.appendChild(responseDiv);
-          }
-          responseDiv.innerHTML = formatMD(full) + '<span class="msg-stream-cursor"></span>';
-          msgs.scrollTop = msgs.scrollHeight;
-        },
-        (full) => {
-          if (responseDiv) {
-            responseDiv.innerHTML = formatMD(full);
-          }
-          resolve();
-        },
-        (err) => reject(new Error(err))
-      );
+    const leads    = leadsRes.data  || [];
+    const profiles = profilesRes.data || [];
+    const acts     = actRes.data    || [];
+
+    const now      = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const pipeline    = leads.filter(l => !['ganado','perdido','cancelado'].includes(l.status))
+                             .reduce((s,l) => s + (l.pipeline_value||0), 0);
+    const activos     = leads.filter(l => !['ganado','perdido','cancelado'].includes(l.status)).length;
+    const ganadosMes  = leads.filter(l => l.status === 'ganado' && l.created_at >= monthStart).length;
+    const enRiesgo    = leads.filter(l => l.status === 'en_riesgo' || l.status === 'perdido').length;
+    const usuarios    = profiles.length;
+    const aiQueries   = acts.length;
+
+    _kpis = { pipeline, activos, ganadosMes, enRiesgo, usuarios, aiQueries };
+
+    const fmt = n => n >= 1e6
+      ? '$' + (n/1e6).toFixed(1) + 'M'
+      : n >= 1e3 ? '$' + (n/1e3).toFixed(0) + 'K'
+      : '$' + n.toFixed(0);
+
+    strip.innerHTML = `
+      <div class="kpi-card" style="--kpi-color:${pipeline>0?'#00ff88':'#888'}">
+        <div class="kpi-label">Pipeline Total</div>
+        <div class="kpi-value">${fmt(pipeline)}</div>
+        <div class="kpi-sub">${activos} deals activos</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:#00e5ff">
+        <div class="kpi-label">Deals Activos</div>
+        <div class="kpi-value">${activos}</div>
+        <div class="kpi-sub">En proceso</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:#00ff88">
+        <div class="kpi-label">Ganados Mes</div>
+        <div class="kpi-value">${ganadosMes}</div>
+        <div class="kpi-sub">Deals cerrados</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:${enRiesgo>0?'#ff4646':'#888'}">
+        <div class="kpi-label">En Riesgo</div>
+        <div class="kpi-value" style="color:${enRiesgo>0?'#ff4646':'inherit'}">${enRiesgo}</div>
+        <div class="kpi-sub">Requieren atención</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:#b966ff">
+        <div class="kpi-label">Usuarios</div>
+        <div class="kpi-value">${usuarios}</div>
+        <div class="kpi-sub">En plataforma</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:#ffb400">
+        <div class="kpi-label">IA Queries</div>
+        <div class="kpi-value">${aiQueries}</div>
+        <div class="kpi-sub">Últimos 30 días</div>
+      </div>
+    `;
+
+    const el = document.getElementById('last-refresh');
+    if (el) el.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    console.warn('loadKPIs:', e);
+    const el = document.getElementById('last-refresh');
+    if (el) el.textContent = 'Error cargando KPIs';
+  }
+}
+
+/* ── Agent interaction ── */
+function askAgent(agentId, prompt) {
+  const input = document.getElementById('input-'+agentId);
+  if (input) { input.value = prompt; input.focus(); }
+  sendAgent(agentId);
+}
+
+async function sendAgent(agentId) {
+  if (_streaming[agentId]) return;
+  const input   = document.getElementById('input-'+agentId);
+  const out     = document.getElementById('out-'+agentId);
+  const sendBtn = document.getElementById('send-'+agentId);
+  const tokEl   = document.getElementById('tokens-'+agentId);
+  if (!input || !out) return;
+
+  const question = input.value.trim();
+  if (!question) return;
+
+  const agent = AGENTS.find(a => a.id === agentId);
+  if (!agent) return;
+
+  _streaming[agentId] = true;
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<span class="spin"></span>';
+  out.classList.add('streaming');
+  out.innerHTML = `<div style="color:var(--text-faint);font-size:12px;display:flex;align-items:center;gap:8px"><span class="spin"></span> ${agent.name} está procesando...</div>`;
+  input.value = '';
+
+  // Build context with KPIs
+  const kpiCtx = _kpis.pipeline !== undefined ? `
+CONTEXTO EJECUTIVO (datos en tiempo real):
+- Pipeline comercial: $${(_kpis.pipeline||0).toLocaleString('es-MX')} MXN
+- Deals activos: ${_kpis.activos||0}
+- Ganados este mes: ${_kpis.ganadosMes||0}
+- En riesgo/perdidos: ${_kpis.enRiesgo||0}
+- Usuarios plataforma: ${_kpis.usuarios||0}
+- AI queries (30d): ${_kpis.aiQueries||0}
+` : '';
+
+  const fullPrompt = kpiCtx + '\nPREGUNTA DEL CEO: ' + question;
+
+  try {
+    const session = await getSession();
+    const jwt = session?.access_token || '';
+    const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
+    if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado en config.js');
+
+    const resp = await fetch(proxyUrl + '/groq', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        max_tokens:2048,
+        system: agent.system,
+        messages:[{role:'user', content:fullPrompt}],
+        stream:true,
+      }),
+      signal:AbortSignal.timeout(90000),
     });
 
-  } catch (err) {
-    document.getElementById(`typing-${type}`)?.remove();
-    const errDiv = document.createElement('div');
-    errDiv.className = 'msg-ai';
-    errDiv.style.color = 'var(--danger)';
-    errDiv.textContent = `⚠️ Error: ${err.message}`;
-    msgs.appendChild(errDiv);
-  }
-
-  if (btn) { btn.disabled = false; btn.textContent = type === 'consejo' ? 'CONVOCAR' : 'ENVIAR'; }
-  if (statusEl) { statusEl.textContent = 'LISTO'; statusEl.className = 'agent-status status-ready'; }
-  msgs.scrollTop = msgs.scrollHeight;
-  sending[type] = false;
-}
-
-// Minimal markdown formatting
-function formatMD(text) {
-  return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/▸/g,'<span style="color:var(--accent)">▸</span>')
-    .replace(/⚡/g,'<span style="color:var(--accent)">⚡</span>')
-    .replace(/🏷️/g,'<br><span style="color:var(--purple)">🏷️</span>')
-    .replace(/\n/g,'<br>');
-}
-
-// Enter to send per panel
-['ventas','marketing','admin','consejo'].forEach(type => {
-  const el = document.getElementById(`input-${type}`);
-  el?.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askAgent(type); }
-  });
-});
-
-// ── LOAD REAL KPIs FROM SUPABASE ─────────────────────────────
-async function loadKPIs() {
-  const db = getDB();
-  if (!db) return;
-
-  try {
-    // Leads / pipeline
-    const { data: leads } = await db.from('leads')
-      .select('id,value,stage,source,created_at,updated_at');
-
-    if (leads) {
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const sevenDaysAgo = new Date(now - 7 * 86400000);
-
-      const active    = leads.filter(l => !['ganado','perdido'].includes(l.stage?.toLowerCase()));
-      const won       = leads.filter(l => l.stage?.toLowerCase() === 'ganado' && new Date(l.updated_at) > startOfMonth);
-      const risk      = active.filter(l => new Date(l.updated_at) < sevenDaysAgo);
-      const pipeline  = active.reduce((s,l) => s + (Number(l.value)||0), 0);
-      const sources   = [...new Set(leads.map(l=>l.source).filter(Boolean))];
-
-      const fmt = n => n >= 1000000 ? `$${(n/1000000).toFixed(1)}M` : n >= 1000 ? `$${(n/1000).toFixed(0)}K` : `$${n}`;
-
-      // Top KPI strip
-      setText('kpi-pipeline', fmt(pipeline));
-      setText('kpi-pipeline-d', `${active.length} deals activos`);
-      setText('kpi-deals', active.length);
-      setText('kpi-won', won.length);
-      setText('kpi-won-d', `valor: ${fmt(won.reduce((s,l)=>s+(Number(l.value)||0),0))}`);
-      setText('kpi-risk', risk.length);
-
-      // Ventas mini-KPIs
-      setText('av-pipeline', fmt(pipeline));
-      setText('av-leads', leads.length);
-      setText('av-won', won.length);
-      const conv = leads.length ? Math.round((won.length / leads.length) * 100) : 0;
-      setText('av-conv', `${conv}%`);
-
-      // Marketing mini-KPIs
-      setText('am-oport', active.length);
-      setText('am-fuentes', sources.length || '—');
-      setText('am-cpl', '—');
-      setText('am-roi', '—');
-
-      orgData.pipeline_total = fmt(pipeline);
-      orgData.deals_count    = active.length;
-      orgData.won_count      = won.length;
-      orgData.risk_count     = risk.length;
-      orgData.lead_sources   = sources.slice(0,4).join(', ') || 'N/D';
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({error:resp.statusText}));
+      throw new Error(err.error || 'Error '+resp.status);
     }
-  } catch (_) {}
 
-  try {
-    // Users / team
-    const { data: profiles } = await db.from('profiles')
-      .select('id,is_active,last_seen,role');
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf=''; let html=''; let inputTokens=0; let outputTokens=0;
+    out.innerHTML = '';
 
-    if (profiles) {
-      const total = profiles.length;
-      const now = new Date();
-      const today = profiles.filter(p => {
-        const ls = new Date(p.last_seen);
-        return (now - ls) < 86400000;
-      }).length;
-
-      setText('kpi-users', total);
-      setText('ao-team', total);
-      setText('ao-active', today);
-
-      orgData.total_users  = total;
-      orgData.active_today = today;
+    while(true) {
+      const {done,value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value,{stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for(const line of lines) {
+        if(!line.startsWith('data:')) continue;
+        const d = line.slice(5).trim();
+        if(d==='[DONE]') break;
+        try {
+          const j = JSON.parse(d);
+          if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html += j.delta.text;
+          if(j.type==='message_start') { inputTokens = j.message?.usage?.input_tokens||0; }
+          if(j.type==='message_delta') { outputTokens = j.usage?.output_tokens||0; }
+        } catch {}
+      }
+      out.innerHTML = html;
+      out.scrollTop = out.scrollHeight;
     }
-  } catch (_) {}
-
-  try {
-    // AI queries this month
-    const { data: logs } = await db.from('activity_logs')
-      .select('id').eq('action','llm_query')
-      .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
-
-    if (logs) {
-      setText('kpi-ai', logs.length);
-      setText('ao-ai-queries', logs.length);
-      orgData.ai_queries = logs.length;
-    }
-  } catch (_) {}
-
-  setText('ao-efficiency', '—');
-  setText('ac-consensus', '72%');
-  setText('ac-sessions', orgData.ai_queries || '—');
-}
-
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-
-// ── COMPANY SWITCHER ─────────────────────────────────────────
-async function openCompanySwitcher() {
-  // Placeholder — full company switcher in next iteration
-  showToast?.('Switcher multi-empresa próximamente', 'info');
-}
-
-async function loadCompanyName() {
-  try {
-    const db = getDB();
-    const { data: p } = await db.from('profiles')
-      .select('company_id').eq('id', ceoUser.id).single();
-    const companyId = p?.company_id || 'metatronix';
-    const { data: c } = await db.from('companies').select('name').eq('id', companyId).single();
-    document.getElementById('company-name').textContent = c?.name || companyId.toUpperCase();
-  } catch (_) {
-    document.getElementById('company-name').textContent = 'METATRONIX';
+    out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta.</em>';
+    if(tokEl) tokEl.textContent = `${inputTokens}↑ ${outputTokens}↓ tokens`;
+  } catch(e) {
+    out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+  } finally {
+    _streaming[agentId] = false;
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = '▶ Enviar';
+    out.classList.remove('streaming');
   }
 }
 
-// ── AUTH & INIT ───────────────────────────────────────────────
-async function init() {
-  const db = getDB();
-  if (!db) { window.location.href = '/index.html'; return; }
+function clearAgent(agentId) {
+  const agent = AGENTS.find(a => a.id === agentId);
+  const out = document.getElementById('out-'+agentId);
+  const tok = document.getElementById('tokens-'+agentId);
+  if (out) out.innerHTML = `<div class="agent-placeholder">Listo para responder · ${agent?.name||''}</div>`;
+  if (tok) tok.textContent = '';
+}
+
+/* ── CEO Briefing ── */
+async function generateBriefing(type) {
+  const out = document.getElementById('briefing-out');
+  const btns = ['btn-daily','btn-strategy','btn-risk','btn-week'].map(id => document.getElementById(id));
+  if (!out) return;
+
+  btns.forEach(b => { if(b) b.disabled = true; });
+  out.classList.add('streaming');
+  out.innerHTML = `<div style="color:var(--text-faint);padding:20px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><span class="spin spin-cyan"></span> Generando análisis estratégico...</div>`;
+
+  const fecha = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const kpiCtx = `
+INDICADORES EJECUTIVOS — ${fecha}:
+• Pipeline comercial: $${(_kpis.pipeline||0).toLocaleString('es-MX')} MXN
+• Deals activos: ${_kpis.activos||0} | Ganados mes: ${_kpis.ganadosMes||0} | En riesgo: ${_kpis.enRiesgo||0}
+• Usuarios en plataforma: ${_kpis.usuarios||0}
+• Consultas IA (30d): ${_kpis.aiQueries||0}
+`;
+
+  const briefingTypes = {
+    daily: {
+      title: 'Briefing Diario CEO',
+      prompt: `Genera un BRIEFING DIARIO para el CEO de IBANOR SA de CV / MetaTronix:
+${kpiCtx}
+Estructura:
+<h2>📊 Estado del Negocio — ${fecha}</h2>
+<h3>Semáforo Ejecutivo</h3>
+<h3>Prioridades del Día (Top 3)</h3>
+<h3>Alertas que Requieren Decisión</h3>
+<h3>Métricas Clave vs. Objetivos</h3>
+<h3>Recomendación del Director IA</h3>
+Sé directo, ejecutivo y accionable. Máximo 400 palabras.`,
+    },
+    strategy: {
+      title: 'Revisión Estratégica',
+      prompt: `Genera una REVISIÓN ESTRATÉGICA para IBANOR SA de CV / MetaTronix:
+${kpiCtx}
+Estructura:
+<h2>🎯 Revisión Estratégica — ${fecha}</h2>
+<h3>Posición Competitiva Actual</h3>
+<h3>Oportunidades de Crecimiento Inmediatas</h3>
+<h3>Brechas Críticas a Cerrar</h3>
+<h3>Iniciativas Prioritarias Q2 2026</h3>
+<h3>Plan de 90 Días</h3>
+Piensa como McKinsey + Anthropic. Concreto, cuantificado, ejecutable.`,
+    },
+    risk: {
+      title: 'Análisis de Riesgos',
+      prompt: `Genera un ANÁLISIS DE RIESGOS EJECUTIVO para IBANOR SA de CV / MetaTronix:
+${kpiCtx}
+Estructura:
+<h2>🚨 Matriz de Riesgos Ejecutivos — ${fecha}</h2>
+Usa tabla HTML: Riesgo | Probabilidad | Impacto | Acción Mitigadora | Responsable
+<h3>Riesgos Críticos (acción inmediata)</h3>
+<h3>Riesgos Monitoreados</h3>
+<h3>Oportunidades Disfrazadas de Riesgo</h3>
+<h3>Decisiones Necesarias Esta Semana</h3>
+Cuantifica impactos en pesos cuando sea posible.`,
+    },
+    week: {
+      title: 'Cierre de Semana',
+      prompt: `Genera un INFORME DE CIERRE SEMANAL para IBANOR SA de CV / MetaTronix:
+${kpiCtx}
+Estructura:
+<h2>📊 Cierre Semanal — ${fecha}</h2>
+<h3>Logros de la Semana</h3>
+<h3>Métricas vs. Meta</h3>
+(tabla: Métrica | Real | Meta | Variación | Tendencia)
+<h3>Pendientes que Pasan a Próxima Semana</h3>
+<h3>Aprendizajes y Ajustes</h3>
+<h3>Agenda Prioritaria Semana Siguiente</h3>
+Ejecutivo, honesto, sin maquillaje de cifras.`,
+    },
+  };
+
+  const cfg = briefingTypes[type] || briefingTypes.daily;
 
   try {
-    const { data: { session } } = await db.auth.getSession();
-    if (!session) { window.location.href = '/index.html'; return; }
+    const session = await getSession();
+    const jwt = session?.access_token || '';
+    const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
+    if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado');
 
-    ceoUser = session.user;
-    let displayName = ceoUser.email?.split('@')[0] || 'Usuario';
+    const resp = await fetch(proxyUrl, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:3000,
+        system:`Eres el Chief Strategy Officer IA de IBANOR SA de CV / MetaTronix.
+Generas análisis ejecutivos de máxima calidad para el CEO.
+Tu perspectiva combina: pensamiento estratégico de McKinsey, mentalidad de producto de Steve Jobs, y rigor analítico de Anthropic.
+Formato: HTML semántico (h2, h3, p, ul, ol, table, strong, em). Sin DOCTYPE, html, head, body.`,
+        messages:[{role:'user', content:cfg.prompt}],
+        stream:true,
+      }),
+      signal:AbortSignal.timeout(120000),
+    });
 
-    try {
-      const { data: p } = await db.from('profiles').select('full_name,role').eq('id', ceoUser.id).single();
-      if (p?.full_name) displayName = p.full_name;
-      ceoRole = p?.role || 'user';
-    } catch(_) { ceoRole = 'user'; }
-
-    // Access check — only super_admin and admin
-    if (!ALLOWED.includes(ceoRole)) {
-      document.getElementById('auth-gate').innerHTML = `
-        <div style="text-align:center;font-family:'JetBrains Mono',monospace;gap:12px;display:flex;flex-direction:column;align-items:center">
-          <div style="font-size:32px">🔒</div>
-          <div style="font-size:12px;color:var(--danger)">ACCESO RESTRINGIDO</div>
-          <div style="font-size:11px;color:var(--muted)">El CEO Command Center requiere rol Director o superior.</div>
-          <a href="/home.html" style="padding:6px 18px;border-radius:6px;border:1px solid rgba(0,255,136,.3);background:rgba(0,255,136,.06);color:var(--accent);text-decoration:none;font-size:10px">← Volver al Portal</a>
-        </div>`;
-      return;
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({error:resp.statusText}));
+      throw new Error(err.error||'Error '+resp.status);
     }
 
-    document.getElementById('user-chip').textContent = displayName.toUpperCase();
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf=''; let html='';
+    out.innerHTML = '';
 
-    // Render header for sidebar (optional — ceo.html is standalone)
-    renderHeader(
-      { email: ceoUser.email, id: ceoUser.id, profile: { role: ceoRole, full_name: displayName } },
-      'ceo'
-    );
-
-    // Show
-    document.getElementById('auth-gate').style.display = 'none';
-    document.getElementById('ceo-shell').style.display = 'flex';
-
-    // Load data
-    await loadKPIs();
-    loadCompanyName();
-
-    // Log
-    db.from('activity_logs').insert({
-      user_id: ceoUser.id, action: 'page_view',
-      entity_type: 'page', entity_id: 'ceo',
-      metadata: { role: ceoRole }
-    }).catch(() => {});
-
-  } catch (err) {
-    console.error('CEO init error:', err);
-    window.location.href = '/index.html';
+    while(true) {
+      const {done,value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value,{stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for(const line of lines) {
+        if(!line.startsWith('data:')) continue;
+        const d = line.slice(5).trim();
+        if(d==='[DONE]') break;
+        try {
+          const j = JSON.parse(d);
+          if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html+=j.delta.text;
+        } catch {}
+      }
+      out.innerHTML = html;
+      out.scrollTop = out.scrollHeight;
+    }
+    out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta.</em>';
+  } catch(e) {
+    out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+  } finally {
+    btns.forEach(b => { if(b) b.disabled = false; });
+    out.classList.remove('streaming');
   }
 }
 
-window.addEventListener('DOMContentLoaded', init);
-// Refresh KPIs every 2 minutes
-setInterval(loadKPIs, 120000);
+function clearBriefing() {
+  const out = document.getElementById('briefing-out');
+  if (out) out.innerHTML = '<div class="agent-placeholder">El briefing ejecutivo integra KPIs y contexto de todos los directores.<br>Selecciona el tipo de análisis para generar.</div>';
+}
+
+init();
 </script>
 </body>
 </html>
