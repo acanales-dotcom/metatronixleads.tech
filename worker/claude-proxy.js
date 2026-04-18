@@ -11,9 +11,9 @@
 const ALLOWED_ORIGINS = [
   'https://metatronixleads.tech',
   'https://www.metatronixleads.tech',
-  'https://acanales-dotcom.github.io',
-  'http://localhost:8080',
-  'http://127.0.0.1:5500',
+  // localhost permitido SOLO en dev — eliminar antes de audit externo
+  // 'http://localhost:8080',
+  // 'http://127.0.0.1:5500',
 ];
 
 /* ── Security headers agregados a TODAS las respuestas ─────── */
@@ -84,6 +84,19 @@ function checkRateLimit(userId) {
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
+
+    // ── CORS enforcement: rechazar orígenes no permitidos ───
+    // Permitimos requests sin Origin (same-origin, curl directo desde server)
+    // Bloqueamos cualquier Origin que no esté en la whitelist
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      return new Response(JSON.stringify({ error: 'Origin no permitido' }), {
+        status: 403,
+        headers: {
+          'Content-Type': 'application/json',
+          ...SECURITY_HEADERS,
+        },
+      });
+    }
 
     // ── Preflight CORS ──────────────────────────────────────
     if (request.method === 'OPTIONS') {

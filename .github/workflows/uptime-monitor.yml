@@ -1,0 +1,155 @@
+name: 🔴 Uptime Monitor — MetaTronix
+
+on:
+  schedule:
+    # Cada 5 minutos (mínimo de GitHub Actions)
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Permite ejecución manual
+
+jobs:
+  check-uptime:
+    name: Check endpoints
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Check domain principal
+        id: domain
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://metatronixleads.tech/index.html" || echo "000")
+          echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
+          echo "Domain HTTP: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "301" ] && [ "$HTTP_STATUS" != "302" ]; then
+            echo "DOMAIN_DOWN=true" >> $GITHUB_ENV
+            echo "DOMAIN_STATUS=$HTTP_STATUS" >> $GITHUB_ENV
+          fi
+
+      - name: Check Cloudflare Worker (claude-proxy)
+        id: worker
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X OPTIONS \
+            -H "Origin: https://metatronixleads.tech" \
+            "https://claude-proxy.acanales-7d4.workers.dev" || echo "000")
+          echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
+          echo "Worker HTTP: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "204" ] && [ "$HTTP_STATUS" != "405" ]; then
+            echo "WORKER_DOWN=true" >> $GITHUB_ENV
+            echo "WORKER_STATUS=$HTTP_STATUS" >> $GITHUB_ENV
+          fi
+
+      - name: Check Supabase API
+        id: supabase
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            "https://hodrfonbpmqulkyzrzpq.supabase.co/rest/v1/" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" || echo "000")
+          echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
+          echo "Supabase HTTP: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "401" ]; then
+            echo "SUPABASE_DOWN=true" >> $GITHUB_ENV
+            echo "SUPABASE_STATUS=$HTTP_STATUS" >> $GITHUB_ENV
+          fi
+
+      - name: Check pages críticas (leads, marketing, admin)
+        id: pages
+        run: |
+          FAILED_PAGES=""
+          for PAGE in leads marketing admin dashboard home; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+              "https://metatronixleads.tech/${PAGE}.html" || echo "000")
+            echo "$PAGE: $STATUS"
+            if [ "$STATUS" != "200" ] && [ "$STATUS" != "301" ] && [ "$STATUS" != "302" ]; then
+              FAILED_PAGES="$FAILED_PAGES $PAGE($STATUS)"
+            fi
+          done
+          if [ -n "$FAILED_PAGES" ]; then
+            echo "PAGES_DOWN=true" >> $GITHUB_ENV
+            echo "FAILED_PAGES=$FAILED_PAGES" >> $GITHUB_ENV
+          fi
+
+      - name: 🚨 Crear Issue si hay caída
+        if: |
+          env.DOMAIN_DOWN == 'true' ||
+          env.WORKER_DOWN == 'true' ||
+          env.SUPABASE_DOWN == 'true' ||
+          env.PAGES_DOWN == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const now = new Date().toISOString();
+            const issues = [];
+            if (process.env.DOMAIN_DOWN === 'true')
+              issues.push(`🔴 **Dominio principal**: HTTP ${process.env.DOMAIN_STATUS}`);
+            if (process.env.WORKER_DOWN === 'true')
+              issues.push(`🔴 **Cloudflare Worker**: HTTP ${process.env.WORKER_STATUS}`);
+            if (process.env.SUPABASE_DOWN === 'true')
+              issues.push(`🔴 **Supabase API**: HTTP ${process.env.SUPABASE_STATUS}`);
+            if (process.env.PAGES_DOWN === 'true')
+              issues.push(`🔴 **Páginas caídas**: ${process.env.FAILED_PAGES}`);
+
+            // Verificar si ya existe un issue abierto de uptime
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['uptime-alert'],
+            });
+
+            if (existingIssues.data.length > 0) {
+              // Actualizar el issue existente con comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssues.data[0].number,
+                body: `## ⚠️ Alerta repetida: ${now}\n\n${issues.join('\n')}\n\n*Verificar: https://metatronixleads.tech*`,
+              });
+            } else {
+              // Crear nuevo issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 [UPTIME] Caída detectada — ${now.substring(0,16)}`,
+                body: `## Sistemas caídos detectados\n\n${issues.join('\n')}\n\n**Timestamp**: ${now}\n**Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n### Acciones inmediatas\n- Verificar GitHub Pages status: https://www.githubstatus.com\n- Verificar Cloudflare status: https://www.cloudflarestatus.com\n- Verificar Supabase status: https://status.supabase.com\n- Revisar logs en Cloudflare Workers dashboard`,
+                labels: ['uptime-alert', 'incident'],
+              });
+            }
+
+      - name: ✅ Cerrar issues de uptime si todo OK
+        if: |
+          env.DOMAIN_DOWN != 'true' &&
+          env.WORKER_DOWN != 'true' &&
+          env.SUPABASE_DOWN != 'true' &&
+          env.PAGES_DOWN != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['uptime-alert'],
+            });
+            for (const issue of existingIssues.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ **Sistemas restaurados** — ${new Date().toISOString()}\n\nTodos los endpoints responden correctamente.`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }
+
+      - name: Resumen de estado
+        run: |
+          echo "=== RESUMEN UPTIME ==="
+          echo "Dominio:  ${{ steps.domain.outputs.status }}"
+          echo "Worker:   ${{ steps.worker.outputs.status }}"
+          echo "Supabase: ${{ steps.supabase.outputs.status }}"
+          echo "====================="

@@ -490,8 +490,60 @@
   const btn  = document.getElementById('login-btn');
   const err  = document.getElementById('login-error');
 
+  // ── Brute Force Protection ──────────────────────────────
+  const BF_KEY      = 'mtx_login_attempts';
+  const BF_MAX      = 5;      // intentos antes de lockout
+  const BF_WINDOW   = 15 * 60 * 1000;  // 15 min ventana
+  const BF_LOCKOUT  = 15 * 60 * 1000;  // 15 min lockout
+
+  function getBFState() {
+    try { return JSON.parse(sessionStorage.getItem(BF_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function saveBFState(s) { sessionStorage.setItem(BF_KEY, JSON.stringify(s)); }
+
+  function checkBruteForce() {
+    const s = getBFState();
+    const now = Date.now();
+    if (s.lockedUntil && now < s.lockedUntil) {
+      const mins = Math.ceil((s.lockedUntil - now) / 60000);
+      return { blocked: true, mins };
+    }
+    // Limpiar intentos viejos
+    if (s.firstAttempt && (now - s.firstAttempt) > BF_WINDOW) {
+      saveBFState({});
+    }
+    return { blocked: false };
+  }
+
+  function recordFailedAttempt() {
+    const s = getBFState();
+    const now = Date.now();
+    if (!s.firstAttempt) s.firstAttempt = now;
+    s.attempts = (s.attempts || 0) + 1;
+    if (s.attempts >= BF_MAX) {
+      s.lockedUntil = now + BF_LOCKOUT;
+      s.attempts = 0;
+      s.firstAttempt = null;
+    }
+    saveBFState(s);
+    return s.lockedUntil ? { locked: true, mins: Math.ceil(BF_LOCKOUT / 60000) } : { locked: false, remaining: BF_MAX - s.attempts };
+  }
+
+  function clearBruteForce() { sessionStorage.removeItem(BF_KEY); }
+  // ────────────────────────────────────────────────────────
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // Verificar lockout ANTES de procesar
+    const bfCheck = checkBruteForce();
+    if (bfCheck.blocked) {
+      err.textContent = `Demasiados intentos fallidos. Espera ${bfCheck.mins} minuto(s) antes de intentar de nuevo.`;
+      err.classList.add('show');
+      return;
+    }
+
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Verificando...';
     err.classList.remove('show');
@@ -502,14 +554,23 @@
     const { data, error } = await db.auth.signInWithPassword({ email, password });
 
     if (error) {
-      err.textContent = error.message.includes('Invalid')
+      const bfResult = recordFailedAttempt();
+      let msg = error.message.includes('Invalid')
         ? 'Credenciales incorrectas. Verifica tu correo y contraseña.'
         : error.message;
+      if (bfResult.locked) {
+        msg = `Cuenta bloqueada por ${bfResult.mins} minuto(s) por múltiples intentos fallidos.`;
+      } else if (bfResult.remaining <= 2) {
+        msg += ` (${bfResult.remaining} intento(s) restante(s))`;
+      }
+      err.textContent = msg;
       err.classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Ingresar al Portal';
       return;
     }
+
+    clearBruteForce(); // Limpiar estado en login exitoso
 
     const { data: profile } = await db.from('profiles').select('role').eq('id', data.user.id).single();
     await logActivity('login', 'user', data.user.id);
