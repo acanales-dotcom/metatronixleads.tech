@@ -560,6 +560,14 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">✨</span>
         <span class="nav-label">Generador IA</span>
       </a>
+      <a href="/consejo.html" class="sidebar-nav-link ${activePage==='consejo'?'active':''}">
+        <span class="nav-icon">🏛</span>
+        <span class="nav-label">Consejo Ejecutivo IA</span>
+      </a>
+      <a href="/marketing.html#social-sim" class="sidebar-nav-link ${activePage==='social-sim'?'active':''}">
+        <span class="nav-icon">🎭</span>
+        <span class="nav-label">Simulación Social</span>
+      </a>
 
       ${hasAdminAccess ? `
       <div class="sidebar-divider"></div>
