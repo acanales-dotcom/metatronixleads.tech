@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MTX QA PROTOCOL — PENTAGON LEVEL</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- AUTH GUARD: classified internal document -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(async function mtxAuthGuard() {
+  const SB_URL = 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
+  try {
+    const db = window.supabase.createClient(SB_URL, SB_KEY);
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { window.location.replace('/'); }
+  } catch(e) { window.location.replace('/'); }
+})();
+</script>
 <style>
 :root {
   --bg: #0A0E1A;

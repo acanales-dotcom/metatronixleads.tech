@@ -4,7 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Portal Interno de Documentos de Ventas</title>
-  <link rel="stylesheet" href="/assets/style.css?v=202604174">
+  <!-- Open Graph -->
+  <meta property="og:title" content="MetaTronix — Portal de Ventas">
+  <meta property="og:description" content="Portal interno de inteligencia comercial y gestión de ventas para colaboradores de IBANOR SA de CV.">
+  <meta property="og:url" content="https://metatronixleads.tech">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://metatronixleads.tech/assets/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MetaTronix — Portal de Ventas">
+  <meta name="twitter:description" content="Portal de inteligencia comercial y agentes de ventas con IA.">
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate icon" href="/assets/favicon.ico">
+  <link rel="stylesheet" href="/assets/style.css?v=202604181">
   <style>
     /* ── Login page overrides ── */
     body { overflow: hidden; }
@@ -350,9 +362,16 @@
       </button>
     </form>
 
-    <p class="login-footer-note">¿Sin acceso? Contacta al administrador.</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+      <p class="login-footer-note" style="margin:0">¿Sin acceso? Contacta al administrador.</p>
+      <button onclick="handlePasswordReset()" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;text-decoration:underline;padding:0">¿Olvidaste tu contraseña?</button>
+    </div>
 
-    <div>
+    <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--text-faint)">
+      Al ingresar aceptas nuestros <a href="/terms.html" style="color:var(--accent)">Términos de Uso</a> y <a href="/privacy.html" style="color:var(--accent)">Política de Privacidad</a>
+    </div>
+
+    <div style="margin-top:12px">
       <span class="powered-badge">POWERED BY CLAUDE AI · ANTHROPIC</span>
     </div>
 
@@ -361,7 +380,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=202604174"></script>
+<script src="/assets/app.js?v=202604181"></script>
 
 <!-- Neural network canvas animation -->
 <script>
@@ -472,6 +491,58 @@
     draw();
   });
 })();
+</script>
+
+<!-- Cookie Consent Banner -->
+<script>
+(function() {
+  if (localStorage.getItem('mtx_cookie_consent') === 'accepted') return;
+  const banner = document.createElement('div');
+  banner.id = 'cookie-banner';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0D1220;border-top:1px solid #1E2A3A;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:9999;font-family:"DM Sans",sans-serif;font-size:13px;color:#B8C4D8;flex-wrap:wrap;';
+  banner.innerHTML = `
+    <span>Usamos cookies esenciales para autenticación y funcionamiento del portal. Sin datos de publicidad ni rastreo externo. <a href="/privacy.html" style="color:#00FF88;text-decoration:underline">Política de Privacidad</a> · <a href="/terms.html" style="color:#00FF88;text-decoration:underline">Términos</a></span>
+    <button onclick="document.getElementById('cookie-banner').remove();localStorage.setItem('mtx_cookie_consent','accepted')" style="background:#00FF88;color:#0A0E1A;border:none;border-radius:6px;padding:8px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Aceptar y continuar</button>
+  `;
+  document.body.appendChild(banner);
+})();
+</script>
+
+<!-- Password Reset -->
+<script>
+async function handlePasswordReset() {
+  const emailInput = document.getElementById('email');
+  const err = document.getElementById('login-error');
+  const email = emailInput ? emailInput.value.trim() : '';
+
+  const address = email || window.prompt('Ingresa tu correo electrónico para restablecer tu contraseña:');
+  if (!address) return;
+  if (!address.includes('@')) {
+    err.textContent = 'Ingresa un correo válido antes de solicitar el restablecimiento.';
+    err.classList.add('show');
+    return;
+  }
+
+  try {
+    const db = getDB();
+    if (!db) throw new Error('No se pudo conectar con el servidor.');
+    const { error } = await db.auth.resetPasswordForEmail(address, {
+      redirectTo: window.location.origin + '/activar-cuenta.html'
+    });
+    if (error) throw error;
+    err.style.color = 'var(--accent)';
+    err.textContent = `✓ Correo enviado a ${address}. Revisa tu bandeja de entrada (y spam).`;
+    err.classList.add('show');
+    setTimeout(() => {
+      err.classList.remove('show');
+      err.style.color = '';
+    }, 8000);
+  } catch (e) {
+    err.style.color = '';
+    err.textContent = e.message || 'Error al enviar el correo. Intenta de nuevo.';
+    err.classList.add('show');
+  }
+}
 </script>
 
 <!-- Auth logic -->

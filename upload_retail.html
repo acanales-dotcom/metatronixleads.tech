@@ -18,6 +18,19 @@
   .spin { display: inline-block; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg) } }
 </style>
+<!-- AUTH GUARD: internal tool — requires active session -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(async function mtxAuthGuard() {
+  const SB_URL = 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
+  try {
+    const db = window.supabase.createClient(SB_URL, SB_KEY);
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { window.location.replace('/'); }
+  } catch(e) { window.location.replace('/'); }
+})();
+</script>
 </head>
 <body>
 <div class="box">

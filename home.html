@@ -870,5 +870,20 @@ document.addEventListener('keydown', e => {
 
 init();
 </script>
+
+<!-- Cookie Consent Banner -->
+<script>
+(function() {
+  if (localStorage.getItem('mtx_cookie_consent') === 'accepted') return;
+  const banner = document.createElement('div');
+  banner.id = 'cookie-banner';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0D1220;border-top:1px solid #1E2A3A;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:9999;font-family:"DM Sans",sans-serif;font-size:13px;color:#B8C4D8;flex-wrap:wrap;';
+  banner.innerHTML = `
+    <span>Usamos cookies esenciales para autenticación y funcionamiento del portal. Sin rastreo externo ni publicidad. <a href="/privacy.html" style="color:#00FF88;text-decoration:underline">Privacidad</a> · <a href="/terms.html" style="color:#00FF88;text-decoration:underline">Términos</a></span>
+    <button onclick="document.getElementById('cookie-banner').remove();localStorage.setItem('mtx_cookie_consent','accepted')" style="background:#00FF88;color:#0A0E1A;border:none;border-radius:6px;padding:8px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Aceptar y continuar</button>
+  `;
+  document.body.appendChild(banner);
+})();
+</script>
 </body>
 </html>
