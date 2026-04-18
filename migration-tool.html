@@ -5,325 +5,432 @@
   <title>MTX — Migration Tool</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0a0a0f; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-    .card { background: #13131a; border: 1px solid #222; border-radius: 12px; max-width: 680px; width: 100%; padding: 32px; }
+    body { background: #0a0a0f; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding: 24px; }
+    .card { background: #13131a; border: 1px solid #222; border-radius: 12px; max-width: 720px; margin: 0 auto; padding: 32px; }
     h1 { font-size: 20px; color: #00ff88; margin-bottom: 4px; }
     .sub { font-size: 12px; color: #666; margin-bottom: 24px; }
-    .step { border: 1px solid #222; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .step { border: 1px solid #222; border-radius: 8px; padding: 16px; margin-bottom: 16px; transition: opacity .3s; }
     .step-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
     .badge { width: 22px; height: 22px; border-radius: 50%; background: #00ff88; color: #000; font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; }
-    input { width: 100%; padding: 8px 12px; background: #0d0d14; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 13px; outline: none; }
-    input:focus { border-color: #00ff88; }
-    button { padding: 10px 20px; background: #00ff88; color: #000; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; }
-    button:disabled { opacity: .4; cursor: not-allowed; }
-    button.secondary { background: #222; color: #fff; }
-    .log { font-family: 'Courier New', monospace; font-size: 11px; background: #080810; border: 1px solid #222; border-radius: 6px; padding: 12px; max-height: 280px; overflow-y: auto; white-space: pre-wrap; margin-top: 16px; }
-    .ok  { color: #00ff88; }
-    .err { color: #ff4444; }
-    .inf { color: #aaa; }
-    .warn { color: #ffd700; }
-    .row { display: flex; gap: 8px; margin-top: 12px; }
-    hr { border: none; border-top: 1px solid #222; margin: 20px 0; }
+    input, select { width: 100%; padding: 8px 12px; background: #0d0d14; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 13px; outline: none; }
+    input:focus, select:focus { border-color: #00ff88; }
+    .btn { padding: 10px 20px; background: #00ff88; color: #000; border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn.sec { background: #222; color: #fff; }
+    .btn.danger { background: #ff4444; color: #fff; }
+    .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; margin: 12px 0; display: none; }
+    .alert.err  { background: rgba(255,68,68,.15); border: 1px solid #ff4444; color: #ff8888; display: block; }
+    .alert.ok   { background: rgba(0,255,136,.12); border: 1px solid #00ff88; color: #00ff88; display: block; }
+    .alert.warn { background: rgba(255,215,0,.1); border: 1px solid #ffd700; color: #ffd700; display: block; }
+    .log { font-family: 'Courier New', monospace; font-size: 11px; background: #080810; border: 1px solid #222; border-radius: 6px; padding: 12px; height: 200px; overflow-y: auto; white-space: pre-wrap; margin-top: 16px; }
+    .c-ok   { color: #00ff88; }
+    .c-err  { color: #ff4444; }
+    .c-inf  { color: #aaa; }
+    .c-warn { color: #ffd700; }
+    .row { display: flex; gap: 8px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
     .user-card { background: #0d0d14; border: 1px solid #1a1a2e; border-radius: 8px; padding: 12px; margin-top: 8px; }
-    .user-row { display: grid; grid-template-columns: 1fr 140px 180px; gap: 8px; align-items: center; }
-    .user-row label { font-size: 11px; color: #555; }
+    .user-row { display: grid; grid-template-columns: 1.4fr 130px 1fr; gap: 8px; align-items: end; }
+    .status-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .pill-ok   { background: rgba(0,255,136,.15); color: #00ff88; }
+    .pill-pend { background: rgba(255,215,0,.15);  color: #ffd700; }
+    .pill-err  { background: rgba(255,68,68,.15);  color: #ff6666; }
+    #diag-box { background: #0d0d14; border: 1px solid #333; border-radius: 8px; padding: 14px; margin: 12px 0; display: none; }
+    .diag-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-size: 12px; }
+    .diag-icon { width: 18px; text-align: center; }
   </style>
 </head>
 <body>
 <div class="card">
-  <h1>⚙ MetaTronix — Migration Tool</h1>
-  <div class="sub">Crea los 3 nuevos usuarios + ejecuta SQL de migración. Abre solo en tu browser (metatronixleads.tech).</div>
+  <h1>⚙ MetaTronix — Migration Tool v2</h1>
+  <div class="sub">Crea los 3 nuevos usuarios en Supabase directamente desde tu browser.</div>
 
-  <!-- STEP 1: Autenticar como admin -->
+  <!-- DIAGNÓSTICO AUTOMÁTICO -->
+  <div id="diag-box">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#555;margin-bottom:8px">Diagnóstico de conexión</div>
+    <div class="diag-row"><span class="diag-icon" id="d1-icon">⏳</span><span id="d1-txt">Cargando Supabase SDK…</span></div>
+    <div class="diag-row"><span class="diag-icon" id="d2-icon">⏳</span><span id="d2-txt">Verificando conectividad con Supabase…</span></div>
+    <div class="diag-row"><span class="diag-icon" id="d3-icon">⏳</span><span id="d3-txt">Validando anon key…</span></div>
+  </div>
+  <button class="btn sec" onclick="runDiag()" style="margin-bottom:16px;font-size:12px;padding:7px 14px">🔍 Ejecutar diagnóstico primero</button>
+
+  <!-- STEP 1 -->
   <div class="step">
-    <div class="step-title"><span class="badge">1</span>Autenticar como administrador principal</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="step-title"><span class="badge">1</span>Autenticar como administrador</div>
+    <div id="login-alert"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div>
-        <label>Email del admin (tú)</label>
-        <input id="admin-email" type="email" value="acanales@ibanormexico.com">
+        <label>Tu email</label>
+        <input id="admin-email" type="email" value="acanales@ibanormexico.com" autocomplete="email">
       </div>
       <div>
         <label>Contraseña</label>
-        <input id="admin-pass" type="password" placeholder="Tu contraseña actual">
+        <input id="admin-pass" type="password" placeholder="Tu contraseña actual" autocomplete="current-password">
       </div>
     </div>
     <div class="row">
-      <button onclick="doLogin()">🔑 Conectar a Supabase</button>
-      <span id="login-status" style="font-size:12px;color:#666;align-self:center"></span>
+      <button class="btn" id="login-btn" onclick="doLogin()">🔑 Conectar a Supabase</button>
+      <span id="login-status" style="font-size:12px;color:#555"></span>
     </div>
   </div>
 
-  <!-- STEP 2: DDL -->
-  <div class="step" id="step2" style="opacity:.4;pointer-events:none">
-    <div class="step-title"><span class="badge">2</span>Agregar columna <code style="color:#00ff88">doc_approval_required</code> a profiles</div>
-    <p style="font-size:12px;color:#888;margin-bottom:10px">Esta columna es necesaria para el panel de Gestión de Usuarios. Se agrega vía función SQL de Supabase.</p>
-    <button onclick="runDDL()">🔧 Ejecutar ALTER TABLE</button>
+  <!-- STEP 2 (deshabilitado hasta login) -->
+  <div class="step" id="step2" style="opacity:.35;pointer-events:none">
+    <div class="step-title"><span class="badge">2</span>Verificar / agregar columna <code style="color:#00ff88;font-size:12px">doc_approval_required</code></div>
+    <p style="font-size:12px;color:#888;margin-bottom:10px">Detecta si la columna ya existe. Si no, muestra el SQL exacto para copiar/pegar en Supabase SQL Editor (30 seg).</p>
+    <div id="ddl-alert"></div>
+    <button class="btn" onclick="runDDL()">🔧 Verificar columna</button>
   </div>
 
-  <!-- STEP 3: Crear usuarios -->
-  <div class="step" id="step3" style="opacity:.4;pointer-events:none">
-    <div class="step-title"><span class="badge">3</span>Crear los 3 usuarios</div>
-    <p style="font-size:12px;color:#888;margin-bottom:10px">Contraseña temporal: <strong style="color:#00ff88">MetaTronix2026!</strong> — cada usuario deberá cambiarla al primer acceso.</p>
+  <!-- STEP 3 -->
+  <div class="step" id="step3" style="opacity:.35;pointer-events:none">
+    <div class="step-title"><span class="badge">3</span>Crear / actualizar los 3 usuarios</div>
+    <p style="font-size:12px;color:#888;margin-bottom:12px">Contraseña temporal: <strong style="color:#00ff88;font-family:monospace">MetaTronix2026!</strong></p>
+
+    <div id="create-alert"></div>
 
     <div class="user-card">
       <div class="user-row">
-        <div>
-          <label>Email</label>
-          <input id="u1-email" value="ncanales@ibanormexico.com">
-        </div>
-        <div>
-          <label>Rol</label>
-          <select id="u1-role" style="width:100%;padding:8px 10px;background:#0a0a12;border:1px solid #333;border-radius:6px;color:#fff;font-size:13px">
+        <div><label>Email</label><input id="u1-email" value="ncanales@ibanormexico.com"></div>
+        <div><label>Rol</label>
+          <select id="u1-role">
             <option value="admin" selected>Admin</option>
             <option value="super_admin">Super Admin</option>
             <option value="admin_restringido">Admin Restringido</option>
             <option value="user">Colaborador</option>
           </select>
         </div>
-        <div>
-          <label>Nombre</label>
-          <input id="u1-name" value="Norma Canales">
-        </div>
+        <div><label>Nombre</label><input id="u1-name" value="Norma Canales"></div>
       </div>
+      <div style="margin-top:6px;font-size:11px;color:#555">Sin acceso a archivos-ibanor.html · Aprobación directa</div>
     </div>
 
     <div class="user-card">
       <div class="user-row">
-        <div>
-          <label>Email</label>
-          <input id="u2-email" value="nibarra@ibanormexico.com">
-        </div>
-        <div>
-          <label>Rol</label>
-          <select id="u2-role" style="width:100%;padding:8px 10px;background:#0a0a12;border:1px solid #333;border-radius:6px;color:#fff;font-size:13px">
+        <div><label>Email</label><input id="u2-email" value="nibarra@ibanormexico.com"></div>
+        <div><label>Rol</label>
+          <select id="u2-role">
             <option value="admin">Admin</option>
             <option value="super_admin" selected>Super Admin</option>
             <option value="admin_restringido">Admin Restringido</option>
             <option value="user">Colaborador</option>
           </select>
         </div>
-        <div>
-          <label>Nombre</label>
-          <input id="u2-name" value="N. Ibarra">
-        </div>
+        <div><label>Nombre</label><input id="u2-name" value="N. Ibarra"></div>
       </div>
+      <div style="margin-top:6px;font-size:11px;color:#ffd700">⚠ Docs ventas/marketing → routing a ncanales + acanales</div>
     </div>
 
     <div class="user-card">
       <div class="user-row">
-        <div>
-          <label>Email</label>
-          <input id="u3-email" value="acanalesf@ibanormexico.com">
-        </div>
-        <div>
-          <label>Rol</label>
-          <select id="u3-role" style="width:100%;padding:8px 10px;background:#0a0a12;border:1px solid #333;border-radius:6px;color:#fff;font-size:13px">
+        <div><label>Email</label><input id="u3-email" value="acanalesf@ibanormexico.com"></div>
+        <div><label>Rol</label>
+          <select id="u3-role">
             <option value="admin">Admin</option>
             <option value="super_admin">Super Admin</option>
             <option value="admin_restringido" selected>Admin Restringido</option>
             <option value="user">Colaborador</option>
           </select>
         </div>
-        <div>
-          <label>Nombre</label>
-          <input id="u3-name" value="Alejandro Canales Farías">
-        </div>
+        <div><label>Nombre</label><input id="u3-name" value="Alejandro Canales Farías"></div>
       </div>
+      <div style="margin-top:6px;font-size:11px;color:#ffd700">⚠ Docs ventas/marketing → routing a ncanales + acanales</div>
     </div>
 
     <div class="row" style="margin-top:14px">
-      <button onclick="createAllUsers()">👥 Crear los 3 usuarios</button>
+      <button class="btn" onclick="createAllUsers()">👥 Crear / Actualizar los 3 usuarios</button>
     </div>
+    <div id="users-result" style="margin-top:12px"></div>
   </div>
 
-  <!-- STEP 4: Asignar doc_approval_required -->
-  <div class="step" id="step4" style="opacity:.4;pointer-events:none">
-    <div class="step-title"><span class="badge">4</span>Asignar permisos de routing de documentos</div>
-    <p style="font-size:12px;color:#888;margin-bottom:10px">
-      nibarra y acanalesf → <code style="color:#ffd700">doc_approval_required = true</code> (ruta docs a ncanales + acanales)<br>
-      ncanales → <code style="color:#00ff88">doc_approval_required = false</code> (aprobación directa)
-    </p>
-    <button onclick="assignPermissions()">🔐 Asignar Permisos</button>
+  <!-- STEP 4 -->
+  <div class="step" id="step4" style="opacity:.35;pointer-events:none">
+    <div class="step-title"><span class="badge">4</span>Asignar roles y permisos de routing</div>
+    <p style="font-size:12px;color:#888;margin-bottom:10px">Actualiza <code style="color:#00ff88">role</code> y <code style="color:#00ff88">doc_approval_required</code> en la tabla profiles para cada usuario.</p>
+    <div id="perm-alert"></div>
+    <button class="btn" onclick="assignPermissions()">🔐 Asignar Permisos</button>
   </div>
 
-  <!-- LOG -->
-  <div class="log" id="log">— Listo. Comienza desde el paso 1 —</div>
+  <!-- LOG TERMINAL -->
+  <div style="margin-top:8px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#444;margin-bottom:4px">Console</div>
+    <div class="log" id="log">Listo. Ejecuta el diagnóstico o comienza en el Paso 1.</div>
+  </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-const SUPABASE_URL      = 'https://hodrfonbpmqulkyzrzpq.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
-const TEMP_PASS         = 'MetaTronix2026!';
+const SUPABASE_URL = 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
+const TEMP_PASS    = 'MetaTronix2026!';
+const ROUTING_EMAILS = ['nibarra@ibanormexico.com','acanalesf@ibanormexico.com'];
 
-let db  = null;
-let uid = null;
+let db = null;
 
-function log(msg, type='inf') {
+/* ── Helpers ─────────────────────────────────────────────── */
+function log(msg, type='c-inf') {
   const el = document.getElementById('log');
-  const ts = new Date().toLocaleTimeString('es-MX');
-  el.innerHTML += `\n<span class="${type}">[${ts}] ${msg}</span>`;
+  const ts  = new Date().toLocaleTimeString('es-MX');
+  const line = document.createElement('div');
+  line.className = type;
+  line.textContent = `[${ts}] ${msg}`;
+  el.appendChild(line);
   el.scrollTop = el.scrollHeight;
 }
 
-function unlock(id) {
+function setAlert(id, msg, type) {
   const el = document.getElementById(id);
-  if (el) { el.style.opacity = '1'; el.style.pointerEvents = 'auto'; }
+  if (!el) return;
+  el.innerHTML = `<div class="alert ${type}">${msg}</div>`;
 }
 
-// ── STEP 1: Login ────────────────────────────────────────────
-async function doLogin() {
-  const email = document.getElementById('admin-email').value.trim();
-  const pass  = document.getElementById('admin-pass').value;
-  if (!email || !pass) { log('❌ Completa email y contraseña', 'err'); return; }
+function unlock(...ids) { ids.forEach(id => { const e = document.getElementById(id); if(e){ e.style.opacity='1'; e.style.pointerEvents='auto'; }}); }
 
-  db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  log(`🔑 Autenticando como ${email}…`);
-
-  const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
-  if (error) { log(`❌ Error: ${error.message}`, 'err'); return; }
-
-  uid = data.user?.id;
-  log(`✅ Autenticado. UID: ${uid}`, 'ok');
-  document.getElementById('login-status').textContent = '✅ Conectado';
-  document.getElementById('login-status').style.color = '#00ff88';
-  unlock('step2'); unlock('step3'); unlock('step4');
+function diag(n, icon, txt, cls) {
+  document.getElementById(`d${n}-icon`).textContent = icon;
+  const t = document.getElementById(`d${n}-txt`);
+  t.textContent = txt;
+  t.style.color = cls === 'ok' ? '#00ff88' : cls === 'err' ? '#ff6666' : cls === 'warn' ? '#ffd700' : '#aaa';
 }
 
-// ── STEP 2: DDL ──────────────────────────────────────────────
-async function runDDL() {
-  log('🔧 Intentando agregar columna doc_approval_required…');
+/* ── DIAGNÓSTICO ─────────────────────────────────────────── */
+async function runDiag() {
+  document.getElementById('diag-box').style.display = 'block';
+  log('🔍 Iniciando diagnóstico…');
 
-  // Supabase no expone DDL via API pública — lo hacemos via función RPC si existe
-  // Si no existe, simplemente verificamos si la columna ya está
-  const { data: test, error: testErr } = await db.from('profiles')
-    .select('doc_approval_required').limit(1);
+  // D1: SDK cargado?
+  if (typeof supabase === 'undefined') {
+    diag(1,'❌','Supabase SDK no cargó — verifica tu conexión a internet o desactiva el ad-blocker','err');
+    log('❌ supabase global no definido. El CDN no cargó.','c-err');
+    return;
+  }
+  diag(1,'✅','Supabase SDK cargado correctamente','ok');
+  log('✅ SDK OK');
 
-  if (!testErr) {
-    log('✅ Columna doc_approval_required ya existe en profiles', 'ok');
+  // D2: Conectividad
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
+    });
+    diag(2, res.ok||res.status===400 ? '✅':'⚠', `Conectividad Supabase: HTTP ${res.status}`, res.ok||res.status===400 ? 'ok':'warn');
+    log(`📡 Conectividad: HTTP ${res.status}`);
+  } catch(e) {
+    diag(2,'❌',`Sin conexión a Supabase: ${e.message}`,'err');
+    log(`❌ Fetch error: ${e.message}`,'c-err');
     return;
   }
 
-  if (testErr.message.includes('doc_approval_required')) {
-    log('⚠ Columna no existe. El routing de aprobaciones funciona igual (es por email).', 'warn');
-    log('  Para agregar la columna, ejecuta en Supabase → SQL Editor:', 'warn');
-    log('  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS doc_approval_required BOOLEAN NOT NULL DEFAULT FALSE;', 'warn');
-    log('  ALTER TABLE documents ADD COLUMN IF NOT EXISTS admin_note TEXT;', 'warn');
-    log('  El sistema funciona completo sin la columna — es solo para el panel de gestión.', 'inf');
-  } else {
-    log(`❌ Error inesperado: ${testErr.message}`, 'err');
+  // D3: Anon key válida?
+  try {
+    const client = supabase.createClient(SUPABASE_URL, ANON_KEY);
+    const { data, error } = await client.from('profiles').select('id').limit(1);
+    if (error) {
+      diag(3,'⚠',`Anon key activa pero RLS bloqueó: ${error.message}`,'warn');
+      log(`⚠ RLS activo: ${error.message}`,'c-warn');
+    } else {
+      diag(3,'✅',`Anon key válida. profiles accesible (${data?.length||0} rows).`,'ok');
+      log(`✅ Anon key OK. Rows visibles: ${data?.length||0}`);
+    }
+  } catch(e) {
+    diag(3,'❌',`Error: ${e.message}`,'err');
+    log(`❌ ${e.message}`,'c-err');
+  }
+
+  log('🔍 Diagnóstico completo. Revisa resultados arriba.');
+}
+
+/* ── STEP 1: LOGIN ───────────────────────────────────────── */
+async function doLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pass  = document.getElementById('admin-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const stat  = document.getElementById('login-status');
+
+  if (!email || !pass) { setAlert('login-alert','Ingresa email y contraseña','err'); return; }
+
+  // Verificar SDK
+  if (typeof supabase === 'undefined') {
+    setAlert('login-alert','❌ El SDK de Supabase no cargó. Prueba desactivar el ad-blocker o usa otro browser.','err');
+    log('❌ SDK no disponible','c-err');
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = '⏳ Conectando…'; stat.textContent = '';
+  setAlert('login-alert','','');
+  log(`🔑 signInWithPassword(${email})…`);
+
+  try {
+    db = supabase.createClient(SUPABASE_URL, ANON_KEY);
+    const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+
+    if (error) {
+      const hint = error.message.includes('Invalid login') ? ' — Verifica que la contraseña sea correcta.' :
+                   error.message.includes('Email not confirmed') ? ' — El email no está confirmado en Supabase.' : '';
+      setAlert('login-alert', `❌ ${error.message}${hint}`, 'err');
+      log(`❌ Auth error: ${error.message}`, 'c-err');
+      btn.disabled = false; btn.textContent = '🔑 Conectar a Supabase';
+      return;
+    }
+
+    log(`✅ Sesión iniciada. UID: ${data.user?.id}`, 'c-ok');
+    log(`   Rol: ${data.user?.user_metadata?.role || '?'}`);
+    setAlert('login-alert', `✅ Conectado como ${email}`, 'ok');
+    stat.textContent = '✅ Conectado';
+    stat.style.color = '#00ff88';
+    btn.textContent = '✅ Conectado';
+    unlock('step2','step3','step4');
+
+  } catch(e) {
+    setAlert('login-alert', `❌ Error inesperado: ${e.message}. ${typeof supabase === 'undefined' ? 'SDK no cargó.' : ''}`, 'err');
+    log(`❌ Exception: ${e.message}`, 'c-err');
+    btn.disabled = false; btn.textContent = '🔑 Conectar a Supabase';
   }
 }
 
-// ── STEP 3: Crear usuarios ───────────────────────────────────
-async function createUser(email, name, role) {
-  log(`\n👤 Creando ${email}…`);
+/* ── STEP 2: DDL ─────────────────────────────────────────── */
+async function runDDL() {
+  log('🔧 Verificando columna doc_approval_required…');
+  setAlert('ddl-alert','','');
 
-  // signUp público (no requiere service_role)
+  const { data, error } = await db.from('profiles').select('doc_approval_required').limit(1);
+  if (!error) {
+    log('✅ Columna ya existe.','c-ok');
+    setAlert('ddl-alert','✅ La columna <code>doc_approval_required</code> ya existe en profiles. No se necesita SQL adicional.','ok');
+    return;
+  }
+
+  if (error.message.includes('doc_approval_required') || error.message.includes('column')) {
+    log('⚠ Columna no existe. Muestra SQL para ejecutar.','c-warn');
+    setAlert('ddl-alert', `
+      <div style="margin-bottom:8px">⚠ La columna no existe aún. Ejecuta este SQL en <strong>Supabase Dashboard → SQL Editor</strong> (30 seg):</div>
+      <pre style="background:#080810;padding:10px;border-radius:6px;font-size:11px;overflow-x:auto;white-space:pre-wrap">ALTER TABLE profiles ADD COLUMN IF NOT EXISTS doc_approval_required BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS admin_note TEXT;</pre>
+      <div style="margin-top:8px;font-size:12px;color:#ffd700">El sistema funciona sin esta columna — el routing ya opera por email. Esta columna solo activa el panel de gestión.</div>
+    `, 'warn');
+  } else {
+    log(`❌ Error: ${error.message}`, 'c-err');
+    setAlert('ddl-alert', `❌ ${error.message}`, 'err');
+  }
+}
+
+/* ── STEP 3: CREAR USUARIOS ──────────────────────────────── */
+async function createUser(email, name, role) {
+  const isRouting = ROUTING_EMAILS.includes(email.toLowerCase());
+  log(`\n👤 Procesando ${email} (rol: ${role}, routing: ${isRouting})…`);
+
+  // signUp público
   const { data, error } = await db.auth.signUp({
-    email,
-    password: TEMP_PASS,
+    email, password: TEMP_PASS,
     options: { data: { full_name: name, role } }
   });
 
   if (error) {
-    if (error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('email address')) {
-      log(`  ⚠ ${email} ya existe en Auth. Actualizando perfil…`, 'warn');
+    if (error.message.toLowerCase().includes('already registered') || error.message.includes('User already registered')) {
+      log(`  ⚠ Ya existe en Auth — solo actualizando perfil`, 'c-warn');
     } else {
-      log(`  ❌ Auth error: ${error.message}`, 'err');
-      return null;
+      log(`  ❌ signUp error: ${error.message}`, 'c-err');
     }
   } else {
-    log(`  ✅ Usuario creado en Auth. ID: ${data.user?.id}`, 'ok');
+    log(`  ✅ Auth: usuario creado. ID: ${data.user?.id || '?'}`, 'c-ok');
   }
 
-  // Buscar el ID real del usuario (ya sea nuevo o existente)
   const userId = data?.user?.id;
 
-  // Intentar upsert del perfil con doc_approval_required
-  const docAppr = ['nibarra@ibanormexico.com','acanalesf@ibanormexico.com'].includes(email);
-  let { error: pe } = await db.from('profiles').upsert({
-    ...(userId ? { id: userId } : {}),
-    email,
-    full_name: name,
-    role,
-    doc_approval_required: docAppr,
-    is_active: true
-  }, { onConflict: 'email' });
+  // Upsert profile — con doc_approval_required si existe
+  const payload = { email, full_name: name, role, is_active: true,
+    ...(userId ? { id: userId } : {}) };
 
-  if (pe?.message?.includes('doc_approval_required')) {
-    // Columna no existe — upsert sin ella
-    const { error: pe2 } = await db.from('profiles').upsert({
-      ...(userId ? { id: userId } : {}),
-      email, full_name: name, role, is_active: true
-    }, { onConflict: 'email' });
-    if (pe2) log(`  ⚠ Profile upsert (sin columna): ${pe2.message}`, 'warn');
-    else log(`  ✅ Perfil guardado (sin doc_approval_required)`, 'ok');
+  // Intentar con columna
+  let { error: pe } = await db.from('profiles').upsert(
+    { ...payload, doc_approval_required: isRouting }, { onConflict: 'email' }
+  );
+
+  if (pe?.message?.includes('doc_approval_required') || pe?.message?.includes('column')) {
+    // Sin columna
+    const { error: pe2 } = await db.from('profiles').upsert(payload, { onConflict: 'email' });
+    if (pe2) { log(`  ⚠ Profile: ${pe2.message}`, 'c-warn'); return false; }
+    log(`  ✅ Perfil guardado (sin columna doc_approval_required)`, 'c-ok');
   } else if (pe) {
-    log(`  ⚠ Profile warning: ${pe.message}`, 'warn');
+    log(`  ⚠ Profile: ${pe.message}`, 'c-warn');
   } else {
-    log(`  ✅ Perfil guardado con rol "${role}" y doc_approval_required=${docAppr}`, 'ok');
+    log(`  ✅ Perfil guardado. doc_approval_required=${isRouting}`, 'c-ok');
   }
-
-  return userId;
+  return true;
 }
 
 async function createAllUsers() {
   log('\n═══ CREANDO USUARIOS ═══');
+  setAlert('create-alert','','');
+
   const users = [
-    { id:'u1', def_email:'ncanales@ibanormexico.com', def_name:'Norma Canales',            def_role:'admin' },
-    { id:'u2', def_email:'nibarra@ibanormexico.com',  def_name:'N. Ibarra',                def_role:'super_admin' },
-    { id:'u3', def_email:'acanalesf@ibanormexico.com',def_name:'Alejandro Canales Farías', def_role:'admin_restringido' }
+    { ei:'u1', def:['ncanales@ibanormexico.com','Norma Canales','admin'] },
+    { ei:'u2', def:['nibarra@ibanormexico.com','N. Ibarra','super_admin'] },
+    { ei:'u3', def:['acanalesf@ibanormexico.com','Alejandro Canales Farías','admin_restringido'] },
   ];
 
+  let ok = 0;
   for (const u of users) {
-    const email = document.getElementById(`${u.id}-email`).value.trim() || u.def_email;
-    const name  = document.getElementById(`${u.id}-name`).value.trim()  || u.def_name;
-    const role  = document.getElementById(`${u.id}-role`).value         || u.def_role;
-    await createUser(email, name, role);
+    const email = document.getElementById(`${u.ei}-email`).value.trim() || u.def[0];
+    const name  = document.getElementById(`${u.ei}-name`).value.trim()  || u.def[1];
+    const role  = document.getElementById(`${u.ei}-role`).value         || u.def[2];
+    const res = await createUser(email, name, role);
+    if (res !== false) ok++;
   }
 
-  log('\n✅ Creación completada. Contraseña temporal: MetaTronix2026!', 'ok');
-  log('   Cada usuario recibirá email de confirmación (si está activo en Supabase).', 'inf');
-  log('   O accede directamente si "Email confirmations" está desactivado.', 'inf');
+  const msg = `✅ ${ok}/3 usuarios procesados. Contraseña temporal: <strong>MetaTronix2026!</strong>`;
+  setAlert('create-alert', msg, ok === 3 ? 'ok' : 'warn');
+  log(`\n═══ FIN: ${ok}/3 OK ═══`, 'c-ok');
 }
 
-// ── STEP 4: Asignar permisos ─────────────────────────────────
+/* ── STEP 4: PERMISOS ────────────────────────────────────── */
 async function assignPermissions() {
-  log('\n═══ ASIGNANDO PERMISOS DE ROUTING ═══');
+  log('\n═══ ASIGNANDO PERMISOS ═══');
+  setAlert('perm-alert','','');
 
   const targets = [
-    { email: 'nibarra@ibanormexico.com',   role: 'super_admin',      docAppr: true  },
-    { email: 'acanalesf@ibanormexico.com', role: 'admin_restringido', docAppr: true  },
-    { email: 'ncanales@ibanormexico.com',  role: 'admin',             docAppr: false },
+    { email:'nibarra@ibanormexico.com',   role:'super_admin',       docAppr:true },
+    { email:'acanalesf@ibanormexico.com', role:'admin_restringido',  docAppr:true },
+    { email:'ncanales@ibanormexico.com',  role:'admin',              docAppr:false },
   ];
 
+  let ok = 0;
   for (const t of targets) {
-    log(`\n🔐 Actualizando ${t.email}…`);
+    log(`\n🔐 ${t.email} → ${t.role}, routing:${t.docAppr}`);
     let { error } = await db.from('profiles').update({
       role: t.role, doc_approval_required: t.docAppr, is_active: true
     }).eq('email', t.email);
 
-    if (error?.message?.includes('doc_approval_required')) {
+    if (error?.message?.includes('doc_approval_required') || error?.message?.includes('column')) {
       const { error: e2 } = await db.from('profiles').update({ role: t.role, is_active: true }).eq('email', t.email);
-      if (e2) log(`  ❌ ${e2.message}`, 'err');
-      else    log(`  ✅ Rol="${t.role}" (sin columna doc_approval_required)`, 'ok');
+      if (e2) { log(`  ❌ ${e2.message}`, 'c-err'); continue; }
+      log(`  ✅ rol actualizado (sin columna)`, 'c-ok');
     } else if (error) {
-      log(`  ⚠ ${error.message} — puede que el usuario no esté en profiles aún`, 'warn');
+      log(`  ⚠ ${error.message}`, 'c-warn');
     } else {
-      log(`  ✅ rol="${t.role}" doc_approval_required=${t.docAppr}`, 'ok');
+      log(`  ✅ OK`, 'c-ok');
+      ok++;
     }
   }
 
-  log('\n✅ Permisos asignados correctamente.', 'ok');
-  log('═══════════════════════════════════════', 'ok');
-  log('RESUMEN:', 'ok');
-  log('  ncanales  → Admin | acceso completo excepto archivos-ibanor.html', 'ok');
-  log('  nibarra   → SuperAdmin | docs de ventas/marketing → routing a ncanales + acanales', 'ok');
-  log('  acanalesf → Admin Restringido | docs de ventas/marketing → routing', 'ok');
-  log('  acanales  → SuperAdmin | aprobación directa (sin routing)', 'ok');
+  setAlert('perm-alert',
+    ok >= 2 ? '✅ Permisos asignados correctamente. El sistema está listo.' :
+    '⚠ Algunos permisos no se aplicaron — revisa la consola.',
+    ok >= 2 ? 'ok' : 'warn'
+  );
+
+  log('\n✅ Listo. Los usuarios pueden entrar a metatronixleads.tech.', 'c-ok');
 }
+
+/* ── Auto-diagnóstico de SDK al cargar ───────────────────── */
+window.addEventListener('load', () => {
+  if (typeof supabase === 'undefined') {
+    const w = document.createElement('div');
+    w.style.cssText = 'background:#ff4444;color:#fff;padding:12px 20px;font-weight:700;text-align:center;position:fixed;top:0;left:0;right:0;z-index:9999';
+    w.textContent = '⚠ El SDK de Supabase no cargó. Verifica tu conexión a internet o desactiva el ad-blocker, luego recarga.';
+    document.body.prepend(w);
+  }
+});
 </script>
 </body>
 </html>
