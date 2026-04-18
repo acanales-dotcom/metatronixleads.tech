@@ -64,7 +64,7 @@ fetch(SUPABASE_URL + '/rest/v1/metatronix_docs', {
     st.innerHTML = '❌ Error: ' + JSON.stringify(data);
   }
 })
-.catch(e => { st.className = 'err'; st.innerHTML = '❌ Error de red: ' + e.message; });
+.catch(e => { st.className = 'err'; st.innerHTML = '❌ Error de red: ' + (e.message||'').replace(/<[^>]*>/g,''); });
 </script>
 </body>
 </html>

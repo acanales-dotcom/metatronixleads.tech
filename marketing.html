@@ -1269,7 +1269,7 @@ async function runAgent(id) {
     await agent.run(id, output);
     if (_origChat && window.CRM_LLM) window.CRM_LLM.chat = _origChat;
   } catch(e) {
-    output.innerHTML = `<div style="color:var(--danger)">❌ Error: ${e.message}</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Verifica tu conexión a internet.</div>`;
+    output.innerHTML = `<div style="color:var(--danger)">❌ Error: ${escHtml(e.message||String(e))}</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Verifica tu conexión a internet.</div>`;
   } finally {
     setAgentBusy(id, false, status, btn);
     if (usedLLM) await _postRunIncrement();

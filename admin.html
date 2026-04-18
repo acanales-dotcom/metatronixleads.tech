@@ -119,6 +119,7 @@
     <button class="tab-btn" onclick="switchTab('users')">Usuarios</button>
     <button class="tab-btn" onclick="switchTab('activity')">Actividad</button>
     <button class="tab-btn" id="tab-claude-btn" style="display:none;background:rgba(124,58,237,.15);color:#a78bfa" onclick="switchTab('claude')">🤖 IA APIs</button>
+    <button class="tab-btn" id="tab-llmlogs-btn" style="display:none;background:rgba(0,212,240,.08);color:var(--cyan)" onclick="switchTab('llmlogs')">📊 Consultas IA</button>
   </div>
 
   <!-- TAB: POR COLABORADOR -->
@@ -338,6 +339,94 @@
     </div>
   </div>
 
+  <!-- TAB: CONSULTAS IA (superAdmin only) -->
+  <div id="tab-llmlogs" class="tab-panel">
+    <style>
+      .llm-stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
+      .llm-stat-card { background:var(--s2); border:1px solid var(--b1); border-radius:var(--r-lg); padding:14px 16px; }
+      .llm-stat-val  { font-size:1.6rem; font-weight:700; font-family:var(--font-mono); color:var(--cyan); }
+      .llm-stat-lbl  { font-size:11px; color:var(--t2); margin-top:2px; text-transform:uppercase; letter-spacing:.07em; }
+      .llm-filter-bar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+      .llm-row       { display:grid; grid-template-columns:140px 120px 100px 1fr 80px 60px 80px; gap:8px;
+                       align-items:center; padding:8px 12px; border-bottom:1px solid var(--b0); font-size:12px; }
+      .llm-row:hover { background:var(--s2); }
+      .llm-thead     { grid-template-columns:140px 120px 100px 1fr 80px 60px 80px;
+                       font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+                       color:var(--t2); padding:6px 12px; border-bottom:1px solid var(--b2); }
+      .llm-prompt    { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--t2); font-family:var(--font-mono); font-size:11px; }
+      .llm-ok        { color:var(--green); font-weight:700; }
+      .llm-err       { color:var(--red);   font-weight:700; }
+      .llm-chip      { background:var(--s3); border-radius:3px; padding:1px 6px; font-size:10px; font-family:var(--font-mono); }
+    </style>
+
+    <!-- KPI strip -->
+    <div class="llm-stat-grid" id="llm-kpi-grid">
+      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-total">—</div><div class="llm-stat-lbl">Consultas hoy</div></div>
+      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-week">—</div><div class="llm-stat-lbl">Esta semana</div></div>
+      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-month">—</div><div class="llm-stat-lbl">Este mes</div></div>
+      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-tokens">—</div><div class="llm-stat-lbl">Tokens aprox.</div></div>
+      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-errors">—</div><div class="llm-stat-lbl">Errores hoy</div></div>
+      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-avgms">—</div><div class="llm-stat-lbl">ms prom.</div></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="llm-filter-bar">
+      <select id="llm-f-user" class="form-select" style="width:180px" onchange="loadLLMLogs()">
+        <option value="">Todos los usuarios</option>
+      </select>
+      <select id="llm-f-page" class="form-select" style="width:150px" onchange="loadLLMLogs()">
+        <option value="">Todas las páginas</option>
+        <option value="generate">Generador IA</option>
+        <option value="marketing">MetaMKTX</option>
+        <option value="ventas">MetaVentax</option>
+        <option value="oportunidades">Inteligencia</option>
+        <option value="leads">Pipeline</option>
+      </select>
+      <select id="llm-f-status" class="form-select" style="width:130px" onchange="loadLLMLogs()">
+        <option value="">Todo</option>
+        <option value="ok">Solo exitosas</option>
+        <option value="err">Solo errores</option>
+      </select>
+      <select id="llm-f-period" class="form-select" style="width:130px" onchange="loadLLMLogs()">
+        <option value="today">Hoy</option>
+        <option value="week">Esta semana</option>
+        <option value="month">Este mes</option>
+        <option value="all">Historial completo</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="exportLLMLogs()">⬇ CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadLLMLogs()">↻</button>
+      <span id="llm-count-label" style="font-size:12px;color:var(--t2);margin-left:auto"></span>
+    </div>
+
+    <!-- Table header -->
+    <div class="llm-row llm-thead">
+      <span>Fecha</span>
+      <span>Usuario</span>
+      <span>Página / Agente</span>
+      <span>Preview prompt</span>
+      <span>Tokens</span>
+      <span>ms</span>
+      <span>Estado</span>
+    </div>
+
+    <!-- Table body -->
+    <div id="llm-logs-list" style="max-height:520px;overflow-y:auto;border:1px solid var(--b1);border-radius:var(--r)">
+      <div style="color:var(--t2);text-align:center;padding:40px">Cargando consultas IA...</div>
+    </div>
+
+    <!-- Top users / pages breakdown -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:10px">Top usuarios</div>
+        <div id="llm-top-users" style="font-size:12px"></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:10px">Top páginas / agentes</div>
+        <div id="llm-top-pages" style="font-size:12px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- TAB: ACTIVITY -->
   <div id="tab-activity" class="tab-panel">
     <div class="section-header">
@@ -455,9 +544,10 @@ async function init() {
   const isSuperAdmin = currentUser.profile?.role === 'super_admin';
   document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'admin');
 
-  // Mostrar tab Claude API solo al superAdmin
+  // Mostrar tabs de superAdmin
   if (isSuperAdmin) {
-    document.getElementById('tab-claude-btn').style.display = 'inline-flex';
+    document.getElementById('tab-claude-btn').style.display  = 'inline-flex';
+    document.getElementById('tab-llmlogs-btn').style.display = 'inline-flex';
   }
 
   // Para admin restringido: forzar filtro "aprobado" en documentos y ocultar acciones admin
@@ -992,6 +1082,7 @@ function switchTab(name) {
   if (name === 'plans')         loadPlansAdmin();
   if (name === 'colaboradores') loadColaboradores();
   if (name === 'claude')        { loadClaudeAdmin(); loadPerplexityAdmin(); }
+  if (name === 'llmlogs')       loadLLMLogs();
 }
 
 // ── Por Colaborador ──────────────────────────────────────────
@@ -1428,6 +1519,194 @@ async function authorizePerplexityUser(userId, name) {
 
 async function revokePerplexityUser(userId, name) {
   await togglePerplexityEnabled(userId, false);
+}
+
+/* ════════════════════════════════════════════════════════════
+   TAB: CONSULTAS IA — visor de log LLM desde activity_logs
+   ════════════════════════════════════════════════════════════ */
+let _llmLogsCache = [];
+
+let _llmUsersLoaded = false;
+async function loadLLMLogs() {
+  const db = getDB();
+
+  // Populate user filter once
+  if (!_llmUsersLoaded) {
+    _llmUsersLoaded = true;
+    const { data: users } = await db.from('profiles').select('id,full_name,email').order('full_name');
+    const sel = document.getElementById('llm-f-user');
+    if (sel && users) {
+      users.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.full_name || u.email;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  const userFilter   = document.getElementById('llm-f-user')?.value   || '';
+  const pageFilter   = document.getElementById('llm-f-page')?.value   || '';
+  const statusFilter = document.getElementById('llm-f-status')?.value || '';
+  const period       = document.getElementById('llm-f-period')?.value || 'today';
+
+  // Date range
+  const now = new Date();
+  let fromDate = null;
+  if (period === 'today') {
+    fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  } else if (period === 'week') {
+    const d = new Date(now); d.setDate(d.getDate() - 7);
+    fromDate = d.toISOString();
+  } else if (period === 'month') {
+    fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  }
+
+  let query = db.from('activity_logs')
+    .select('id, created_at, user_id, metadata, profiles!user_id(full_name, email)')
+    .eq('action', 'llm_query')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (fromDate)   query = query.gte('created_at', fromDate);
+  if (userFilter) query = query.eq('user_id', userFilter);
+
+  const { data, error } = await query;
+  if (error) { showToast('Error cargando logs IA', 'error'); return; }
+
+  let rows = data || [];
+
+  // Client-side filters
+  if (pageFilter)   rows = rows.filter(r => (r.metadata?.page || '') === pageFilter);
+  if (statusFilter === 'ok')  rows = rows.filter(r => r.metadata?.success !== false);
+  if (statusFilter === 'err') rows = rows.filter(r => r.metadata?.success === false);
+
+  _llmLogsCache = rows;
+
+  // Render KPIs
+  await renderLLMKPIs(db, period);
+
+  // Render table
+  const list = document.getElementById('llm-logs-list');
+  document.getElementById('llm-count-label').textContent = `${rows.length} registros`;
+
+  if (!rows.length) {
+    list.innerHTML = '<div style="color:var(--t2);text-align:center;padding:40px">Sin consultas en el período seleccionado</div>';
+  } else {
+    list.innerHTML = rows.map(r => {
+      const m    = r.metadata || {};
+      const name = r.profiles?.full_name || r.profiles?.email || 'Desconocido';
+      const date = formatDate(r.created_at);
+      const page = escHtml(m.page || '—');
+      const agent= escHtml(m.agent_name || '—');
+      const prompt = escHtml((m.prompt_preview || '').slice(0, 80));
+      const tokens = m.tokens_approx ? `~${Number(m.tokens_approx).toLocaleString('es-MX')}` : '—';
+      const ms   = m.duration_ms ? `${m.duration_ms}` : '—';
+      const ok   = m.success !== false;
+      const statusHtml = ok
+        ? '<span class="llm-ok">✓ OK</span>'
+        : `<span class="llm-err" title="${escHtml(m.error_msg||'')}" style="cursor:help">✕ ERR</span>`;
+      return `<div class="llm-row">
+        <span class="llm-chip" style="font-size:10px">${date}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(name)}">${escHtml(name)}</span>
+        <span><span class="llm-chip">${page}</span><br><span style="font-size:10px;color:var(--t2)">${agent}</span></span>
+        <span class="llm-prompt" title="${escHtml(m.prompt_preview||'')}">${prompt || '<em style="color:var(--t3)">sin preview</em>'}</span>
+        <span class="llm-chip">${tokens}</span>
+        <span class="llm-chip">${ms}</span>
+        <span>${statusHtml}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Top users breakdown
+  const userCount = {};
+  rows.forEach(r => {
+    const k = r.profiles?.full_name || r.profiles?.email || 'Desconocido';
+    userCount[k] = (userCount[k] || 0) + 1;
+  });
+  const topUsers = Object.entries(userCount).sort((a,b) => b[1]-a[1]).slice(0, 6);
+  const maxU = topUsers[0]?.[1] || 1;
+  document.getElementById('llm-top-users').innerHTML = topUsers.map(([u, n]) =>
+    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${escHtml(u)}</span>
+      <div style="width:80px;height:5px;background:var(--s3);border-radius:3px">
+        <div style="width:${Math.round(n/maxU*100)}%;height:100%;background:var(--cyan);border-radius:3px"></div>
+      </div>
+      <span style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);min-width:24px;text-align:right">${n}</span>
+    </div>`
+  ).join('') || '<span style="color:var(--t3)">Sin datos</span>';
+
+  // Top pages breakdown
+  const pageCount = {};
+  rows.forEach(r => {
+    const k = `${r.metadata?.page || 'unknown'} / ${r.metadata?.agent_name || '—'}`;
+    pageCount[k] = (pageCount[k] || 0) + 1;
+  });
+  const topPages = Object.entries(pageCount).sort((a,b) => b[1]-a[1]).slice(0, 6);
+  const maxP = topPages[0]?.[1] || 1;
+  document.getElementById('llm-top-pages').innerHTML = topPages.map(([p, n]) =>
+    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${escHtml(p)}</span>
+      <div style="width:80px;height:5px;background:var(--s3);border-radius:3px">
+        <div style="width:${Math.round(n/maxP*100)}%;height:100%;background:var(--teal);border-radius:3px"></div>
+      </div>
+      <span style="font-family:var(--font-mono);font-size:11px;color:var(--teal);min-width:24px;text-align:right">${n}</span>
+    </div>`
+  ).join('') || '<span style="color:var(--t3)">Sin datos</span>';
+}
+
+async function renderLLMKPIs(db, activePeriod) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const weekStart  = new Date(now.getTime() - 7 * 86400000).toISOString();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const [today, week, month] = await Promise.all([
+    db.from('activity_logs').select('id,metadata', {count:'exact'}).eq('action','llm_query').gte('created_at',todayStart),
+    db.from('activity_logs').select('id,metadata', {count:'exact'}).eq('action','llm_query').gte('created_at',weekStart),
+    db.from('activity_logs').select('id,metadata', {count:'exact'}).eq('action','llm_query').gte('created_at',monthStart),
+  ]);
+
+  const rows = month.data || [];
+  const totalTokens = rows.reduce((s, r) => s + (r.metadata?.tokens_approx || 0), 0);
+  const todayRows   = (today.data  || []);
+  const errorsToday = todayRows.filter(r => r.metadata?.success === false).length;
+  const durations   = todayRows.filter(r => r.metadata?.duration_ms).map(r => r.metadata.duration_ms);
+  const avgMs       = durations.length ? Math.round(durations.reduce((a,b)=>a+b,0)/durations.length) : 0;
+
+  document.getElementById('llm-k-total').textContent  = today.count  ?? '—';
+  document.getElementById('llm-k-week').textContent   = week.count   ?? '—';
+  document.getElementById('llm-k-month').textContent  = month.count  ?? '—';
+  document.getElementById('llm-k-tokens').textContent = totalTokens > 0 ? `~${(totalTokens/1000).toFixed(1)}K` : '0';
+  document.getElementById('llm-k-errors').textContent = errorsToday;
+  document.getElementById('llm-k-avgms').textContent  = avgMs > 0 ? avgMs : '—';
+}
+
+function exportLLMLogs() {
+  if (!_llmLogsCache.length) { showToast('No hay datos para exportar', 'info'); return; }
+  const header = ['Fecha','Usuario','Email','Página','Agente','Prompt Preview','Tokens','ms','Éxito','Error'];
+  const rows = _llmLogsCache.map(r => {
+    const m = r.metadata || {};
+    return [
+      r.created_at,
+      r.profiles?.full_name || '',
+      r.profiles?.email || m.user_email || '',
+      m.page || '',
+      m.agent_name || '',
+      (m.prompt_preview || '').replace(/,/g,'‚').replace(/\n/g,' '),
+      m.tokens_approx || 0,
+      m.duration_ms || 0,
+      m.success !== false ? 'SI' : 'NO',
+      m.error_msg || '',
+    ].join(',');
+  });
+  const csv = [header.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `consultas-ia-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 </script>
 </body>
