@@ -261,7 +261,7 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
 5. CAUSALIDAD: nunca la atribuyas sin evidencia directa — "correlación posible, no causalidad confirmada"
 6. EXTRAPOLACIÓN: no proyectes más allá del rango explícito de los datos proporcionados
 7. AMBIGÜEDAD: si la consulta es incompleta, solicita el dato faltante — no supongas
-8. MÉTRICAS DE MERCADO: añade "† Datos de mercado orientativos — validar con fuentes primarias antes de invertir"`,
+8. MÉTRICAS DE MERCADO: añade "† Datos de mercado orientativos — validar antes de invertir, contrastar con fuentes primarias"`,
     promptBuilder: (agenda, ctx) => `SESIÓN DEL CONSEJO — Mesa de Mercado & Clientes
 Empresa: IBANOR SA de CV / MetaTronix
 Segmento: ${ctx['ctx-segment']||'PyMEs / Empresas medianas'}
@@ -315,7 +315,7 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
 5. CAUSALIDAD: nunca la atribuyas sin evidencia directa — "correlación posible, no causalidad confirmada"
 6. EXTRAPOLACIÓN: no proyectes más allá del rango explícito de los datos proporcionados
 7. AMBIGÜEDAD: si la consulta es incompleta, solicita el dato faltante — no supongas
-8. ESTIMACIONES TÉCNICAS: añade "† Estimación orientativa — validar con arquitecto antes de comprometer recursos"`,
+8. ESTIMACIONES TÉCNICAS: añade "† Estimación orientativa — validar antes de comprometer recursos, revisar con arquitecto de sistemas"`,
     promptBuilder: (agenda, ctx) => `SESIÓN DEL CONSEJO — Mesa de Operaciones & Tecnología
 Empresa: IBANOR SA de CV / MetaTronix
 Equipo: ${ctx['ctx-team']||'6-15 personas'}

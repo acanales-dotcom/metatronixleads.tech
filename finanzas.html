@@ -1161,7 +1161,9 @@ INSTRUCCIÓN: Analiza el documento y devuelve un JSON estructurado así:
   "campos_no_encontrados": ["lista de campos esperados que no estaban en el documento"]
 }
 
-Responde SOLO con el JSON. Sin texto adicional, sin markdown, sin explicaciones fuera del JSON.`;
+Responde SOLO JSON válido. Sin texto adicional, sin markdown, sin explicaciones fuera del JSON.
+IMPORTANTE: null para datos faltantes — jamás inventes un valor para completar el esquema.`;
+
 
       const resp = await fetch(proxyUrl, {
         method:'POST',
