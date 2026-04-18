@@ -2411,8 +2411,6 @@ async function init() {
     Notiflix.Notify.init({ position:'right-bottom', timeout:3000, fontSize:'13px' });
   }
 
-  await loadHFToken();
-
   const kb = getKB();
   updateKBStatus(!!kb.empresa);
   renderAgents();
@@ -2434,65 +2432,6 @@ async function init() {
   loadUsage();
 }
 
-async function loadHFToken() {
-  // 1. localStorage primero (instantáneo, sin red)
-  const local = localStorage.getItem('mtx_hf_token');
-  if (local) { _hfTokenShared = local; }
-
-  // 2. Supabase portal_settings (fuente de verdad para todos los usuarios)
-  try {
-    const { data } = await getDB()
-      .from('portal_settings')
-      .select('value')
-      .eq('key', 'hf_api_token')
-      .single();
-    if (data?.value) {
-      _hfTokenShared = data.value;
-      localStorage.setItem('mtx_hf_token', data.value); // sincronizar a local
-    }
-  } catch (_) { /* token no configurado en DB todavía */ }
-
-  // 3. Actualizar campos visibles y estado del UI
-  document.querySelectorAll('[id="media-hf-token"]').forEach(el => {
-    el.value = _hfTokenShared;
-  });
-  _refreshHFTokenUI();
-}
-
-function _refreshHFTokenUI() {
-  // Mostrar/ocultar campo según si ya hay token
-  document.querySelectorAll('.hf-token-section').forEach(sec => {
-    const hasToken = !!_hfTokenShared;
-    const active   = sec.querySelector('.hf-token-active');
-    const form     = sec.querySelector('.hf-token-form');
-    if (active) active.style.display = hasToken ? 'flex' : 'none';
-    if (form)   form.style.display   = hasToken ? 'none' : 'block';
-  });
-}
-
-async function saveHFTokenGlobal(token) {
-  if (!token) return;
-  _hfTokenShared = token;
-  localStorage.setItem('mtx_hf_token', token);
-  _refreshHFTokenUI();
-  try {
-    await getDB().from('portal_settings').upsert(
-      { key: 'hf_api_token', value: token },
-      { onConflict: 'key' }
-    );
-    if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Token HF guardado para todos los usuarios ✓');
-  } catch (e) {
-    if (typeof Notiflix !== 'undefined') Notiflix.Notify.info('Token guardado localmente. Error al sincronizar con DB.');
-  }
-}
-
-function clearHFToken() {
-  _hfTokenShared = '';
-  localStorage.removeItem('mtx_hf_token');
-  document.querySelectorAll('[id="media-hf-token"]').forEach(el => { el.value = ''; });
-  _refreshHFTokenUI();
-}
-
 function escHtml(s) {
   const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML;
 }
@@ -2505,7 +2444,34 @@ function escHtml(s) {
    ═══════════════════════════════════════════════════════════ */
 
 let _mediaRunning = null; // 'video' | 'image' | null
-let _hfTokenShared = ''; // shared between video and image
+/* ═══════════════════════════════════════════════════════════
+   MEDIA PROXY — llama al Worker /hf con JWT del usuario
+   El token HF está en el servidor — el usuario no lo ve
+   ═══════════════════════════════════════════════════════════ */
+async function callHFProxy(model, inputs, parameters) {
+  const proxyBase = (window.MTX_CONFIG?.CLAUDE_PROXY_URL || '').replace(/\/+$/, '');
+  if (!proxyBase) throw new Error('CLAUDE_PROXY_URL no configurado en config.js');
+  const session = await getSession(); // app.js
+  const jwt = session?.access_token || '';
+  if (!jwt) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+  const resp = await fetch(proxyBase + '/hf', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': 'Bearer ' + jwt,
+    },
+    body: JSON.stringify({ model, inputs, parameters }),
+    signal: AbortSignal.timeout(300000),
+  });
+  if (!resp.ok) {
+    let errMsg = 'Error ' + resp.status;
+    try { const j = await resp.json(); errMsg = j.error || errMsg; } catch { /* noop */ }
+    throw new Error(errMsg);
+  }
+  return resp;
+}
+
+
 
 function renderMediaAgentForm(a) {
   const isVideo = a.mediaType === 'video';
@@ -2554,9 +2520,8 @@ function renderMediaAgentForm(a) {
         ⚠️ Uso individual — desactiva el otro generador media si está corriendo
       </div>
       <div style="font-size:10px;color:${color};font-weight:600">
-        ${isVideo ? 'GPU RTX 3060+ / HF Token' : 'GPU RTX 4070+ (NVFP4) / HF Token'}
-        &nbsp;·&nbsp;
-        <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:${color}">Obtener token gratis →</a>
+        ${isVideo ? 'Wan2.1-T2V-1.3B · GPU RTX 3060+' : 'FLUX.1-dev · GPU RTX 4070+ (NVFP4)'}
+        &nbsp;·&nbsp; <span style="color:#00ff88">🔑 Powered by MetaTronix API</span>
       </div>
     </div>
     <div class="agent-input-row">
@@ -2570,29 +2535,7 @@ function renderMediaAgentForm(a) {
         placeholder="blurry, low quality, watermark" value="blurry, low quality, distorted, watermark">
     </div>
     ${steps}
-    <div class="agent-input-row hf-token-section">
-      <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em">HUGGINGFACE TOKEN</label>
-      <!-- Estado: token activo -->
-      <div class="hf-token-active" style="display:${_hfTokenShared ? 'flex' : 'none'};align-items:center;gap:8px;padding:6px 10px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:6px">
-        <span style="color:#00ff88;font-size:11px;font-weight:700">🔑 Token activo</span>
-        <span style="color:rgba(255,255,255,.35);font-size:10px;font-family:monospace">hf_••••••••••••••••••••</span>
-        <button onclick="clearHFToken()" style="margin-left:auto;background:none;border:none;color:#7E8FA8;font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.1)" title="Cambiar token">✏️ Cambiar</button>
-      </div>
-      <!-- Estado: sin token — mostrar campo -->
-      <div class="hf-token-form" style="display:${_hfTokenShared ? 'none' : 'block'}">
-        <input type="password" id="media-hf-token" class="crm-input"
-          style="font-size:11px;height:30px;font-family:monospace;margin-bottom:5px"
-          placeholder="hf_xxxxxxxxxxxxxxxxxx"
-          oninput="_hfTokenShared=this.value;document.querySelectorAll('[id=media-hf-token]').forEach(el=>el.value=this.value)">
-        <button onclick="saveHFTokenGlobal(document.querySelector('[id=media-hf-token]').value)"
-          style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:5px;background:rgba(0,255,136,.12);color:#00ff88;border:1px solid rgba(0,255,136,.3);cursor:pointer;width:100%">
-          💾 Guardar token (no volver a pedirlo)
-        </button>
-        <div style="font-size:9px;color:#4A5568;margin-top:4px">
-          <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#7E8FA8">Obtener token gratis en huggingface.co →</a>
-        </div>
-      </div>
-    </div>
+    <!-- Token HF gestionado en servidor — sin configuración por parte del usuario -->
     <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
       <a href="${isVideo ? 'https://huggingface.co/spaces/Wan-AI/Wan2.1' : 'https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev'}"
         target="_blank"
@@ -2614,22 +2557,17 @@ async function runAgentVideo(id, output) {
     return;
   }
   const prompt   = getInput('video');
-  const token    = document.getElementById('media-hf-token')?.value.trim() || _hfTokenShared;
   const negPrompt= document.getElementById('media-video-neg')?.value.trim() || 'blurry, low quality';
   const frames   = parseInt(document.getElementById('media-video-frames')?.value || '48');
   const res      = (document.getElementById('media-video-res')?.value || '720x1280').split('x');
   const [w, h]   = res.map(Number);
 
   if (!prompt) { output.innerHTML = '<div style="color:var(--danger);font-size:12px">Escribe un prompt para el video</div>'; return; }
-  if (!token)  { output.innerHTML = `<div style="font-size:12px;color:#F59E0B;padding:10px;background:rgba(245,158,11,.08);border-radius:6px">
-    Necesitas un <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#00C2E0">token de HuggingFace</a> para generar video.<br>
-    O usa el botón "🚀 Usar HF Space (gratis)" arriba.
-  </div>`; return; }
 
   _mediaRunning = 'video';
   output.innerHTML = `<div style="font-size:12px;color:#00C2E0;font-family:'Inter',sans-serif;padding:8px 0">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <div class="agent-spinner"></div> Enviando a HuggingFace Wan2.1-T2V…
+      <div class="agent-spinner"></div> Generando video con IA (via MetaTronix API)…
     </div>
     <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
       <div id="vid-fill" style="height:100%;background:linear-gradient(90deg,#00C2E0,#14B8A6);border-radius:2px;width:15%;transition:width .5s"></div>
@@ -2643,21 +2581,13 @@ async function runAgentVideo(id, output) {
   };
 
   try {
-    setP(20, '📡 Conectando con api-inference.huggingface.co…');
-    const resp = await fetch(
-      'https://api-inference.huggingface.co/models/Wan-AI/Wan2.1-T2V-1.3B',
-      { method:'POST',
-        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json','X-Wait-For-Model':'true'},
-        body: JSON.stringify({ inputs: prompt, parameters: { negative_prompt: negPrompt, num_frames: frames, height: h, width: w, guidance_scale: 6 } }),
-        signal: AbortSignal.timeout(300000) }
+    setP(20, '📡 Conectando con MetaTronix AI Proxy → Wan2.1-T2V…');
+    const resp = await callHFProxy(
+      'Wan-AI/Wan2.1-T2V-1.3B',
+      prompt,
+      { negative_prompt: negPrompt, num_frames: frames, height: h, width: w, guidance_scale: 6 }
     );
     setP(60, '🎬 Modelo procesando video (1-3 min)…');
-    if (!resp.ok) {
-      const e = await resp.json().catch(()=>({}));
-      if (resp.status===503) throw new Error('Modelo cargando en HuggingFace. Espera 60s e intenta de nuevo.');
-      if (resp.status===401) throw new Error('Token inválido. Verifica en huggingface.co/settings/tokens');
-      throw new Error(e.error || `Error ${resp.status}`);
-    }
     setP(90, '⬇ Descargando video…');
     const blob = await resp.blob();
     const url  = URL.createObjectURL(blob);
@@ -2681,9 +2611,8 @@ async function runAgentVideo(id, output) {
       <div style="padding:12px;font-size:12px;font-family:'Inter',sans-serif">
         <div style="color:#EF4444;font-weight:700;margin-bottom:6px">❌ ${escHtml(e.message)}</div>
         <div style="color:#4A5568;font-size:11px">
-          • Sin token → usa <a href="https://huggingface.co/spaces/Wan-AI/Wan2.1" target="_blank" style="color:#00C2E0">HF Space</a><br>
-          • El modelo puede estar cargando — espera 1 min<br>
-          • Para uso local instala wan_server.py con Flask + Diffusers
+          • El modelo puede estar cargando en HuggingFace — espera 60s e intenta de nuevo<br>
+          • Usa el botón "🚀 HF Space" para acceso directo sin proxy
         </div>
       </div>`;
   } finally {
@@ -2701,21 +2630,17 @@ async function runAgentImage(id, output) {
     return;
   }
   const prompt   = getInput('image');
-  const token    = document.getElementById('media-hf-token')?.value.trim() || _hfTokenShared;
   const negPrompt= document.getElementById('media-image-neg')?.value.trim() || 'blurry, low quality';
   const res      = (document.getElementById('media-image-res')?.value || '1024x1024').split('x');
   const count    = parseInt(document.getElementById('media-image-count')?.value || '1');
   const [w, h]   = res.map(Number);
 
   if (!prompt) { output.innerHTML = '<div style="color:var(--danger);font-size:12px">Escribe un prompt para la imagen</div>'; return; }
-  if (!token)  { output.innerHTML = `<div style="font-size:12px;color:#F59E0B;padding:10px;background:rgba(245,158,11,.08);border-radius:6px">
-    Necesitas un <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#A78BFA">token de HuggingFace</a> para generar imágenes.
-  </div>`; return; }
 
   _mediaRunning = 'image';
   output.innerHTML = `<div style="font-size:12px;color:#A78BFA;font-family:'Inter',sans-serif;padding:8px 0">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <div class="agent-spinner" style="border-top-color:#A78BFA"></div> Enviando a HuggingFace FLUX.2…
+      <div class="agent-spinner" style="border-top-color:#A78BFA"></div> Generando imagen con IA (via MetaTronix API)…
     </div>
     <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
       <div id="img-fill" style="height:100%;background:linear-gradient(90deg,#7C3AED,#A78BFA);border-radius:2px;width:15%;transition:width .5s"></div>
@@ -2730,25 +2655,13 @@ async function runAgentImage(id, output) {
   };
 
   try {
-    setP(20, '📡 Conectando con FLUX.2-dev-NVFP4…');
-    const body = {
-      inputs: prompt,
-      parameters: { negative_prompt: negPrompt, height: h, width: w, guidance_scale: 3.5, num_inference_steps: 28, num_images_per_prompt: count }
-    };
-    const resp = await fetch(
-      'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev',
-      { method:'POST',
-        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json','X-Wait-For-Model':'true'},
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(180000) }
+    setP(20, '📡 Conectando con MetaTronix AI Proxy → FLUX.1-dev…');
+    const resp = await callHFProxy(
+      'black-forest-labs/FLUX.1-dev',
+      prompt,
+      { negative_prompt: negPrompt, height: h, width: w, guidance_scale: 3.5, num_inference_steps: 28, num_images_per_prompt: count }
     );
     setP(65, '🖼 Modelo generando imagen…');
-    if (!resp.ok) {
-      const e = await resp.json().catch(()=>({}));
-      if (resp.status===503) throw new Error('Modelo cargando. Espera 30-60 segundos.');
-      if (resp.status===401) throw new Error('Token inválido. Verifica en huggingface.co/settings/tokens');
-      throw new Error(e.error || `Error ${resp.status}`);
-    }
     setP(90, '⬇ Procesando imagen…');
     const blob = await resp.blob();
     const url  = URL.createObjectURL(blob);
@@ -2770,8 +2683,8 @@ async function runAgentImage(id, output) {
       <div style="padding:12px;font-size:12px;font-family:'Inter',sans-serif">
         <div style="color:#EF4444;font-weight:700;margin-bottom:6px">❌ ${escHtml(e.message)}</div>
         <div style="color:#4A5568;font-size:11px">
-          • Sin token → usa <a href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev" target="_blank" style="color:#A78BFA">HF Space</a><br>
-          • El modelo puede estar cargando — espera 1 min
+          • El modelo puede estar cargando en HuggingFace — espera 30-60s e intenta de nuevo<br>
+          • Usa el botón "🚀 HF Space" para acceso directo
         </div>
       </div>`;
   } finally {

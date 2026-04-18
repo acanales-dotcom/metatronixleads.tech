@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# deploy-worker.yml — Despliega claude-proxy Worker a Cloudflare Workers
+# Se activa: manualmente (workflow_dispatch) o en push a worker/claude-proxy.js
+# Secrets requeridos en GitHub → Settings → Secrets:
+#   CLOUDFLARE_API_TOKEN  → Cloudflare API token con permiso "Edit Workers"
+#   CLOUDFLARE_ACCOUNT_ID → 7d424ed86707327fa5b7bec1a0fe373a
+# ─────────────────────────────────────────────────────────────────────────────
+name: Deploy → Cloudflare Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/claude-proxy.js'
+  workflow_dispatch:
+    inputs:
+      add_hf_secret:
+        description: 'Agregar/actualizar HF_API_KEY secret (dejar vacío para solo deploy)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  deploy-worker:
+    name: 🤖 Deploy Claude+HF Proxy Worker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Crear wrangler.toml temporal
+        run: |
+          cat > wrangler.toml << 'EOF'
+          name = "claude-proxy"
+          main = "worker/claude-proxy.js"
+          compatibility_date = "2024-01-15"
+          account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          EOF
+          echo "✅ wrangler.toml creado"
+          cat wrangler.toml
+
+      - name: Deploy Worker
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Desplegando claude-proxy Worker v3.0"
+          echo "  Rutas: POST / → Claude, POST /hf → HuggingFace"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Agregar HF_API_KEY como Worker secret
+        if: ${{ github.event.inputs.add_hf_secret != '' }}
+        run: |
+          echo "${{ github.event.inputs.add_hf_secret }}" | wrangler secret put HF_API_KEY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Verificar Worker activo
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Verificando Worker respondiendo..."
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            https://claude-proxy.acanales-7d4.workers.dev \
+            -H "Content-Type: application/json" \
+            -d '{}' || echo "000")
+          echo "  HTTP Status: $STATUS"
+          if [ "$STATUS" = "401" ]; then
+            echo "✅ Worker activo — devuelve 401 (sin auth, correcto)"
+          elif [ "$STATUS" = "000" ]; then
+            echo "⚠️  No se pudo conectar — puede estar propagando"
+          else
+            echo "  Status $STATUS recibido"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Worker URL: https://claude-proxy.acanales-7d4.workers.dev"
+          echo "  Rutas disponibles:"
+          echo "    POST /    → Claude API (SSE streaming)"
+          echo "    POST /hf  → HuggingFace API proxy"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

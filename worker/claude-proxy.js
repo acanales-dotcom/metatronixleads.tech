@@ -1,19 +1,31 @@
 // ============================================================
-// METATRONIXLEADS.TECH — Cloudflare Worker: Claude API Proxy
-// v2.1 — JWT verification + rate limiting + security headers
+// METATRONIXLEADS.TECH — Cloudflare Worker: Claude + HF Proxy
+// v3.0 — JWT verification + rate limiting + HuggingFace proxy
 // ============================================================
 // Secrets requeridos en Workers dashboard:
 //   ANTHROPIC_API_KEY  → tu Anthropic API key
+//   HF_API_KEY         → tu HuggingFace Access Token (hf_xxx)
 //   SUPABASE_URL       → https://hodrfonbpmqulkyzrzpq.supabase.co
 //   SUPABASE_ANON_KEY  → tu Supabase anon key
+//
+// Rutas:
+//   POST /        → Claude API proxy (streaming SSE)
+//   POST /hf      → HuggingFace Inference API proxy (imagen/video)
 // ============================================================
 
 const ALLOWED_ORIGINS = [
   'https://metatronixleads.tech',
   'https://www.metatronixleads.tech',
-  // localhost permitido SOLO en dev — eliminar antes de audit externo
-  // 'http://localhost:8080',
-  // 'http://127.0.0.1:5500',
+  'https://acanales-dotcom.github.io',
+  'http://localhost:8080',
+  'http://127.0.0.1:5500',
+];
+
+// Modelos HF permitidos (whitelist de seguridad)
+const HF_ALLOWED_MODELS = [
+  'black-forest-labs/FLUX.1-dev',        // imágenes HD — requiere HF Pro
+  'black-forest-labs/FLUX.1-schnell',    // imágenes rápidas — tier gratuito
+  'Wan-AI/Wan2.1-T2V-1.3B',             // video — requiere HF Pro
 ];
 
 /* ── Security headers agregados a TODAS las respuestas ─────── */
@@ -81,22 +93,166 @@ function checkRateLimit(userId) {
   return true;
 }
 
+/* ── Verificar JWT y retornar usuario o respuesta de error ──── */
+async function requireAuth(request, env, origin) {
+  const authHeader = request.headers.get('Authorization') || '';
+  const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  if (!jwt) return { user: null, err: jsonResp({ error: 'No autorizado. Inicia sesión.' }, 401, origin) };
+
+  let user = null;
+  if (env.SUPABASE_URL && env.SUPABASE_ANON_KEY) {
+    user = await verifySupabaseJWT(jwt, env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+  }
+  if (!user) return { user: null, err: jsonResp({ error: 'Token inválido o expirado.' }, 401, origin) };
+  return { user, err: null };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HANDLER: HuggingFace Inference API Proxy
+   Ruta: POST /hf
+   Body: { model: string, inputs: string, parameters: object }
+   ═══════════════════════════════════════════════════════════ */
+async function handleHF(request, env, origin) {
+  if (!env.HF_API_KEY) {
+    return jsonResp({ error: 'HF_API_KEY no configurada en el Worker. Agrégala en Cloudflare Workers → Settings → Variables.' }, 500, origin);
+  }
+
+  const { user, err } = await requireAuth(request, env, origin);
+  if (err) return err;
+
+  if (!checkRateLimit(user.id + '_hf')) {
+    return jsonResp({
+      error: `Límite de velocidad alcanzado (${RATE_LIMIT_MAX} requests/min). Espera un momento.`,
+    }, 429, origin);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResp({ error: 'Body JSON inválido.' }, 400, origin);
+  }
+
+  const { model, inputs, parameters } = body;
+
+  if (!model || !HF_ALLOWED_MODELS.includes(model)) {
+    return jsonResp({
+      error: `Modelo no permitido: ${model}. Modelos válidos: ${HF_ALLOWED_MODELS.join(', ')}`,
+    }, 400, origin);
+  }
+
+  if (!inputs || typeof inputs !== 'string' || inputs.trim().length < 3) {
+    return jsonResp({ error: 'inputs requerido (prompt de texto mínimo 3 chars).' }, 400, origin);
+  }
+
+  try {
+    const hfResp = await fetch(
+      `https://api-inference.huggingface.co/models/${model}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization':    `Bearer ${env.HF_API_KEY}`,
+          'Content-Type':     'application/json',
+          'X-Wait-For-Model': 'true',
+        },
+        body: JSON.stringify({ inputs: inputs.trim(), parameters: parameters || {} }),
+        // No timeout en el Worker — el cliente ya pone AbortSignal
+      }
+    );
+
+    if (!hfResp.ok) {
+      // Intentar leer JSON de error de HF, sino texto plano
+      let errMsg = `HuggingFace error ${hfResp.status}`;
+      try {
+        const errBody = await hfResp.json();
+        errMsg = errBody.error || errBody.message || errMsg;
+      } catch {
+        try { errMsg = await hfResp.text(); } catch { /* noop */ }
+      }
+      return jsonResp({ error: errMsg, status: hfResp.status }, hfResp.status, origin);
+    }
+
+    // Pasar la respuesta binaria (imagen PNG/JPEG o video MP4) directo al cliente
+    const contentType = hfResp.headers.get('content-type') || 'application/octet-stream';
+    return new Response(hfResp.body, {
+      status: 200,
+      headers: {
+        ...corsHeaders(origin),
+        ...SECURITY_HEADERS,
+        'Content-Type': contentType,
+      },
+    });
+
+  } catch (e) {
+    return jsonResp({ error: e.message || 'Error interno proxying HuggingFace.' }, 500, origin);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HANDLER: Claude API Proxy
+   Ruta: POST /  (cualquier path que no sea /hf)
+   ═══════════════════════════════════════════════════════════ */
+async function handleClaude(request, env, origin) {
+  if (!env.ANTHROPIC_API_KEY) {
+    return jsonResp({ error: 'ANTHROPIC_API_KEY no configurada en el Worker' }, 500, origin);
+  }
+
+  const { user, err } = await requireAuth(request, env, origin);
+  if (err) return err;
+
+  if (!checkRateLimit(user.id)) {
+    return jsonResp({
+      error: `Límite de velocidad alcanzado (${RATE_LIMIT_MAX} llamadas/min). Espera un momento.`,
+    }, 429, origin);
+  }
+
+  try {
+    const body = await request.json();
+
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key':         env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type':      'application/json',
+      },
+      body: JSON.stringify({
+        model:      body.model      || 'claude-haiku-4-5-20251001',
+        max_tokens: body.max_tokens || 4096,
+        system:     body.system     || `Eres un redactor experto de documentos empresariales para IBANOR SA de CV / MetaTronix. Genera documentos en español, estructurados y profesionales. Devuelve SOLO HTML semántico (h1-h3, p, ul, ol, table, strong, em). NO incluyas DOCTYPE, html, head, body ni style tags. Incluye fecha actual: ${new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' })}.`,
+        messages:   body.messages,
+        stream:     true,
+      }),
+    });
+
+    if (!claudeRes.ok) {
+      const errText = await claudeRes.text();
+      return jsonResp({ error: `Claude API error ${claudeRes.status}: ${errText}` }, claudeRes.status, origin);
+    }
+
+    return new Response(claudeRes.body, {
+      status: 200,
+      headers: {
+        ...corsHeaders(origin),
+        ...SECURITY_HEADERS,
+        'Content-Type':      'text/event-stream',
+        'Cache-Control':     'no-cache',
+        'X-Accel-Buffering': 'no',
+        'X-User-Id':         user.id,
+      },
+    });
+
+  } catch (err) {
+    return jsonResp({ error: err.message || 'Error interno del servidor' }, 500, origin);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ROUTER PRINCIPAL
+   ═══════════════════════════════════════════════════════════ */
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
-
-    // ── CORS enforcement: rechazar orígenes no permitidos ───
-    // Permitimos requests sin Origin (same-origin, curl directo desde server)
-    // Bloqueamos cualquier Origin que no esté en la whitelist
-    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-      return new Response(JSON.stringify({ error: 'Origin no permitido' }), {
-        status: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          ...SECURITY_HEADERS,
-        },
-      });
-    }
 
     // ── Preflight CORS ──────────────────────────────────────
     if (request.method === 'OPTIONS') {
@@ -111,72 +267,13 @@ export default {
       return jsonResp({ error: 'Method Not Allowed' }, 405, origin);
     }
 
-    // ── Verificar ANTHROPIC_API_KEY configurada ─────────────
-    if (!env.ANTHROPIC_API_KEY) {
-      return jsonResp({ error: 'ANTHROPIC_API_KEY no configurada en el Worker' }, 500, origin);
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+
+    if (path === '/hf') {
+      return handleHF(request, env, origin);
     }
 
-    // ── Verificar JWT de Supabase ───────────────────────────
-    const authHeader = request.headers.get('Authorization') || '';
-    const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
-
-    let authenticatedUser = null;
-    if (env.SUPABASE_URL && env.SUPABASE_ANON_KEY && jwt) {
-      authenticatedUser = await verifySupabaseJWT(jwt, env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-    }
-
-    // Rechazar si no hay JWT válido (protección de créditos)
-    if (!authenticatedUser) {
-      return jsonResp({ error: 'No autorizado. Inicia sesión para usar esta función.' }, 401, origin);
-    }
-
-    // ── Rate limiting por usuario ───────────────────────────
-    if (!checkRateLimit(authenticatedUser.id)) {
-      return jsonResp({
-        error: `Límite de velocidad alcanzado (${RATE_LIMIT_MAX} llamadas/min). Espera un momento.`,
-      }, 429, origin);
-    }
-
-    try {
-      const body = await request.json();
-
-      // ── Llamar a Claude API (streaming SSE) ────────────────
-      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key':         env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'content-type':      'application/json',
-        },
-        body: JSON.stringify({
-          model:      body.model      || 'claude-haiku-4-5-20251001',
-          max_tokens: body.max_tokens || 4096,
-          system:     body.system     || `Eres un redactor experto de documentos empresariales para IBANOR SA de CV / MetaTronix. Genera documentos en español, estructurados y profesionales. Devuelve SOLO HTML semántico (h1-h3, p, ul, ol, table, strong, em). NO incluyas DOCTYPE, html, head, body ni style tags. Incluye fecha actual: ${new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' })}.`,
-          messages:   body.messages,
-          stream:     true,
-        }),
-      });
-
-      if (!claudeRes.ok) {
-        const err = await claudeRes.text();
-        return jsonResp({ error: `Claude API error ${claudeRes.status}: ${err}` }, claudeRes.status, origin);
-      }
-
-      // ── Pasar el stream SSE directo al cliente ──────────────
-      return new Response(claudeRes.body, {
-        status: 200,
-        headers: {
-          ...corsHeaders(origin),
-          ...SECURITY_HEADERS,
-          'Content-Type':      'text/event-stream',
-          'Cache-Control':     'no-cache',
-          'X-Accel-Buffering': 'no',
-          'X-User-Id':         authenticatedUser.id, // debug header
-        },
-      });
-
-    } catch (err) {
-      return jsonResp({ error: err.message || 'Error interno del servidor' }, 500, origin);
-    }
+    return handleClaude(request, env, origin);
   },
 };
