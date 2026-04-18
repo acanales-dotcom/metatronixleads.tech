@@ -522,10 +522,12 @@
       <div class="form-group">
         <label class="form-label">Rol</label>
         <select id="gu-role" class="form-select">
-          <option value="user">Colaborador</option>
-          <option value="admin_restringido">Admin Restringido (Visor)</option>
-          <option value="admin">Administrador</option>
-          <option value="super_admin">Super Administrador</option>
+          <option value="readonly">Solo Lectura — Personal Base</option>
+          <option value="viewer">Operativo / Soporte</option>
+          <option value="user">Colaborador — Vendedor / Agente</option>
+          <option value="admin_restringido">Gerente / Coordinador</option>
+          <option value="admin">Director de Área</option>
+          <option value="super_admin">CEO / Super Admin</option>
         </select>
       </div>
       <div class="form-group">
@@ -623,9 +625,11 @@
       <div class="form-group">
         <label class="form-label">Rol</label>
         <select id="invite-role" class="form-select">
-          <option value="user">Colaborador</option>
-          <option value="admin_restringido">Admin Restringido (Visor)</option>
-          <option value="admin">Administrador</option>
+          <option value="readonly">Solo Lectura — Personal Base</option>
+          <option value="viewer">Operativo / Soporte</option>
+          <option value="user">Colaborador — Vendedor / Agente</option>
+          <option value="admin_restringido">Gerente / Coordinador</option>
+          <option value="admin">Director de Área</option>
         </select>
       </div>
     </div>
@@ -1260,7 +1264,7 @@ async function loadColaboradores() {
     propuesta_enviada:'var(--accent)', cerrado_ganado:'var(--accent)', cerrado_perdido:'var(--danger)'
   };
   const DOC_STATUS_COLOR = { draft:'var(--text-muted)', pending_review:'var(--warning)', approved:'var(--accent)', rejected:'var(--danger)' };
-  const ROLE_LABELS = { super_admin:'Super Admin', admin:'Administrador', admin_restringido:'Admin Restringido', user:'Colaborador' };
+  const ROLE_LABELS = { super_admin:'CEO · Super Admin', admin:'Director', admin_restringido:'Gerente', user:'Colaborador', viewer:'Operativo', readonly:'Solo Lectura' };
 
   container.innerHTML = colaboradores.map(u => {
     const uLeads = (leads||[]).filter(l => l.user_id === u.id);
@@ -1398,7 +1402,7 @@ async function loadClaudeAdmin() {
     return;
   }
 
-  const ROLE_LABELS = { super_admin:'Super Admin', admin:'Administrador', admin_restringido:'Admin Restringido', user:'Colaborador' };
+  const ROLE_LABELS = { super_admin:'CEO · Super Admin', admin:'Director', admin_restringido:'Gerente', user:'Colaborador', viewer:'Operativo', readonly:'Solo Lectura' };
 
   tbody.innerHTML = users.map(u => {
     const pct = u.claude_monthly_limit > 0 ? Math.min(Math.round((u.claude_usage_month/u.claude_monthly_limit)*100), 100) : 0;
@@ -1646,7 +1650,8 @@ async function loadPerplexityAdmin() {
   }
 
   const roleLabel = r => ({
-    user:'Colaborador', admin:'Administrador', admin_restringido:'Admin Restringido', super_admin:'Super Admin'
+    readonly:'Solo Lectura', viewer:'Operativo', user:'Colaborador',
+    admin_restringido:'Gerente', admin:'Director', super_admin:'CEO · Super Admin'
   }[r] || r);
 
   tbody.innerHTML = profiles.map(p => {
@@ -1958,10 +1963,12 @@ async function sendDocToReview() {
 //  GESTIÓN DE USUARIOS (solo ncanales + acanales)
 // ══════════════════════════════════════════════════════════════
 const GU_ROLE_LABELS = {
+  readonly:         'Solo Lectura',
+  viewer:           'Operativo',
   user:             'Colaborador',
-  admin_restringido:'Admin Restringido',
-  admin:            'Administrador',
-  super_admin:      'Super Admin'
+  admin_restringido:'Gerente',
+  admin:            'Director',
+  super_admin:      'CEO · Super Admin'
 };
 
 async function loadGestionUsers() {
@@ -1998,7 +2005,9 @@ function renderGestionUsers() {
       super_admin:      'badge-danger',
       admin:            'badge-accent',
       admin_restringido:'badge-warning',
-      user:             'badge-neutral'
+      user:             'badge-neutral',
+      viewer:           'badge-neutral',
+      readonly:         'badge-neutral'
     }[u.role] || 'badge-neutral';
 
     const isSelf = u.email?.toLowerCase() === cuEmail;

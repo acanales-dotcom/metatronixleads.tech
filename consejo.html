@@ -1023,12 +1023,74 @@ function updateUsagePill() {
 }
 
 // ── AUTH & INIT ───────────────────────────────────────────────
+// Acceso a mesas por rol (mirrors ROLE_CONSEJO_ACCESS in app.js)
+const CONSEJO_ACCESS = {
+  super_admin:       true,
+  admin:             true,
+  admin_restringido: ['ceo','ventas','marketing','admin'],
+  user:              ['ceo'],
+  viewer:            ['ceo'],
+  readonly:          [],
+};
+
+const ROLE_DISPLAY = {
+  super_admin:'CEO · Super Admin', admin:'Director', admin_restringido:'Gerente',
+  user:'Colaborador', viewer:'Operativo', readonly:'Solo Lectura'
+};
+
+function applyRoleAccess(role) {
+  const access = CONSEJO_ACCESS[role] ?? ['ceo'];
+
+  // Si no tiene acceso en absoluto → redirigir
+  if (Array.isArray(access) && access.length === 0) {
+    document.getElementById('auth-gate').innerHTML = `
+      <div style="text-align:center;font-family:'JetBrains Mono',monospace;color:var(--muted)">
+        <div style="font-size:32px;margin-bottom:12px">🔒</div>
+        <div style="font-size:13px;color:var(--danger)">ACCESO RESTRINGIDO</div>
+        <div style="font-size:11px;margin-top:8px">Tu nivel organizacional no incluye acceso al Consejo IA</div>
+        <a href="/home.html" style="display:inline-block;margin-top:20px;padding:8px 20px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--accent);border-radius:6px;text-decoration:none;font-size:11px">← Volver al Portal</a>
+      </div>`;
+    return false;
+  }
+
+  // Ocultar tabs no permitidos
+  if (access !== true) {
+    document.querySelectorAll('.dtab').forEach(btn => {
+      const dir = btn.getAttribute('onclick')?.match(/'(\w+)'\)/)?.[1];
+      if (dir && !access.includes(dir)) {
+        btn.style.display = 'none';
+      }
+    });
+    // Asegurar que el tab activo sea uno permitido
+    const allowed = access[0] || 'ceo';
+    const firstTab = document.querySelector(`.dtab[onclick*="'${allowed}'"]`);
+    if (firstTab) {
+      document.querySelectorAll('.dtab').forEach(b => b.classList.remove('active'));
+      firstTab.classList.add('active');
+    }
+  }
+
+  // Viewer → modo lectura (deshabilita envío)
+  if (role === 'viewer') {
+    const sendBtn = document.getElementById('send-btn');
+    const textarea = document.getElementById('reto-input');
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.title = 'Modo solo lectura — 5 consultas/mes disponibles para Operativos';
+      sendBtn.style.opacity = '.5';
+    }
+    if (textarea) {
+      textarea.placeholder = 'Modo visualización. Contacta a tu Director para aumentar permisos.';
+      textarea.disabled = true;
+    }
+  }
+
+  return true;
+}
+
 async function init() {
   const db = getDB();
-  if (!db) {
-    window.location.href = '/index.html';
-    return;
-  }
+  if (!db) { window.location.href = '/index.html'; return; }
 
   try {
     const { data: { session } } = await db.auth.getSession();
@@ -1036,14 +1098,19 @@ async function init() {
 
     currentUser = session.user;
 
-    // Get profile
+    // Get profile with role
     let displayName = currentUser.email?.split('@')[0] || 'Usuario';
+    let userRole = 'user';
     try {
       const { data: profile } = await db.from('profiles').select('full_name,role').eq('id', currentUser.id).single();
       if (profile?.full_name) displayName = profile.full_name.split(' ')[0];
+      if (profile?.role) userRole = profile.role;
     } catch (_) {}
 
-    document.getElementById('user-chip').textContent = displayName.toUpperCase();
+    document.getElementById('user-chip').textContent = `${displayName.toUpperCase()} · ${ROLE_DISPLAY[userRole] || userRole}`;
+
+    // Apply role-based access — stop if no access
+    if (!applyRoleAccess(userRole)) return;
 
     // Load usage
     try {
@@ -1057,17 +1124,17 @@ async function init() {
     document.getElementById('auth-gate').style.display = 'none';
     document.getElementById('consejo-shell').style.display = 'flex';
 
-    // Render default grid
-    renderGrid('ceo');
+    // Render initial grid based on role
+    const access = CONSEJO_ACCESS[userRole];
+    const defaultDir = (Array.isArray(access) ? access[0] : null) || 'ceo';
+    renderGrid(defaultDir);
 
     // Log activity
     try {
       await db.from('activity_logs').insert({
-        user_id: currentUser.id,
-        action: 'page_view',
-        entity_type: 'page',
-        entity_id: 'consejo',
-        metadata: { page: 'consejo.html' }
+        user_id: currentUser.id, action: 'page_view',
+        entity_type: 'page', entity_id: 'consejo',
+        metadata: { page: 'consejo.html', role: userRole }
       });
     } catch (_) {}
 
