@@ -543,6 +543,26 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">🏛</span>
         <span class="nav-label">Consejo Ejecutivo</span>
       </a>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-label">Directores IA</div>
+      <a href="/ventas.html#director" class="sidebar-nav-link ${activePage==='director-ventas'?'active':''}">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Dir. Comercial</span>
+      </a>
+      <a href="/marketing.html#director" class="sidebar-nav-link ${activePage==='director-marketing'?'active':''}">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">Dir. Marketing</span>
+      </a>
+      <a href="/director-ops.html" class="sidebar-nav-link ${activePage==='director-ops'?'active':''}">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Dir. Operaciones</span>
+      </a>
+      <a href="/finanzas.html#director" class="sidebar-nav-link ${activePage==='director-admin'?'active':''}">
+        <span class="nav-icon">💼</span>
+        <span class="nav-label">Dir. Administrativo</span>
+      </a>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-label">Finanzas & Operación</div>
       <a href="/finanzas.html" class="sidebar-nav-link ${activePage==='finanzas'?'active':''}">
         <span class="nav-icon">📊</span>
         <span class="nav-label">Finanzas & Flujo</span>

@@ -801,5 +801,491 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 
 init();
 </script>
+
+<!-- SheetJS para leer Excel/CSV -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<!-- ═══ DIRECTOR ADMINISTRATIVO IA — MetaAdmin ═══ -->
+<section id="director" style="display:none">
+<style>
+  .dma-wrap{padding:0 28px 28px;max-width:1400px;margin:0 auto}
+  .dma-head{display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-top:28px}
+  .dma-ico{width:52px;height:52px;border-radius:12px;background:rgba(185,102,255,.1);border:1px solid rgba(185,102,255,.25);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+  .dma-tit{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;color:#b966ff;margin:0}
+  .dma-rol{font-size:12px;color:var(--text-muted);margin-top:2px}
+  .dma-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .dma-chips{display:flex;flex-wrap:wrap;gap:6px;padding:14px 20px;border-bottom:1px solid var(--border)}
+  .dma-chip{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:.15s}
+  .dma-chip:hover{border-color:#b966ff;color:#b966ff}
+  .dma-row{display:flex;gap:8px;padding:12px 20px;border-bottom:1px solid var(--border)}
+  .dma-inp{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;font-family:inherit;resize:none;min-height:44px}
+  .dma-inp:focus{outline:none;border-color:#b966ff}
+  .dma-btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:700;background:#b966ff;color:#000;border:none;cursor:pointer;transition:opacity .15s;align-self:flex-end}
+  .dma-btn:hover:not(:disabled){opacity:.85}.dma-btn:disabled{opacity:.4;cursor:not-allowed}
+  .dma-out{min-height:200px;max-height:420px;overflow-y:auto;padding:16px 20px;font-size:13px;line-height:1.8;color:var(--text)}
+  .dma-out.streaming{border-top:1px solid #b966ff}
+  .dma-out h2,.dma-out h3{font-family:'Bebas Neue',sans-serif;color:#b966ff;margin:8px 0 4px}
+  .dma-out p{margin:4px 0}.dma-out ul{margin:4px 0 4px 16px}
+  .dma-out strong{color:#fff}
+  .dma-out table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+  .dma-out th{padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);color:#b966ff}
+  .dma-out td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.05)}
+  .dma-foot{display:flex;justify-content:space-between;align-items:center;padding:8px 20px;border-top:1px solid var(--border)}
+  .dma-spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(185,102,255,.2);border-top-color:#b966ff;border-radius:50%;animation:dmaspin .7s linear infinite}
+  @keyframes dmaspin{to{transform:rotate(360deg)}}
+</style>
+<div class="dma-wrap">
+  <div class="dma-head">
+    <div class="dma-ico">💼</div>
+    <div>
+      <div class="dma-tit">MetaAdmin — Director Administrativo & Financiero IA</div>
+      <div class="dma-rol">Flujo de Caja · Cobranza · Fiscal SAT · Tesorería · Contratos · IBANOR SA de CV</div>
+    </div>
+  </div>
+  <div class="dma-card">
+    <div class="dma-chips">
+      <button class="dma-chip" onclick="dma_ask('Estado financiero general y flujo de caja')">→ Estado financiero</button>
+      <button class="dma-chip" onclick="dma_ask('Alertas de riesgo financiero y accionables inmediatos')">→ Alertas de riesgo</button>
+      <button class="dma-chip" onclick="dma_ask('Proyección de flujo de caja para los próximos 30 días')">→ Flujo de caja 30d</button>
+      <button class="dma-chip" onclick="dma_ask('Prioridades de cobranza por importe y antigüedad')">→ Prioridades cobranza</button>
+      <button class="dma-chip" onclick="dma_ask('Cumplimiento fiscal SAT: obligaciones del mes')">→ Cumplimiento fiscal</button>
+      <button class="dma-chip" onclick="dma_ask('Estrategia de tesorería y optimización de capital de trabajo')">→ Tesorería</button>
+    </div>
+    <div class="dma-row">
+      <textarea class="dma-inp" id="dma-inp" placeholder="Consulta al Director Administrativo IA…" rows="2"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();dma_send()}"></textarea>
+      <button class="dma-btn" id="dma-btn" onclick="dma_send()">▶ Enviar</button>
+    </div>
+    <div class="dma-out" id="dma-out">
+      <div style="color:var(--text-faint);font-style:italic;text-align:center;padding:40px">MetaAdmin listo · Director Administrativo & Financiero IA</div>
+    </div>
+    <div class="dma-foot">
+      <button style="font-size:11px;color:var(--text-faint);background:none;border:none;cursor:pointer" onclick="document.getElementById('dma-out').innerHTML='<div style=\'color:var(--text-faint);font-style:italic;text-align:center;padding:40px\'>MetaAdmin listo</div>';document.getElementById('dma-tok').textContent=''">✕ Limpiar</button>
+      <span style="font-size:10px;color:var(--text-faint);font-family:monospace" id="dma-tok"></span>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══ IMPORTAR DOCUMENTOS — Agente Lector con política anti-alucinaciones ═══ -->
+<section id="importar">
+<style>
+  .imp-wrap{padding:0 28px 40px;max-width:1400px;margin:0 auto}
+  .imp-section-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);margin-bottom:12px;padding-top:16px}
+  .imp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .imp-card-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(0,0,0,.3),transparent)}
+  .imp-card-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+  .imp-anti-badge{font-size:10px;background:rgba(255,70,70,.08);color:#ff7070;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,70,70,.2);font-weight:700}
+  .imp-body{padding:20px}
+  .drop-zone{
+    border:2px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;
+    cursor:pointer;transition:.2s;background:rgba(255,255,255,.02);
+  }
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(0,255,136,.04)}
+  .drop-zone-icon{font-size:40px;margin-bottom:10px}
+  .drop-zone-text{font-size:14px;color:var(--text-muted);margin:0}
+  .drop-zone-sub{font-size:11px;color:var(--text-faint);margin-top:6px}
+  .imp-file-input{display:none}
+  .imp-status{padding:14px 16px;border-radius:8px;font-size:13px;margin-top:12px;display:none}
+  .imp-status.info{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);color:#00e5ff;display:block}
+  .imp-status.error{background:rgba(255,70,70,.06);border:1px solid rgba(255,70,70,.2);color:#ff7070;display:block}
+  .imp-status.success{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);color:#00ff88;display:block}
+  .imp-agent-out{
+    min-height:120px;max-height:340px;overflow-y:auto;
+    background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;
+    padding:14px 16px;font-size:12px;line-height:1.7;color:var(--text);margin-top:12px;display:none;
+  }
+  .imp-agent-out.active{display:block}
+  .imp-preview{margin-top:16px;display:none}
+  .imp-preview.active{display:block}
+  .imp-preview-title{font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;letter-spacing:.04em}
+  .imp-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px}
+  .imp-table{width:100%;border-collapse:collapse;font-size:12px}
+  .imp-table th{padding:7px 12px;text-align:left;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border);font-weight:600;color:var(--text-muted)}
+  .imp-table td{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .conf-alta{color:#00ff88}.conf-media{color:#ffb400}.conf-baja{color:#ff4646}
+  .low-conf-row{background:rgba(255,180,0,.04)}
+  .imp-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .btn-import{padding:9px 20px;border-radius:8px;font-size:13px;font-weight:700;background:var(--accent);color:#000;border:none;cursor:pointer;transition:opacity .15s}
+  .btn-import:hover{opacity:.85}.btn-import:disabled{opacity:.4;cursor:not-allowed}
+  .btn-cancel-imp{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer}
+  .imp-spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,229,255,.2);border-top-color:#00e5ff;border-radius:50%;animation:impspin .7s linear infinite}
+  @keyframes impspin{to{transform:rotate(360deg)}}
+  .confidence-legend{font-size:11px;color:var(--text-faint);display:flex;gap:14px;margin-top:8px}
+</style>
+<div class="imp-wrap">
+  <div class="imp-section-title">Importar Documentos a Finanzas</div>
+  <div class="imp-card">
+    <div class="imp-card-head">
+      <div class="imp-card-title">
+        📂 Agente Lector de Documentos
+        <span class="imp-anti-badge">🛡 Anti-Alucinaciones</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-faint)">Excel · CSV · Facturas · Estados de cuenta</div>
+    </div>
+    <div class="imp-body">
+
+      <!-- Policy notice -->
+      <div style="background:rgba(255,70,70,.05);border:1px solid rgba(255,70,70,.15);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--text-muted);display:flex;gap:10px">
+        <span style="font-size:18px;flex-shrink:0">🛡</span>
+        <div>
+          <strong style="color:#ff9090">Política Estricta Anti-Alucinaciones:</strong>
+          El agente solo extrae datos <strong>explícitamente presentes</strong> en el documento.
+          Nunca infiere ni completa campos ausentes — los marca como <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px">nulo</code>.
+          Cada campo incluye nivel de confianza y referencia a la fuente exacta.
+          Si la confianza es baja, el campo se resalta para tu revisión antes de importar.
+        </div>
+      </div>
+
+      <!-- Drop zone -->
+      <div class="drop-zone" id="fin-drop" onclick="document.getElementById('fin-file').click()"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="event.preventDefault();this.classList.remove('drag-over');handleFinDrop(event.dataTransfer.files)">
+        <div class="drop-zone-icon">📄</div>
+        <p class="drop-zone-text">Arrastra tu archivo aquí o haz clic para seleccionar</p>
+        <p class="drop-zone-sub">Formatos: .xlsx, .xls, .csv — Facturas, estados de cuenta, CXC, CXP</p>
+      </div>
+      <input type="file" class="imp-file-input" id="fin-file" accept=".xlsx,.xls,.csv"
+             onchange="handleFinFile(this.files[0])">
+
+      <!-- Status -->
+      <div class="imp-status" id="fin-status"></div>
+
+      <!-- Agent output (streaming) -->
+      <div class="imp-agent-out" id="fin-agent-out"></div>
+
+      <!-- Preview table -->
+      <div class="imp-preview" id="fin-preview">
+        <div class="imp-preview-title">📋 Datos extraídos — revisa antes de importar</div>
+        <div class="imp-table-wrap">
+          <table class="imp-table" id="fin-preview-table">
+            <thead></thead><tbody></tbody>
+          </table>
+        </div>
+        <div class="confidence-legend">
+          <span><span class="conf-alta">●</span> Confianza alta</span>
+          <span><span class="conf-media">●</span> Confianza media — revisar</span>
+          <span><span class="conf-baja">●</span> Confianza baja — requiere corrección</span>
+        </div>
+        <div class="imp-actions">
+          <button class="btn-import" id="fin-import-btn" onclick="confirmFinImport()">✓ Confirmar e importar a Finanzas</button>
+          <button class="btn-cancel-imp" onclick="cancelFinImport()">✕ Cancelar</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</section>
+
+<script>
+(function() {
+  // Show director/importar sections
+  function checkAnchors() {
+    const dir = document.getElementById('director');
+    const imp = document.getElementById('importar');
+    if (dir) dir.style.display = window.location.hash === '#director' ? 'block' : 'none';
+    if (imp) imp.style.display = 'block'; // siempre visible al fondo
+  }
+  window.addEventListener('hashchange', checkAnchors);
+  document.addEventListener('DOMContentLoaded', checkAnchors);
+  checkAnchors();
+
+  // ── MetaAdmin Director ──────────────────────────────────
+  let _dmaStreaming = false;
+  let _extractedFinData = null;
+
+  window.dma_ask = function(p) {
+    const inp = document.getElementById('dma-inp');
+    if (inp) { inp.value = p; inp.focus(); }
+    dma_send();
+  };
+
+  window.dma_send = async function() {
+    if (_dmaStreaming) return;
+    const inp = document.getElementById('dma-inp');
+    const out = document.getElementById('dma-out');
+    const btn = document.getElementById('dma-btn');
+    const tok = document.getElementById('dma-tok');
+    if (!inp || !out) return;
+    const q = inp.value.trim(); if (!q) return;
+
+    _dmaStreaming = true;
+    btn.disabled = true; btn.innerHTML = '<span class="dma-spin"></span>';
+    out.classList.add('streaming');
+    out.innerHTML = '<div style="color:var(--text-faint);display:flex;align-items:center;gap:8px;padding:24px"><span class="dma-spin"></span> MetaAdmin procesando...</div>';
+    inp.value = '';
+
+    try {
+      const session = await getSession();
+      const jwt = session?.access_token || '';
+      const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
+      if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado');
+
+      const resp = await fetch(proxyUrl + '/groq', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+        body:JSON.stringify({
+          model:'llama-3.3-70b-versatile',
+          max_tokens:2048,
+          system:`Eres MetaAdmin, el Director Administrativo y Financiero IA de IBANOR SA de CV / MetaTronix.
+Tu especialidad: flujo de caja, administración empresarial, cobranza, compras, cumplimiento fiscal México (SAT, CFDI, IVA), contratos y tesorería.
+Respondes en español con análisis financiero ejecutivo, alertas de riesgo y recomendaciones de tesorería.
+Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
+          messages:[{role:'user', content:q}],
+          stream:true,
+        }),
+        signal:AbortSignal.timeout(90000),
+      });
+
+      if (!resp.ok) { const e=await resp.json().catch(()=>({error:resp.statusText})); throw new Error(e.error||'Error '+resp.status); }
+
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf=''; let html=''; let iT=0; let oT=0;
+      out.innerHTML = '';
+
+      while(true) {
+        const {done,value} = await reader.read(); if(done) break;
+        buf += dec.decode(value,{stream:true});
+        const lines = buf.split('\n'); buf = lines.pop();
+        for(const line of lines) {
+          if(!line.startsWith('data:')) continue;
+          const d = line.slice(5).trim(); if(d==='[DONE]') break;
+          try { const j=JSON.parse(d);
+            if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html+=j.delta.text;
+            if(j.type==='message_start') iT=j.message?.usage?.input_tokens||0;
+            if(j.type==='message_delta') oT=j.usage?.output_tokens||0;
+          } catch {}
+        }
+        out.innerHTML = html; out.scrollTop = out.scrollHeight;
+      }
+      out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta.</em>';
+      if(tok) tok.textContent = `${iT}↑ ${oT}↓ tokens`;
+    } catch(e) {
+      out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+    } finally {
+      _dmaStreaming = false; btn.disabled = false; btn.innerHTML = '▶ Enviar'; out.classList.remove('streaming');
+    }
+  };
+
+  // ── Agente Lector de Documentos — Anti-Alucinaciones ────
+  window.handleFinDrop = function(files) { if (files[0]) handleFinFile(files[0]); };
+
+  window.handleFinFile = async function(file) {
+    if (!file) return;
+    const status = document.getElementById('fin-status');
+    const agentOut = document.getElementById('fin-agent-out');
+    const preview  = document.getElementById('fin-preview');
+
+    // Reset
+    agentOut.innerHTML = ''; agentOut.classList.remove('active');
+    preview.classList.remove('active'); _extractedFinData = null;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx','xls','csv'].includes(ext)) {
+      status.textContent = '⚠ Formato no soportado. Usa .xlsx, .xls o .csv';
+      status.className = 'imp-status error'; return;
+    }
+
+    status.textContent = `📂 Leyendo ${file.name}…`; status.className = 'imp-status info';
+
+    try {
+      // Parse with SheetJS
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, blankrows:false});
+
+      if (!rows.length) { status.textContent = '⚠ El archivo está vacío.'; status.className='imp-status error'; return; }
+
+      // Serialize to text (máx 200 filas)
+      const headers = rows[0] || [];
+      const dataRows = rows.slice(1, 201);
+      const textTable = [headers.join(' | '), ...dataRows.map(r => r.join(' | '))].join('\n');
+      const totalRows = dataRows.length;
+
+      status.textContent = `✓ Archivo leído: ${totalRows} registros · Enviando al Agente Lector…`;
+      agentOut.classList.add('active');
+      agentOut.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--text-faint)"><span class="imp-spin"></span> Agente analizando documento...</div>';
+
+      // Call Claude claude-sonnet-4-6 with strict anti-hallucination policy
+      const session = await getSession();
+      const jwt = session?.access_token || '';
+      const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
+      if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado');
+
+      const SYSTEM = `Eres un agente extractor de datos financieros con POLÍTICA ESTRICTA ANTI-ALUCINACIONES.
+
+REGLAS ABSOLUTAS — NUNCA VIOLAS ESTAS REGLAS:
+1. SOLO extrae información EXPLÍCITAMENTE presente en el documento. Jamás inferes ni asumes.
+2. Si un campo no aparece en el documento, su valor es null. NUNCA inventes un valor.
+3. Cada campo extraído debe incluir "fuente": el texto exacto del documento del que lo obtuviste.
+4. Si un dato es ambiguo o ilegible, marca ambiguo: true y describe la ambigüedad.
+5. Asigna confianza a cada campo: "alta" (dato claro y explícito), "media" (requiere interpretación mínima), "baja" (dudoso — el usuario debe verificar).
+6. Si tu confianza en un valor es baja, marca low_confidence: true.
+7. No normallices errores del documento — extráelos tal como aparecen.
+8. Si el documento no contiene datos financieros reconocibles, responde: {"error": "El documento no contiene datos financieros identificables", "tipo": null}
+
+INSTRUCCIÓN: Analiza el documento y devuelve un JSON estructurado así:
+
+{
+  "tipo": "CXC" | "CXP" | "mixto" | "desconocido",
+  "total_filas_detectadas": number,
+  "filas_con_baja_confianza": number,
+  "registros": [
+    {
+      "cliente_proveedor": {"valor": string|null, "confianza": "alta"|"media"|"baja", "fuente": string, "ambiguo": bool},
+      "folio": {"valor": string|null, "confianza": "alta"|"media"|"baja", "fuente": string},
+      "fecha_emision": {"valor": string|null, "confianza": "alta"|"media"|"baja", "fuente": string},
+      "fecha_vencimiento": {"valor": string|null, "confianza": "alta"|"media"|"baja", "fuente": string},
+      "monto": {"valor": number|null, "confianza": "alta"|"media"|"baja", "fuente": string},
+      "moneda": {"valor": "MXN"|"USD"|null, "confianza": "alta"|"media"|"baja", "fuente": string},
+      "estatus": {"valor": string|null, "confianza": "alta"|"media"|"baja", "fuente": string},
+      "low_confidence_row": bool
+    }
+  ],
+  "advertencias": ["lista de advertencias sobre la calidad de los datos"],
+  "campos_no_encontrados": ["lista de campos esperados que no estaban en el documento"]
+}
+
+Responde SOLO con el JSON. Sin texto adicional, sin markdown, sin explicaciones fuera del JSON.`;
+
+      const resp = await fetch(proxyUrl, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-6',
+          max_tokens:4096,
+          system: SYSTEM,
+          messages:[{role:'user', content:`DOCUMENTO FINANCIERO (${file.name}):\n\nColumnas: ${headers.join(', ')}\nTotal filas: ${totalRows}\n\nCONTENIDO:\n${textTable}`}],
+          stream:true,
+        }),
+        signal:AbortSignal.timeout(120000),
+      });
+
+      if (!resp.ok) { const e=await resp.json().catch(()=>({error:resp.statusText})); throw new Error(e.error||'Error '+resp.status); }
+
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf=''; let jsonStr='';
+      agentOut.innerHTML = '';
+
+      while(true) {
+        const {done,value} = await reader.read(); if(done) break;
+        buf += dec.decode(value,{stream:true});
+        const lines = buf.split('\n'); buf = lines.pop();
+        for(const line of lines) {
+          if(!line.startsWith('data:')) continue;
+          const d = line.slice(5).trim(); if(d==='[DONE]') break;
+          try { const j=JSON.parse(d);
+            if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') jsonStr+=j.delta.text;
+          } catch {}
+        }
+        agentOut.innerHTML = `<span style="color:var(--text-faint)">Analizando…</span> <code style="font-size:10px;color:#888">${jsonStr.length} chars</code>`;
+      }
+
+      // Parse the extracted JSON
+      let extracted;
+      try {
+        // Strip markdown code fences if present
+        const clean = jsonStr.replace(/^```json\n?/,'').replace(/\n?```$/,'').trim();
+        extracted = JSON.parse(clean);
+      } catch(pe) {
+        agentOut.innerHTML = `<span style="color:#ff4646">⚠ El agente no devolvió JSON válido. Intenta con un archivo más limpio.</span><details style="margin-top:8px"><summary style="font-size:11px;cursor:pointer">Ver respuesta cruda</summary><pre style="font-size:10px;white-space:pre-wrap;max-height:200px;overflow:auto">${escHtml(jsonStr)}</pre></details>`;
+        status.textContent = '⚠ Error al interpretar la respuesta del agente';
+        status.className = 'imp-status error'; return;
+      }
+
+      if (extracted.error) {
+        agentOut.innerHTML = `<span style="color:#ffb400">⚠ ${escHtml(extracted.error)}</span>`;
+        status.textContent = '⚠ El documento no contiene datos financieros reconocibles';
+        status.className = 'imp-status error'; return;
+      }
+
+      _extractedFinData = extracted;
+      renderFinPreview(extracted);
+
+      const warns = extracted.advertencias?.length ? `<br><strong>⚠ Advertencias:</strong> ${extracted.advertencias.join('; ')}` : '';
+      const noEnc = extracted.campos_no_encontrados?.length ? `<br><strong>Campos no encontrados:</strong> ${extracted.campos_no_encontrados.join(', ')}` : '';
+      agentOut.innerHTML = `<strong style="color:var(--accent)">✓ Análisis completo</strong> · Tipo: <strong>${extracted.tipo}</strong> · ${extracted.registros?.length||0} registros · ${extracted.filas_con_baja_confianza||0} con baja confianza${warns}${noEnc}`;
+      status.textContent = `✓ ${extracted.registros?.length||0} registros extraídos · Revisa los marcados en naranja antes de importar`;
+      status.className = 'imp-status success';
+
+    } catch(e) {
+      status.textContent = '✗ Error: ' + e.message; status.className = 'imp-status error';
+      agentOut.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+    }
+  };
+
+  function renderFinPreview(data) {
+    const preview = document.getElementById('fin-preview');
+    const table   = document.getElementById('fin-preview-table');
+    if (!preview || !table || !data.registros?.length) return;
+
+    const cols = ['cliente_proveedor','folio','fecha_emision','fecha_vencimiento','monto','moneda','estatus'];
+    const labels = ['Cliente/Proveedor','Folio','F. Emisión','F. Vencimiento','Monto','Moneda','Estatus'];
+
+    table.querySelector('thead').innerHTML = `<tr>${labels.map(l=>`<th>${l}</th>`).join('')}<th>Confianza</th></tr>`;
+    table.querySelector('tbody').innerHTML = data.registros.slice(0,50).map(r => {
+      const lowRow = r.low_confidence_row ? ' class="low-conf-row"' : '';
+      const cells = cols.map(c => {
+        const f = r[c] || {};
+        const v = f.valor !== null && f.valor !== undefined ? escHtml(String(f.valor)) : '<em style="color:#555">nulo</em>';
+        return `<td title="Fuente: ${escHtml(f.fuente||'')}">${v}</td>`;
+      });
+      const confCounts = { alta:0, media:0, baja:0 };
+      cols.forEach(c => { const ci = (r[c]||{}).confianza; if (ci) confCounts[ci]++; });
+      const confSummary = confCounts.baja > 0
+        ? `<span class="conf-baja">⚠ ${confCounts.baja} baja</span>`
+        : confCounts.media > 0
+          ? `<span class="conf-media">~ ${confCounts.media} media</span>`
+          : `<span class="conf-alta">✓ alta</span>`;
+      return `<tr${lowRow}>${cells.join('')}<td>${confSummary}</td></tr>`;
+    }).join('');
+
+    preview.classList.add('active');
+  }
+
+  window.confirmFinImport = function() {
+    if (!_extractedFinData?.registros?.length) return;
+    const rows = _extractedFinData.registros.map(r => ({
+      customer_name:  r.cliente_proveedor?.valor || '—',
+      folio:          r.folio?.valor || '—',
+      issue_date:     r.fecha_emision?.valor || null,
+      due_date:       r.fecha_vencimiento?.valor || null,
+      total:          Number(r.monto?.valor) || 0,
+      currency:       r.moneda?.valor || 'MXN',
+      status:         r.estatus?.valor || 'pendiente',
+      days_overdue:   0,
+      collection_priority: 'normal',
+      _imported: true,
+    }));
+
+    // Inject into the page's _arRows and re-render
+    if (typeof _arRows !== 'undefined') {
+      window._arRows = [...rows, ...(window._arRows||[])];
+      if (typeof renderAR === 'function') renderAR();
+      if (typeof renderAgingBars === 'function') renderAgingBars();
+    }
+
+    document.getElementById('fin-status').textContent = `✓ ${rows.length} registros importados a Cuentas por Cobrar`;
+    document.getElementById('fin-status').className = 'imp-status success';
+    document.getElementById('fin-preview').classList.remove('active');
+    _extractedFinData = null;
+    document.getElementById('fin-agent-out').innerHTML = `<strong style="color:var(--accent)">✓ ${rows.length} registros importados exitosamente.</strong> Desplázate arriba para ver la tabla CXC actualizada.`;
+    // Scroll to top
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
+
+  window.cancelFinImport = function() {
+    _extractedFinData = null;
+    document.getElementById('fin-preview').classList.remove('active');
+    document.getElementById('fin-agent-out').classList.remove('active');
+    document.getElementById('fin-status').className = 'imp-status';
+  };
+})();
+</script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co https://api.groq.com; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>CEO Command Center — MetaTronix</title>
@@ -13,163 +13,96 @@
   <script src="/config.js?v=20260418"></script>
   <script src="/assets/app.js?v=20260418"></script>
   <style>
-    :root {
-      --green:  #00ff88;
-      --cyan:   #00e5ff;
-      --gold:   #ffb400;
-      --purple: #b966ff;
-      --red:    #ff4646;
-    }
+    :root { --green:#00ff88; --cyan:#00e5ff; --gold:#ffb400; --purple:#b966ff; --red:#ff4646; }
 
-    /* ── Layout ── */
-    .ceo-root { display:flex; flex-direction:column; gap:28px; padding:28px; max-width:1500px; margin:0 auto; }
+    .ceo-root { display:flex; flex-direction:column; gap:28px; padding:28px; max-width:1400px; margin:0 auto; }
 
-    /* ── Page header ── */
+    /* Header */
     .page-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
     .page-header h1 { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:.06em; margin:0; }
     .page-header p  { font-size:12px; color:var(--text-muted); margin:3px 0 0; }
     .live-dot { display:inline-block; width:8px; height:8px; background:var(--green); border-radius:50%; animation:pulse 2s ease-in-out infinite; margin-right:8px; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    /* ── KPI strip ── */
-    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+    /* KPI strip */
+    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:12px; }
     .kpi-card {
-      background:var(--surface);
-      border:1px solid var(--border);
-      border-radius:10px;
-      padding:14px 18px;
-      position:relative; overflow:hidden;
-      transition:border-color .2s;
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      padding:14px 18px; position:relative; overflow:hidden; transition:border-color .2s;
     }
-    .kpi-card::after {
-      content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
-      background:var(--kpi-color, var(--green)); opacity:.5;
-    }
+    .kpi-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+      background:var(--kpi-color, var(--green)); opacity:.5; }
     .kpi-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
     .kpi-value { font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:var(--kpi-color, var(--text)); margin:6px 0 2px; }
     .kpi-sub   { font-size:11px; color:var(--text-muted); }
 
-    /* ── Agents grid ── */
-    .agents-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-    @media(max-width:980px){ .agents-grid { grid-template-columns:1fr; } }
-
-    /* ── Agent card ── */
-    .agent-card {
-      background:var(--surface);
-      border:1px solid var(--border);
-      border-radius:12px;
-      display:flex; flex-direction:column;
-      overflow:hidden;
-      transition:border-color .2s, box-shadow .2s;
+    /* Director nav grid */
+    .directors-section-label {
+      font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+      color:var(--text-faint); margin-bottom:-8px;
     }
-    .agent-card:hover { border-color:var(--agent-color); box-shadow:0 0 20px -6px var(--agent-color); }
-
-    .agent-head {
-      padding:16px 20px;
+    .directors-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .director-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:12px;
+      overflow:hidden; transition:border-color .2s, box-shadow .2s; display:flex; flex-direction:column;
+    }
+    .director-card:hover { border-color:var(--dc); box-shadow:0 0 20px -6px var(--dc); }
+    .director-head {
+      padding:16px 20px; display:flex; align-items:center; gap:12px;
       border-bottom:1px solid var(--border);
-      display:flex; align-items:center; gap:12px;
-      background:linear-gradient(135deg, rgba(0,0,0,.4) 0%, transparent 100%);
+      background:linear-gradient(135deg,rgba(0,0,0,.35) 0%,transparent 100%);
     }
-    .agent-icon {
-      width:42px; height:42px; border-radius:10px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:20px; flex-shrink:0;
-      background:rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.08);
+    .director-icon {
+      width:44px; height:44px; border-radius:10px; display:flex; align-items:center;
+      justify-content:center; font-size:22px; flex-shrink:0;
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
     }
-    .agent-meta { flex:1; min-width:0; }
-    .agent-name { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:.08em; color:var(--agent-color); }
-    .agent-role { font-size:11px; color:var(--text-muted); margin-top:1px; }
-    .agent-status {
-      font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px;
-      background:rgba(0,255,136,.08); color:var(--green); border:1px solid rgba(0,255,136,.2);
+    .director-name { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:.08em; color:var(--dc); line-height:1; }
+    .director-role { font-size:11px; color:var(--text-muted); margin-top:3px; }
+    .director-body { padding:14px 20px 18px; flex:1; display:flex; flex-direction:column; gap:10px; }
+    .director-caps { display:flex; flex-wrap:wrap; gap:5px; }
+    .director-cap {
+      font-size:11px; padding:3px 10px; border-radius:20px;
+      background:rgba(255,255,255,.04); border:1px solid var(--border); color:var(--text-muted);
     }
-
-    .agent-body { padding:16px 20px; flex:1; display:flex; flex-direction:column; gap:12px; }
-
-    /* Quick prompts */
-    .quick-prompts { display:flex; flex-wrap:wrap; gap:6px; }
-    .quick-chip {
-      padding:5px 12px; border-radius:20px; font-size:11px; font-weight:600;
-      background:rgba(255,255,255,.04); border:1px solid var(--border);
-      color:var(--text-muted); cursor:pointer; transition:.15s; white-space:nowrap;
-    }
-    .quick-chip:hover { border-color:var(--agent-color); color:var(--agent-color); background:rgba(255,255,255,.06); }
-
-    /* Input */
-    .agent-input-wrap { display:flex; gap:8px; }
-    .agent-input {
-      flex:1; background:rgba(255,255,255,.04); border:1px solid var(--border);
-      border-radius:8px; padding:9px 14px; color:var(--text); font-size:12px;
-      font-family:inherit; resize:none; min-height:44px; max-height:100px;
-      transition:border-color .15s;
-    }
-    .agent-input:focus { outline:none; border-color:var(--agent-color); }
-    .agent-send {
+    .director-btn {
+      display:block; text-align:center; text-decoration:none;
       padding:9px 16px; border-radius:8px; font-size:12px; font-weight:700;
-      background:var(--agent-color); color:#000; border:none;
-      cursor:pointer; transition:opacity .15s; white-space:nowrap;
-      align-self:flex-end;
+      background:var(--dc); color:#000; transition:opacity .15s; margin-top:4px;
     }
-    .agent-send:hover:not(:disabled) { opacity:.85; }
-    .agent-send:disabled { opacity:.4; cursor:not-allowed; }
+    .director-btn:hover { opacity:.85; }
 
-    /* Output */
-    .agent-output {
-      flex:1; min-height:180px; max-height:320px; overflow-y:auto;
-      background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:8px;
-      padding:14px 16px; font-size:12px; line-height:1.75; color:var(--text);
-    }
-    .agent-output.streaming { border-color:var(--agent-color); animation:glow-border 1.5s ease-in-out infinite; }
-    @keyframes glow-border { 0%,100%{border-color:var(--agent-color)} 50%{border-color:transparent} }
-    .agent-output h2,.agent-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--agent-color); letter-spacing:.05em; margin:8px 0 4px; }
-    .agent-output p  { margin:4px 0; }
-    .agent-output ul { margin:4px 0 4px 16px; }
-    .agent-output strong { color:#fff; }
-    .agent-output table { width:100%; border-collapse:collapse; margin:8px 0; font-size:11px; }
-    .agent-output th { padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); font-weight:700; }
-    .agent-output td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.05); }
-    .agent-placeholder { color:var(--text-faint); font-style:italic; text-align:center; padding:30px 16px; font-size:12px; }
-
-    .agent-footer { display:flex; justify-content:space-between; align-items:center; }
-    .agent-clear { font-size:11px; color:var(--text-faint); background:none; border:none; cursor:pointer; padding:2px 6px; }
-    .agent-clear:hover { color:var(--text-muted); }
-    .token-info { font-size:10px; color:var(--text-faint); font-family:monospace; }
-
-    /* ── CEO Briefing full-width ── */
+    /* CEO Briefing */
     .ceo-briefing {
-      background:var(--surface);
-      border:1px solid var(--border);
-      border-radius:12px;
-      overflow:hidden;
+      background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden;
     }
     .briefing-head {
-      padding:16px 24px;
-      border-bottom:1px solid var(--border);
+      padding:16px 24px; border-bottom:1px solid var(--border);
       display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
-      background:linear-gradient(135deg, rgba(0,0,0,.4) 0%, transparent 100%);
+      background:linear-gradient(135deg,rgba(0,0,0,.4) 0%,transparent 100%);
     }
     .briefing-title { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:.06em; display:flex; align-items:center; gap:10px; }
     .briefing-badge { font-size:10px; background:rgba(0,229,255,.08); color:var(--cyan); padding:3px 10px; border-radius:20px; border:1px solid rgba(0,229,255,.2); font-weight:700; }
     .briefing-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
     .briefing-output {
-      min-height:200px; max-height:500px; overflow-y:auto;
+      min-height:200px; max-height:520px; overflow-y:auto;
       background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:8px;
-      padding:16px 20px; font-size:12px; line-height:1.8; color:var(--text);
+      padding:16px 20px; font-size:13px; line-height:1.8; color:var(--text);
     }
     .briefing-output.streaming { border-color:var(--cyan); }
-    .briefing-output h2 { font-family:'Bebas Neue',sans-serif; color:var(--cyan); letter-spacing:.06em; margin:10px 0 5px; font-size:18px; }
-    .briefing-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--gold); letter-spacing:.04em; margin:8px 0 4px; font-size:14px; }
-    .briefing-output p  { margin:4px 0; }
+    .briefing-output h2 { font-family:'Bebas Neue',sans-serif; color:var(--cyan); letter-spacing:.06em; margin:10px 0 5px; font-size:20px; }
+    .briefing-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--gold); letter-spacing:.04em; margin:8px 0 4px; font-size:15px; }
+    .briefing-output p  { margin:5px 0; }
     .briefing-output ul { margin:4px 0 4px 18px; }
-    .briefing-output table { width:100%; border-collapse:collapse; margin:10px 0; font-size:11px; }
+    .briefing-output table { width:100%; border-collapse:collapse; margin:10px 0; font-size:12px; }
     .briefing-output th { background:rgba(0,229,255,.07); color:var(--cyan); padding:6px 10px; text-align:left; border-bottom:1px solid var(--border); }
     .briefing-output td { padding:6px 10px; border-bottom:1px solid rgba(255,255,255,.04); }
+    .briefing-output strong { color:#fff; }
+    .briefing-placeholder { color:var(--text-faint); font-style:italic; text-align:center; padding:40px 20px; font-size:13px; }
     .briefing-actions { display:flex; gap:10px; flex-wrap:wrap; }
     .btn-brief {
-      padding:8px 18px; border-radius:7px; font-size:12px; font-weight:700;
+      padding:9px 20px; border-radius:7px; font-size:12px; font-weight:700;
       background:var(--cyan); color:#000; border:none; cursor:pointer; transition:opacity .15s;
-      display:inline-flex; align-items:center; gap:6px;
     }
     .btn-brief:hover:not(:disabled) { opacity:.85; }
     .btn-brief:disabled { opacity:.4; cursor:not-allowed; }
@@ -177,17 +110,13 @@
     .btn-brief.gold { background:var(--gold); color:#000; }
     .btn-outline-sm {
       padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600;
-      background:transparent; border:1px solid var(--border); color:var(--text-muted);
-      cursor:pointer; transition:.15s;
+      background:transparent; border:1px solid var(--border); color:var(--text-muted); cursor:pointer; transition:.15s;
     }
     .btn-outline-sm:hover { border-color:var(--cyan); color:var(--text); }
-
-    /* refresh info */
     .refresh-info { font-size:11px; color:var(--text-faint); display:flex; align-items:center; gap:6px; }
-
     .spin { display:inline-block; width:13px; height:13px; border:2px solid rgba(0,255,136,.25); border-top-color:var(--green); border-radius:50%; animation:spin .7s linear infinite; }
-    @keyframes spin { to{transform:rotate(360deg)} }
     .spin-cyan { border-color:rgba(0,229,255,.25); border-top-color:var(--cyan); }
+    @keyframes spin { to{transform:rotate(360deg)} }
   </style>
 </head>
 <body>
@@ -198,64 +127,53 @@
 
 <script>
 'use strict';
-/* ═════════════════════════════════════════════════════
-   CEO COMMAND CENTER — 4 Director Agents + KPIs + Briefing
-   ═════════════════════════════════════════════════════ */
 
 let _user = null;
 let _db   = null;
 let _kpis = {};
 let _refreshTimer = null;
-const _streaming = {};   // { agentId: bool }
+let _briefingStreaming = false;
 
-const AGENTS = [
+const DIRECTORS = [
   {
-    id:      'ventas',
-    name:    'MetaVentaX',
-    role:    'Director Comercial & Ventas IA',
-    icon:    '📈',
-    color:   '#00ff88',
-    system:  `Eres MetaVentaX, el Director Comercial IA de IBANOR SA de CV / MetaTronix.
-Tu especialidad: pipeline de ventas, leads, conversión, estrategia comercial B2B en México.
-Respondes en español, con datos precisos, recomendaciones accionables y métricas de negocio.
-Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
-    prompts: ['Estado del pipeline','Top 5 leads calientes','Forecast del mes','Estrategia de conversión','Análisis de objeciones'],
+    id:    'ventas',
+    icon:  '📈',
+    name:  'MetaVentaX',
+    role:  'Director Comercial & Ventas IA',
+    color: '#00ff88',
+    caps:  ['Pipeline','Conversión','Forecast','Objeciones','CRM'],
+    href:  '/ventas.html#director',
+    label: 'Ir a Director Comercial',
   },
   {
-    id:      'marketing',
-    name:    'MetaMKTX',
-    role:    'Director de Marketing & Crecimiento IA',
-    icon:    '🎯',
-    color:   '#00e5ff',
-    system:  `Eres MetaMKTX, el Director de Marketing IA de IBANOR SA de CV / MetaTronix.
-Tu especialidad: growth marketing, campañas digitales, posicionamiento de marca, generación de demanda B2B en México.
-Respondes en español con estrategias concretas, métricas de ROI y tácticas ejecutables.
-Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
-    prompts: ['Diagnóstico de canales','Plan de contenidos','Campaña generación leads','Análisis competitivo','ROI de marketing'],
+    id:    'marketing',
+    icon:  '🎯',
+    name:  'MetaMKTX',
+    role:  'Director de Marketing & Crecimiento IA',
+    color: '#00e5ff',
+    caps:  ['Campañas','Growth','Posicionamiento','ROI','Leads'],
+    href:  '/marketing.html#director',
+    label: 'Ir a Director Marketing',
   },
   {
-    id:      'ops',
-    name:    'MetaOps',
-    role:    'Director de Operaciones & Procesos IA',
-    icon:    '⚙️',
-    color:   '#ffb400',
-    system:  `Eres MetaOps, el Director de Operaciones IA de IBANOR SA de CV / MetaTronix.
-Tu especialidad: eficiencia operacional, procesos internos, KPIs de operación, mejora continua, supply chain y tecnología.
-Respondes en español con análisis de cuellos de botella, oportunidades de automatización y quick wins.
-Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
-    prompts: ['Diagnóstico operacional','Procesos a automatizar','KPIs de productividad','Reducción de costos','Roadmap tecnológico'],
+    id:    'ops',
+    icon:  '⚙️',
+    name:  'MetaOps',
+    role:  'Director de Operaciones & Procesos IA',
+    color: '#ffb400',
+    caps:  ['Procesos','Eficiencia','KPIs Ops','Automatización','Supply Chain'],
+    href:  '/ops.html#director',
+    label: 'Ir a Director Operaciones',
   },
   {
-    id:      'admin',
-    name:    'MetaAdmin',
-    role:    'Director Administrativo & Financiero IA',
-    icon:    '💼',
-    color:   '#b966ff',
-    system:  `Eres MetaAdmin, el Director Administrativo y Financiero IA de IBANOR SA de CV / MetaTronix.
-Tu especialidad: flujo de caja, administración empresarial, cobranza, compras, cumplimiento fiscal México (SAT, CFDI, IVA), contratos.
-Respondes en español con análisis financiero ejecutivo, alertas de riesgo y recomendaciones de tesorería.
-Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
-    prompts: ['Estado financiero','Alertas de riesgo','Flujo de caja 30d','Prioridades de cobranza','Cumplimiento fiscal'],
+    id:    'admin',
+    icon:  '💼',
+    name:  'MetaAdmin',
+    role:  'Director Administrativo & Financiero IA',
+    color: '#b966ff',
+    caps:  ['Flujo de Caja','Cobranza','Fiscal SAT','Tesorería','Contratos'],
+    href:  '/finanzas.html#director',
+    label: 'Ir a Director Administrativo',
   },
 ];
 
@@ -263,7 +181,6 @@ async function init() {
   _user = await requireAuth(true);
   if (!_user) return;
 
-  // Solo admin y super_admin
   const role = _user?.profile?.role;
   if (!['admin','super_admin'].includes(role)) {
     window.location.href = '/dashboard.html';
@@ -278,7 +195,7 @@ async function init() {
   if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
 
   await loadKPIs();
-  _refreshTimer = setInterval(loadKPIs, 120_000); // auto-refresh cada 2 min
+  _refreshTimer = setInterval(loadKPIs, 120_000);
 }
 
 function buildShell() {
@@ -292,7 +209,7 @@ function buildShell() {
         <div class="page-header">
           <div>
             <h1><span class="live-dot"></span>CEO Command Center</h1>
-            <p>Panel ejecutivo en tiempo real · Agentes directivos IA · MetaTronix / IBANOR SA de CV</p>
+            <p>Panel ejecutivo en tiempo real · Briefings estratégicos · MetaTronix / IBANOR SA de CV</p>
           </div>
           <div class="refresh-info">
             <span id="last-refresh">Cargando...</span>
@@ -307,16 +224,17 @@ function buildShell() {
           ).join('')}
         </div>
 
-        <!-- Agents grid -->
-        <div class="agents-grid">
-          ${AGENTS.map(a => buildAgentCard(a)).join('')}
+        <!-- Directores -->
+        <div class="directors-section-label">Directores IA — acceso directo</div>
+        <div class="directors-grid">
+          ${DIRECTORS.map(buildDirectorCard).join('')}
         </div>
 
         <!-- CEO Briefing -->
         <div class="ceo-briefing">
           <div class="briefing-head">
             <div class="briefing-title">
-              🧠 Briefing Ejecutivo CEO <span class="briefing-badge">Claude — Análisis Estratégico</span>
+              🧠 Briefing Ejecutivo <span class="briefing-badge">Claude — Análisis Estratégico</span>
             </div>
             <div style="display:flex;gap:8px">
               <button class="btn-outline-sm" onclick="clearBriefing()">✕ Limpiar</button>
@@ -324,13 +242,13 @@ function buildShell() {
           </div>
           <div class="briefing-body">
             <div class="briefing-output" id="briefing-out">
-              <div class="agent-placeholder">El briefing ejecutivo integra KPIs y contexto de todos los directores.<br>Selecciona el tipo de análisis para generar.</div>
+              <div class="briefing-placeholder">Selecciona un tipo de análisis para generar el briefing ejecutivo.<br>Los datos del pipeline se incluyen automáticamente.</div>
             </div>
             <div class="briefing-actions">
-              <button class="btn-brief" id="btn-daily" onclick="generateBriefing('daily')">⚡ Briefing Diario</button>
-              <button class="btn-brief secondary" id="btn-strategy" onclick="generateBriefing('strategy')">🎯 Revisión Estratégica</button>
-              <button class="btn-brief gold" id="btn-risk" onclick="generateBriefing('risk')">🚨 Análisis de Riesgos</button>
-              <button class="btn-outline-sm" id="btn-week" onclick="generateBriefing('week')">📊 Cierre Semana</button>
+              <button class="btn-brief"           id="btn-daily"    onclick="generateBriefing('daily')">⚡ Briefing Diario</button>
+              <button class="btn-brief secondary"  id="btn-strategy" onclick="generateBriefing('strategy')">🎯 Revisión Estratégica</button>
+              <button class="btn-brief gold"       id="btn-risk"     onclick="generateBriefing('risk')">🚨 Análisis de Riesgos</button>
+              <button class="btn-outline-sm"       id="btn-week"     onclick="generateBriefing('week')">📊 Cierre Semana</button>
             </div>
           </div>
         </div>
@@ -340,37 +258,21 @@ function buildShell() {
   </div>`;
 }
 
-function buildAgentCard(a) {
+function buildDirectorCard(d) {
   return `
-  <div class="agent-card" style="--agent-color:${a.color}">
-    <div class="agent-head">
-      <div class="agent-icon">${a.icon}</div>
-      <div class="agent-meta">
-        <div class="agent-name">${a.name}</div>
-        <div class="agent-role">${a.role}</div>
+  <div class="director-card" style="--dc:${d.color}">
+    <div class="director-head">
+      <div class="director-icon">${d.icon}</div>
+      <div>
+        <div class="director-name">${d.name}</div>
+        <div class="director-role">${d.role}</div>
       </div>
-      <div class="agent-status">● ACTIVO</div>
     </div>
-    <div class="agent-body">
-      <div class="quick-prompts">
-        ${a.prompts.map(p => `<button class="quick-chip" onclick="askAgent('${a.id}','${p.replace(/'/g,"\\'")}')">→ ${p}</button>`).join('')}
+    <div class="director-body">
+      <div class="director-caps">
+        ${d.caps.map(c => `<span class="director-cap">${c}</span>`).join('')}
       </div>
-      <div class="agent-input-wrap">
-        <textarea class="agent-input" id="input-${a.id}"
-          placeholder="Pregunta al ${a.name}..."
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAgent('${a.id}')}"
-          rows="2"></textarea>
-        <button class="agent-send" id="send-${a.id}" onclick="sendAgent('${a.id}')" style="background:${a.color}">
-          ▶ Enviar
-        </button>
-      </div>
-      <div class="agent-output" id="out-${a.id}" style="--agent-color:${a.color}">
-        <div class="agent-placeholder">Listo para responder · ${a.name}</div>
-      </div>
-      <div class="agent-footer">
-        <button class="agent-clear" onclick="clearAgent('${a.id}')">✕ Limpiar</button>
-        <span class="token-info" id="tokens-${a.id}"></span>
-      </div>
+      <a href="${d.href}" class="director-btn">${d.label} →</a>
     </div>
   </div>`;
 }
@@ -379,46 +281,32 @@ function buildAgentCard(a) {
 async function loadKPIs() {
   const companyId = _user?.profile?.company_id;
   const strip = document.getElementById('kpi-strip');
-  if (!strip) return;
+  if (!strip || !companyId) return;
 
   try {
     const [leadsRes, profilesRes, actRes] = await Promise.all([
-      _db.from('leads')
-        .select('id,status,pipeline_value,created_at')
-        .eq('company_id', companyId)
-        .limit(1000),
-      _db.from('profiles')
-        .select('id,role')
-        .eq('company_id', companyId),
-      _db.from('activity_logs')
-        .select('id,created_at')
-        .eq('company_id', companyId)
+      _db.from('leads').select('id,status,pipeline_value,created_at').eq('company_id', companyId).limit(1000),
+      _db.from('profiles').select('id,role').eq('company_id', companyId),
+      _db.from('activity_logs').select('id,created_at').eq('company_id', companyId)
         .gte('created_at', new Date(Date.now()-30*864e5).toISOString())
-        .like('action', '%claude%')
-        .limit(500),
+        .like('action','%claude%').limit(500),
     ]);
 
     const leads    = leadsRes.data  || [];
     const profiles = profilesRes.data || [];
     const acts     = actRes.data    || [];
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
-    const now      = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-    const pipeline    = leads.filter(l => !['ganado','perdido','cancelado'].includes(l.status))
-                             .reduce((s,l) => s + (l.pipeline_value||0), 0);
-    const activos     = leads.filter(l => !['ganado','perdido','cancelado'].includes(l.status)).length;
-    const ganadosMes  = leads.filter(l => l.status === 'ganado' && l.created_at >= monthStart).length;
-    const enRiesgo    = leads.filter(l => l.status === 'en_riesgo' || l.status === 'perdido').length;
-    const usuarios    = profiles.length;
-    const aiQueries   = acts.length;
+    const pipeline   = leads.filter(l=>!['ganado','perdido','cancelado'].includes(l.status)).reduce((s,l)=>s+(l.pipeline_value||0),0);
+    const activos    = leads.filter(l=>!['ganado','perdido','cancelado'].includes(l.status)).length;
+    const ganadosMes = leads.filter(l=>l.status==='ganado'&&l.created_at>=monthStart).length;
+    const enRiesgo   = leads.filter(l=>l.status==='en_riesgo'||l.status==='perdido').length;
+    const usuarios   = profiles.length;
+    const aiQueries  = acts.length;
 
     _kpis = { pipeline, activos, ganadosMes, enRiesgo, usuarios, aiQueries };
 
-    const fmt = n => n >= 1e6
-      ? '$' + (n/1e6).toFixed(1) + 'M'
-      : n >= 1e3 ? '$' + (n/1e3).toFixed(0) + 'K'
-      : '$' + n.toFixed(0);
+    const fmt = n => n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+n.toFixed(0);
 
     strip.innerHTML = `
       <div class="kpi-card" style="--kpi-color:${pipeline>0?'#00ff88':'#888'}">
@@ -450,8 +338,7 @@ async function loadKPIs() {
         <div class="kpi-label">IA Queries</div>
         <div class="kpi-value">${aiQueries}</div>
         <div class="kpi-sub">Últimos 30 días</div>
-      </div>
-    `;
+      </div>`;
 
     const el = document.getElementById('last-refresh');
     if (el) el.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
@@ -462,189 +349,31 @@ async function loadKPIs() {
   }
 }
 
-/* ── Agent interaction ── */
-function askAgent(agentId, prompt) {
-  const input = document.getElementById('input-'+agentId);
-  if (input) { input.value = prompt; input.focus(); }
-  sendAgent(agentId);
-}
-
-async function sendAgent(agentId) {
-  if (_streaming[agentId]) return;
-  const input   = document.getElementById('input-'+agentId);
-  const out     = document.getElementById('out-'+agentId);
-  const sendBtn = document.getElementById('send-'+agentId);
-  const tokEl   = document.getElementById('tokens-'+agentId);
-  if (!input || !out) return;
-
-  const question = input.value.trim();
-  if (!question) return;
-
-  const agent = AGENTS.find(a => a.id === agentId);
-  if (!agent) return;
-
-  _streaming[agentId] = true;
-  sendBtn.disabled = true;
-  sendBtn.innerHTML = '<span class="spin"></span>';
-  out.classList.add('streaming');
-  out.innerHTML = `<div style="color:var(--text-faint);font-size:12px;display:flex;align-items:center;gap:8px"><span class="spin"></span> ${agent.name} está procesando...</div>`;
-  input.value = '';
-
-  // Build context with KPIs
-  const kpiCtx = _kpis.pipeline !== undefined ? `
-CONTEXTO EJECUTIVO (datos en tiempo real):
-- Pipeline comercial: $${(_kpis.pipeline||0).toLocaleString('es-MX')} MXN
-- Deals activos: ${_kpis.activos||0}
-- Ganados este mes: ${_kpis.ganadosMes||0}
-- En riesgo/perdidos: ${_kpis.enRiesgo||0}
-- Usuarios plataforma: ${_kpis.usuarios||0}
-- AI queries (30d): ${_kpis.aiQueries||0}
-` : '';
-
-  const fullPrompt = kpiCtx + '\nPREGUNTA DEL CEO: ' + question;
-
-  try {
-    const session = await getSession();
-    const jwt = session?.access_token || '';
-    const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
-    if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado en config.js');
-
-    const resp = await fetch(proxyUrl + '/groq', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
-      body:JSON.stringify({
-        model:'llama-3.3-70b-versatile',
-        max_tokens:2048,
-        system: agent.system,
-        messages:[{role:'user', content:fullPrompt}],
-        stream:true,
-      }),
-      signal:AbortSignal.timeout(90000),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(()=>({error:resp.statusText}));
-      throw new Error(err.error || 'Error '+resp.status);
-    }
-
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    let buf=''; let html=''; let inputTokens=0; let outputTokens=0;
-    out.innerHTML = '';
-
-    while(true) {
-      const {done,value} = await reader.read();
-      if(done) break;
-      buf += dec.decode(value,{stream:true});
-      const lines = buf.split('\n');
-      buf = lines.pop();
-      for(const line of lines) {
-        if(!line.startsWith('data:')) continue;
-        const d = line.slice(5).trim();
-        if(d==='[DONE]') break;
-        try {
-          const j = JSON.parse(d);
-          if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html += j.delta.text;
-          if(j.type==='message_start') { inputTokens = j.message?.usage?.input_tokens||0; }
-          if(j.type==='message_delta') { outputTokens = j.usage?.output_tokens||0; }
-        } catch {}
-      }
-      out.innerHTML = html;
-      out.scrollTop = out.scrollHeight;
-    }
-    out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta.</em>';
-    if(tokEl) tokEl.textContent = `${inputTokens}↑ ${outputTokens}↓ tokens`;
-  } catch(e) {
-    out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
-  } finally {
-    _streaming[agentId] = false;
-    sendBtn.disabled = false;
-    sendBtn.innerHTML = '▶ Enviar';
-    out.classList.remove('streaming');
-  }
-}
-
-function clearAgent(agentId) {
-  const agent = AGENTS.find(a => a.id === agentId);
-  const out = document.getElementById('out-'+agentId);
-  const tok = document.getElementById('tokens-'+agentId);
-  if (out) out.innerHTML = `<div class="agent-placeholder">Listo para responder · ${agent?.name||''}</div>`;
-  if (tok) tok.textContent = '';
-}
-
 /* ── CEO Briefing ── */
 async function generateBriefing(type) {
-  const out = document.getElementById('briefing-out');
+  if (_briefingStreaming) return;
+  const out  = document.getElementById('briefing-out');
   const btns = ['btn-daily','btn-strategy','btn-risk','btn-week'].map(id => document.getElementById(id));
   if (!out) return;
 
+  _briefingStreaming = true;
   btns.forEach(b => { if(b) b.disabled = true; });
   out.classList.add('streaming');
-  out.innerHTML = `<div style="color:var(--text-faint);padding:20px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><span class="spin spin-cyan"></span> Generando análisis estratégico...</div>`;
+  out.innerHTML = `<div style="color:var(--text-faint);padding:30px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><span class="spin spin-cyan"></span> Generando análisis estratégico...</div>`;
 
-  const fecha = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const fecha  = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const fmt    = n => n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+n.toFixed(0);
   const kpiCtx = `
 INDICADORES EJECUTIVOS — ${fecha}:
-• Pipeline comercial: $${(_kpis.pipeline||0).toLocaleString('es-MX')} MXN
-• Deals activos: ${_kpis.activos||0} | Ganados mes: ${_kpis.ganadosMes||0} | En riesgo: ${_kpis.enRiesgo||0}
-• Usuarios en plataforma: ${_kpis.usuarios||0}
-• Consultas IA (30d): ${_kpis.aiQueries||0}
+• Pipeline: ${fmt(_kpis.pipeline||0)} | Deals activos: ${_kpis.activos||0} | Ganados mes: ${_kpis.ganadosMes||0} | En riesgo: ${_kpis.enRiesgo||0}
+• Usuarios plataforma: ${_kpis.usuarios||0} | Consultas IA (30d): ${_kpis.aiQueries||0}
 `;
 
   const briefingTypes = {
-    daily: {
-      title: 'Briefing Diario CEO',
-      prompt: `Genera un BRIEFING DIARIO para el CEO de IBANOR SA de CV / MetaTronix:
-${kpiCtx}
-Estructura:
-<h2>📊 Estado del Negocio — ${fecha}</h2>
-<h3>Semáforo Ejecutivo</h3>
-<h3>Prioridades del Día (Top 3)</h3>
-<h3>Alertas que Requieren Decisión</h3>
-<h3>Métricas Clave vs. Objetivos</h3>
-<h3>Recomendación del Director IA</h3>
-Sé directo, ejecutivo y accionable. Máximo 400 palabras.`,
-    },
-    strategy: {
-      title: 'Revisión Estratégica',
-      prompt: `Genera una REVISIÓN ESTRATÉGICA para IBANOR SA de CV / MetaTronix:
-${kpiCtx}
-Estructura:
-<h2>🎯 Revisión Estratégica — ${fecha}</h2>
-<h3>Posición Competitiva Actual</h3>
-<h3>Oportunidades de Crecimiento Inmediatas</h3>
-<h3>Brechas Críticas a Cerrar</h3>
-<h3>Iniciativas Prioritarias Q2 2026</h3>
-<h3>Plan de 90 Días</h3>
-Piensa como McKinsey + Anthropic. Concreto, cuantificado, ejecutable.`,
-    },
-    risk: {
-      title: 'Análisis de Riesgos',
-      prompt: `Genera un ANÁLISIS DE RIESGOS EJECUTIVO para IBANOR SA de CV / MetaTronix:
-${kpiCtx}
-Estructura:
-<h2>🚨 Matriz de Riesgos Ejecutivos — ${fecha}</h2>
-Usa tabla HTML: Riesgo | Probabilidad | Impacto | Acción Mitigadora | Responsable
-<h3>Riesgos Críticos (acción inmediata)</h3>
-<h3>Riesgos Monitoreados</h3>
-<h3>Oportunidades Disfrazadas de Riesgo</h3>
-<h3>Decisiones Necesarias Esta Semana</h3>
-Cuantifica impactos en pesos cuando sea posible.`,
-    },
-    week: {
-      title: 'Cierre de Semana',
-      prompt: `Genera un INFORME DE CIERRE SEMANAL para IBANOR SA de CV / MetaTronix:
-${kpiCtx}
-Estructura:
-<h2>📊 Cierre Semanal — ${fecha}</h2>
-<h3>Logros de la Semana</h3>
-<h3>Métricas vs. Meta</h3>
-(tabla: Métrica | Real | Meta | Variación | Tendencia)
-<h3>Pendientes que Pasan a Próxima Semana</h3>
-<h3>Aprendizajes y Ajustes</h3>
-<h3>Agenda Prioritaria Semana Siguiente</h3>
-Ejecutivo, honesto, sin maquillaje de cifras.`,
-    },
+    daily: { prompt: `Genera un BRIEFING DIARIO para el CEO de IBANOR SA de CV / MetaTronix:\n${kpiCtx}\nEstructura:\n<h2>📊 Estado del Negocio — ${fecha}</h2>\n<h3>Semáforo Ejecutivo</h3>\n<h3>Prioridades del Día (Top 3)</h3>\n<h3>Alertas que Requieren Decisión</h3>\n<h3>Métricas Clave vs. Objetivos</h3>\n<h3>Recomendación Ejecutiva</h3>\nSé directo y accionable. Máximo 400 palabras.` },
+    strategy: { prompt: `Genera una REVISIÓN ESTRATÉGICA para IBANOR SA de CV / MetaTronix:\n${kpiCtx}\nEstructura:\n<h2>🎯 Revisión Estratégica — ${fecha}</h2>\n<h3>Posición Competitiva Actual</h3>\n<h3>Oportunidades de Crecimiento Inmediatas</h3>\n<h3>Brechas Críticas a Cerrar</h3>\n<h3>Iniciativas Prioritarias Q2 2026</h3>\n<h3>Plan de 90 Días</h3>\nConcreto, cuantificado, ejecutable.` },
+    risk: { prompt: `Genera un ANÁLISIS DE RIESGOS EJECUTIVO para IBANOR SA de CV / MetaTronix:\n${kpiCtx}\nEstructura:\n<h2>🚨 Matriz de Riesgos — ${fecha}</h2>\nTabla: Riesgo | Probabilidad | Impacto | Acción Mitigadora\n<h3>Riesgos Críticos</h3>\n<h3>Riesgos Monitoreados</h3>\n<h3>Decisiones Necesarias Esta Semana</h3>\nCuantifica impactos en pesos cuando sea posible.` },
+    week: { prompt: `Genera un CIERRE SEMANAL para IBANOR SA de CV / MetaTronix:\n${kpiCtx}\nEstructura:\n<h2>📊 Cierre Semanal — ${fecha}</h2>\n<h3>Logros de la Semana</h3>\n<h3>Métricas vs. Meta</h3>\nTabla: Métrica | Real | Meta | Variación\n<h3>Pendientes Semana Siguiente</h3>\n<h3>Agenda Prioritaria</h3>\nEjecutivo, honesto, sin maquillaje de cifras.` },
   };
 
   const cfg = briefingTypes[type] || briefingTypes.daily;
@@ -663,7 +392,7 @@ Ejecutivo, honesto, sin maquillaje de cifras.`,
         max_tokens:3000,
         system:`Eres el Chief Strategy Officer IA de IBANOR SA de CV / MetaTronix.
 Generas análisis ejecutivos de máxima calidad para el CEO.
-Tu perspectiva combina: pensamiento estratégico de McKinsey, mentalidad de producto de Steve Jobs, y rigor analítico de Anthropic.
+Perspectiva: pensamiento estratégico de McKinsey + rigor analítico de Anthropic.
 Formato: HTML semántico (h2, h3, p, ul, ol, table, strong, em). Sin DOCTYPE, html, head, body.`,
         messages:[{role:'user', content:cfg.prompt}],
         stream:true,
@@ -671,10 +400,7 @@ Formato: HTML semántico (h2, h3, p, ul, ol, table, strong, em). Sin DOCTYPE, ht
       signal:AbortSignal.timeout(120000),
     });
 
-    if (!resp.ok) {
-      const err = await resp.json().catch(()=>({error:resp.statusText}));
-      throw new Error(err.error||'Error '+resp.status);
-    }
+    if (!resp.ok) { const err = await resp.json().catch(()=>({error:resp.statusText})); throw new Error(err.error||'Error '+resp.status); }
 
     const reader = resp.body.getReader();
     const dec = new TextDecoder();
@@ -685,16 +411,12 @@ Formato: HTML semántico (h2, h3, p, ul, ol, table, strong, em). Sin DOCTYPE, ht
       const {done,value} = await reader.read();
       if(done) break;
       buf += dec.decode(value,{stream:true});
-      const lines = buf.split('\n');
-      buf = lines.pop();
+      const lines = buf.split('\n'); buf = lines.pop();
       for(const line of lines) {
         if(!line.startsWith('data:')) continue;
         const d = line.slice(5).trim();
         if(d==='[DONE]') break;
-        try {
-          const j = JSON.parse(d);
-          if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html+=j.delta.text;
-        } catch {}
+        try { const j=JSON.parse(d); if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html+=j.delta.text; } catch {}
       }
       out.innerHTML = html;
       out.scrollTop = out.scrollHeight;
@@ -703,6 +425,7 @@ Formato: HTML semántico (h2, h3, p, ul, ol, table, strong, em). Sin DOCTYPE, ht
   } catch(e) {
     out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
   } finally {
+    _briefingStreaming = false;
     btns.forEach(b => { if(b) b.disabled = false; });
     out.classList.remove('streaming');
   }
@@ -710,7 +433,7 @@ Formato: HTML semántico (h2, h3, p, ul, ol, table, strong, em). Sin DOCTYPE, ht
 
 function clearBriefing() {
   const out = document.getElementById('briefing-out');
-  if (out) out.innerHTML = '<div class="agent-placeholder">El briefing ejecutivo integra KPIs y contexto de todos los directores.<br>Selecciona el tipo de análisis para generar.</div>';
+  if (out) out.innerHTML = '<div class="briefing-placeholder">Selecciona un tipo de análisis para generar el briefing ejecutivo.<br>Los datos del pipeline se incluyen automáticamente.</div>';
 }
 
 init();
