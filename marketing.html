@@ -2435,6 +2435,11 @@ async function init() {
 }
 
 async function loadHFToken() {
+  // 1. localStorage primero (instantáneo, sin red)
+  const local = localStorage.getItem('mtx_hf_token');
+  if (local) { _hfTokenShared = local; }
+
+  // 2. Supabase portal_settings (fuente de verdad para todos los usuarios)
   try {
     const { data } = await getDB()
       .from('portal_settings')
@@ -2443,12 +2448,49 @@ async function loadHFToken() {
       .single();
     if (data?.value) {
       _hfTokenShared = data.value;
-      // Pre-fill any visible token fields
-      document.querySelectorAll('[id="media-hf-token"]').forEach(el => {
-        el.value = data.value;
-      });
+      localStorage.setItem('mtx_hf_token', data.value); // sincronizar a local
     }
-  } catch (_) { /* token not in DB yet */ }
+  } catch (_) { /* token no configurado en DB todavía */ }
+
+  // 3. Actualizar campos visibles y estado del UI
+  document.querySelectorAll('[id="media-hf-token"]').forEach(el => {
+    el.value = _hfTokenShared;
+  });
+  _refreshHFTokenUI();
+}
+
+function _refreshHFTokenUI() {
+  // Mostrar/ocultar campo según si ya hay token
+  document.querySelectorAll('.hf-token-section').forEach(sec => {
+    const hasToken = !!_hfTokenShared;
+    const active   = sec.querySelector('.hf-token-active');
+    const form     = sec.querySelector('.hf-token-form');
+    if (active) active.style.display = hasToken ? 'flex' : 'none';
+    if (form)   form.style.display   = hasToken ? 'none' : 'block';
+  });
+}
+
+async function saveHFTokenGlobal(token) {
+  if (!token) return;
+  _hfTokenShared = token;
+  localStorage.setItem('mtx_hf_token', token);
+  _refreshHFTokenUI();
+  try {
+    await getDB().from('portal_settings').upsert(
+      { key: 'hf_api_token', value: token },
+      { onConflict: 'key' }
+    );
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Token HF guardado para todos los usuarios ✓');
+  } catch (e) {
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.info('Token guardado localmente. Error al sincronizar con DB.');
+  }
+}
+
+function clearHFToken() {
+  _hfTokenShared = '';
+  localStorage.removeItem('mtx_hf_token');
+  document.querySelectorAll('[id="media-hf-token"]').forEach(el => { el.value = ''; });
+  _refreshHFTokenUI();
 }
 
 function escHtml(s) {
@@ -2528,16 +2570,28 @@ function renderMediaAgentForm(a) {
         placeholder="blurry, low quality, watermark" value="blurry, low quality, distorted, watermark">
     </div>
     ${steps}
-    <div class="agent-input-row">
-      <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em">
-        HUGGINGFACE TOKEN
-        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#4A5568"> — o usa HF Space si no tienes</span>
-      </label>
-      <input type="password" id="media-hf-token" class="crm-input"
-        style="font-size:11px;height:30px;font-family:monospace"
-        placeholder="hf_xxxxxxxxxxxxxxxxxx"
-        oninput="_hfTokenShared=this.value;document.querySelectorAll('[id=media-hf-token]').forEach(el=>el.value=this.value)"
-        value="${_hfTokenShared}">
+    <div class="agent-input-row hf-token-section">
+      <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em">HUGGINGFACE TOKEN</label>
+      <!-- Estado: token activo -->
+      <div class="hf-token-active" style="display:${_hfTokenShared ? 'flex' : 'none'};align-items:center;gap:8px;padding:6px 10px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:6px">
+        <span style="color:#00ff88;font-size:11px;font-weight:700">🔑 Token activo</span>
+        <span style="color:rgba(255,255,255,.35);font-size:10px;font-family:monospace">hf_••••••••••••••••••••</span>
+        <button onclick="clearHFToken()" style="margin-left:auto;background:none;border:none;color:#7E8FA8;font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.1)" title="Cambiar token">✏️ Cambiar</button>
+      </div>
+      <!-- Estado: sin token — mostrar campo -->
+      <div class="hf-token-form" style="display:${_hfTokenShared ? 'none' : 'block'}">
+        <input type="password" id="media-hf-token" class="crm-input"
+          style="font-size:11px;height:30px;font-family:monospace;margin-bottom:5px"
+          placeholder="hf_xxxxxxxxxxxxxxxxxx"
+          oninput="_hfTokenShared=this.value;document.querySelectorAll('[id=media-hf-token]').forEach(el=>el.value=this.value)">
+        <button onclick="saveHFTokenGlobal(document.querySelector('[id=media-hf-token]').value)"
+          style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:5px;background:rgba(0,255,136,.12);color:#00ff88;border:1px solid rgba(0,255,136,.3);cursor:pointer;width:100%">
+          💾 Guardar token (no volver a pedirlo)
+        </button>
+        <div style="font-size:9px;color:#4A5568;margin-top:4px">
+          <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#7E8FA8">Obtener token gratis en huggingface.co →</a>
+        </div>
+      </div>
     </div>
     <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
       <a href="${isVideo ? 'https://huggingface.co/spaces/Wan-AI/Wan2.1' : 'https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev'}"

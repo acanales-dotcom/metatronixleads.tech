@@ -166,6 +166,31 @@
       El límite se renueva automáticamente el 1° de cada mes.
     </div>
 
+    <!-- ── Sección HF Token ───────────────────────────────────── -->
+    <div class="section-header" style="margin-top:40px;padding-top:24px;border-top:2px solid var(--border)">
+      <span class="section-title">🤗 Token HuggingFace (Imágenes y Video IA)</span>
+    </div>
+    <div style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);max-width:560px">
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px">
+        Configura el token una vez aquí y todos los usuarios podrán generar imágenes y videos sin pedirlo manualmente.
+        El token se guarda en <code style="font-size:11px;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px">portal_settings</code> y en localStorage de cada navegador.
+      </p>
+      <div id="hf-token-admin-status" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="admin-hf-token-input" class="crm-input"
+          style="font-family:monospace;font-size:12px;flex:1"
+          placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxx">
+        <button onclick="adminSaveHFToken()" class="btn btn-accent" style="white-space:nowrap;font-size:12px">
+          💾 Guardar para todos
+        </button>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:10px;align-items:center">
+        <a href="https://huggingface.co/settings/tokens" target="_blank"
+          style="font-size:11px;color:var(--text-muted)">Obtener token gratis →</a>
+        <button onclick="adminClearHFToken()" style="font-size:11px;background:none;border:none;color:#EF4444;cursor:pointer;padding:0">🗑 Eliminar token guardado</button>
+      </div>
+    </div>
+
     <!-- ── Sección 2: IA de Ventas (Perplexity) ──────────────── -->
     <div class="section-header" style="margin-top:40px;padding-top:24px;border-top:2px solid var(--border)">
       <span class="section-title">🔍 Control de IA de Ventas por Usuario</span>
@@ -1205,7 +1230,7 @@ function switchTab(name) {
   if (name === 'leads')         loadLeadsAdmin();
   if (name === 'plans')         loadPlansAdmin();
   if (name === 'colaboradores') loadColaboradores();
-  if (name === 'claude')        { loadClaudeAdmin(); loadPerplexityAdmin(); }
+  if (name === 'claude')        { loadClaudeAdmin(); loadPerplexityAdmin(); loadHFTokenAdmin(); }
   if (name === 'llmlogs')       loadLLMLogs();
   if (name === 'gestion')       loadGestionUsers();
 }
@@ -1311,6 +1336,53 @@ async function loadColaboradores() {
 }
 
 // ── Claude API Admin (superAdmin only) ──────────────────────
+// ── HuggingFace Token (admin) ─────────────────────────────────
+async function loadHFTokenAdmin() {
+  const statusEl = document.getElementById('hf-token-admin-status');
+  if (!statusEl) return;
+  try {
+    const { data } = await getDB().from('portal_settings').select('value').eq('key','hf_api_token').single();
+    if (data?.value) {
+      statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:6px;font-size:11px">
+        <span style="color:#00ff88;font-weight:700">🔑 Token configurado</span>
+        <span style="color:rgba(255,255,255,.35);font-family:monospace">${data.value.substring(0,6)}••••••••••••••••</span>
+      </div>`;
+      document.getElementById('admin-hf-token-input').value = '';
+    } else {
+      statusEl.innerHTML = `<div style="font-size:11px;color:#F59E0B">⚠️ Sin token configurado — los usuarios deben ingresarlo manualmente.</div>`;
+    }
+  } catch(_) {
+    statusEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted)">No se pudo verificar el estado del token.</div>`;
+  }
+}
+
+async function adminSaveHFToken() {
+  const token = document.getElementById('admin-hf-token-input')?.value.trim();
+  if (!token || !token.startsWith('hf_')) {
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.warning('El token debe empezar con hf_');
+    return;
+  }
+  try {
+    await getDB().from('portal_settings').upsert({ key: 'hf_api_token', value: token }, { onConflict: 'key' });
+    localStorage.setItem('mtx_hf_token', token);
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Token HF guardado para todos los usuarios ✓');
+    loadHFTokenAdmin();
+  } catch(e) {
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.failure('Error al guardar: ' + e.message);
+  }
+}
+
+async function adminClearHFToken() {
+  try {
+    await getDB().from('portal_settings').delete().eq('key','hf_api_token');
+    localStorage.removeItem('mtx_hf_token');
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.info('Token HF eliminado');
+    loadHFTokenAdmin();
+  } catch(e) {
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.failure('Error: ' + e.message);
+  }
+}
+
 async function loadClaudeAdmin() {
   const db = getDB();
   const thisMonth = new Date().toISOString().slice(0,7);
