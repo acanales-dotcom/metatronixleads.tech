@@ -861,6 +861,80 @@ document.addEventListener('click', e => {
   if (e.target.closest('.sidebar-nav-link')) closeMobileSidebar();
 });
 
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL ERROR BOUNDARY
+   Captura errores silenciosos y los muestra como toast.
+   Evita que la app quede rota sin aviso al usuario.
+   ═══════════════════════════════════════════════════════════ */
+(function initGlobalErrorBoundary() {
+  // Errores síncronos no capturados
+  window.onerror = function(message, source, lineno, colno, error) {
+    const msg = error?.message || message || 'Error inesperado';
+    // Ignorar errores de extensiones de browser (chrome-extension://, moz-extension://)
+    if (source && (source.includes('extension') || source.includes('safari-extension'))) return false;
+    // Ignorar errores de terceros (fonts, cdn) que no son nuestros
+    if (source && !source.includes(window.location.hostname) && !source.includes('localhost') && !source.includes('127.0.0.1')) return false;
+    console.error('[MTX] Uncaught error:', msg, { source, lineno, colno });
+    showToast(`Error: ${msg.slice(0, 120)}`, 'error');
+    // Log al servidor si tenemos usuario autenticado
+    if (window._mtxCurrentUser) {
+      logSecurityEvent('js_error', { message: msg.slice(0, 500), source, lineno });
+    }
+    return false; // No suprimir stack en console
+  };
+
+  // Promesas rechazadas sin catch
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg = event.reason?.message || String(event.reason) || 'Promesa rechazada';
+    // Ignorar errores de red típicos (offline, timeout) — se muestran en la operación
+    if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('Load failed')) return;
+    console.error('[MTX] Unhandled rejection:', msg);
+    showToast(`Error de operación: ${msg.slice(0, 120)}`, 'error');
+    if (window._mtxCurrentUser) {
+      logSecurityEvent('promise_rejection', { message: msg.slice(0, 500) });
+    }
+  });
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   RETRY CON BACKOFF EXPONENCIAL
+   Uso: await fetchWithRetry(fn, { retries: 3, baseDelay: 500 })
+   fn = función async que devuelve data o lanza error
+   ═══════════════════════════════════════════════════════════ */
+async function fetchWithRetry(fn, opts = {}) {
+  const { retries = 3, baseDelay = 400, maxDelay = 8000, onRetry } = opts;
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt === retries) break;
+      // No reintentar errores de autenticación/autorización
+      const status = err?.status || err?.statusCode || 0;
+      if (status === 401 || status === 403 || status === 422) throw err;
+      const delay = Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 200, maxDelay);
+      console.warn(`[MTX] Retry ${attempt + 1}/${retries} en ${Math.round(delay)}ms —`, err?.message || err);
+      if (onRetry) onRetry(attempt + 1, delay);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw lastError;
+}
+
+/* Wrapper para llamadas Supabase con retry automático */
+async function supabaseQuery(queryFn, opts = {}) {
+  return fetchWithRetry(async () => {
+    const result = await queryFn();
+    if (result.error) {
+      const err = new Error(result.error.message || 'Supabase error');
+      err.status = result.error.status || result.error.code;
+      throw err;
+    }
+    return result.data;
+  }, { retries: 2, baseDelay: 500, ...opts });
+}
+
 /* ── Run security + mobile init on every page ─────────── */
 document.addEventListener('DOMContentLoaded', () => {
   injectSecurityHeaders();

@@ -1,0 +1,228 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# deploy.yml — CI/CD para metatronixleads.tech
+# Valida HTML + JS, ejecuta QA básico, despliega a GitHub Pages
+# Se activa en: push a main, o manualmente (workflow_dispatch)
+# ─────────────────────────────────────────────────────────────────────────────
+name: Deploy → metatronixleads.tech
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      skip_qa:
+        description: 'Saltear validación QA (emergencia)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  contents: read
+  pages:    write
+  id-token: write
+
+concurrency:
+  group:   "pages"
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # JOB 1: Validación de código
+  # ──────────────────────────────────────────────────────────
+  validate:
+    name: 🔍 Validar código
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.skip_qa != 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias de validación
+        run: |
+          npm install -g htmlhint
+          npm install -g @eslint/eslintrc eslint 2>/dev/null || true
+
+      - name: Validar HTML — archivos principales
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Validando HTML..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          # Crear config htmlhint temporal
+          cat > /tmp/.htmlhintrc << 'EOF'
+          {
+            "doctype-first": false,
+            "doctype-html5": false,
+            "head-script-disabled": false,
+            "style-disabled": false,
+            "inline-style-disabled": false,
+            "inline-script-disabled": false,
+            "id-class-value": false,
+            "title-require": false,
+            "tag-self-close": false,
+            "attr-lowercase": true,
+            "attr-value-double-quotes": true,
+            "tag-pair": true,
+            "spec-char-escape": false,
+            "id-unique": false
+          }
+          EOF
+          ERRORS=0
+          for f in index.html home.html leads.html admin.html dashboard.html marketing.html ventas.html generate.html; do
+            if [ -f "$f" ]; then
+              echo "  → $f"
+              htmlhint --config /tmp/.htmlhintrc "$f" || ERRORS=$((ERRORS+1))
+            fi
+          done
+          if [ $ERRORS -gt 0 ]; then
+            echo "⚠️  Hay $ERRORS archivo(s) con errores HTML — continúa pero revisa."
+          else
+            echo "✅ HTML válido"
+          fi
+
+      - name: Verificar archivos críticos existen
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Verificando archivos críticos..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          MISSING=0
+          REQUIRED=(
+            "index.html"
+            "home.html"
+            "leads.html"
+            "config.js"
+            "assets/app.js"
+            "assets/style.css"
+            "assets/teamchat.js"
+            "worker/claude-proxy.js"
+          )
+          for f in "${REQUIRED[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "  ❌ FALTA: $f"
+              MISSING=$((MISSING+1))
+            else
+              echo "  ✅ $f"
+            fi
+          done
+          if [ $MISSING -gt 0 ]; then
+            echo "🔴 Faltan $MISSING archivo(s) críticos — deploy cancelado."
+            exit 1
+          fi
+
+      - name: Verificar no hay credenciales hardcodeadas (servicio_role)
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Escaneando credenciales expuestas..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          # Buscar service_role keys (son más largas y tienen 'service_role' en el payload)
+          if grep -r "service_role" --include="*.js" --include="*.html" --include="*.json" . 2>/dev/null | grep -v "node_modules" | grep -v ".git"; then
+            echo "🔴 ERROR: Se encontró 'service_role' en el código — nunca debe ir al repositorio."
+            exit 1
+          fi
+          # Buscar Anthropic API keys hardcodeadas
+          if grep -r "sk-ant-api" --include="*.js" --include="*.html" . 2>/dev/null | grep -v "node_modules" | grep -v ".git"; then
+            echo "🔴 ERROR: Se encontró ANTHROPIC_API_KEY hardcodeada — muévela a Worker secrets."
+            exit 1
+          fi
+          echo "✅ Sin credenciales de servicio expuestas"
+
+      - name: Verificar config.js tiene versión actualizada
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Verificando ASSET_V en config.js..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          VERSION=$(grep -o "ASSET_V:.*'[0-9]*'" config.js | grep -o "[0-9]*" | tail -1)
+          TODAY=$(date +%Y%m%d)
+          echo "  ASSET_V actual: $VERSION"
+          echo "  Fecha hoy:      ${TODAY}x"
+          if [[ "$VERSION" == "${TODAY}"* ]]; then
+            echo "✅ ASSET_V está actualizado"
+          else
+            echo "⚠️  ASSET_V ($VERSION) no corresponde a hoy ($TODAY) — considera actualizarlo"
+          fi
+
+  # ──────────────────────────────────────────────────────────
+  # JOB 2: Deploy a GitHub Pages
+  # ──────────────────────────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy → GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [validate]
+    if: |
+      always() &&
+      (needs.validate.result == 'success' || needs.validate.result == 'skipped')
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Preparar artefactos de deploy
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Preparando deploy..."
+          echo "  Rama: ${{ github.ref_name }}"
+          echo "  SHA:  ${{ github.sha }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          # Excluir archivos que no deben ir al deploy
+          EXCLUDE=(
+            ".git"
+            ".github"
+            "node_modules"
+            "*.py"
+            "SETUP_PENDIENTE.md"
+            "deploy_*.py"
+          )
+          mkdir -p /tmp/deploy-artifact
+          rsync -av \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="node_modules" \
+            --exclude="*.py" \
+            --exclude="SETUP_PENDIENTE.md" \
+            --exclude="deploy_*.py" \
+            . /tmp/deploy-artifact/ || cp -r . /tmp/deploy-artifact/
+          echo "✅ Artefactos preparados"
+          ls /tmp/deploy-artifact/ | head -30
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verificar deploy exitoso
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Deploy completado"
+          echo "   URL: https://metatronixleads.tech"
+          echo "   SHA: ${{ github.sha }}"
+          echo "   Hora: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          # Ping al sitio para verificar que responde
+          sleep 15
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://metatronixleads.tech/index.html || echo "000")
+          echo "  HTTP Status de index.html: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Sitio respondiendo correctamente"
+          else
+            echo "⚠️  Sitio devolvió HTTP $STATUS — puede estar propagando (normal en primeros segundos)"
+          fi
