@@ -532,6 +532,35 @@ function renderHeader(user, activePage) {
 
       <div class="sidebar-divider"></div>
 
+      <!-- ADMINISTRACIÓN (admin roles only) — aparece después de Marketing -->
+      ${hasAdminAccess ? `
+      <div class="sidebar-section-label">Administración</div>
+      <a href="/ceo.html" class="sidebar-nav-link ${activePage==='ceo'?'active':''}">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">CEO Command Center</span>
+      </a>
+      <a href="/consejo.html" class="sidebar-nav-link ${activePage==='consejo'?'active':''}">
+        <span class="nav-icon">🏛</span>
+        <span class="nav-label">Consejo Ejecutivo</span>
+      </a>
+      <a href="/finanzas.html" class="sidebar-nav-link ${activePage==='finanzas'?'active':''}">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Finanzas & Flujo</span>
+      </a>
+      <a href="/cobranza.html" class="sidebar-nav-link ${activePage==='cobranza'?'active':''}">
+        <span class="nav-icon">📞</span>
+        <span class="nav-label">Cobranza IA</span>
+      </a>
+      <a href="/compras.html" class="sidebar-nav-link ${activePage==='compras'?'active':''}">
+        <span class="nav-icon">🛒</span>
+        <span class="nav-label">Compras & POs</span>
+      </a>
+      <a href="/facturacion.html" class="sidebar-nav-link ${activePage==='facturacion'?'active':''}">
+        <span class="nav-icon">📄</span>
+        <span class="nav-label">Facturación</span>
+      </a>
+      <div class="sidebar-divider"></div>` : ''}
+
       <!-- DOCUMENTOS -->
       <div class="sidebar-section-label">Documentos</div>
       <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">
@@ -561,37 +590,8 @@ function renderHeader(user, activePage) {
         <span class="nav-label">Generador IA</span>
       </a>
 
+      <!-- SISTEMA (admin/superadmin) -->
       ${hasAdminAccess ? `
-      <div class="sidebar-divider"></div>
-      <div class="sidebar-section-label">Dirección & Admin</div>
-      <a href="/ceo.html" class="sidebar-nav-link ${activePage==='ceo'?'active':''}">
-        <span class="nav-icon">🎯</span>
-        <span class="nav-label">CEO Command Center</span>
-      </a>
-      <a href="/consejo.html" class="sidebar-nav-link ${activePage==='consejo'?'active':''}">
-        <span class="nav-icon">🏛</span>
-        <span class="nav-label">Consejo Ejecutivo</span>
-      </a>
-
-      <div class="sidebar-divider"></div>
-      <div class="sidebar-section-label">Administración</div>
-      <a href="/finanzas.html" class="sidebar-nav-link ${activePage==='finanzas'?'active':''}">
-        <span class="nav-icon">💰</span>
-        <span class="nav-label">Finanzas & Flujo</span>
-      </a>
-      <a href="/cobranza.html" class="sidebar-nav-link ${activePage==='cobranza'?'active':''}">
-        <span class="nav-icon">📞</span>
-        <span class="nav-label">Cobranza IA</span>
-      </a>
-      <a href="/compras.html" class="sidebar-nav-link ${activePage==='compras'?'active':''}">
-        <span class="nav-icon">🛒</span>
-        <span class="nav-label">Compras & POs</span>
-      </a>
-      <a href="/facturacion.html" class="sidebar-nav-link ${activePage==='facturacion'?'active':''}">
-        <span class="nav-icon">📄</span>
-        <span class="nav-label">Facturación</span>
-      </a>
-
       <div class="sidebar-divider"></div>
       <div class="sidebar-section-label">Sistema</div>
       <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">
