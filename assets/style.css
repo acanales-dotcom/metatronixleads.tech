@@ -51,9 +51,9 @@
   --brand:     #00D4F0;
 
   /* Legacy compat aliases (old pages still use these) */
-  --accent:     #00D4F0;
-  --accent-dim: rgba(0,212,240,.10);
-  --accent-mid: rgba(0,212,240,.18);
+  --accent:     #00FF88;
+  --accent-dim: rgba(0,255,136,.10);
+  --accent-mid: rgba(0,255,136,.18);
   --danger:     #EF4444;
   --danger-dim: rgba(239,68,68,.12);
   --warning:    #F59E0B;

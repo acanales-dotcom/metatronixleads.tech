@@ -2,10 +2,31 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MTX QA MASTER — 223,050 Tests</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── CDN Guard: Supabase mock si CDN no disponible (sandbox/offline) ──────────
+window.__supabaseMock = {
+  createClient: function(url, key) {
+    return {
+      auth: {
+        signInWithPassword: async function() { return { data: { session: null }, error: new Error('CDN offline — producción usa CDN real') }; },
+        getSession: async function() { return { data: { session: null }, error: null }; },
+      }
+    };
+  }
+};
+// Suprimir errores de red de CDNs externos (solo afectan sandbox, no producción)
+window.addEventListener('error', function(e) {
+  if (e.filename && (e.filename.includes('cdn.jsdelivr') || e.filename.includes('fonts.googleapis') || e.filename.includes('unpkg.com'))) {
+    e.stopImmediatePropagation();
+    return false;
+  }
+}, true);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.supabase=window.__supabaseMock"></script>
 <style>
 :root{--bg:#0A0E1A;--bg2:#0D1220;--bg3:#111827;--card:#141B2D;--border:#1E2A3A;--accent:#00FF88;--red:#FF3B3B;--orange:#FF8C00;--yellow:#FFD700;--blue:#00BFFF;--purple:#A78BFA;--indigo:#818CF8;--amber:#F59E0B;--text:#E8EDF5;--muted:#6B7A99;--mono:'JetBrains Mono',monospace;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -510,7 +531,7 @@ const SUITE_MASTER = [
   }},
   {id:'MTX-AGT-005', name:'teamchat.js isDM() + dmStorageKey simétrico', run:async()=>{
     const {t}=await fetchText('/assets/teamchat.js');
-    return t.includes('isDM')&&t.includes('.sort())?pass('isDM() + sort ✓'):skip('isDM no detectado');
+    return t.includes('isDM')&&t.includes('.sort()')?pass('isDM() + sort ✓'):skip('isDM no detectado');
   }},
   {id:'MTX-AGT-006', name:'admin.html tab Consultas IA + KPIs', run:async()=>{
     const {t}=await fetchText('/admin.html');
@@ -1426,7 +1447,7 @@ const MANUAL_MODULES = [
     {id:'P-AHL-REV-02',name:'Sugerencia, no decisión: "se recomienda" no "debes"',note:''},
     {id:'P-AHL-REV-03',name:'Agentes no modifican Supabase directamente',note:'Solo texto/UI'},
     {id:'P-AHL-ADV-01',name:'Prompt injection: input de usuario no rompe JSON',note:'Test con {"hack":"true"}'},
-    {id:'P-AHL-ADV-02',name:'Prompt injection: XSS en input no ejecuta en output',note:'<script>alert(1)</script>'},
+    {id:'P-AHL-ADV-02',name:'Prompt injection: XSS en input no ejecuta en output',note:'<scr'+'ipt>alert(1)</scr'+'ipt>'},
   ]},
   { id:'M-SEC', title:'SEGURIDAD COMPLETA (15 funciones)', color:'var(--red)', tests:[
     {id:'P-SEC-01',name:'Login: intentos fallidos → lockout 15min después de 5',note:'BF_MAX=5'},
@@ -1511,13 +1532,27 @@ function toggleProtocol() {
 }
 
 // ═══════════════════════════════════════════════════════
+// EXPOSE GLOBALS — para QA testing y Playwright
+// ═══════════════════════════════════════════════════════
+window.runAll          = runAll;
+window.runSuite        = runSuite;
+window.initAuth        = initAuth;
+window.exportResults   = exportResults;
+window.toggleProtocol  = toggleProtocol;
+window.renderSuites    = renderSuites;
+
+// ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
 (async () => {
-  renderSuites();
-  setStatus('Autenticando QA…');
-  await initAuth();
-  setStatus('Listo · Click ▶ RUN 223,050 TESTS para comenzar');
+  try {
+    renderSuites();
+    setStatus('Autenticando QA…');
+    await initAuth();
+    setStatus('Listo · Click ▶ RUN 223,050 TESTS para comenzar');
+  } catch(e) {
+    setStatus('⚠ Init error: ' + e.message + ' — funciones disponibles');
+  }
 })();
 </script>
 </body>
