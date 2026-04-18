@@ -2,7 +2,7 @@
    MetaTronix Portal — Service Worker
    Stale-while-revalidate para assets estáticos
    ============================================================ */
-const CACHE = 'mtx-v202604181';
+const CACHE = 'mtx-v202604182';
 const STATIC = [
   '/assets/style.css',
   '/assets/app.js',

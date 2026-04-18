@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co https://api.groq.com; object-src 'none'; base-uri 'self';">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Facturación — MetaTronix</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=20260418">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/config.js?v=20260418"></script>
+  <script src="/assets/app.js?v=20260418"></script>
+  <style>
+    .fact-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1200px; margin:0 auto; }
+
+    .page-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:8px; }
+    .page-title-block h1 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; margin:0; display:flex; align-items:center; gap:10px; }
+    .page-title-block p  { color:var(--text-muted); font-size:13px; margin:4px 0 0; }
+
+    .coming-soon-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:60px 40px;
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:20px;
+    }
+    .coming-soon-icon { font-size:64px; line-height:1; }
+    .coming-soon-title { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:2px; color:var(--text); }
+    .coming-soon-desc { color:var(--text-muted); font-size:14px; max-width:520px; line-height:1.7; }
+    .coming-soon-badge {
+      background:var(--accent-dim);
+      color:var(--accent);
+      border:1px solid rgba(0,255,136,.3);
+      border-radius:20px;
+      padding:6px 18px;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:1px;
+      text-transform:uppercase;
+    }
+
+    .roadmap-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+      gap:16px;
+    }
+    .roadmap-item {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .roadmap-item-icon { font-size:28px; }
+    .roadmap-item-title { font-weight:600; font-size:14px; color:var(--text); }
+    .roadmap-item-desc  { font-size:12px; color:var(--text-muted); line-height:1.5; }
+    .roadmap-item-status {
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      padding:3px 10px;
+      border-radius:12px;
+      width:fit-content;
+      margin-top:4px;
+    }
+    .status-pronto    { background:rgba(0,255,136,.12); color:#00ff88; }
+    .status-q3        { background:rgba(255,180,0,.12);  color:#ffb400; }
+    .status-q4        { background:rgba(100,100,255,.12);color:#7b9fff; }
+
+    .btn-notify {
+      background:var(--accent);
+      color:#000;
+      border:none;
+      border-radius:8px;
+      padding:12px 28px;
+      font-size:14px;
+      font-weight:700;
+      cursor:pointer;
+      transition:opacity .2s;
+    }
+    .btn-notify:hover { opacity:.85; }
+  </style>
+</head>
+
+<body>
+
+<div id="app-root">
+  <div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>
+</div>
+
+<script>
+'use strict';
+
+let _user = null;
+
+async function init() {
+  _user = await requireAuth(true);
+  if (!_user) return;
+
+  document.getElementById('app-root').innerHTML = buildShell();
+  if (typeof renderHeader === 'function') {
+    document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'facturacion');
+  }
+  if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+}
+
+function buildShell() {
+  return `
+  <div style="display:flex;min-height:100vh">
+    <div id="sidebar-slot"></div>
+    <main style="flex:1;overflow:auto">
+      <div class="fact-root">
+
+        <!-- Header -->
+        <div class="page-header">
+          <div class="page-title-block">
+            <h1>📄 Facturación</h1>
+            <p>Emisión de CFDI · Timbrado SAT · Complementos de pago · Notas de crédito</p>
+          </div>
+          <span class="coming-soon-badge">Próximamente</span>
+        </div>
+
+        <!-- Coming Soon -->
+        <div class="coming-soon-card">
+          <div class="coming-soon-icon">🧾</div>
+          <div class="coming-soon-title">Módulo de Facturación CFDI</div>
+          <div class="coming-soon-desc">
+            El módulo de facturación electrónica está en desarrollo activo. Permitirá
+            emitir CFDI 4.0, gestionar complementos de pago, notas de crédito, cancelaciones
+            y conciliación automática con Compras y Cobranza — todo desde el portal sin
+            salir de la plataforma.
+          </div>
+          <button class="btn-notify" onclick="notifyMe()">🔔 Notificarme cuando esté listo</button>
+        </div>
+
+        <!-- Roadmap -->
+        <div style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
+          Funciones planificadas
+        </div>
+        <div class="roadmap-grid">
+          <div class="roadmap-item">
+            <div class="roadmap-item-icon">📋</div>
+            <div class="roadmap-item-title">Emisión CFDI 4.0</div>
+            <div class="roadmap-item-desc">Generación y timbrado de facturas via PAC certificado. Soporte para conceptos, impuestos y complementos.</div>
+            <div class="roadmap-item-status status-pronto">Q2 2026</div>
+          </div>
+          <div class="roadmap-item">
+            <div class="roadmap-item-icon">💳</div>
+            <div class="roadmap-item-title">Complementos de Pago</div>
+            <div class="roadmap-item-desc">Registro de pagos parciales, complemento 2.0, conciliación automática con CXC de Cobranza.</div>
+            <div class="roadmap-item-status status-pronto">Q2 2026</div>
+          </div>
+          <div class="roadmap-item">
+            <div class="roadmap-item-icon">🔄</div>
+            <div class="roadmap-item-title">Cancelaciones SAT</div>
+            <div class="roadmap-item-desc">Flujo de cancelación con motivo, sustitución de CFDI y control de aceptación del receptor.</div>
+            <div class="roadmap-item-status status-q3">Q3 2026</div>
+          </div>
+          <div class="roadmap-item">
+            <div class="roadmap-item-icon">📊</div>
+            <div class="roadmap-item-title">Conciliación Automática</div>
+            <div class="roadmap-item-desc">Cruce automático entre facturas emitidas, Órdenes de Compra y pagos recibidos.</div>
+            <div class="roadmap-item-status status-q3">Q3 2026</div>
+          </div>
+          <div class="roadmap-item">
+            <div class="roadmap-item-icon">🤖</div>
+            <div class="roadmap-item-title">IA de Validación Fiscal</div>
+            <div class="roadmap-item-desc">Agente IA que valida RFC, régimen fiscal, uso de CFDI y detecta inconsistencias antes del timbrado.</div>
+            <div class="roadmap-item-status status-q4">Q4 2026</div>
+          </div>
+          <div class="roadmap-item">
+            <div class="roadmap-item-icon">📥</div>
+            <div class="roadmap-item-title">Buzón CFDI Recibidos</div>
+            <div class="roadmap-item-desc">Descarga automática del SAT, validación, clasificación y vinculación con Compras & POs.</div>
+            <div class="roadmap-item-status status-q4">Q4 2026</div>
+          </div>
+        </div>
+
+        <!-- While waiting -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="font-size:28px">💡</div>
+          <div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">Mientras tanto</div>
+            <div style="font-size:13px;color:var(--text-muted)">
+              Usa <strong>Finanzas & Flujo</strong> para registrar CXC y controlar tu cartera,
+              o <strong>MetaAdmin</strong> en el CEO Command Center para análisis fiscal y de tesorería.
+            </div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap">
+            <a href="/finanzas.html" style="background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,255,136,.3);border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;text-decoration:none">→ Finanzas & Flujo</a>
+            <a href="/ceo.html" style="background:var(--surface-2,#1a1a2e);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;text-decoration:none">→ CEO Command Center</a>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>`;
+}
+
+function notifyMe() {
+  alert('¡Anotado! Te avisaremos cuando el módulo de Facturación esté disponible.');
+}
+
+init();
+</script>
+</body>
+</html>
