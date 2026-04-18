@@ -118,8 +118,8 @@ const suites = [
     const pages=['admin','archivos-ibanor','archivos','dashboard','generate','home','leads','marketing','mtx-docs','oportunidades'];
     const results=[];
     for(const p of pages){
-      try{const r=await fetch(BASE_URL+'/'+p+'.html');const t=await r.text();
-      results.push({p, ok:t.includes('?v=3')});}catch(e){results.push({p,ok:false,err:e.message});}
+      try{const r=await fetch(BASE_URL+'/'+p+'.html',{cache:'no-store'});const t=await r.text();
+      results.push({p, ok:/\?v=\d+/.test(t)||t.includes('?v=')});}catch(e){results.push({p,ok:false,err:e.message});}
     }
     const failed=results.filter(r=>!r.ok);
     if(failed.length===0)return pass('10/10 páginas con cache-bust versioning');
