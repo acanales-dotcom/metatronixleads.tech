@@ -97,17 +97,26 @@
       if (_activeController) { _activeController.abort(); _activeController = null; }
     },
 
-    /* Llamada principal a Claude — streaming, con retry automático */
+    /* Contexto del agente actual — se establece desde la página antes de llamar a chat() */
+    _agentContext: { name: 'General', page: 'unknown' },
+
+    /* Llamada principal a Claude — streaming, con retry automático + logging automático */
     async chat(systemPrompt, userMessage, opts = {}) {
       const url = window.MTX_CONFIG?.CLAUDE_PROXY_URL;
       if (!url) throw new Error('CLAUDE_PROXY_URL no configurado');
+
+      const t0    = Date.now();
+      const model = opts.model || 'claude-haiku-4-5-20251001';
+      const agentName = opts.agentName || this._agentContext?.name || 'General';
+      const page      = opts.page      || this._agentContext?.page ||
+                        window.location.pathname.replace(/^\/|\.html$/g,'') || 'unknown';
 
       const authH = await getAuthHeaders();
       const resp  = await fetchWithRetry(url, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', ...authH },
         body:    JSON.stringify({
-          model:      opts.model      || 'claude-haiku-4-5-20251001',
+          model,
           max_tokens: opts.maxTokens  || 1500,
           system:     systemPrompt,
           messages:   [{ role: 'user', content: String(userMessage).slice(0, 8000) }],
@@ -116,16 +125,32 @@
       }, MAX_RETRIES);
 
       if (!resp.ok) {
-        const txt = await resp.text().catch(() => resp.statusText);
-        const msg = resp.status === 401
+        const errMsg = resp.status === 401
           ? 'Sesión expirada — recarga la página e inicia sesión de nuevo'
           : resp.status === 429
             ? 'Demasiadas solicitudes — espera unos segundos e intenta de nuevo'
             : `Error ${resp.status} — intenta de nuevo`;
-        throw new Error(msg);
+        // Log el error silenciosamente
+        if (typeof window.logLLMQuery === 'function') {
+          window.logLLMQuery({ agentName, page, model,
+            prompt: String(userMessage).slice(0, 250),
+            responseChars: 0, durationMs: Date.now() - t0,
+            success: false, error: errMsg });
+        }
+        throw new Error(errMsg);
       }
 
-      return streamToText(resp);
+      const text = await streamToText(resp);
+
+      // Log exitoso — no bloquea el return
+      if (typeof window.logLLMQuery === 'function') {
+        window.logLLMQuery({ agentName, page, model,
+          prompt: String(userMessage).slice(0, 250),
+          responseChars: text.length, durationMs: Date.now() - t0,
+          success: true });
+      }
+
+      return text;
     },
   };
 })();

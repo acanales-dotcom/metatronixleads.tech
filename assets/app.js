@@ -103,6 +103,34 @@ async function logout() {
   window.location.href = '/index.html';
 }
 
+/* ── Log de consultas LLM — registro para administradores ─── */
+async function logLLMQuery(data) {
+  try {
+    const db = getDB();
+    if (!db) return;
+    const user = window._mtxCurrentUser;
+    await db.from('activity_logs').insert({
+      user_id:     user?.id || null,
+      action:      'llm_query',
+      entity_type: 'llm',
+      entity_id:   null,
+      metadata: {
+        user_email:     user?.email || '',
+        user_name:      user?.profile?.full_name || user?.email || '',
+        page:           data.page || window.location.pathname.replace(/^\/|\.html$/g,'') || 'unknown',
+        agent_name:     data.agentName || 'General',
+        prompt_preview: String(data.prompt || '').slice(0, 250),
+        response_chars: data.responseChars || 0,
+        tokens_approx:  Math.round((data.responseChars || 0) / 4),
+        duration_ms:    data.durationMs || 0,
+        success:        data.success !== false,
+        error_msg:      data.error || null,
+        model:          data.model || 'claude-haiku-4-5-20251001',
+      }
+    });
+  } catch(_) { /* silencioso — nunca debe interrumpir la UI */ }
+}
+
 /* ── Actividad ─────────────────────────────────────────────── */
 async function logActivity(action, entityType = null, entityId = null, metadata = {}) {
   try {

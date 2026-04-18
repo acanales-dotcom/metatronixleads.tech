@@ -2712,46 +2712,10 @@ async function runGenieINTEL(container, mission, scores, structured, agentScores
     </div>`;
   }).join('');
 
-  // Recomendaciones — intenta con Claude, fallback determinístico
+  // Recomendaciones — siempre determinístico (para no añadir más llamadas Claude antes del Genio principal)
   let recs = [];
 
-  if (window.CRM_LLM?.engine) {
-    try {
-      const sys = `Eres el Genio de MetaTronix. Tu única tarea es analizar el Mission Score actual y dar recomendaciones específicas para llegar al 100/100. Responde SOLO JSON válido, sin texto extra.`;
-
-      const userMsg = `Mission Score actual: ${missionScore}/100 (faltan ${pointsLeft} puntos)
-
-Brechas por componente (de mayor a menor potencial de mejora):
-${gaps.map(g=>`- ${g.label}: ${g.current}% actual → máximo ${g.target}% · peso ${g.weight}pts`).join('\n')}
-
-Dimensiones sin cubrir: ${dimensions_missing.join(', ')||'ninguna'}
-Contradicciones detectadas: ${contradictions.map(c=>c.topic).join('; ')||'ninguna'}
-Riesgos críticos: ${critical_risks.filter(r=>r.severity==='critico'||r.severity==='alto').map(r=>r.risk).join('; ')||'ninguno'}
-Riesgo de ejecución: ${execution_risk}
-Agente con mayor relevancia: ${agentScores[0]?.name||'N/A'}
-
-Dame exactamente 4 recomendaciones específicas para MetaTronix que suban el score al 100. Responde SOLO este JSON:
-{
-  "recs": [
-    {
-      "title": "Acción concreta de máximo 8 palabras",
-      "desc": "Explicación de 20-30 palabras: qué hacer exactamente, con qué agente o herramienta de MetaTronix",
-      "component": "nombre del componente que mejora",
-      "impact": "+N pts"
-    }
-  ]
-}`;
-
-      const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:500 });
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (m) {
-        const parsed = JSON.parse(m[0]);
-        recs = parsed.recs || [];
-      }
-    } catch(_) {}
-  }
-
-  // Fallback determinístico: recomienda atacar los gaps más grandes
+  // Determinístico: recomienda atacar los gaps más grandes
   if (!recs.length) {
     const fallbackMap = {
       'Consenso':    { title:'Refinar el enfoque de la misión', desc:'Redacta la misión con términos más específicos para que todos los agentes hablen del mismo problema central. Usa el campo de misión del Command Center.',  component:'consenso',   impact:'+6 pts' },
@@ -3097,11 +3061,11 @@ async function showGenie(mission, agentResults, intelScores = null) {
   const sectionsEl = document.getElementById('genie-sections');
   const speechEl   = document.getElementById('genie-speech');
 
-  // Preparar contexto de todos los agentes (máx 500 chars cada uno)
+  // Preparar contexto de todos los agentes (máx 200 chars cada uno — clave para no sobrepasar el límite del Worker)
   const outputsText = agentResults
     .filter(r => r.text)
-    .map(r => `### ${r.name}\n${r.text.slice(0, 500)}`)
-    .join('\n\n---\n\n');
+    .map(r => `[${r.name}] ${r.text.slice(0, 200).replace(/\n+/g,' ')}`)
+    .join('\n');
 
   if (!window.CRM_LLM?.engine) {
     // Fallback sin LLM
@@ -3129,54 +3093,59 @@ REGLAS:
 - Cada acción debe tener: QUÉ, CUÁNDO y MÉTRICA de éxito.
 - El plan de 7 días debe ser ejecutable por un vendedor real de MetaTronix.`;
 
-  // Contexto INTEL para enriquecer el prompt del Genio
-  const intelCtx = intelScores ? `
-INTEL — Análisis Operacional Previo:
-• Mission Score: ${intelScores.missionScore}/100
-• Consenso entre agentes: ${Math.round(intelScores.consensusIndex * 100)}%
-• Relevancia media: ${Math.round(intelScores.meanRelevance * 100)}%
-• Agente más relevante: ${intelScores.agentScores?.[0]?.name || 'N/A'}
-• Riesgo de ejecución: ${intelScores.structured?.execution_risk || 'medio'}
-• Dimensiones cubiertas: ${(intelScores.structured?.dimensions_covered||[]).join(', ')}
-• Dimensiones sin cubrir: ${(intelScores.structured?.dimensions_missing||[]).join(', ')}
-${intelScores.structured?.critical_risks?.length ? `• Riesgos críticos detectados: ${intelScores.structured.critical_risks.map(r=>r.risk).join(' | ')}` : ''}
-${intelScores.structured?.contradictions?.length ? `• Contradicciones entre agentes: ${intelScores.structured.contradictions.map(c=>c.topic).join(' | ')}` : ''}
-` : '';
+  // Contexto INTEL ultra-compacto (≤ 80 chars) para no inflar el prompt
+  const intelCtx = intelScores
+    ? `[INTEL Score:${intelScores.missionScore}/100 Riesgo:${intelScores.structured?.execution_risk||'medio'}${intelScores.structured?.critical_risks?.length ? ' ⚠ '+intelScores.structured.critical_risks[0]?.risk?.slice(0,60) : ''}]`
+    : '';
 
-  const userMsg = `La agencia trabajó en esta misión: "${mission.slice(0,300)}"
-${intelCtx}
-Outputs de los agentes:
+  const userMsg = `Misión: "${mission.slice(0,200)}" ${intelCtx}
 
+Outputs:
 ${outputsText}
 
-Responde con EXACTAMENTE estas 5 secciones (usa este formato con los emojis de título):
+Responde con EXACTAMENTE estas 5 secciones:
 
 🔮 RESUMEN EJECUTIVO
-[3 líneas: qué encontró la agencia, cuál es la oportunidad central y el tamaño del premio]
+[3 líneas: oportunidad central y tamaño del premio para MetaTronix]
 
 💡 CÓMO APLICARLO HOY
-[5 acciones concretas. Cada una en formato: N. ACCIÓN → qué hacer · cuándo · métrica de éxito]
+[5 acciones: N. ACCIÓN → qué · cuándo · métrica]
 
 ⚡ LO PRIMERO QUE DEBES HACER
-[La acción #1 para los próximos 60 minutos — ultra específica, con nombres de agentes y pasos exactos]
+[Acción #1 para los próximos 60 min — ultra específica]
 
 🗓️ PLAN DE 7 DÍAS
-[Día 1 al 7 — qué ejecutar en MetaTronix con esta información — una acción por día, ejecutable por un vendedor real]
+[Día 1-7: una acción concreta por día]
 
 🎯 PREDICCIÓN DEL GENIO
-[Si ejecutas este plan: resultado esperado en 7 días (con números) y en 30 días (con números) para MetaTronix]`;
+[Resultado en 7 días y 30 días con números]`;
 
   try {
-    if (speechEl) speechEl.innerHTML = '🪄 Analizando el trabajo de los 10 agentes… dame un momento.';
-    const result = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 2000 });
-    if (speechEl) speechEl.innerHTML = '✨ Aquí está mi síntesis completa — sigue cada sección en orden para obtener el máximo resultado.';
-
-    // Parse sections from result
-    const parsed = parseGenieSections(result);
-    buildGenieSections(sectionsEl, parsed);
+    if (speechEl) speechEl.innerHTML = '🪄 Sintetizando el trabajo de los agentes…';
+    const result = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 1200, agentName:'Genie', page:'ventas' });
+    if (speechEl) speechEl.innerHTML = '✨ Síntesis completa — sigue cada sección en orden.';
+    buildGenieSections(sectionsEl, parseGenieSections(result));
 
   } catch(e) {
-    if (speechEl) speechEl.innerHTML = `⚠️ El genio tuvo un problema: ${e.message}`;
+    // Reintento con prompt mínimo si falla (400 = prompt muy largo o rate limit)
+    if (speechEl) speechEl.innerHTML = '🪄 Reintentando con resumen compacto…';
+    try {
+      const miniOutputs = agentResults.slice(0,5).map(r=>`[${r.name}] ${r.text.slice(0,100).replace(/\n+/g,' ')}`).join('\n');
+      const miniMsg = `Misión: "${mission.slice(0,150)}"\n\nOutputs:\n${miniOutputs}\n\nDa las 5 secciones: 🔮 RESUMEN EJECUTIVO · 💡 CÓMO APLICARLO HOY · ⚡ LO PRIMERO · 🗓️ PLAN 7 DÍAS · 🎯 PREDICCIÓN`;
+      const result2 = await window.CRM_LLM.chat(sys, miniMsg, { maxTokens: 900, agentName:'Genie', page:'ventas' });
+      if (speechEl) speechEl.innerHTML = '✨ Síntesis lista (modo compacto).';
+      buildGenieSections(sectionsEl, parseGenieSections(result2));
+    } catch(e2) {
+      // Último recurso: mostrar fallback sin LLM
+      if (speechEl) speechEl.innerHTML = '⚡ Síntesis basada en los outputs de los agentes (modo offline).';
+      buildGenieSections(sectionsEl, {
+        resumen:    `La agencia analizó: "${mission.slice(0,100)}…"\n\n${agentResults.slice(0,3).map(r=>`${r.name}: ${r.text.slice(0,120)}`).join('\n\n')}`,
+        aplicar:    agentResults.slice(0,5).map((r,i)=>`${i+1}. ${r.name}: Aplica su recomendación principal en las próximas 24h.`).join('\n'),
+        primero:    `Abre el Orquestador y pega el estado actual de tu pipeline para obtener el plan de ataque de hoy.`,
+        plan:       `Día 1-2: Prospección con el Prospector.\nDía 3: Califica con el Calificador.\nDía 4-5: Demo con Presentador.\nDía 6: Propuesta IA.\nDía 7: Seguimiento IA.`,
+        prediccion: `Con disciplina de ejecución en 7 días: 3-5 nuevas oportunidades. En 30 días: 1-2 deals en etapa de propuesta.`,
+      });
+    }
   }
 }
 
