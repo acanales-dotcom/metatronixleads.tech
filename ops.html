@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Mi Portal</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050C12;--s1:#080F17;--s2:#0B1520;--s3:#0F1D2B;
+  --border:rgba(255,255,255,.07);--accent:#00ff88;--cyan:#00C2E0;
+  --gold:#F59E0B;--danger:#EF4444;--text:#E2E8F0;--muted:#7E8FA8;
+  --sans:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* AUTH GATE */
+#auth-gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.spinner{width:28px;height:28px;border-radius:50%;border:2px solid rgba(0,255,136,.1);border-top-color:var(--accent);animation:spin .8s linear infinite}
+
+/* TOPBAR */
+.ops-topbar{background:var(--s1);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
+.ops-logo{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent);letter-spacing:.08em}
+.ops-sep{width:1px;height:18px;background:var(--border)}
+.ops-greeting{font-size:14px;font-weight:500;color:var(--text)}
+.ops-role-badge{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:10px;border:1px solid var(--border);color:var(--muted)}
+.ops-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.ops-date{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.ops-logout{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--mono);font-size:9px;cursor:pointer;transition:all .15s}
+.ops-logout:hover{color:var(--text)}
+
+/* CONTENT */
+.ops-content{max-width:900px;margin:0 auto;padding:20px}
+.ops-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.ops-grid{grid-template-columns:1fr}}
+
+/* CARDS */
+.ops-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;animation:fadeUp .3s ease}
+.ops-card-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,var(--s2) 0%,transparent 100%)}
+.ops-card-icon{font-size:18px}
+.ops-card-title{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);letter-spacing:.06em;text-transform:uppercase}
+.ops-card-body{padding:14px 16px}
+
+/* TODAY'S DIGEST */
+.digest-date{font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:12px;letter-spacing:.06em}
+.digest-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.digest-item:last-child{border-bottom:none}
+.digest-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.digest-text{font-size:13px;line-height:1.5;color:var(--text)}
+.digest-meta{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
+
+/* CHECKLIST */
+.check-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.check-item:last-child{border-bottom:none}
+.check-item:hover .check-label{color:var(--accent)}
+.check-box{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s}
+.check-box.done{background:rgba(0,255,136,.15);border-color:rgba(0,255,136,.5)}
+.check-label{font-size:13px;line-height:1.4;flex:1}
+.check-label.done{color:var(--muted);text-decoration:line-through}
+.check-time{font-family:var(--mono);font-size:9px;color:var(--muted);flex-shrink:0;margin-top:2px}
+
+/* ANNOUNCEMENTS */
+.ann-item{padding:10px 0;border-bottom:1px solid var(--border)}
+.ann-item:last-child{border-bottom:none}
+.ann-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.ann-body{font-size:12px;color:var(--muted);line-height:1.5}
+.ann-date{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px}
+.ann-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:8px;margin-right:6px;border:1px solid}
+
+/* INCIDENT REPORT */
+.inc-form{display:flex;flex-direction:column;gap:10px}
+.inc-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em;margin-bottom:4px;text-transform:uppercase}
+.inc-input,.inc-select,.inc-textarea{width:100%;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:var(--sans);font-size:13px;transition:border-color .15s}
+.inc-input:focus,.inc-select:focus,.inc-textarea:focus{outline:none;border-color:rgba(0,255,136,.3)}
+.inc-textarea{resize:vertical;min-height:72px;line-height:1.5}
+.inc-select option{background:var(--s2)}
+.inc-btn{padding:9px 18px;border-radius:6px;border:1px solid rgba(0,255,136,.35);background:rgba(0,255,136,.08);color:var(--accent);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s;letter-spacing:.04em}
+.inc-btn:hover{background:rgba(0,255,136,.15)}
+.inc-success{display:none;padding:10px;border-radius:6px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);font-size:12px;color:var(--accent);text-align:center}
+
+/* CONTACT DIRECTORY */
+.dir-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.dir-item:last-child{border-bottom:none}
+.dir-avatar{width:32px;height:32px;border-radius:50%;background:var(--s3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;font-family:var(--mono);font-weight:700;color:var(--accent)}
+.dir-info{flex:1}
+.dir-name{font-size:13px;font-weight:500;color:var(--text)}
+.dir-role{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px}
+.dir-dept{font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:4px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.15);color:var(--accent)}
+
+/* QUICK LINKS */
+.qlink-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qlink{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;text-decoration:none;cursor:pointer;transition:all .2s}
+.qlink:hover{border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.04)}
+.qlink-icon{font-size:22px}
+.qlink-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em;text-align:center}
+
+/* FULL WIDTH CARD */
+.ops-card.full-width{grid-column:1/-1}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:24px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+
+<div id="auth-gate"><div class="spinner"></div></div>
+
+<div id="ops-shell" style="display:none">
+
+  <div class="ops-topbar">
+    <div class="ops-logo">MTX</div>
+    <div class="ops-sep"></div>
+    <div>
+      <div class="ops-greeting" id="ops-greeting">Hola —</div>
+    </div>
+    <div class="ops-role-badge" id="ops-role-badge">Cargando…</div>
+    <div class="ops-right">
+      <div class="ops-date" id="ops-date"></div>
+      <button class="ops-logout" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="ops-content">
+    <div class="ops-grid">
+
+      <!-- DIGEST DEL DÍA -->
+      <div class="ops-card">
+        <div class="ops-card-header">
+          <div class="ops-card-icon">📋</div>
+          <div class="ops-card-title">Resumen del Día</div>
+        </div>
+        <div class="ops-card-body">
+          <div class="digest-date" id="digest-date"></div>
+          <div id="digest-items">
+            <div class="digest-item">
+              <div class="digest-dot" style="background:var(--accent)"></div>
+              <div>
+                <div class="digest-text">Bienvenido al portal MetaTronix</div>
+                <div class="digest-meta">Tu área de trabajo del día</div>
+              </div>
+            </div>
+            <div class="digest-item">
+              <div class="digest-dot" style="background:var(--cyan)"></div>
+              <div>
+                <div class="digest-text">Revisa tu checklist de tareas</div>
+                <div class="digest-meta">Marca las completadas conforme avances</div>
+              </div>
+            </div>
+            <div class="digest-item">
+              <div class="digest-dot" style="background:var(--gold)"></div>
+              <div>
+                <div class="digest-text">Reporta cualquier incidente al terminar turno</div>
+                <div class="digest-meta">Usa el formulario de incidentes abajo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHECKLIST DIARIO -->
+      <div class="ops-card">
+        <div class="ops-card-header">
+          <div class="ops-card-icon">✅</div>
+          <div class="ops-card-title">Mi Checklist de Hoy</div>
+        </div>
+        <div class="ops-card-body" id="checklist-body">
+          <!-- Populated by JS based on role/department -->
+        </div>
+      </div>
+
+      <!-- ANUNCIOS CORPORATIVOS -->
+      <div class="ops-card full-width">
+        <div class="ops-card-header">
+          <div class="ops-card-icon">📢</div>
+          <div class="ops-card-title">Anuncios y Comunicados</div>
+        </div>
+        <div class="ops-card-body" id="announcements-body">
+          <div class="ann-item">
+            <div class="ann-title">
+              <span class="ann-badge" style="color:var(--accent);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.06)">NUEVO</span>
+              Portal MetaTronix actualizado
+            </div>
+            <div class="ann-body">Se habilitaron nuevas herramientas de IA para todos los colaboradores. Consulta a tu jefe directo para capacitación.</div>
+            <div class="ann-date">Hoy</div>
+          </div>
+          <div class="ann-item">
+            <div class="ann-title">
+              <span class="ann-badge" style="color:var(--gold);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)">AVISO</span>
+              Política de uso responsable de plataforma
+            </div>
+            <div class="ann-body">Recuerda que el uso de las herramientas IA queda registrado. Úsalas para optimizar tu trabajo y reportar resultados a tu supervisor.</div>
+            <div class="ann-date">Esta semana</div>
+          </div>
+          <div id="extra-announcements"></div>
+        </div>
+      </div>
+
+      <!-- REPORTAR INCIDENTE -->
+      <div class="ops-card">
+        <div class="ops-card-header">
+          <div class="ops-card-icon">⚠️</div>
+          <div class="ops-card-title">Reportar Incidente</div>
+        </div>
+        <div class="ops-card-body">
+          <div class="inc-form">
+            <div>
+              <div class="inc-label">Tipo de incidente</div>
+              <select class="inc-select" id="inc-type">
+                <option value="">Seleccionar…</option>
+                <option value="mantenimiento">Mantenimiento / Falla de equipo</option>
+                <option value="seguridad">Seguridad</option>
+                <option value="accidente">Accidente / Lesión</option>
+                <option value="suministros">Falta de suministros</option>
+                <option value="instalaciones">Instalaciones</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <div class="inc-label">Ubicación</div>
+              <input class="inc-input" id="inc-location" type="text" placeholder="Área, piso, sala…">
+            </div>
+            <div>
+              <div class="inc-label">Descripción</div>
+              <textarea class="inc-textarea" id="inc-desc" placeholder="Describe el incidente con detalle. ¿Qué pasó? ¿Cuándo?"></textarea>
+            </div>
+            <button class="inc-btn" onclick="submitIncident()">📤 ENVIAR REPORTE</button>
+            <div class="inc-success" id="inc-success">✅ Reporte enviado correctamente. Tu supervisor fue notificado.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIRECTORIO DE CONTACTOS -->
+      <div class="ops-card">
+        <div class="ops-card-header">
+          <div class="ops-card-icon">👥</div>
+          <div class="ops-card-title">Directorio — Mis Contactos</div>
+        </div>
+        <div class="ops-card-body" id="directory-body">
+          <div class="dir-item">
+            <div class="dir-avatar">S</div>
+            <div class="dir-info">
+              <div class="dir-name">Supervisor Directo</div>
+              <div class="dir-role">Cargando…</div>
+            </div>
+            <div class="dir-dept">MI JEFE</div>
+          </div>
+          <div class="dir-item">
+            <div class="dir-avatar">🆘</div>
+            <div class="dir-info">
+              <div class="dir-name">Emergencias / Seguridad</div>
+              <div class="dir-role">Ext. 100 / 911</div>
+            </div>
+            <div class="dir-dept">URGENTE</div>
+          </div>
+          <div class="dir-item">
+            <div class="dir-avatar">⚙️</div>
+            <div class="dir-info">
+              <div class="dir-name">Mantenimiento</div>
+              <div class="dir-role">Reporta por formulario ←</div>
+            </div>
+            <div class="dir-dept">SOPORTE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCESOS RÁPIDOS -->
+      <div class="ops-card full-width">
+        <div class="ops-card-header">
+          <div class="ops-card-icon">⚡</div>
+          <div class="ops-card-title">Accesos Rápidos</div>
+        </div>
+        <div class="ops-card-body">
+          <div class="qlink-grid" id="quick-links">
+            <a href="/mtx-docs.html" class="qlink">
+              <div class="qlink-icon">📁</div>
+              <div class="qlink-label">DOCUMENTOS Y MANUALES</div>
+            </a>
+            <div class="qlink" onclick="window.location.href='/mtx-docs.html'">
+              <div class="qlink-icon">📖</div>
+              <div class="qlink-label">POLÍTICAS DE EMPRESA</div>
+            </div>
+            <div class="qlink" onclick="showCheckIn()">
+              <div class="qlink-icon">🕐</div>
+              <div class="qlink-label">REGISTRAR ENTRADA / SALIDA</div>
+            </div>
+            <div class="qlink" id="consejo-link" style="display:none" onclick="window.location.href='/consejo.html'">
+              <div class="qlink-icon">🏛</div>
+              <div class="qlink-label">CONSEJO IA (5 CONSULTAS)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><!-- /ops-shell -->
+
+<script src="/assets/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/assets/app.js?v=202604185"></script>
+<script>
+// ══════════════════════════════════════════════════════════════
+// OPS PORTAL — viewer + readonly levels
+// Personal de operaciones, mantenimiento, base
+// ══════════════════════════════════════════════════════════════
+
+let opsUser = null;
+let opsRole = null;
+let checklistState = {}; // {taskId: done}
+
+// Role-based checklists
+const CHECKLISTS = {
+  viewer: [
+    { id:'v1', label:'Revisión de área asignada al inicio de turno', time:'Inicio' },
+    { id:'v2', label:'Verificar insumos y reportar faltantes', time:'8:00' },
+    { id:'v3', label:'Completar bitácora de mantenimiento', time:'Continuo' },
+    { id:'v4', label:'Reporte de novedades al supervisor', time:'12:00' },
+    { id:'v5', label:'Revisión de equipos y cierre de turno', time:'Fin' },
+  ],
+  readonly: [
+    { id:'r1', label:'Check-in de entrada registrado', time:'Inicio' },
+    { id:'r2', label:'Limpieza de área asignada — Piso 1', time:'8:00' },
+    { id:'r3', label:'Limpieza de baños y áreas comunes', time:'10:00' },
+    { id:'r4', label:'Recarga de insumos (papel, jabón, etc.)', time:'11:00' },
+    { id:'r5', label:'Revisión de turno de tarde', time:'14:00' },
+    { id:'r6', label:'Check-out de salida registrado', time:'Fin' },
+  ],
+  default: [
+    { id:'d1', label:'Revisar pendientes del día', time:'Mañana' },
+    { id:'d2', label:'Actualizar actividad en el portal', time:'Continuo' },
+    { id:'d3', label:'Comunicar avances al equipo', time:'Tarde' },
+  ]
+};
+
+function renderChecklist(role) {
+  const items = CHECKLISTS[role] || CHECKLISTS.default;
+  const container = document.getElementById('checklist-body');
+  const saved = JSON.parse(localStorage.getItem('mtx_checklist_' + todayKey()) || '{}');
+  checklistState = saved;
+
+  container.innerHTML = items.map(item => `
+    <div class="check-item" onclick="toggleCheck('${item.id}')">
+      <div class="check-box ${saved[item.id] ? 'done' : ''}" id="box-${item.id}">
+        ${saved[item.id] ? '<span style="color:var(--accent);font-size:11px">✓</span>' : ''}
+      </div>
+      <div class="check-label ${saved[item.id] ? 'done' : ''}" id="lbl-${item.id}">${item.label}</div>
+      <div class="check-time">${item.time}</div>
+    </div>
+  `).join('');
+}
+
+function toggleCheck(id) {
+  checklistState[id] = !checklistState[id];
+  localStorage.setItem('mtx_checklist_' + todayKey(), JSON.stringify(checklistState));
+
+  const box = document.getElementById('box-' + id);
+  const lbl = document.getElementById('lbl-' + id);
+  if (box) {
+    box.classList.toggle('done', checklistState[id]);
+    box.innerHTML = checklistState[id] ? '<span style="color:var(--accent);font-size:11px">✓</span>' : '';
+  }
+  if (lbl) lbl.classList.toggle('done', checklistState[id]);
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Check-in simple
+function showCheckIn() {
+  const now = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  const type = confirm(`¿Registrar ENTRADA a las ${now}?\n\nPresiona Cancelar para registrar SALIDA.`) ? 'entrada' : 'salida';
+  const db = getDB();
+  if (db && opsUser) {
+    db.from('activity_logs').insert({
+      user_id: opsUser.id,
+      action: `checkin_${type}`,
+      entity_type: 'attendance',
+      entity_id: todayKey(),
+      metadata: { time: now, type }
+    }).catch(() => {});
+  }
+  alert(`✅ ${type.charAt(0).toUpperCase() + type.slice(1)} registrada a las ${now}`);
+}
+
+// Incident report
+async function submitIncident() {
+  const type = document.getElementById('inc-type').value;
+  const location = document.getElementById('inc-location').value.trim();
+  const desc = document.getElementById('inc-desc').value.trim();
+
+  if (!type || !desc) { alert('Completa tipo y descripción del incidente.'); return; }
+
+  const db = getDB();
+  if (db && opsUser) {
+    try {
+      await db.from('activity_logs').insert({
+        user_id: opsUser.id,
+        action: 'incident_report',
+        entity_type: 'incident',
+        metadata: {
+          type, location,
+          description: desc,
+          reported_by: opsUser.email,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (_) {}
+  }
+
+  // Reset form
+  document.getElementById('inc-type').value = '';
+  document.getElementById('inc-location').value = '';
+  document.getElementById('inc-desc').value = '';
+  const success = document.getElementById('inc-success');
+  success.style.display = 'block';
+  setTimeout(() => { success.style.display = 'none'; }, 4000);
+}
+
+// Load supervisor from Supabase
+async function loadDirectory() {
+  const db = getDB();
+  if (!db || !opsUser) return;
+  try {
+    const { data: me } = await db.from('profiles')
+      .select('reports_to').eq('id', opsUser.id).single();
+
+    if (me?.reports_to) {
+      const { data: sup } = await db.from('profiles')
+        .select('full_name,email,role').eq('id', me.reports_to).single();
+      if (sup) {
+        const dirBody = document.getElementById('directory-body');
+        const firstItem = dirBody.querySelector('.dir-item');
+        if (firstItem) {
+          firstItem.querySelector('.dir-avatar').textContent = (sup.full_name?.[0] || 'S').toUpperCase();
+          firstItem.querySelector('.dir-name').textContent = sup.full_name || sup.email;
+          firstItem.querySelector('.dir-role').textContent = sup.email;
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+// ROLE DISPLAY
+const ROLE_DISPLAY = {
+  super_admin:'CEO · Super Admin', admin:'Director', admin_restringido:'Gerente',
+  user:'Colaborador', viewer:'Operativo / Soporte', readonly:'Personal Base'
+};
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  const db = getDB();
+  if (!db) { window.location.href = '/index.html'; return; }
+
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { window.location.href = '/index.html'; return; }
+
+    opsUser = session.user;
+    let displayName = opsUser.email?.split('@')[0] || 'Usuario';
+
+    try {
+      const { data: p } = await db.from('profiles').select('full_name,role').eq('id', opsUser.id).single();
+      if (p?.full_name) displayName = p.full_name.split(' ')[0];
+      opsRole = p?.role || 'readonly';
+    } catch (_) { opsRole = 'readonly'; }
+
+    // If higher-role user opens this page, redirect to home
+    if (['super_admin','admin','admin_restringido'].includes(opsRole)) {
+      window.location.href = '/home.html'; return;
+    }
+
+    // Set UI
+    document.getElementById('ops-greeting').textContent = `Hola, ${displayName}`;
+    document.getElementById('ops-role-badge').textContent = ROLE_DISPLAY[opsRole] || opsRole;
+
+    const now = new Date();
+    const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    document.getElementById('ops-date').textContent =
+      `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`;
+    document.getElementById('digest-date').textContent =
+      `HOY · ${now.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'}).toUpperCase()}`;
+
+    // Show consejo link if viewer (has AI access)
+    if (opsRole === 'viewer') {
+      document.getElementById('consejo-link').style.display = 'flex';
+    }
+
+    // Render checklist
+    renderChecklist(opsRole);
+
+    // Load directory
+    loadDirectory();
+
+    // Show shell
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('ops-shell').style.display = 'block';
+
+    // Log
+    db.from('activity_logs').insert({
+      user_id: opsUser.id, action: 'page_view',
+      entity_type: 'page', entity_id: 'ops',
+      metadata: { role: opsRole }
+    }).catch(() => {});
+
+  } catch (err) {
+    console.error('Ops init error:', err);
+    window.location.href = '/index.html';
+  }
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

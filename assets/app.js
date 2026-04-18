@@ -624,6 +624,15 @@ function renderHeader(user, activePage) {
         <span class="nav-label">Simulación Social</span>
       </a>` : ''}` : ''}
 
+      <!-- ═══ CEO COMMAND CENTER — super_admin + admin ═══ -->
+      ${(isSuperAdmin || isAdmin) ? `
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-label">Dirección</div>
+      <a href="/ceo.html" class="sidebar-nav-link ${activePage==='ceo'?'active':''}" style="position:relative">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">CEO Command Center</span>
+      </a>` : ''}
+
       <!-- ═══ SISTEMA — admin+ ═══ -->
       ${hasAdminAccess ? `
       <div class="sidebar-divider"></div>

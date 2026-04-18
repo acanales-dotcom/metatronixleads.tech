@@ -486,6 +486,14 @@ function daysSince(dateStr) { return Math.round((Date.now()-new Date(dateStr).ge
 async function init() {
   currentUser = await requireAuth();
   if (!currentUser) return;
+
+  // ── ROLE-BASED ROUTING ────────────────────────────────────
+  const role = currentUser.profile?.role || 'user';
+  // Operativos y personal base → portal simplificado
+  if (role === 'viewer' || role === 'readonly') {
+    window.location.href = '/ops.html'; return;
+  }
+
   document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'home');
 
   // Greeting
