@@ -469,7 +469,7 @@ function renderHeader(user, activePage) {
   };
   const roleBadge = ROLE_BADGES[role] || '';
 
-  return `
+  const _html = `
   <style>
     body { padding-left: var(--sidebar-w, 220px); }
     /* Bell dropdown */
@@ -510,6 +510,54 @@ function renderHeader(user, activePage) {
       letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint);
     }
     .sidebar-divider { height:1px; background:var(--border); margin:6px 0; }
+
+    /* ── COMPANY SWITCHER ── */
+    .co-switcher {
+      margin:8px 10px 4px; border-radius:8px;
+      border:1px solid var(--border); overflow:hidden;
+    }
+    .co-current {
+      display:flex; align-items:center; gap:8px; padding:8px 10px;
+      cursor:pointer; background:rgba(255,255,255,.02);
+      transition:background .15s; user-select:none;
+    }
+    .co-current:hover { background:rgba(255,255,255,.05); }
+    .co-logo {
+      width:24px; height:24px; border-radius:5px; flex-shrink:0;
+      background:rgba(0,255,136,.12); border:1px solid rgba(0,255,136,.25);
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px; font-weight:800; font-family:var(--font-mono);
+      color:var(--accent);
+    }
+    .co-info { flex:1; min-width:0; }
+    .co-name { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .co-plan { font-size:9px; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:.04em; }
+    .co-chevron { font-size:10px; color:var(--text-muted); transition:transform .2s; flex-shrink:0; }
+    .co-dropdown {
+      display:none; border-top:1px solid var(--border);
+      background:var(--bg-2, #10141F); max-height:200px; overflow-y:auto;
+    }
+    .co-dropdown.open { display:block; }
+    .co-option {
+      display:flex; align-items:center; gap:8px; padding:7px 10px;
+      cursor:pointer; transition:background .12s;
+    }
+    .co-option:hover { background:rgba(0,255,136,.06); }
+    .co-option.active { background:rgba(0,255,136,.04); }
+    .co-option-logo {
+      width:20px; height:20px; border-radius:4px; flex-shrink:0;
+      background:rgba(0,255,136,.1); border:1px solid rgba(0,255,136,.2);
+      display:flex; align-items:center; justify-content:center;
+      font-size:10px; font-weight:700; font-family:var(--font-mono); color:var(--accent);
+    }
+    .co-option-name { font-size:11px; color:var(--text); flex:1; }
+    .co-option-check { font-size:10px; color:var(--accent); }
+    .co-add {
+      display:flex; align-items:center; gap:6px; padding:7px 10px;
+      cursor:pointer; border-top:1px solid var(--border);
+      font-size:10px; color:var(--text-muted); transition:color .15s;
+    }
+    .co-add:hover { color:var(--accent); }
   </style>
   <aside class="app-sidebar">
 
@@ -523,6 +571,24 @@ function renderHeader(user, activePage) {
         <span class="sidebar-brand-sub">PORTAL</span>
       </div>
     </a>
+
+    <!-- COMPANY SWITCHER -->
+    <div class="co-switcher" id="co-switcher-wrap">
+      <div class="co-current" onclick="toggleCoDropdown()" id="co-current-btn">
+        <div class="co-logo" id="co-logo">M</div>
+        <div class="co-info">
+          <div class="co-name" id="co-name">Cargando…</div>
+          <div class="co-plan" id="co-plan">plan · empresa</div>
+        </div>
+        <div class="co-chevron" id="co-chevron">▾</div>
+      </div>
+      <div class="co-dropdown" id="co-dropdown">
+        <div id="co-options-list"></div>
+        <div class="co-add" onclick="requestNewCompany()">
+          <span>＋</span> Agregar empresa
+        </div>
+      </div>
+    </div>
 
     <!-- Navigation — diferenciada por nivel organizacional -->
     <nav class="sidebar-nav">
@@ -683,6 +749,9 @@ function renderHeader(user, activePage) {
       </button>
     </div>
   </aside>`;
+  // Auto-init company switcher once the HTML lands in the DOM
+  setTimeout(() => { if (typeof initCompanySwitcher === 'function') initCompanySwitcher(); }, 60);
+  return _html;
 }
 
 function toggleBellDropdown(e) {
@@ -730,6 +799,129 @@ function handleAlertClick(alertId, leadId) {
   }
   closeBellDropdown();
   if (leadId) window.location.href = '/leads.html';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MULTI-EMPRESA — Company Switcher
+   ═══════════════════════════════════════════════════════════ */
+
+// Active company state (persisted in localStorage)
+window.MTX_ACTIVE_COMPANY = localStorage.getItem('mtx_active_company') || null;
+
+async function initCompanySwitcher() {
+  const db = getDB();
+  if (!db) return;
+  try {
+    // Get current user's company_id
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await db.from('profiles')
+      .select('company_id').eq('id', user.id).single();
+    const userCompanyId = profile?.company_id || 'metatronix';
+
+    // If no active company set, default to user's company
+    if (!window.MTX_ACTIVE_COMPANY) {
+      window.MTX_ACTIVE_COMPANY = userCompanyId;
+      localStorage.setItem('mtx_active_company', userCompanyId);
+    }
+
+    // Load all companies this user has access to
+    // super_admin sees all; others see only their company
+    const role = window._mtxCurrentUser?.profile?.role;
+    let companies = [];
+
+    if (role === 'super_admin') {
+      const { data } = await db.from('companies').select('*').eq('is_active', true).order('name');
+      companies = data || [];
+    } else {
+      const { data } = await db.from('companies')
+        .select('*').eq('id', userCompanyId).single();
+      companies = data ? [data] : [{ id: userCompanyId, name: userCompanyId, plan: 'pro' }];
+    }
+
+    window._mtxUserCompanies = companies;
+    renderCompanySwitcher(companies, window.MTX_ACTIVE_COMPANY);
+
+  } catch (_) {
+    // Fallback: show placeholder
+    const nameEl = document.getElementById('co-name');
+    const planEl = document.getElementById('co-plan');
+    if (nameEl) nameEl.textContent = 'MetaTronix';
+    if (planEl) planEl.textContent = 'enterprise';
+  }
+}
+
+function renderCompanySwitcher(companies, activeId) {
+  const active = companies.find(c => c.id === activeId) || companies[0];
+  if (!active) return;
+
+  const nameEl = document.getElementById('co-name');
+  const planEl = document.getElementById('co-plan');
+  const logoEl = document.getElementById('co-logo');
+  if (nameEl) nameEl.textContent = active.name;
+  if (planEl) planEl.textContent = (active.plan || 'pro').toUpperCase();
+  if (logoEl) logoEl.textContent = (active.name?.[0] || 'M').toUpperCase();
+
+  const list = document.getElementById('co-options-list');
+  if (!list) return;
+  list.innerHTML = companies.map(c => `
+    <div class="co-option ${c.id === activeId ? 'active' : ''}" onclick="switchCompany('${escHtml(c.id)}')">
+      <div class="co-option-logo">${(c.name?.[0] || 'E').toUpperCase()}</div>
+      <div class="co-option-name">${escHtml(c.name)}</div>
+      ${c.id === activeId ? '<span class="co-option-check">✓</span>' : ''}
+    </div>
+  `).join('');
+
+  // Hide switcher if only 1 company (no need to switch)
+  const wrap = document.getElementById('co-switcher-wrap');
+  if (wrap && companies.length <= 1) wrap.style.cursor = 'default';
+}
+
+function toggleCoDropdown() {
+  const companies = window._mtxUserCompanies || [];
+  if (companies.length <= 1) return; // single company — no dropdown
+  const dd = document.getElementById('co-dropdown');
+  const ch = document.getElementById('co-chevron');
+  if (!dd) return;
+  const isOpen = dd.classList.toggle('open');
+  if (ch) ch.style.transform = isOpen ? 'rotate(180deg)' : '';
+  // Close when clicking outside
+  if (isOpen) {
+    setTimeout(() => {
+      document.addEventListener('click', closeCoDropdown, { once: true });
+    }, 10);
+  }
+}
+
+function closeCoDropdown() {
+  const dd = document.getElementById('co-dropdown');
+  const ch = document.getElementById('co-chevron');
+  if (dd) dd.classList.remove('open');
+  if (ch) ch.style.transform = '';
+}
+
+function switchCompany(companyId) {
+  if (window.MTX_ACTIVE_COMPANY === companyId) { closeCoDropdown(); return; }
+  window.MTX_ACTIVE_COMPANY = companyId;
+  localStorage.setItem('mtx_active_company', companyId);
+  closeCoDropdown();
+  // Re-render switcher
+  renderCompanySwitcher(window._mtxUserCompanies || [], companyId);
+  // Dispatch event so pages can reload their data
+  window.dispatchEvent(new CustomEvent('mtx:company-changed', { detail: { companyId } }));
+  // Show toast
+  const c = (window._mtxUserCompanies || []).find(x => x.id === companyId);
+  if (typeof showToast === 'function') showToast(`Empresa: ${c?.name || companyId}`, 'success');
+}
+
+function getActiveCompany() {
+  return window.MTX_ACTIVE_COMPANY || localStorage.getItem('mtx_active_company') || 'metatronix';
+}
+
+function requestNewCompany() {
+  closeCoDropdown();
+  if (typeof showToast === 'function') showToast('Contacta a soporte para agregar una nueva empresa', 'info');
 }
 
 /* ═══════════════════════════════════════════════════════════
