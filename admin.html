@@ -1235,7 +1235,7 @@ async function loadColaboradores() {
     propuesta_enviada:'var(--accent)', cerrado_ganado:'var(--accent)', cerrado_perdido:'var(--danger)'
   };
   const DOC_STATUS_COLOR = { draft:'var(--text-muted)', pending_review:'var(--warning)', approved:'var(--accent)', rejected:'var(--danger)' };
-  const ROLE_LABELS = { admin:'Admin', admin_restringido:'Visor', user:'Colaborador' };
+  const ROLE_LABELS = { super_admin:'Super Admin', admin:'Administrador', admin_restringido:'Admin Restringido', user:'Colaborador' };
 
   container.innerHTML = colaboradores.map(u => {
     const uLeads = (leads||[]).filter(l => l.user_id === u.id);
@@ -1326,7 +1326,7 @@ async function loadClaudeAdmin() {
     return;
   }
 
-  const ROLE_LABELS = { super_admin:'SuperAdmin', admin:'Admin', admin_restringido:'Visor', user:'Colaborador' };
+  const ROLE_LABELS = { super_admin:'Super Admin', admin:'Administrador', admin_restringido:'Admin Restringido', user:'Colaborador' };
 
   tbody.innerHTML = users.map(u => {
     const pct = u.claude_monthly_limit > 0 ? Math.min(Math.round((u.claude_usage_month/u.claude_monthly_limit)*100), 100) : 0;
@@ -1574,7 +1574,7 @@ async function loadPerplexityAdmin() {
   }
 
   const roleLabel = r => ({
-    user:'Colaborador', admin:'Admin', admin_restringido:'Admin Visor', super_admin:'SuperAdmin'
+    user:'Colaborador', admin:'Administrador', admin_restringido:'Admin Restringido', super_admin:'Super Admin'
   }[r] || r);
 
   tbody.innerHTML = profiles.map(p => {
