@@ -51,13 +51,11 @@
   </script>
   <style>
 /* ── Pipeline CRM — Full-height layout fix ── */
-html, body { height: 100vh; overflow: hidden; }
 .page {
-  height: 100%; padding: 0; max-width: none; background: var(--bg);
+  height: 100vh; padding: 0; max-width: none; background: var(--bg);
   display: flex; flex-direction: column; overflow: hidden;
 }
-/* o-cp stays fixed at top (sticky doesn't apply in overflow:hidden, but position is fine) */
-.o-cp { flex-shrink: 0; position: relative; z-index: 50; }
+.o-cp    { flex-shrink: 0; position: relative; z-index: 50; }
 .o-stat-bar { flex-shrink: 0; }
 .o-view { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
 .o-view.active { display: flex; }
