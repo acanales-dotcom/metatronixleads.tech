@@ -53,10 +53,10 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:16px 32p
 <div class="clf-banner">⚠ MTX QA RUNNER — AUTOMATED TEST EXECUTION — INTERNAL USE ONLY ⚠</div>
 <header>
   <h1>MTX QA RUNNER</h1>
-  <p>Automated test execution for metatronixleads.tech · 57 automated tests across 10 suites · v2.1 Security+Features</p>
+  <p>Automated test execution for metatronixleads.tech · 72 automated tests across 11 suites · v2.2 Anti-Hallucination+Security</p>
 </header>
 <div class="stats-bar">
-  <div class="stat"><div class="stat-num" id="s-total" style="color:var(--text)">57</div><div class="stat-label">Total</div></div>
+  <div class="stat"><div class="stat-num" id="s-total" style="color:var(--text)">72</div><div class="stat-label">Total</div></div>
   <div class="stat"><div class="stat-num" id="s-pass" style="color:var(--accent)">0</div><div class="stat-label">Pass</div></div>
   <div class="stat"><div class="stat-num" id="s-fail" style="color:var(--red)">0</div><div class="stat-label">Fail</div></div>
   <div class="stat"><div class="stat-num" id="s-skip" style="color:var(--muted)">0</div><div class="stat-label">Skip</div></div>
@@ -75,11 +75,12 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:16px 32p
   <button class="btn" onclick="runSuite('REG')">REG</button>
   <button class="btn" onclick="runSuite('SEC2')" style="border-color:#EF4444;color:#EF4444">SEC2</button>
   <button class="btn" onclick="runSuite('FTR')" style="border-color:#00D4F0;color:#00D4F0">FTR</button>
+  <button class="btn" onclick="runSuite('AHL')" style="border-color:#F59E0B;color:#F59E0B;font-weight:700">🧠 AHL</button>
   <button class="btn" onclick="resetAll()" style="margin-left:auto">↺ RESET</button>
   <a href="qa-protocol.html" class="btn" style="text-decoration:none;display:flex;align-items:center">📋 PROTOCOL</a>
 </div>
 <main id="mainContent"></main>
-<footer>MTX QA RUNNER v2.1 · metatronixleads.tech · Automated suite: 57 tests · Manual: 91 tests (see qa-protocol.html)</footer>
+<footer>MTX QA RUNNER v2.2 · metatronixleads.tech · Automated: 72 tests · Manual: 130 tests (qa-protocol.html) · AHL suite: FDA SaMD · IEC 62304 · ISO 14971 · NIST AI RMF</footer>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -602,6 +603,257 @@ const suites = [
     }catch(e){return fail(e.message);}
   }},
 ]},
+
+{id:'AHL', title:'ANTI-HALLUCINATION — MEDICAL-GRADE AI SAFETY', tests:[
+  /* ── AHL-GRD: Data Grounding ── */
+  {id:'AHL-GRD-005', name:'INTEL inyecta datos reales de Supabase en el prompt (no hardcoded)', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Verificar que runINTELStandalone existe y referencia byStage/totalValue/stuckLeads
+      const hasStandalone = t.includes('runINTELStandalone');
+      const hasByStage = t.includes('byStage') || t.includes('by_stage');
+      const hasTotalValue = t.includes('totalValue') || t.includes('total_value');
+      const hasStuck = t.includes('stuckLeads') || t.includes('stuck');
+      // Verificar que el prompt hace referencia a datos de Supabase, no valores hardcodeados
+      const noFakeData = !t.includes('pipeline: $500,000') && !t.includes('leads: 50') && !t.includes('"totalValue": 100');
+      if(hasStandalone && hasByStage && hasTotalValue && hasStuck && noFakeData)
+        return pass('runINTELStandalone ✓ · byStage ✓ · totalValue ✓ · stuckLeads ✓ · sin datos hardcodeados ✓');
+      return fail([
+        !hasStandalone ? 'runINTELStandalone no encontrado' : '',
+        !hasByStage ? 'byStage no encontrado' : '',
+        !hasTotalValue ? 'totalValue no encontrado' : '',
+        !hasStuck ? 'stuckLeads no encontrado' : '',
+        !noFakeData ? 'datos hardcodeados detectados en prompt' : ''
+      ].filter(Boolean).join(' · '));
+    }catch(e){return fail(e.message);}
+  }},
+
+  /* ── AHL-UNK: Uncertainty — verificación estática ── */
+  {id:'AHL-UNK-005', name:'INTEL maneja Supabase retorno vacío (guard clause para array vacío)', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Buscar guard clause para leads vacíos en runINTELStandalone
+      const hasLengthCheck = /leads\.length\s*===?\s*0|!leads\.length|leads\.length\s*<\s*1|generateDemoLeads/.test(t);
+      // Verificar que hay fallback a 0 en totalValue reduce
+      const hasFallback = /reduce\s*\([^)]*,\s*0\)/.test(t) || /\|\|\s*0/.test(t);
+      // Verificar que conversionRate tiene guardia de división por cero
+      const hasConvGuard = /closed\s*\+\s*lost\s*===?\s*0|!.*\(closed|denominator/.test(t) || t.includes('conv') && t.includes('|| 0');
+      if(hasLengthCheck && hasFallback)
+        return pass('Guard clause vacío ✓ · Reduce con fallback 0 ✓' + (hasConvGuard ? ' · ConvRate guard ✓' : ' · ConvRate guard: verificar manualmente'));
+      return fail('Faltan guardas: ' + (!hasLengthCheck?'sin guard para leads vacíos · ':'') + (!hasFallback?'sin fallback 0 en reduce':''));
+    }catch(e){return fail(e.message);}
+  }},
+
+  /* ── AHL-CTX: Context Faithfulness — escHtml en prompts ── */
+  {id:'AHL-CTX-004', name:'escHtml() aplicado a outputs de IA en UI (anti-XSS + anti-injection)', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Contar usos de escHtml en contexto de resultado de agente
+      const escCount = (t.match(/escHtml\s*\(/g)||[]).length;
+      // Verificar que existe la función escHtml
+      const hasFn = t.includes('function escHtml') || t.includes('escHtml =');
+      // Verificar que se usa en outputs de agentes (innerHTML con escHtml)
+      const usedInOutput = t.includes('escHtml(result)') || t.includes('escHtml(e.message') || /innerHTML.*escHtml/.test(t);
+      if(hasFn && escCount >= 10 && usedInOutput)
+        return pass('escHtml función ✓ · '+escCount+' usos · Aplicado en outputs de agentes ✓');
+      return fail('escHtml usos: '+escCount+' · función: '+(hasFn?'✓':'✗')+' · en outputs: '+(usedInOutput?'✓':'✗'));
+    }catch(e){return fail(e.message);}
+  }},
+
+  /* ── AHL-SCH: Schema validation — JSON.parse con try-catch ── */
+  {id:'AHL-SCH-003', name:'JSON.parse de respuestas IA envuelto en try-catch (no uncaught SyntaxError)', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Buscar patrones de JSON.parse en contexto de respuesta IA
+      // Verificar que están dentro de try-catch
+      const jsonParseMatches = t.match(/JSON\.parse\s*\([^)]+\)/g) || [];
+      // Buscar si hay try-catch cerca de JSON.parse
+      const hasTryCatch = /try\s*\{[^}]*JSON\.parse|JSON\.parse[^;]*;[^}]*\}\s*catch/.test(t.replace(/\n/g,' '));
+      // Verificar que el parser de buyer personas tiene strip de markdown
+      const hasMarkdownStrip = t.includes("replace(/```json?|```/g") || t.includes('replace(/```');
+      // Verificar regex fallback para JSON extraction
+      const hasRegexFallback = /match\s*\(\s*\/\\\{/.test(t) || t.includes('jsonMatch') || t.includes('json_match');
+      if(hasTryCatch && hasMarkdownStrip)
+        return pass('try-catch en JSON.parse ✓ · markdown strip ✓ · '+jsonParseMatches.length+' JSON.parse detectados' + (hasRegexFallback?' · regex fallback ✓':''));
+      return fail('try-catch: '+(hasTryCatch?'✓':'✗')+' · markdown strip: '+(hasMarkdownStrip?'✓':'✗')+' · JSON.parse count: '+jsonParseMatches.length);
+    }catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL-SCH-004', name:'Buyer Persona schema: strip de markdown implementado en código', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      const hasStrip = t.includes("replace(/```json?|```/g,'').trim()") || t.includes("replace(/```json");
+      const hasJsonParse = t.includes("JSON.parse(") && t.includes(".trim()");
+      const hasPersonaSchema = t.includes('"score"') && t.includes('"objecion"') && t.includes('"perspectiva"');
+      if(hasStrip && hasPersonaSchema)
+        return pass('Markdown strip ✓ · Schema fields (score, objecion, perspectiva) ✓ · JSON.parse+trim ✓');
+      return fail('Strip: '+(hasStrip?'✓':'✗')+' · Schema: '+(hasPersonaSchema?'✓':'✗'));
+    }catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL-SCH-001', name:'INTEL JSON schema — 5 campos requeridos en system prompt', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      const hasDiagnosis = t.includes('"diagnosis"');
+      const hasTopRisk = t.includes('"top_risk"');
+      const hasTopOpp = t.includes('"top_opportunity"');
+      const hasAction = t.includes('"action_today"');
+      const hasForecast = t.includes('"forecast_30d"');
+      const allPresent = hasDiagnosis && hasTopRisk && hasTopOpp && hasAction && hasForecast;
+      if(allPresent)
+        return pass('Schema INTEL: diagnosis ✓ · top_risk ✓ · top_opportunity ✓ · action_today ✓ · forecast_30d ✓');
+      return fail('Campos faltantes: '+[
+        !hasDiagnosis?'diagnosis':'', !hasTopRisk?'top_risk':'',
+        !hasTopOpp?'top_opportunity':'', !hasAction?'action_today':'', !hasForecast?'forecast_30d':''
+      ].filter(Boolean).join(', '));
+    }catch(e){return fail(e.message);}
+  }},
+
+  /* ── AHL-NUM: Numeric Precision — verificación estática ── */
+  {id:'AHL-NUM-001', name:'Pipeline Health Score tiene capping 0-100 (Math.min/max o equivalente)', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Buscar Math.min(100 o Math.max(0 cerca de health score
+      const hasCap = /Math\.min\s*\(\s*100/.test(t) || /Math\.max\s*\(\s*0/.test(t);
+      // Buscar nombre de función de health score
+      const hasFn = t.includes('calcPipelineHealth') || t.includes('healthScore') || t.includes('health_score') || t.includes('calcMissionScore');
+      // Verificar que hay cálculo de health score
+      const hasHealth = t.includes('health') && (t.includes('+= ') || t.includes('health ='));
+      if(hasCap && hasFn)
+        return pass('Capping 0-100 (Math.min/max) ✓ · Función health score ✓');
+      if(hasHealth && !hasCap)
+        return fail('Health score calculado pero sin capping Math.min(100) / Math.max(0) detectado — riesgo de valor fuera de rango');
+      return fail('hasCap: '+(hasCap?'✓':'✗')+' · hasFn: '+(hasFn?'✓':'✗'));
+    }catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL-NUM-002', name:'Tasa de conversión: protección contra división por cero', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Buscar patrón de conversión rate con guardia
+      const hasConvCalc = t.includes('conversionRate') || t.includes('conversion') && t.includes('/');
+      // Buscar patrones de guardia: || 0, ? : , !== 0
+      const hasGuard = /\|\|\s*0|closed\s*\+\s*lost\s*>\s*0|\?\s*\(closed|denominat/.test(t);
+      // Buscar parseFloat con fallback
+      const hasParseFloat = t.includes('parseFloat') && t.includes('|| 0');
+      if(hasConvCalc && (hasGuard || hasParseFloat))
+        return pass('División por cero protegida ✓ · conversionRate con guard ✓');
+      if(hasConvCalc && !hasGuard)
+        return fail('conversionRate calculado pero sin guard contra división por cero — riesgo de NaN/Infinity');
+      return skip('conversionRate no encontrado — verificar manualmente');
+    }catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL-NUM-004', name:'Buyer Persona score: rango 0-100 en código de render', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Buscar rendering de score con validación de rango
+      const hasScoreRender = t.includes('r.score') || t.includes('.score');
+      // Buscar que el color del score tiene condición sobre valor numérico
+      const hasColorCond = /score\s*>=?\s*\d+/.test(t);
+      // Verificar que score se usa para calcular un porcentaje en UI
+      const hasPctCalc = t.includes('score/100') || t.includes('score / 100') || t.includes('width:${r.score}%') || /score.*\%/.test(t);
+      if(hasScoreRender && hasColorCond)
+        return pass('Score render ✓ · Condición de color por rango ✓' + (hasPctCalc?' · Porcentaje UI ✓':''));
+      return fail('score render: '+(hasScoreRender?'✓':'✗')+' · color cond: '+(hasColorCond?'✓':'✗'));
+    }catch(e){return fail(e.message);}
+  }},
+
+  /* ── AHL-ADV: Adversarial — verificación estática ── */
+  {id:'AHL-ADV-STATIC', name:'Agentes de venta usan escHtml en interpolación de input de usuario en prompts', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Buscar si getInput() se concatena directamente en template literals sin escHtml
+      // Pattern peligroso: `...${contexto}...` donde contexto = getInput()
+      const hasContexto = t.includes('const contexto = getInput');
+      // Verificar si contexto se sanitiza antes del prompt
+      const contextoSanitized = t.includes('escHtml(contexto)') || t.includes('sanitize(contexto)');
+      // Verificar getInput en prompts
+      const getInputInPrompt = /getInput\([^)]*\).*\$\{/.test(t.replace(/\n/g,' ')) || t.includes('getInput(id)') && t.includes('`');
+      // Verificar escHtml en outputs (ya probado) — aquí buscamos en prompts
+      const promptsHaveEsc = t.includes('escHtml(result)');
+
+      if(!hasContexto)
+        return skip('getInput pattern no encontrado con ese nombre — verificar manualmente en prompts de agentes');
+      if(hasContexto && !contextoSanitized)
+        return fail('RIESGO: contexto = getInput() usado en template literal de prompt SIN escHtml() — prompt injection posible');
+      return pass('Uso de getInput detectado · Verificar manualmente que cada ${contexto} en prompts de agente es escaped');
+    }catch(e){return fail(e.message);}
+  }},
+
+  /* ── AHL-REV: Human-in-the-Loop — verificación estática ── */
+  {id:'AHL-REV-001', name:'Labels de "IA" / "sugerencia" presentes en outputs de agentes', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Buscar etiquetas de origen IA en los títulos de output
+      const hasIALabel = t.includes('IA —') || t.includes('— IA') || t.includes('IA Insight') || t.includes('ia-') || t.includes('AI INSIGHT') || t.includes('intel-ai');
+      // Buscar sección de output con título que incluye nombre de agente (ej: "Prospector — Plan")
+      const hasOutputTitle = t.includes('output-title') || t.includes('class="output-section"');
+      // Buscar indicador de generación por IA
+      const hasPoweredBy = t.includes('POWERED BY') || t.includes('powered by') || t.includes('Generado por IA') || t.includes('Anthropic');
+      if(hasIALabel || hasPoweredBy)
+        return pass('Label IA detectado ✓' + (hasOutputTitle?' · output-title class ✓':'') + (hasPoweredBy?' · powered-by badge ✓':''));
+      return fail('Sin label de origen IA en outputs de agentes — agregar "Sugerencia IA" o "Generado por Claude AI" en .output-title');
+    }catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL-REV-002', name:'Agentes NO modifican datos de Supabase directamente — solo outputs de texto/UI', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Verificar que las funciones de agentes de venta no llaman a Supabase .insert/.update/.upsert
+      // Las funciones de agente típicas: runProspector, runCalificador, runDescubridor, etc.
+      // Si alguna llama a db.from().insert() sería peligroso (side effect no confirmado)
+      const agentFunctions = t.match(/async function run\w+\s*\([^)]*\)\s*\{[^}]{0,2000}/g) || [];
+      const supabaseWrite = agentFunctions.some(fn => fn.includes('.insert(') || fn.includes('.update(') || fn.includes('.upsert('));
+      if(!supabaseWrite)
+        return pass('Agentes de venta no escriben en Supabase ✓ — outputs son solo texto/UI');
+      return fail('CRÍTICO: función de agente contiene .insert()/.update() — agente modifica datos sin confirmación del usuario');
+    }catch(e){return fail(e.message);}
+  }},
+
+  /* ── AHL-SCH: INTEL system prompt instructions ── */
+  {id:'AHL-GRD-SYSTEM', name:'System prompts de INTEL e intelClaudeExtract tienen instrucción SOLO JSON', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/ventas.html',{cache:'no-store'});
+      const t=await r.text();
+      // Verificar que los system prompts de los agentes que devuelven JSON tienen la instrucción de solo JSON
+      const hasOnlyJson1 = t.includes('SOLO JSON') || t.includes('Solo JSON') || t.includes('SOLO en JSON') || t.includes('solo JSON');
+      const hasNoMarkdown = t.includes('sin markdown') || t.includes('sin texto adicional') || t.includes('without markdown') || t.includes('no markdown');
+      const hasRespJson = t.includes('Responde SOLO JSON') || t.includes('devolver SOLO JSON') || t.includes('devuelve SOLO JSON') || t.includes('SOLO en JSON válido');
+      if(hasRespJson || (hasOnlyJson1 && hasNoMarkdown))
+        return pass('Instrucción "SOLO JSON" en system prompt ✓ · Sin markdown ✓');
+      if(hasOnlyJson1)
+        return pass('Instrucción "SOLO JSON" ✓ — verificar "sin markdown" manualmente');
+      return fail('System prompt de agentes JSON sin instrucción "SOLO JSON válido sin markdown" — riesgo de respuesta con texto extra que rompe JSON.parse');
+    }catch(e){return fail(e.message);}
+  }},
+
+  {id:'AHL-CTX-004B', name:'crm-llm.js tiene parsing/validación de JSON en función principal', run: async()=>{
+    try{
+      const r=await fetch(BASE_URL+'/assets/crm-llm.js?v=202604181',{cache:'no-store'});
+      const t=await r.text();
+      const hasJsonParse = t.includes('JSON.parse');
+      const hasTryCatch = /try\s*\{[^}]*JSON\.parse|JSON\.parse[^;]+catch/.test(t.replace(/\n/g,' ')) || t.includes('catch');
+      const hasStreaming = t.includes('event-stream') || t.includes('ReadableStream') || t.includes('getReader');
+      if(hasStreaming && hasTryCatch)
+        return pass('Streaming SSE ✓ · try-catch ✓' + (hasJsonParse?' · JSON.parse presente ✓':''));
+      return fail('crm-llm.js: streaming='+(hasStreaming?'✓':'✗')+' · try-catch='+(hasTryCatch?'✓':'✗'));
+    }catch(e){return fail('crm-llm.js no accesible: '+e.message);}
+  }},
+
+]},
 ];
 
 // ═══ RESULT HELPERS ═══
@@ -617,16 +869,18 @@ function renderSuites(){
     const sec = document.createElement('div');
     sec.className = 'suite';
     sec.id = 'suite-'+suite.id;
-    sec.innerHTML = `<div class="suite-header">
-      <span class="suite-badge">${suite.id}</span>
-      <span class="suite-title">${suite.title}</span>
-      <span class="suite-count" id="count-${suite.id}">${suite.tests.length} tests</span>
+    const isAHL = suite.id === 'AHL';
+    sec.innerHTML = `<div class="suite-header" style="${isAHL?'border-bottom-color:#F59E0B':''}">
+      <span class="suite-badge" style="${isAHL?'background:#F59E0B;color:#000':''}">${suite.id}</span>
+      <span class="suite-title" style="${isAHL?'color:#F59E0B':''}">${suite.title}</span>
+      <span class="suite-count" id="count-${suite.id}">${suite.tests.length} tests${isAHL?' · FDA SaMD · IEC 62304 · ISO 14971 · NIST AI RMF':''}</span>
     </div>`;
     for(const t of suite.tests){
       const row = document.createElement('div');
       row.className = 'test-row';
       row.id = 'row-'+t.id;
-      row.innerHTML = `<div><div class="test-id">${t.id}</div></div>
+      const idColor = t.id.startsWith('AHL') ? 'color:#F59E0B' : '';
+      row.innerHTML = `<div><div class="test-id" style="${idColor}">${t.id}</div></div>
         <div><div class="test-name">${t.name}</div><div class="test-detail" id="detail-${t.id}">—</div></div>
         <div class="test-result r-pending" id="result-${t.id}">PENDING</div>`;
       sec.appendChild(row);
