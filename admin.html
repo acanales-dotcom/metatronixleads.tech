@@ -121,6 +121,7 @@
     <button class="tab-btn" onclick="switchTab('activity')">Actividad</button>
     <button class="tab-btn" id="tab-claude-btn" style="display:none;background:rgba(124,58,237,.15);color:#a78bfa" onclick="switchTab('claude')">🤖 IA APIs</button>
     <button class="tab-btn" id="tab-llmlogs-btn" style="display:none;background:rgba(0,212,240,.08);color:var(--cyan)" onclick="switchTab('llmlogs')">📊 Consultas IA</button>
+    <button class="tab-btn" id="tab-gestion-btn" style="display:none;background:rgba(0,255,136,.08);color:var(--accent)" onclick="switchTab('gestion')">⚙ Gestión de Usuarios</button>
   </div>
 
   <!-- TAB: POR COLABORADOR -->
@@ -441,6 +442,94 @@
     </div>
   </div>
 
+  <!-- TAB: GESTIÓN DE USUARIOS (ncanales + acanales only) -->
+  <div id="tab-gestion" class="tab-panel">
+    <div class="section-header">
+      <span class="section-title">⚙ Gestión de Usuarios</span>
+      <div style="display:flex;gap:8px">
+        <input id="gu-search" class="form-input" placeholder="Buscar por nombre o email…" style="width:220px;height:34px" oninput="renderGestionUsers()">
+        <button class="btn btn-secondary btn-sm" onclick="openGestionModal()">+ Nuevo Usuario</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadGestionUsers()">↻</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="gu-table">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Aprobación docs</th>
+            <th>Estado</th>
+            <th style="text-align:center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="gu-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal Gestión de Usuarios -->
+<div id="gu-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title" id="gu-modal-title">Nuevo Usuario</span>
+      <button class="modal-close" onclick="closeGestionModal()">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;padding:4px 0">
+      <div class="form-group">
+        <label class="form-label">Nombre completo</label>
+        <input type="text" id="gu-name" class="form-input" placeholder="Nombre Apellido">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input type="email" id="gu-email" class="form-input" placeholder="correo@ejemplo.com">
+      </div>
+      <div class="form-group" id="gu-pass-group">
+        <label class="form-label">Contraseña temporal</label>
+        <input type="password" id="gu-password" class="form-input" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rol</label>
+        <select id="gu-role" class="form-select">
+          <option value="user">Colaborador</option>
+          <option value="admin_restringido">Admin Restringido (Visor)</option>
+          <option value="admin">Administrador</option>
+          <option value="super_admin">Super Administrador</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="gu-doc-approval" style="width:16px;height:16px;accent-color:var(--accent)">
+          <span class="form-label" style="margin:0">Requiere revisión por ncanales + acanales para aprobar docs de Ventas/Marketing</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeGestionModal()">Cancelar</button>
+      <button class="btn btn-primary" id="gu-save-btn" onclick="saveGestionUser()">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm baja modal -->
+<div id="gu-baja-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <span class="modal-title">⚠ Dar de Baja</span>
+      <button class="modal-close" onclick="document.getElementById('gu-baja-modal').style.display='none'">✕</button>
+    </div>
+    <p style="color:var(--text-muted);padding:4px 0">¿Confirmas dar de baja a <strong id="gu-baja-name" style="color:#fff"></strong>? El usuario perderá acceso inmediatamente.</p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('gu-baja-modal').style.display='none'">Cancelar</button>
+      <button class="btn btn-danger" id="gu-baja-confirm-btn" onclick="confirmBaja()">Dar de Baja</button>
+    </div>
+  </div>
 </div>
 
 <!-- Document viewer modal -->
@@ -538,6 +627,16 @@ let currentDocModal = null;
 let currentAlertId = null;
 let isRestrictedAdmin = false;
 
+// Usuarios que requieren routing de aprobación → ncanales + acanales
+const DOC_REVIEW_REQUIRED_EMAILS = ['nibarra@ibanormexico.com','acanalesf@ibanormexico.com'];
+// Usuarios con acceso a Gestión de Usuarios
+const GESTION_ALLOWED_EMAILS = ['ncanales@ibanormexico.com','acanales@ibanormexico.com'];
+
+// Estado gestión de usuarios
+let allGestionUsers = [];
+let guEditingId = null;  // null = creating, id = editing
+let guBajaId    = null;
+
 async function init() {
   currentUser = await requireAuth(true); // admin or admin_restringido
   if (!currentUser) return;
@@ -549,6 +648,12 @@ async function init() {
   if (isSuperAdmin) {
     document.getElementById('tab-claude-btn').style.display  = 'inline-flex';
     document.getElementById('tab-llmlogs-btn').style.display = 'inline-flex';
+  }
+
+  // Mostrar tab Gestión de Usuarios solo para ncanales + acanales
+  const userEmail = (currentUser?.email || '').toLowerCase().trim();
+  if (GESTION_ALLOWED_EMAILS.includes(userEmail)) {
+    document.getElementById('tab-gestion-btn').style.display = 'inline-flex';
   }
 
   // Para admin restringido: forzar filtro "aprobado" en documentos y ocultar acciones admin
@@ -825,7 +930,18 @@ async function openDocModal(docId, alertId) {
   const btnReject  = document.getElementById('btn-reject-doc');
   const btnApprove = document.getElementById('btn-approve-doc');
   if (btnReject)  btnReject.style.display  = isRestrictedAdmin ? 'none' : 'inline-flex';
-  if (btnApprove) btnApprove.style.display = isRestrictedAdmin ? 'none' : 'inline-flex';
+  if (btnApprove) {
+    btnApprove.style.display = isRestrictedAdmin ? 'none' : 'inline-flex';
+    // Si es usuario con routing, cambiar label del botón
+    const cuE = (currentUser?.email || '').toLowerCase().trim();
+    if (DOC_REVIEW_REQUIRED_EMAILS.includes(cuE)) {
+      btnApprove.textContent = '📤 Enviar a Revisión';
+      btnApprove.title = 'Este documento será enviado a ncanales y acanales para aprobación final';
+    } else {
+      btnApprove.textContent = '✓ Aprobar';
+      btnApprove.title = '';
+    }
+  }
   document.getElementById('doc-modal').style.display = 'flex';
 
   // Mark alert as read
@@ -853,6 +969,13 @@ function closeDocModal() {
 async function resolveDoc(newStatus) {
   if (!currentDocModal) return;
   if (isRestrictedAdmin) { showToast('Sin permiso para autorizar documentos', 'warning'); return; }
+
+  // Si el usuario requiere routing y está intentando APROBAR → enviar a revisión
+  const cuEmail = (currentUser?.email || '').toLowerCase().trim();
+  if (newStatus === 'approved' && DOC_REVIEW_REQUIRED_EMAILS.includes(cuEmail)) {
+    await sendDocToReview();
+    return;
+  }
 
   const db   = getDB();
   const note = document.getElementById('admin-note').value.trim();
@@ -1084,6 +1207,7 @@ function switchTab(name) {
   if (name === 'colaboradores') loadColaboradores();
   if (name === 'claude')        { loadClaudeAdmin(); loadPerplexityAdmin(); }
   if (name === 'llmlogs')       loadLLMLogs();
+  if (name === 'gestion')       loadGestionUsers();
 }
 
 // ── Por Colaborador ──────────────────────────────────────────
@@ -1708,6 +1832,230 @@ function exportLLMLogs() {
   a.download = `consultas-ia-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FLUJO DE APROBACIÓN CON ROUTING (nibarra / acanalesf)
+// ══════════════════════════════════════════════════════════════
+async function sendDocToReview() {
+  if (!currentDocModal) return;
+  const db   = getDB();
+  const note = document.getElementById('admin-note').value.trim();
+  const btn  = document.getElementById('btn-approve-doc');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+
+  // Mantener doc en pending_review (ya lo está) y registrar nota de routing
+  const { error } = await db.from('documents').update({
+    updated_at: new Date().toISOString(),
+    admin_note: (note ? note + '\n' : '') +
+      `[ROUTING] Enviado a revisión de ncanales@ibanormexico.com y acanales@ibanormexico.com por ${currentUser.email}`
+  }).eq('id', currentDocModal.id);
+
+  if (error) { showToast('Error al enrutar documento: ' + error.message, 'error'); }
+  else {
+    // Crear alertas para ncanales y acanales
+    const REVIEWERS = ['ncanales@ibanormexico.com', 'acanales@ibanormexico.com'];
+    const { data: reviewerProfiles } = await db.from('profiles')
+      .select('id').in('email', REVIEWERS);
+
+    if (reviewerProfiles?.length) {
+      const alertsPayload = reviewerProfiles.map(rp => ({
+        type:       'doc_review_required',
+        for_user_id: rp.id,
+        is_read:    false,
+        document_id: currentDocModal.id,
+        metadata: {
+          title:     currentDocModal.title,
+          routed_by: currentUser.email,
+          message:   `Documento "${currentDocModal.title}" requiere tu aprobación.`
+        }
+      }));
+      await db.from('alerts').insert(alertsPayload);
+    }
+
+    await logActivity('doc_sent_to_review', 'document', currentDocModal.id, { title: currentDocModal.title });
+    showToast('Documento enviado a revisión de ncanales y acanales ✓', 'info');
+    closeDocModal();
+    await refreshAll();
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '✓ Aprobar'; }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GESTIÓN DE USUARIOS (solo ncanales + acanales)
+// ══════════════════════════════════════════════════════════════
+const GU_ROLE_LABELS = {
+  user:             'Colaborador',
+  admin_restringido:'Admin Restringido',
+  admin:            'Administrador',
+  super_admin:      'Super Admin'
+};
+
+async function loadGestionUsers() {
+  const db = getDB();
+  const { data } = await db.from('profiles')
+    .select('id,email,full_name,role,is_active,doc_approval_required,last_seen')
+    .order('full_name');
+  allGestionUsers = data || [];
+  renderGestionUsers();
+}
+
+function renderGestionUsers() {
+  const q   = (document.getElementById('gu-search')?.value || '').toLowerCase();
+  const rows = allGestionUsers.filter(u =>
+    !q || (u.full_name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q)
+  );
+
+  const tbody = document.getElementById('gu-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Sin resultados</td></tr>';
+    return;
+  }
+
+  const cuEmail = (currentUser?.email || '').toLowerCase();
+
+  tbody.innerHTML = rows.map(u => {
+    const roleBadge = {
+      super_admin:      'badge-danger',
+      admin:            'badge-accent',
+      admin_restringido:'badge-warning',
+      user:             'badge-neutral'
+    }[u.role] || 'badge-neutral';
+
+    const isSelf = u.email?.toLowerCase() === cuEmail;
+    const active = u.is_active !== false;
+
+    return `<tr>
+      <td>
+        <div style="font-weight:600;color:#fff">${escHtml(u.full_name || u.email?.split('@')[0] || '—')}</div>
+        ${u.last_seen ? `<div style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono)">Último acceso: ${formatDate(u.last_seen)}</div>` : ''}
+      </td>
+      <td><span class="td-mono" style="font-size:11px">${escHtml(u.email||'')}</span></td>
+      <td><span class="badge ${roleBadge}">${GU_ROLE_LABELS[u.role]||u.role}</span></td>
+      <td style="text-align:center">
+        ${u.doc_approval_required
+          ? '<span class="badge badge-warning" title="Docs de ventas/marketing van a revisión">⚠ Routing</span>'
+          : '<span class="badge badge-neutral" style="color:var(--accent)">Directo</span>'}
+      </td>
+      <td><span class="${active ? 'dot-online' : 'dot-offline'}"></span>${active ? 'Activo' : 'Baja'}</td>
+      <td>
+        <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="openGestionModal('${u.id}')">✏ Editar</button>
+          ${!isSelf && active
+            ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="openBajaModal('${u.id}','${escHtml(u.full_name||u.email||'')}')">✕ Baja</button>`
+            : ''}
+          ${!isSelf && !active
+            ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="reactivarUser('${u.id}')">↺ Activar</button>`
+            : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openGestionModal(userId) {
+  guEditingId = userId || null;
+  const u = userId ? allGestionUsers.find(x => x.id === userId) : null;
+
+  document.getElementById('gu-modal-title').textContent = u ? `Editar: ${u.full_name || u.email}` : 'Nuevo Usuario';
+  document.getElementById('gu-name').value     = u?.full_name || '';
+  document.getElementById('gu-email').value    = u?.email || '';
+  document.getElementById('gu-role').value     = u?.role || 'user';
+  document.getElementById('gu-doc-approval').checked = !!u?.doc_approval_required;
+  document.getElementById('gu-save-btn').textContent  = u ? 'Guardar Cambios' : 'Crear Usuario';
+
+  // Ocultar campo contraseña al editar
+  document.getElementById('gu-pass-group').style.display = u ? 'none' : 'block';
+  if (!u) document.getElementById('gu-password').value = '';
+
+  document.getElementById('gu-modal').style.display = 'flex';
+}
+
+function closeGestionModal() {
+  document.getElementById('gu-modal').style.display = 'none';
+  guEditingId = null;
+}
+
+async function saveGestionUser() {
+  const btn     = document.getElementById('gu-save-btn');
+  const name    = document.getElementById('gu-name').value.trim();
+  const email   = document.getElementById('gu-email').value.trim();
+  const role    = document.getElementById('gu-role').value;
+  const docAppr = document.getElementById('gu-doc-approval').checked;
+  const pass    = document.getElementById('gu-password').value;
+
+  if (!name || !email) { showToast('Completa nombre y email', 'warning'); return; }
+
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  const db = getDB();
+
+  try {
+    if (guEditingId) {
+      // ── Editar perfil existente ──
+      const { error } = await db.from('profiles').update({
+        full_name:            name,
+        role:                 role,
+        doc_approval_required: docAppr
+      }).eq('id', guEditingId);
+      if (error) throw error;
+      showToast(`${name} actualizado ✓`, 'success');
+
+    } else {
+      // ── Crear nuevo usuario ──
+      if (!pass || pass.length < 6) { showToast('Contraseña mínimo 6 caracteres', 'warning'); return; }
+
+      const { data, error } = await db.auth.signUp({
+        email, password: pass,
+        options: { data: { full_name: name, role } }
+      });
+      if (error) throw error;
+
+      if (data.user) {
+        await db.from('profiles').upsert({
+          id:                   data.user.id,
+          email,
+          full_name:            name,
+          role,
+          doc_approval_required: docAppr,
+          is_active:            true
+        });
+      }
+      showToast(`Usuario ${name} creado ✓ — revisa correo para confirmar`, 'success');
+    }
+
+    closeGestionModal();
+    await loadGestionUsers();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = guEditingId ? 'Guardar Cambios' : 'Crear Usuario';
+}
+
+function openBajaModal(userId, userName) {
+  guBajaId = userId;
+  document.getElementById('gu-baja-name').textContent = userName;
+  document.getElementById('gu-baja-modal').style.display = 'flex';
+}
+
+async function confirmBaja() {
+  if (!guBajaId) return;
+  const btn = document.getElementById('gu-baja-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Procesando…';
+  const { error } = await getDB().from('profiles').update({ is_active: false }).eq('id', guBajaId);
+  if (error) { showToast('Error al dar de baja: ' + error.message, 'error'); }
+  else { showToast('Usuario dado de baja ✓', 'info'); }
+  document.getElementById('gu-baja-modal').style.display = 'none';
+  guBajaId = null;
+  btn.disabled = false; btn.textContent = 'Dar de Baja';
+  await loadGestionUsers();
+}
+
+async function reactivarUser(userId) {
+  const { error } = await getDB().from('profiles').update({ is_active: true }).eq('id', userId);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast('Usuario reactivado ✓', 'success');
+  await loadGestionUsers();
 }
 </script>
 </body>
