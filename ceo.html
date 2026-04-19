@@ -8,10 +8,10 @@
   <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
-  <link rel="stylesheet" href="/assets/style.css?v=20260419">
+  <link rel="stylesheet" href="/assets/style.css?v=20260418">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/config.js?v=20260419"></script>
-  <script src="/assets/app.js?v=20260419"></script>
+  <script src="/config.js?v=20260418"></script>
+  <script src="/assets/app.js?v=20260418"></script>
   <style>
     :root {
       --green:#00ff88; --cyan:#00e5ff; --gold:#ffb400;
@@ -654,7 +654,15 @@ PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} c
       model:'claude-sonnet-4-6', max_tokens:2000, stream:true,
       system:`Eres el Consejero Ejecutivo IA de IBANOR SA de CV / MetaTronix.
 Responde preguntas del CEO con DATOS REALES del sistema.
-PROTOCOLO AHL NIVEL EJECUTIVO: SOLO usa datos del contexto. Cita la fuente de cada número. Distingue hecho de análisis. Añade ⚠ en recomendaciones. Formato HTML (h2,h3,p,ul,table). Sin DOCTYPE.`,
+
+PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO:
+1. NUNCA inventes cifras, proyecciones ni datos que no estén en el contexto provisto.
+2. Cita la fuente de cada número: (Fuente: Pipeline), (Fuente: CXC vencida), etc.
+3. HECHO vs ANÁLISIS: distingue claramente qué es dato real vs interpretación.
+4. Si el dato no está en el contexto, escribe: "Sin dato — requiere verificación manual".
+5. ⚠ en recomendaciones: validar antes de actuar.
+6. † en KPIs financieros: auditar antes de decisiones ejecutivas.
+7. Formato HTML semántico (h2, h3, p, ul, table). Sin DOCTYPE, html, head, body.`,
       messages:[{role:'user',content:`${orgCtx}\n\nPREGUNTA DEL CEO: "${question}"\n\nResponde directo, citando datos del contexto anterior.`}],
     }),
     signal: AbortSignal.timeout(90000),
@@ -784,7 +792,12 @@ PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} |
       body:JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:2500, stream:true,
         system:`Eres el Chief Strategy Officer IA de IBANOR SA de CV / MetaTronix.
-PROTOCOLO ANTI-ALUCINACIÓN: SOLO usa datos del contexto. Cita fuente de cada número (Fuente: Pipeline/CXC/etc). NUNCA inventes cifras. Hecho vs análisis claramente diferenciados. ⚠ en recomendaciones. † en KPIs financieros. HTML semántico sin DOCTYPE.`,
+PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO:
+- NUNCA inventes cifras, datos ni proyecciones sin base en el contexto provisto.
+- Cita fuente de cada número: (Fuente: Pipeline), (Fuente: CXC), etc.
+- HECHO vs ANÁLISIS: diferencia dato real de interpretación.
+- ⚠ en recomendaciones. † en KPIs financieros: auditar antes de decisiones ejecutivas.
+- HTML semántico (h2,h3,p,ul,table). Sin DOCTYPE.`,
         messages:[{role:'user',content:prompts[type]||prompts.daily}],
       }),
       signal:AbortSignal.timeout(120000),

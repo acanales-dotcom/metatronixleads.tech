@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Administración</title>
-  <link rel="stylesheet" href="/assets/style.css?v=202604174">
+  <link rel="stylesheet" href="/assets/style.css?v=20260418">
   <link rel="stylesheet" href="/assets/agent.css">
   <style>
     .lead-status-nuevo            { color: var(--info);    background: var(--info-dim); padding:2px 7px; border-radius:3px; font-size:11px; font-weight:600; }
@@ -642,12 +642,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260419"></script>
-<script src="/assets/agent.js?v=202604174"></script>
+<script src="/assets/app.js?v=20260418"></script>
+<script src="/assets/agent.js?v=20260418"></script>
 <!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js?v=202604174"></script>
+<script src="/assets/salescoach.js?v=20260418"></script>
 <!-- TEAM CHAT -->
-<script src="/assets/teamchat.js?v=202604174"></script>
+<script src="/assets/teamchat.js?v=20260418"></script>
 <script>
 let currentUser = null;
 let allDocsData = [];
@@ -656,10 +656,10 @@ let currentDocModal = null;
 let currentAlertId = null;
 let isRestrictedAdmin = false;
 
-// Usuarios que requieren routing de aprobación → ncanales + acanales
+// Usuarios que requieren routing de aprobación (doc_approval_required = true en profiles)
+// Este array es fallback; la fuente de verdad es el campo doc_approval_required en Supabase
 const DOC_REVIEW_REQUIRED_EMAILS = ['nibarra@ibanormexico.com','acanalesf@ibanormexico.com'];
-// Usuarios con acceso a Gestión de Usuarios
-const GESTION_ALLOWED_EMAILS = ['ncanales@ibanormexico.com','acanales@ibanormexico.com'];
+// Acceso a Gestión de Usuarios: cualquier admin o super_admin por rol (no email hardcodeado)
 
 // Estado gestión de usuarios
 let allGestionUsers = [];
@@ -679,9 +679,9 @@ async function init() {
     document.getElementById('tab-llmlogs-btn').style.display = 'inline-flex';
   }
 
-  // Mostrar tab Gestión de Usuarios solo para ncanales + acanales
-  const userEmail = (currentUser?.email || '').toLowerCase().trim();
-  if (GESTION_ALLOWED_EMAILS.includes(userEmail)) {
+  // Mostrar tab Gestión de Usuarios para admin y super_admin (basado en rol, no email)
+  const userRole = currentUser.profile?.role || '';
+  if (['admin','super_admin'].includes(userRole)) {
     document.getElementById('tab-gestion-btn').style.display = 'inline-flex';
   }
 

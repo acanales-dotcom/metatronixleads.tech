@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Inicio</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="stylesheet" href="/assets/style.css?v=202604174">
+  <link rel="stylesheet" href="/assets/style.css?v=20260418">
   <link rel="stylesheet" href="/assets/agent.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -272,6 +272,15 @@
 
 /* ── Empty state ── */
 .home-empty { padding: 20px; text-align: center; color: var(--t3); font-size: 12px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .home-shell { flex-direction: column; }
+  .home-left { min-width: unset; max-width: unset; border-right: none; border-bottom: 1px solid var(--b1); flex: 0 0 auto; }
+  .home-right { flex: 1; }
+  .report-grid { grid-template-columns: 1fr; }
+  .report-card[style*="grid-column:1/-1"] { grid-column: 1 !important; }
+}
   </style>
 </head>
 <body>
@@ -435,12 +444,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260419"></script>
-<script src="/assets/agent.js?v=202604174"></script>
+<script src="/assets/app.js?v=20260418"></script>
+<script src="/assets/agent.js?v=20260418"></script>
 <!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js?v=202604174"></script>
+<script src="/assets/salescoach.js?v=20260418"></script>
 <!-- TEAM CHAT -->
-<script src="/assets/teamchat.js?v=202604174"></script>
+<script src="/assets/teamchat.js?v=20260418"></script>
 <script>
 /* ════════════════════════════════════════════════════════
    MetaTronix — Home / Mesa de Mando

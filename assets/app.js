@@ -463,6 +463,32 @@ function renderHeader(user, activePage) {
       letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint);
     }
     .sidebar-divider { height:1px; background:var(--border); margin:6px 0; }
+  /* Company switcher */
+  .company-switcher {
+    margin: 0 10px 4px; border-radius: 7px;
+    border: 1px solid rgba(0,194,224,.25); background: rgba(0,194,224,.05);
+    overflow: hidden;
+  }
+  .company-switcher-current {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 11px; cursor: pointer; transition: background .1s;
+  }
+  .company-switcher-current:hover { background: rgba(0,194,224,.08); }
+  .company-switcher-icon { font-size: 13px; flex-shrink: 0; }
+  .company-switcher-name { font-size: 11px; font-weight: 700; color: var(--cyan); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .company-switcher-arrow { font-size: 9px; color: var(--text-muted); transition: transform .15s; }
+  .company-switcher-arrow.open { transform: rotate(180deg); }
+  .company-switcher-list { display: none; border-top: 1px solid rgba(0,194,224,.15); max-height: 180px; overflow-y: auto; }
+  .company-switcher-list.open { display: block; }
+  .company-switcher-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 11px; cursor: pointer; font-size: 11px;
+    color: var(--text-muted); transition: background .1s; border-bottom: 1px solid var(--border);
+  }
+  .company-switcher-item:last-child { border-bottom: none; }
+  .company-switcher-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+  .company-switcher-item.active { color: var(--cyan); font-weight: 700; }
+  .company-switcher-item.active::after { content: '✓'; margin-left: auto; font-size: 10px; }
   </style>
   <aside class="app-sidebar">
 
@@ -476,6 +502,19 @@ function renderHeader(user, activePage) {
         <span class="sidebar-brand-sub">PORTAL</span>
       </div>
     </a>
+
+    ${isSuperAdmin ? `
+    <!-- Company Switcher (super_admin only) -->
+    <div class="company-switcher" id="company-switcher-widget">
+      <div class="company-switcher-current" onclick="toggleCompanySwitcher(event)">
+        <span class="company-switcher-icon">🏢</span>
+        <span class="company-switcher-name" id="company-switcher-name">Cargando...</span>
+        <span class="company-switcher-arrow" id="company-switcher-arrow">▾</span>
+      </div>
+      <div class="company-switcher-list" id="company-switcher-list">
+        <div class="company-switcher-item" style="opacity:.5;cursor:default">Cargando empresas...</div>
+      </div>
+    </div>` : ''}
 
     <!-- Navigation — 5 primary modules + tools -->
     <nav class="sidebar-nav">
@@ -676,6 +715,100 @@ function closeBellDropdown() {
   const dd = document.getElementById('bell-dropdown');
   if (dd) dd.classList.remove('open');
 }
+
+// ── Company Switcher (super_admin) ────────────────────────────────────────
+window.MTX_ACTIVE_COMPANY = JSON.parse(sessionStorage.getItem('mtx_active_company') || 'null');
+
+function toggleCompanySwitcher(e) {
+  e.stopPropagation();
+  const list  = document.getElementById('company-switcher-list');
+  const arrow = document.getElementById('company-switcher-arrow');
+  if (!list) return;
+  const opening = !list.classList.contains('open');
+  list.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open');
+  if (opening) {
+    loadCompanySwitcher();
+    setTimeout(() => document.addEventListener('click', closeCompanySwitcher, { once: true }), 0);
+  }
+}
+
+function closeCompanySwitcher() {
+  const list  = document.getElementById('company-switcher-list');
+  const arrow = document.getElementById('company-switcher-arrow');
+  if (list)  list.classList.remove('open');
+  if (arrow) arrow.classList.remove('open');
+}
+
+async function loadCompanySwitcher() {
+  const list = document.getElementById('company-switcher-list');
+  const nameEl = document.getElementById('company-switcher-name');
+  if (!list) return;
+
+  // Update display name
+  const active = window.MTX_ACTIVE_COMPANY;
+  if (nameEl) nameEl.textContent = active?.name || 'Todas las empresas';
+
+  try {
+    const db = getSupabase();
+    const { data: companies, error } = await db
+      .from('companies')
+      .select('id, name, rfc, status')
+      .order('name');
+
+    if (error) throw error;
+
+    const items = [
+      // "All companies" option for super_admin
+      { id: null, name: 'Todas las empresas', rfc: '', status: 'activo' },
+      ...(companies || [])
+    ];
+
+    list.innerHTML = items.map(c => `
+      <div class="company-switcher-item ${(active?.id || null) === c.id ? 'active' : ''}"
+           onclick="selectCompany(${c.id ? JSON.stringify(c) : 'null'})">
+        <span style="font-size:11px">${c.id ? '🏢' : '🌐'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.name)}</div>
+          ${c.rfc ? `<div style="font-size:9px;color:var(--text-faint);font-family:var(--font-mono)">${escHtml(c.rfc)}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    list.innerHTML = `<div class="company-switcher-item" style="color:var(--red);cursor:default">Error: ${escHtml(err.message)}</div>`;
+  }
+}
+
+function selectCompany(company) {
+  window.MTX_ACTIVE_COMPANY = company;
+  sessionStorage.setItem('mtx_active_company', JSON.stringify(company));
+  const nameEl = document.getElementById('company-switcher-name');
+  if (nameEl) nameEl.textContent = company?.name || 'Todas las empresas';
+  closeCompanySwitcher();
+  // Dispatch event so pages can react to company switch
+  window.dispatchEvent(new CustomEvent('mtx:companySwitch', { detail: company }));
+  // Update active state in list
+  document.querySelectorAll('.company-switcher-item').forEach(el => {
+    el.classList.remove('active');
+    el.style.removeProperty('fontWeight');
+  });
+  showToast(`Empresa: ${company?.name || 'Todas las empresas'}`, 'success');
+  // Reload page data after a brief delay to let toast show
+  setTimeout(() => window.location.reload(), 800);
+}
+
+// Init company switcher display name on page load
+(function initCompanySwitcherDisplay() {
+  // This runs after renderHeader injects the sidebar
+  const observer = new MutationObserver(() => {
+    const nameEl = document.getElementById('company-switcher-name');
+    if (nameEl) {
+      nameEl.textContent = window.MTX_ACTIVE_COMPANY?.name || 'Todas las empresas';
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
 
 function handleAlertClick(alertId, leadId) {
   markAlertRead(alertId);
