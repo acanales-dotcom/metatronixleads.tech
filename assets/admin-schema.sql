@@ -6,6 +6,20 @@
 -- ============================================================
 
 -- ─────────────────────────────────────────────────────────────
+-- 0. LIMPIEZA PREVIA (idempotente — borra todo antes de recrear)
+-- ─────────────────────────────────────────────────────────────
+DROP FUNCTION IF EXISTS get_financial_summary(UUID) CASCADE;
+DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
+DROP TABLE IF EXISTS contracts CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS invoices_in CASCADE;
+DROP TABLE IF EXISTS invoices_out CASCADE;
+DROP TABLE IF EXISTS supplier_quotes CASCADE;
+DROP TABLE IF EXISTS purchase_orders CASCADE;
+DROP TABLE IF EXISTS requisitions CASCADE;
+DROP TABLE IF EXISTS suppliers CASCADE;
+
+-- ─────────────────────────────────────────────────────────────
 -- 1. PROVEEDORES (suppliers)
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS suppliers (
