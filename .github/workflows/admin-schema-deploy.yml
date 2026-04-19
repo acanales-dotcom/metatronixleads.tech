@@ -1,0 +1,87 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# admin-schema-deploy.yml
+# Ejecuta admin-schema.sql en Supabase via CLI (sin necesidad de contraseña DB).
+#
+# SETUP ÚNICO (una sola vez):
+#   1. Ve a: https://supabase.com/dashboard/account/tokens
+#   2. Crea un "Personal Access Token" con nombre "GitHub Actions MTX"
+#   3. En GitHub → Settings → Secrets → Actions → New secret:
+#      Nombre:  SUPABASE_ACCESS_TOKEN
+#      Valor:   (pega el token)
+#   4. Vuelve aquí → Actions → "Admin Schema Deploy" → Run workflow ✅
+#
+# El schema crea las tablas: suppliers, requisitions, purchase_orders,
+# supplier_quotes, invoices_out, invoices_in, payments, contracts
+# ─────────────────────────────────────────────────────────────────────────────
+name: Admin Schema — Deploy a Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribe "ejecutar" para confirmar'
+        required: true
+        type: string
+
+jobs:
+  deploy-schema:
+    name: Ejecutar admin-schema.sql
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'ejecutar' }}
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verificar token
+        run: |
+          echo "🔑 Verificando autenticación con Supabase..."
+          supabase projects list 2>&1 | head -5
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Vincular proyecto
+        run: |
+          echo "🔗 Vinculando proyecto hodrfonbpmqulkyzrzpq..."
+          supabase link --project-ref hodrfonbpmqulkyzrzpq
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Ejecutar admin-schema.sql
+        run: |
+          echo "📦 Ejecutando schema de módulos de administración..."
+          echo "   Tablas: suppliers, requisitions, purchase_orders,"
+          echo "           supplier_quotes, invoices_out, invoices_in,"
+          echo "           payments, contracts"
+          echo ""
+          supabase db execute --file assets/admin-schema.sql
+          echo ""
+          echo "✅ Schema ejecutado exitosamente"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Verificar tablas creadas
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════"
+          echo "  VERIFICACIÓN — TABLAS CREADAS"
+          echo "═══════════════════════════════════════════"
+          supabase db execute --sql "
+            SELECT table_name,
+                   pg_size_pretty(pg_total_relation_size(quote_ident(table_name)::regclass)) AS size
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name IN (
+                'suppliers','requisitions','purchase_orders',
+                'supplier_quotes','invoices_out','invoices_in',
+                'payments','contracts'
+              )
+            ORDER BY table_name;
+          "
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
