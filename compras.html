@@ -577,7 +577,7 @@ function renderKPIs() {
       <div class="kpi-value accent-text">${_reqs.length}</div>
       <div class="kpi-sub">${pendientes} pendientes aprobación</div>
     </div>
-    <div class="kpi-card ${pendientes?''}">
+    <div class="kpi-card ${pendientes?'warn':''}">
       <div class="kpi-label">Pendientes Aprobación</div>
       <div class="kpi-value ${pendientes?'warn-text':''}" style="${pendientes?'color:#ffb400':''}">${pendientes}</div>
       <div class="kpi-sub">Requieren autorización</div>
