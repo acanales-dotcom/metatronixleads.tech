@@ -1,0 +1,345 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# org-pulse-cron.yml
+# Pobla org_pulse cada hora con datos reales de toda la organización.
+# Calcula el org_health_score y lo persiste en Supabase.
+#
+# REQUISITOS — agregar en GitHub → Settings → Secrets and variables → Actions:
+#   SUPABASE_SERVICE_KEY   → service_role key de tu proyecto Supabase
+#   (SUPABASE_URL ya se infiere de la URL del proyecto)
+# ═══════════════════════════════════════════════════════════════════════════
+name: Org Pulse — CEO Nerve Center
+
+on:
+  schedule:
+    # Cada hora en punto (UTC)
+    - cron: '0 * * * *'
+
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Ejecución manual — motivo'
+        required: false
+        default: 'Snapshot manual CEO'
+
+env:
+  SUPABASE_URL: https://hodrfonbpmqulkyzrzpq.supabase.co
+
+jobs:
+  pulse:
+    name: Capturar Org Pulse
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. VENTAS ────────────────────────────────────────────────────────
+      - name: Fetch — Leads (pipeline, deals)
+        id: leads
+        run: |
+          LEADS=$(curl -sf \
+            "${{ env.SUPABASE_URL }}/rest/v1/leads?select=id,status,pipeline_value,created_at" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Accept: application/json")
+
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          MONTH_START=$(date -u +%Y-%m-01T00:00:00Z)
+          DAYS7=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+          DAYS30=$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-30d +%Y-%m-%dT%H:%M:%SZ)
+
+          PIPELINE=$(echo "$LEADS" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          active = [l for l in d if l.get('status') not in ('ganado','perdido','cancelado')]
+          print(sum(l.get('pipeline_value',0) or 0 for l in active))
+          " 2>/dev/null || echo "0")
+
+          DEALS_ACT=$(echo "$LEADS" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print(len([l for l in d if l.get('status') not in ('ganado','perdido','cancelado')]))
+          " 2>/dev/null || echo "0")
+
+          GANADOS_MES=$(echo "$LEADS" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          ms = '$MONTH_START'
+          print(len([l for l in d if l.get('status')=='ganado' and (l.get('created_at') or '') >= ms]))
+          " 2>/dev/null || echo "0")
+
+          EN_RIESGO=$(echo "$LEADS" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print(len([l for l in d if l.get('status') in ('en_riesgo','perdido')]))
+          " 2>/dev/null || echo "0")
+
+          LEADS_7D=$(echo "$LEADS" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          d7 = '$DAYS7'
+          print(len([l for l in d if (l.get('created_at') or '') >= d7]))
+          " 2>/dev/null || echo "0")
+
+          CONV=$(echo "$LEADS" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          d30 = '$DAYS30'
+          recent = [l for l in d if (l.get('created_at') or '') >= d30]
+          ganados = len([l for l in recent if l.get('status')=='ganado'])
+          closed  = len([l for l in recent if l.get('status') in ('ganado','perdido')])
+          print(round(ganados/closed*100, 1) if closed > 0 else 0)
+          " 2>/dev/null || echo "0")
+
+          echo "pipeline=$PIPELINE"       >> $GITHUB_OUTPUT
+          echo "deals_act=$DEALS_ACT"     >> $GITHUB_OUTPUT
+          echo "ganados_mes=$GANADOS_MES" >> $GITHUB_OUTPUT
+          echo "en_riesgo=$EN_RIESGO"     >> $GITHUB_OUTPUT
+          echo "leads_7d=$LEADS_7D"       >> $GITHUB_OUTPUT
+          echo "conv=$CONV"               >> $GITHUB_OUTPUT
+
+      # ── 2. FINANZAS ──────────────────────────────────────────────────────
+      - name: Fetch — Finanzas (CXC / CXP)
+        id: finanzas
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          DAYS30F=$(date -u -d '30 days' +%Y-%m-%d 2>/dev/null || date -u -v+30d +%Y-%m-%d)
+
+          CXC_DATA=$(curl -sf \
+            "${{ env.SUPABASE_URL }}/rest/v1/invoices_out?select=total_amount,due_date,status" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Accept: application/json")
+
+          CXP_DATA=$(curl -sf \
+            "${{ env.SUPABASE_URL }}/rest/v1/invoices_in?select=total_amount,due_date,status" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Accept: application/json")
+
+          CXC_TOTAL=$(echo "$CXC_DATA" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          print(sum(r.get('total_amount',0) or 0 for r in d if r.get('status') not in ('pagada','cancelada')))
+          " 2>/dev/null || echo "0")
+
+          CXC_VENCIDA=$(echo "$CXC_DATA" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          today='$TODAY'
+          print(sum(r.get('total_amount',0) or 0 for r in d
+            if r.get('status') not in ('pagada','cancelada')
+            and (r.get('due_date') or '9999') < today))
+          " 2>/dev/null || echo "0")
+
+          CXP_TOTAL=$(echo "$CXP_DATA" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          print(sum(r.get('total_amount',0) or 0 for r in d if r.get('status') not in ('pagada','cancelada')))
+          " 2>/dev/null || echo "0")
+
+          CXP_30D=$(echo "$CXP_DATA" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          today='$TODAY'; d30='$DAYS30F'
+          print(sum(r.get('total_amount',0) or 0 for r in d
+            if r.get('status') not in ('pagada','cancelada')
+            and today <= (r.get('due_date') or '9999') <= d30))
+          " 2>/dev/null || echo "0")
+
+          COBRANZA_URG=$(echo "$CXC_DATA" | python3 -c "
+          import json,sys
+          from datetime import date, timedelta
+          d=json.load(sys.stdin)
+          cutoff=(date.today()-timedelta(days=60)).isoformat()
+          print(len([r for r in d
+            if r.get('status') not in ('pagada','cancelada')
+            and (r.get('due_date') or '9999') < cutoff]))
+          " 2>/dev/null || echo "0")
+
+          echo "cxc_total=$CXC_TOTAL"       >> $GITHUB_OUTPUT
+          echo "cxc_vencida=$CXC_VENCIDA"   >> $GITHUB_OUTPUT
+          echo "cxp_total=$CXP_TOTAL"       >> $GITHUB_OUTPUT
+          echo "cxp_30d=$CXP_30D"           >> $GITHUB_OUTPUT
+          echo "cob_urg=$COBRANZA_URG"       >> $GITHUB_OUTPUT
+
+      # ── 3. COMPRAS ───────────────────────────────────────────────────────
+      - name: Fetch — Compras (OC / Requisiciones)
+        id: compras
+        run: |
+          OC_DATA=$(curl -sf \
+            "${{ env.SUPABASE_URL }}/rest/v1/purchase_orders?select=total_amount,status" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Accept: application/json")
+
+          REQ_DATA=$(curl -sf \
+            "${{ env.SUPABASE_URL }}/rest/v1/requisitions?select=id,status" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Accept: application/json")
+
+          OC_PEND=$(echo "$OC_DATA" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          print(len([r for r in d if r.get('status') in ('pendiente','borrador','enviada')]))
+          " 2>/dev/null || echo "0")
+
+          OC_MONTO=$(echo "$OC_DATA" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          print(sum(r.get('total_amount',0) or 0 for r in d if r.get('status') in ('pendiente','borrador','enviada')))
+          " 2>/dev/null || echo "0")
+
+          REQ_OPEN=$(echo "$REQ_DATA" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          print(len([r for r in d if r.get('status') in ('borrador','pendiente','aprobada')]))
+          " 2>/dev/null || echo "0")
+
+          echo "oc_pend=$OC_PEND"     >> $GITHUB_OUTPUT
+          echo "oc_monto=$OC_MONTO"   >> $GITHUB_OUTPUT
+          echo "req_open=$REQ_OPEN"   >> $GITHUB_OUTPUT
+
+      # ── 4. PLATAFORMA ────────────────────────────────────────────────────
+      - name: Fetch — Plataforma (usuarios, IA queries)
+        id: plataforma
+        run: |
+          PROFILES=$(curl -sf \
+            "${{ env.SUPABASE_URL }}/rest/v1/profiles?select=id" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Accept: application/json")
+
+          NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          TS_24H=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-24H +%Y-%m-%dT%H:%M:%SZ)
+          TS_7D=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+          ACTS_24H=$(curl -sf \
+            "${{ env.SUPABASE_URL }}/rest/v1/activity_logs?select=id&created_at=gte.$TS_24H&action=like.*claude*" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Prefer: count=exact" \
+            -o /dev/null -w "%{header}" 2>/dev/null | grep -i 'content-range' | grep -oP '\d+$' || echo "0")
+
+          ACTS_7D=$(curl -sf \
+            "${{ env.SUPABASE_URL }}/rest/v1/activity_logs?select=id&created_at=gte.$TS_7D&action=like.*claude*" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Prefer: count=exact" \
+            -o /dev/null -w "%{header}" 2>/dev/null | grep -i 'content-range' | grep -oP '\d+$' || echo "0")
+
+          USUARIOS=$(echo "$PROFILES" | python3 -c "
+          import json,sys; d=json.load(sys.stdin); print(len(d))
+          " 2>/dev/null || echo "0")
+
+          echo "usuarios=$USUARIOS"       >> $GITHUB_OUTPUT
+          echo "ai_24h=${ACTS_24H:-0}"   >> $GITHUB_OUTPUT
+          echo "ai_7d=${ACTS_7D:-0}"     >> $GITHUB_OUTPUT
+
+      # ── 5. CALCULAR HEALTH SCORE + INSERT ────────────────────────────────
+      - name: Calcular score e insertar en org_pulse
+        run: |
+          PIPELINE="${{ steps.leads.outputs.pipeline }}"
+          CXC_TOTAL="${{ steps.finanzas.outputs.cxc_total }}"
+          CXC_VEN="${{ steps.finanzas.outputs.cxc_vencida }}"
+          DEALS_ACT="${{ steps.leads.outputs.deals_act }}"
+          EN_RIESGO="${{ steps.leads.outputs.en_riesgo }}"
+          COB_URG="${{ steps.finanzas.outputs.cob_urg }}"
+          OC_PEND="${{ steps.compras.outputs.oc_pend }}"
+          AI_24H="${{ steps.plataforma.outputs.ai_24h }}"
+          CONV="${{ steps.leads.outputs.conv }}"
+
+          # Calcular health score en Python
+          HEALTH=$(python3 -c "
+          pipeline   = float('$PIPELINE' or 0)
+          cxc_total  = float('$CXC_TOTAL' or 0)
+          cxc_ven    = float('$CXC_VEN' or 0)
+          deals_act  = int('$DEALS_ACT' or 0)
+          en_riesgo  = int('$EN_RIESGO' or 0)
+          cob_urg    = int('$COB_URG' or 0)
+          oc_pend    = int('$OC_PEND' or 0)
+          ai_24h     = int('$AI_24H' or 0)
+          conv       = float('$CONV' or 0)
+
+          s = 0
+          # Pipeline (25)
+          s += 25 if pipeline > 5e6 else 20 if pipeline > 1e6 else 15 if pipeline > 500000 else 10 if pipeline > 100000 else 5 if pipeline > 0 else 0
+          # CXC health (20)
+          pct_ven = (cxc_ven / cxc_total) if cxc_total > 0 else 0
+          s += 20 if pct_ven < 0.10 else 15 if pct_ven < 0.25 else 10 if pct_ven < 0.40 else 5 if pct_ven < 0.60 else 0
+          # Riesgo (15)
+          pct_risk = (en_riesgo / deals_act) if deals_act > 0 else 0
+          s += 15 if en_riesgo == 0 else 12 if pct_risk < 0.10 else 9 if pct_risk < 0.20 else 5 if pct_risk < 0.35 else 0
+          # Cobranza urgente (15)
+          s += 15 if cob_urg == 0 else 12 if cob_urg <= 2 else 8 if cob_urg <= 5 else 4 if cob_urg <= 10 else 0
+          # Compras OC (10)
+          s += 10 if oc_pend == 0 else 8 if oc_pend <= 3 else 5 if oc_pend <= 8 else 3 if oc_pend <= 15 else 0
+          # Adopción IA (10)
+          s += 10 if ai_24h >= 20 else 8 if ai_24h >= 10 else 6 if ai_24h >= 5 else 3 if ai_24h >= 1 else 0
+          # Conversión (5)
+          s += 5 if conv >= 30 else 4 if conv >= 20 else 3 if conv >= 10 else 2 if conv >= 5 else 1
+          print(s)
+          ")
+
+          # Construir payload JSON
+          PAYLOAD=$(python3 -c "
+          import json
+          payload = {
+            'pipeline_total':      float('$PIPELINE' or 0),
+            'deals_activos':       int('${{ steps.leads.outputs.deals_act }}' or 0),
+            'deals_ganados_mes':   int('${{ steps.leads.outputs.ganados_mes }}' or 0),
+            'deals_en_riesgo':     int('${{ steps.leads.outputs.en_riesgo }}' or 0),
+            'leads_nuevos_7d':     int('${{ steps.leads.outputs.leads_7d }}' or 0),
+            'conversion_rate':     float('${{ steps.leads.outputs.conv }}' or 0),
+            'cxc_total':           float('${{ steps.finanzas.outputs.cxc_total }}' or 0),
+            'cxc_vencida':         float('${{ steps.finanzas.outputs.cxc_vencida }}' or 0),
+            'cxp_total':           float('${{ steps.finanzas.outputs.cxp_total }}' or 0),
+            'cxp_proximos_30d':    float('${{ steps.finanzas.outputs.cxp_30d }}' or 0),
+            'flujo_neto':          float('${{ steps.finanzas.outputs.cxc_total }}' or 0) - float('${{ steps.finanzas.outputs.cxp_total }}' or 0),
+            'cobranza_urgente':    int('${{ steps.finanzas.outputs.cob_urg }}' or 0),
+            'oc_pendientes':       int('${{ steps.compras.outputs.oc_pend }}' or 0),
+            'oc_monto_pendiente':  float('${{ steps.compras.outputs.oc_monto }}' or 0),
+            'requisiciones_abiertas': int('${{ steps.compras.outputs.req_open }}' or 0),
+            'usuarios_activos':    int('${{ steps.plataforma.outputs.usuarios }}' or 0),
+            'ai_queries_24h':      int('$AI_24H' or 0),
+            'ai_queries_7d':       int('${{ steps.plataforma.outputs.ai_7d }}' or 0),
+            'org_health_score':    int('$HEALTH' or 0),
+            'source':              'cron',
+          }
+          print(json.dumps(payload))
+          ")
+
+          echo "Payload: $PAYLOAD"
+          echo "Health Score: $HEALTH"
+
+          HTTP=$(curl -s -o /tmp/pulse_resp.json -w "%{http_code}" \
+            -X POST \
+            "${{ env.SUPABASE_URL }}/rest/v1/org_pulse" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "$PAYLOAD")
+
+          cat /tmp/pulse_resp.json
+          echo "HTTP: $HTTP"
+
+          if [ "$HTTP" = "201" ] || [ "$HTTP" = "200" ]; then
+            echo "✅ org_pulse insertado — health score: $HEALTH/100"
+          else
+            echo "❌ Error insertando org_pulse: HTTP $HTTP"
+            exit 1
+          fi
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo "════════════════════════════════════"
+          echo "  ORG PULSE SNAPSHOT — $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "  Pipeline: ${{ steps.leads.outputs.pipeline }}"
+          echo "  Deals activos: ${{ steps.leads.outputs.deals_act }}"
+          echo "  CXC total: ${{ steps.finanzas.outputs.cxc_total }}"
+          echo "  CXC vencida: ${{ steps.finanzas.outputs.cxc_vencida }}"
+          echo "  Cobranza urgente: ${{ steps.finanzas.outputs.cob_urg }}"
+          echo "  OC pendientes: ${{ steps.compras.outputs.oc_pend }}"
+          echo "  Usuarios: ${{ steps.plataforma.outputs.usuarios }}"
+          echo "  AI queries 24h: ${{ steps.plataforma.outputs.ai_24h }}"
+          echo "════════════════════════════════════"

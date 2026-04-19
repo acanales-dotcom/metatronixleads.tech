@@ -4,7 +4,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>CEO Command Center — MetaTronix</title>
+  <title>CEO Nerve Center — MetaTronix</title>
   <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -13,177 +13,230 @@
   <script src="/config.js?v=20260419"></script>
   <script src="/assets/app.js?v=20260419"></script>
   <style>
-    :root { --green:#00ff88; --cyan:#00e5ff; --gold:#ffb400; --purple:#b966ff; --red:#ff4646; }
+    :root {
+      --green:#00ff88; --cyan:#00e5ff; --gold:#ffb400;
+      --purple:#b966ff; --red:#ff4646; --orange:#ff8c00;
+    }
 
-    .ceo-root { display:flex; flex-direction:column; gap:28px; padding:28px; max-width:1400px; margin:0 auto; }
+    /* ── ROOT ─────────────────────────────────────────────────── */
+    .nc-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1440px; margin:0 auto; }
 
-    /* Header */
-    .page-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-    .page-header h1 { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:.06em; margin:0; }
-    .page-header p  { font-size:12px; color:var(--text-muted); margin:3px 0 0; }
-    .live-dot { display:inline-block; width:8px; height:8px; background:var(--green); border-radius:50%; animation:pulse 2s ease-in-out infinite; margin-right:8px; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    /* ── HEADER ──────────────────────────────────────────────── */
+    .nc-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .nc-header-left h1 { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:.06em; margin:0; display:flex; align-items:center; gap:10px; }
+    .nc-header-left p { font-size:11px; color:var(--text-muted); margin:2px 0 0; }
+    .live-dot { display:inline-block; width:8px; height:8px; background:var(--green); border-radius:50%; animation:blink 2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
 
-    /* KPI strip */
-    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:12px; }
-    .kpi-card {
+    /* ── ORG HEALTH SCORE ─────────────────────────────────────── */
+    .health-bar {
+      display:flex; align-items:center; gap:12px;
       background:var(--surface); border:1px solid var(--border); border-radius:10px;
-      padding:14px 18px; position:relative; overflow:hidden; transition:border-color .2s;
+      padding:10px 18px;
     }
-    .kpi-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
-      background:var(--kpi-color, var(--green)); opacity:.5; }
-    .kpi-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
-    .kpi-value { font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:var(--kpi-color, var(--text)); margin:6px 0 2px; }
-    .kpi-sub   { font-size:11px; color:var(--text-muted); }
+    .health-score {
+      font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700;
+      line-height:1; min-width:52px;
+    }
+    .health-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
+    .health-sub { font-size:11px; color:var(--text-muted); }
+    .health-track { flex:1; height:6px; background:rgba(255,255,255,.06); border-radius:3px; overflow:hidden; min-width:80px; }
+    .health-fill { height:100%; border-radius:3px; transition:width .6s ease; }
+    .ts-badge { font-size:10px; color:var(--text-faint); white-space:nowrap; }
 
-    /* Director nav grid */
-    .directors-section-label {
-      font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
-      color:var(--text-faint); margin-bottom:-8px;
+    /* ── ORG PULSE STRIP ──────────────────────────────────────── */
+    .pulse-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+    .pulse-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      padding:12px 14px; position:relative; overflow:hidden; cursor:default;
+      transition:border-color .2s, box-shadow .2s;
     }
-    .directors-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
-    .director-card {
+    .pulse-card:hover { border-color:var(--pc,var(--border)); box-shadow:0 0 14px -5px var(--pc,transparent); }
+    .pulse-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--pc,var(--green)); opacity:.45; }
+    .pc-label { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); }
+    .pc-value { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:600; color:var(--pc,var(--text)); margin:4px 0 2px; line-height:1; }
+    .pc-sub { font-size:10px; color:var(--text-muted); }
+
+    /* ── UNIVERSAL QUERY BAR ─────────────────────────────────── */
+    .query-section { display:flex; flex-direction:column; gap:10px; }
+    .query-label { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint); }
+    .query-bar {
+      display:flex; gap:10px; align-items:stretch;
       background:var(--surface); border:1px solid var(--border); border-radius:12px;
-      overflow:hidden; transition:border-color .2s, box-shadow .2s; display:flex; flex-direction:column;
+      padding:10px 14px; transition:border-color .2s;
     }
-    .director-card:hover { border-color:var(--dc); box-shadow:0 0 20px -6px var(--dc); }
-    .director-head {
-      padding:16px 20px; display:flex; align-items:center; gap:12px;
-      border-bottom:1px solid var(--border);
-      background:linear-gradient(135deg,rgba(0,0,0,.35) 0%,transparent 100%);
+    .query-bar:focus-within { border-color:var(--cyan); box-shadow:0 0 0 2px rgba(0,229,255,.08); }
+    .query-icon { font-size:20px; display:flex; align-items:center; padding-right:4px; opacity:.5; }
+    .query-input {
+      flex:1; background:transparent; border:none; outline:none; font-size:15px;
+      color:var(--text); font-family:'DM Sans',sans-serif; font-weight:500;
+      resize:none; min-height:24px; max-height:120px; line-height:1.5;
     }
-    .director-icon {
-      width:44px; height:44px; border-radius:10px; display:flex; align-items:center;
-      justify-content:center; font-size:22px; flex-shrink:0;
-      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+    .query-input::placeholder { color:var(--text-faint); }
+    .query-send {
+      padding:8px 20px; border-radius:8px; font-size:12px; font-weight:700;
+      background:var(--cyan); color:#000; border:none; cursor:pointer;
+      transition:opacity .15s; white-space:nowrap; align-self:flex-end;
     }
-    .director-name { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:.08em; color:var(--dc); line-height:1; }
-    .director-role { font-size:11px; color:var(--text-muted); margin-top:3px; }
-    .director-body { padding:14px 20px 18px; flex:1; display:flex; flex-direction:column; gap:10px; }
-    .director-caps { display:flex; flex-wrap:wrap; gap:5px; }
-    .director-cap {
-      font-size:11px; padding:3px 10px; border-radius:20px;
-      background:rgba(255,255,255,.04); border:1px solid var(--border); color:var(--text-muted);
+    .query-send:hover:not(:disabled) { opacity:.85; }
+    .query-send:disabled { opacity:.4; cursor:not-allowed; }
+    .query-chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .q-chip {
+      padding:5px 12px; border-radius:20px; font-size:11px; font-weight:600;
+      background:rgba(0,229,255,.06); border:1px solid rgba(0,229,255,.15); color:var(--cyan);
+      cursor:pointer; transition:.15s;
     }
-    .director-btn {
-      display:block; text-align:center; text-decoration:none;
-      padding:9px 16px; border-radius:8px; font-size:12px; font-weight:700;
-      background:var(--dc); color:#000; transition:opacity .15s; margin-top:4px;
-    }
-    .director-btn:hover { opacity:.85; }
+    .q-chip:hover { background:rgba(0,229,255,.12); border-color:rgba(0,229,255,.35); }
 
-    /* CEO Briefing */
-    .ceo-briefing {
+    /* ── QUERY RESPONSE ──────────────────────────────────────── */
+    .query-response {
+      background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:10px;
+      padding:18px 22px; font-size:13px; line-height:1.8; color:var(--text);
+      min-height:80px; max-height:600px; overflow-y:auto; display:none;
+    }
+    .query-response.active { display:block; border-color:var(--cyan); }
+    .query-response h2 { font-family:'Bebas Neue',sans-serif; color:var(--cyan); letter-spacing:.05em; margin:8px 0 4px; font-size:20px; }
+    .query-response h3 { font-family:'Bebas Neue',sans-serif; color:var(--gold); margin:10px 0 4px; font-size:15px; }
+    .query-response p { margin:5px 0; }
+    .query-response ul { margin:4px 0 4px 16px; }
+    .query-response strong { color:#fff; }
+    .query-response table { width:100%; border-collapse:collapse; margin:8px 0; font-size:12px; }
+    .query-response th { background:rgba(0,229,255,.07); color:var(--cyan); padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); }
+    .query-response td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.03); }
+    .query-meta { display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,.05); }
+    .domain-badge { padding:3px 9px; border-radius:20px; font-size:10px; font-weight:700; background:rgba(0,229,255,.08); color:var(--cyan); border:1px solid rgba(0,229,255,.2); }
+
+    /* ── TWO-COL LAYOUT ──────────────────────────────────────── */
+    .nc-cols { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    @media(max-width:900px) { .nc-cols { grid-template-columns:1fr; } }
+
+    /* ── PANEL BASE ──────────────────────────────────────────── */
+    .nc-panel {
       background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden;
     }
-    .briefing-head {
-      padding:16px 24px; border-bottom:1px solid var(--border);
-      display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    .nc-panel-head {
+      padding:13px 18px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
       background:linear-gradient(135deg,rgba(0,0,0,.4) 0%,transparent 100%);
     }
-    .briefing-title { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:.06em; display:flex; align-items:center; gap:10px; }
-    .briefing-badge { font-size:10px; background:rgba(0,229,255,.08); color:var(--cyan); padding:3px 10px; border-radius:20px; border:1px solid rgba(0,229,255,.2); font-weight:700; }
-    .briefing-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
-    .briefing-output {
-      min-height:200px; max-height:520px; overflow-y:auto;
-      background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:8px;
-      padding:16px 20px; font-size:13px; line-height:1.8; color:var(--text);
-    }
-    .briefing-output.streaming { border-color:var(--cyan); }
-    .briefing-output h2 { font-family:'Bebas Neue',sans-serif; color:var(--cyan); letter-spacing:.06em; margin:10px 0 5px; font-size:20px; }
-    .briefing-output h3 { font-family:'Bebas Neue',sans-serif; color:var(--gold); letter-spacing:.04em; margin:8px 0 4px; font-size:15px; }
-    .briefing-output p  { margin:5px 0; }
-    .briefing-output ul { margin:4px 0 4px 18px; }
-    .briefing-output table { width:100%; border-collapse:collapse; margin:10px 0; font-size:12px; }
-    .briefing-output th { background:rgba(0,229,255,.07); color:var(--cyan); padding:6px 10px; text-align:left; border-bottom:1px solid var(--border); }
-    .briefing-output td { padding:6px 10px; border-bottom:1px solid rgba(255,255,255,.04); }
-    .briefing-output strong { color:#fff; }
-    .briefing-placeholder { color:var(--text-faint); font-style:italic; text-align:center; padding:40px 20px; font-size:13px; }
-    .briefing-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .nc-panel-title { font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:.05em; display:flex; align-items:center; gap:8px; }
+    .nc-panel-body { padding:16px 18px; }
+
+    /* ── BRIEFING ────────────────────────────────────────────── */
+    .briefing-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
     .btn-brief {
-      padding:9px 20px; border-radius:7px; font-size:12px; font-weight:700;
-      background:var(--cyan); color:#000; border:none; cursor:pointer; transition:opacity .15s;
+      padding:8px 16px; border-radius:7px; font-size:11px; font-weight:700;
+      border:none; cursor:pointer; transition:opacity .15s;
     }
     .btn-brief:hover:not(:disabled) { opacity:.85; }
-    .btn-brief:disabled { opacity:.4; cursor:not-allowed; }
-    .btn-brief.secondary { background:rgba(0,229,255,.1); color:var(--cyan); border:1px solid rgba(0,229,255,.25); }
-    .btn-brief.gold { background:var(--gold); color:#000; }
-    .btn-outline-sm {
-      padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600;
-      background:transparent; border:1px solid var(--border); color:var(--text-muted); cursor:pointer; transition:.15s;
+    .btn-brief:disabled { opacity:.35; cursor:not-allowed; }
+    .btn-brief.green  { background:var(--green);  color:#000; }
+    .btn-brief.cyan   { background:var(--cyan);   color:#000; }
+    .btn-brief.gold   { background:var(--gold);   color:#000; }
+    .btn-brief.ghost  { background:rgba(255,255,255,.05); color:var(--text-muted); border:1px solid var(--border); }
+    .briefing-out {
+      min-height:180px; max-height:500px; overflow-y:auto;
+      background:rgba(0,0,0,.35); border:1px solid var(--border); border-radius:8px;
+      padding:14px 18px; font-size:13px; line-height:1.8; color:var(--text);
     }
-    .btn-outline-sm:hover { border-color:var(--cyan); color:var(--text); }
-    .refresh-info { font-size:11px; color:var(--text-faint); display:flex; align-items:center; gap:6px; }
-    .spin { display:inline-block; width:13px; height:13px; border:2px solid rgba(0,255,136,.25); border-top-color:var(--green); border-radius:50%; animation:spin .7s linear infinite; }
-    .spin-cyan { border-color:rgba(0,229,255,.25); border-top-color:var(--cyan); }
-    @keyframes spin { to{transform:rotate(360deg)} }
+    .briefing-out.streaming { border-color:var(--cyan); }
+    .briefing-out h2 { font-family:'Bebas Neue',sans-serif; color:var(--cyan); letter-spacing:.05em; margin:8px 0 4px; font-size:19px; }
+    .briefing-out h3 { font-family:'Bebas Neue',sans-serif; color:var(--gold); margin:8px 0 3px; font-size:14px; }
+    .briefing-out p { margin:4px 0; }
+    .briefing-out ul { margin:3px 0 3px 16px; }
+    .briefing-out strong { color:#fff; }
+    .briefing-out table { width:100%; border-collapse:collapse; margin:8px 0; font-size:12px; }
+    .briefing-out th { background:rgba(0,229,255,.07); color:var(--cyan); padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); }
+    .briefing-out td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.04); }
+    .placeholder-msg { color:var(--text-faint); font-style:italic; text-align:center; padding:40px 20px; font-size:12px; }
+
+    /* ── DECISION HISTORY ────────────────────────────────────── */
+    .decision-list { display:flex; flex-direction:column; gap:10px; max-height:440px; overflow-y:auto; }
+    .decision-item {
+      background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.05); border-radius:8px;
+      padding:11px 14px; cursor:pointer; transition:border-color .2s;
+    }
+    .decision-item:hover { border-color:rgba(0,229,255,.25); }
+    .decision-q { font-size:12px; font-weight:600; color:var(--text); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .decision-meta { display:flex; align-items:center; gap:8px; }
+    .decision-ts { font-size:10px; color:var(--text-faint); }
+    .decision-dom { font-size:10px; padding:2px 7px; border-radius:20px; background:rgba(0,229,255,.07); color:var(--cyan); border:1px solid rgba(0,229,255,.15); }
+    .decision-preview { font-size:11px; color:var(--text-muted); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .empty-state { text-align:center; color:var(--text-faint); font-size:12px; padding:30px 10px; }
+
+    /* ── DIRECTOR GRID ───────────────────────────────────────── */
+    .dir-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    @media(max-width:1100px) { .dir-grid { grid-template-columns:repeat(2,1fr); } }
+    .dir-card {
+      background:rgba(0,0,0,.2); border:1px solid var(--border); border-radius:10px;
+      padding:14px; text-decoration:none; transition:border-color .2s, box-shadow .2s;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .dir-card:hover { border-color:var(--dc); box-shadow:0 0 16px -6px var(--dc); }
+    .dir-icon { font-size:22px; }
+    .dir-name { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:.06em; color:var(--dc); }
+    .dir-role { font-size:10px; color:var(--text-muted); line-height:1.4; }
+    .dir-arrow { font-size:10px; color:var(--dc); margin-top:auto; opacity:.7; }
+
+    /* ── SPIN ────────────────────────────────────────────────── */
+    .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(0,255,136,.2); border-top-color:var(--green); border-radius:50%; animation:sp .7s linear infinite; }
+    .spin-cyan { border-color:rgba(0,229,255,.2); border-top-color:var(--cyan); }
+    @keyframes sp { to{transform:rotate(360deg)} }
+
+    /* ── BUTTONS ─────────────────────────────────────────────── */
+    .btn-sm {
+      padding:6px 12px; border-radius:7px; font-size:11px; font-weight:600;
+      background:transparent; border:1px solid var(--border); color:var(--text-muted);
+      cursor:pointer; transition:.15s;
+    }
+    .btn-sm:hover { border-color:var(--cyan); color:var(--text); }
   </style>
 </head>
 <body>
 
 <div id="app-root">
-  <div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>
+  <div style="padding:40px;text-align:center;color:var(--text-muted)">
+    <span class="spin"></span> Cargando CEO Nerve Center...
+  </div>
 </div>
 
 <script>
 'use strict';
 
-let _user = null;
-let _db   = null;
-let _kpis = {};
+/* ── ESTADO ─────────────────────────────────────────────────────────────── */
+let _user = null, _db = null;
+let _pulse = {};          // último snapshot org_pulse
+let _briefingBusy = false;
+let _queryBusy    = false;
 let _refreshTimer = null;
-let _briefingStreaming = false;
+let _decisions    = [];   // historial executive_decisions
 
+/* ── DIRECTORES ─────────────────────────────────────────────────────────── */
 const DIRECTORS = [
-  {
-    id:    'ventas',
-    icon:  '📈',
-    name:  'MetaVentaX',
-    role:  'Director Comercial & Ventas IA',
-    color: '#00ff88',
-    caps:  ['Pipeline','Conversión','Forecast','Objeciones','CRM'],
-    href:  '/ventas.html#director',
-    label: 'Ir a Director Comercial',
-  },
-  {
-    id:    'marketing',
-    icon:  '🎯',
-    name:  'MetaMKTX',
-    role:  'Director de Marketing & Crecimiento IA',
-    color: '#00e5ff',
-    caps:  ['Campañas','Growth','Posicionamiento','ROI','Leads'],
-    href:  '/marketing.html#director',
-    label: 'Ir a Director Marketing',
-  },
-  {
-    id:    'ops',
-    icon:  '⚙️',
-    name:  'MetaOps',
-    role:  'Director de Operaciones & Procesos IA',
-    color: '#ffb400',
-    caps:  ['Procesos','Eficiencia','KPIs Ops','Automatización','Supply Chain'],
-    href:  '/director-ops.html',
-    label: 'Ir a Director Operaciones',
-  },
-  {
-    id:    'admin',
-    icon:  '💼',
-    name:  'MetaAdmin',
-    role:  'Director Administrativo & Financiero IA',
-    color: '#b966ff',
-    caps:  ['Flujo de Caja','Cobranza','Fiscal SAT','Tesorería','Contratos'],
-    href:  '/finanzas.html#director',
-    label: 'Ir a Director Administrativo',
-  },
+  { id:'ventas',    icon:'📈', name:'MetaVentaX', role:'Director Comercial & Ventas IA',       color:'#00ff88', href:'/ventas.html#director' },
+  { id:'marketing', icon:'🎯', name:'MetaMKTX',   role:'Director de Marketing & Crecimiento IA', color:'#00e5ff', href:'/marketing.html#director-mktx' },
+  { id:'ops',       icon:'⚙️', name:'MetaOps',    role:'Director de Operaciones & Procesos IA', color:'#ffb400', href:'/director-ops.html' },
+  { id:'admin',     icon:'💼', name:'MetaAdmin',  role:'Director Administrativo & Financiero IA', color:'#b966ff', href:'/finanzas.html#director' },
 ];
 
+/* ── QUICK QUERIES ──────────────────────────────────────────────────────── */
+const QUICK_QUERIES = [
+  '¿Cuál es el riesgo más urgente esta semana?',
+  '¿Cómo está el flujo de caja?',
+  '¿Cuánto pipeline tenemos y qué tan sano está?',
+  '¿Qué facturas urgentes necesitan atención hoy?',
+  '¿Cuál es el estado del equipo y adopción de IA?',
+  '¿Qué decisiones necesito tomar hoy?',
+];
+
+/* ── INIT ───────────────────────────────────────────────────────────────── */
 async function init() {
   _user = await requireAuth(true);
   if (!_user) return;
 
   const role = _user?.profile?.role;
   if (!['admin','super_admin'].includes(role)) {
-    window.location.href = '/dashboard.html';
+    window.location.href = '/home.html';
     return;
   }
 
@@ -194,189 +247,312 @@ async function init() {
   }
   if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
 
-  await loadKPIs();
-  _refreshTimer = setInterval(loadKPIs, 120_000);
+  // Carga paralela
+  await Promise.all([loadPulse(), loadDecisions()]);
+  _refreshTimer = setInterval(() => { loadPulse(); loadDecisions(); }, 90_000);
 }
 
+/* ── SHELL ──────────────────────────────────────────────────────────────── */
 function buildShell() {
   return `
   <div style="display:flex;min-height:100vh">
     <div id="sidebar-slot"></div>
     <main style="flex:1;overflow:auto">
-      <div class="ceo-root">
+      <div class="nc-root">
 
-        <!-- Header -->
-        <div class="page-header">
-          <div>
-            <h1><span class="live-dot"></span>CEO Command Center</h1>
-            <p>Panel ejecutivo en tiempo real · Briefings estratégicos · MetaTronix / IBANOR SA de CV</p>
+        <!-- HEADER -->
+        <div class="nc-header">
+          <div class="nc-header-left">
+            <h1><span class="live-dot"></span> CEO Nerve Center</h1>
+            <p>Inteligencia organizacional unificada · IBANOR SA de CV / MetaTronix</p>
           </div>
-          <div class="refresh-info">
-            <span id="last-refresh">Cargando...</span>
-            <button class="btn-outline-sm" onclick="loadKPIs()" style="padding:5px 12px;font-size:11px">↺</button>
-          </div>
-        </div>
-
-        <!-- KPIs -->
-        <div class="kpi-strip" id="kpi-strip">
-          ${['Pipeline','Deals Activos','Ganados Mes','En Riesgo','Usuarios','IA Queries'].map(l =>
-            `<div class="kpi-card"><div class="kpi-label">${l}</div><div class="kpi-value" style="color:var(--text-faint);font-size:18px">—</div></div>`
-          ).join('')}
-        </div>
-
-        <!-- Directores -->
-        <div class="directors-section-label">Directores IA — acceso directo</div>
-        <div class="directors-grid">
-          ${DIRECTORS.map(buildDirectorCard).join('')}
-        </div>
-
-        <!-- CEO Briefing -->
-        <div class="ceo-briefing">
-          <div class="briefing-head">
-            <div class="briefing-title">
-              🧠 Briefing Ejecutivo <span class="briefing-badge">Claude — Análisis Estratégico</span>
-            </div>
-            <div style="display:flex;gap:8px">
-              <button class="btn-outline-sm" onclick="clearBriefing()">✕ Limpiar</button>
-            </div>
-          </div>
-          <div class="briefing-body">
-            <div class="briefing-output" id="briefing-out">
-              <div class="briefing-placeholder">Selecciona un tipo de análisis para generar el briefing ejecutivo.<br>Los datos del pipeline se incluyen automáticamente.</div>
-            </div>
-            <div class="briefing-actions">
-              <button class="btn-brief"           id="btn-daily"    onclick="generateBriefing('daily')">⚡ Briefing Diario</button>
-              <button class="btn-brief secondary"  id="btn-strategy" onclick="generateBriefing('strategy')">🎯 Revisión Estratégica</button>
-              <button class="btn-brief gold"       id="btn-risk"     onclick="generateBriefing('risk')">🚨 Análisis de Riesgos</button>
-              <button class="btn-outline-sm"       id="btn-week"     onclick="generateBriefing('week')">📊 Cierre Semana</button>
-            </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div id="health-bar-slot"></div>
+            <button class="btn-sm" onclick="refreshAll()" title="Actualizar datos">↺</button>
           </div>
         </div>
 
-      </div>
+        <!-- ORG PULSE STRIP -->
+        <div class="pulse-strip" id="pulse-strip">
+          ${Array(12).fill(0).map(()=>`
+            <div class="pulse-card">
+              <div class="pc-label" style="background:rgba(255,255,255,.05);width:60%;height:8px;border-radius:4px;margin-bottom:6px"></div>
+              <div class="pc-value" style="color:var(--text-faint)">—</div>
+            </div>`).join('')}
+        </div>
+
+        <!-- UNIVERSAL QUERY BAR -->
+        <div class="query-section">
+          <div class="query-label">🧠 Pregunta a la organización</div>
+          <div class="query-bar">
+            <div class="query-icon">🔍</div>
+            <textarea class="query-input" id="query-input"
+              placeholder="¿Cuál es el riesgo más grande esta semana? · ¿Cómo está el flujo de caja? · ¿Qué decisiones necesito tomar hoy?"
+              rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendQuery();}"
+              oninput="autoResize(this)"></textarea>
+            <button class="query-send" id="query-send-btn" onclick="sendQuery()">Preguntar →</button>
+          </div>
+          <div class="query-chips">
+            ${QUICK_QUERIES.map(q=>`<button class="q-chip" onclick="setQuery(this)">${q}</button>`).join('')}
+          </div>
+          <div class="query-response" id="query-response"></div>
+        </div>
+
+        <!-- DIRECTORS ROW -->
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px">Directores IA — Acceso Directo</div>
+          <div class="dir-grid">
+            ${DIRECTORS.map(d=>`
+              <a class="dir-card" href="${d.href}" style="--dc:${d.color}">
+                <div class="dir-icon">${d.icon}</div>
+                <div class="dir-name">${d.name}</div>
+                <div class="dir-role">${d.role}</div>
+                <div class="dir-arrow">Abrir director →</div>
+              </a>`).join('')}
+          </div>
+        </div>
+
+        <!-- TWO-COL: BRIEFING + HISTORIAL -->
+        <div class="nc-cols">
+
+          <!-- CEO BRIEFING -->
+          <div class="nc-panel">
+            <div class="nc-panel-head">
+              <div class="nc-panel-title">🧬 Briefing Ejecutivo <span style="font-size:11px;color:var(--cyan);background:rgba(0,229,255,.07);padding:2px 8px;border-radius:20px;border:1px solid rgba(0,229,255,.2);font-family:'DM Sans',sans-serif;letter-spacing:0">Claude Sonnet</span></div>
+              <button class="btn-sm" onclick="clearBriefing()">✕ Limpiar</button>
+            </div>
+            <div class="nc-panel-body" style="display:flex;flex-direction:column;gap:10px">
+              <div class="briefing-btns">
+                <button class="btn-brief green"  id="btn-daily"    onclick="generateBriefing('daily')">⚡ Diario</button>
+                <button class="btn-brief cyan"   id="btn-strategy" onclick="generateBriefing('strategy')">🎯 Estrategia</button>
+                <button class="btn-brief gold"   id="btn-risk"     onclick="generateBriefing('risk')">🚨 Riesgos</button>
+                <button class="btn-brief ghost"  id="btn-week"     onclick="generateBriefing('week')">📊 Semana</button>
+              </div>
+              <div class="briefing-out" id="briefing-out">
+                <div class="placeholder-msg">Selecciona un tipo de análisis o usa el Query Bar para preguntar cualquier cosa a la organización.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DECISION HISTORY -->
+          <div class="nc-panel">
+            <div class="nc-panel-head">
+              <div class="nc-panel-title">📋 Historial de Decisiones</div>
+              <button class="btn-sm" onclick="loadDecisions()">↺</button>
+            </div>
+            <div class="nc-panel-body">
+              <div class="decision-list" id="decision-list">
+                <div class="empty-state"><span class="spin"></span><br>Cargando historial...</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- nc-root -->
     </main>
   </div>`;
 }
 
-function buildDirectorCard(d) {
-  return `
-  <div class="director-card" style="--dc:${d.color}">
-    <div class="director-head">
-      <div class="director-icon">${d.icon}</div>
-      <div>
-        <div class="director-name">${d.name}</div>
-        <div class="director-role">${d.role}</div>
-      </div>
-    </div>
-    <div class="director-body">
-      <div class="director-caps">
-        ${d.caps.map(c => `<span class="director-cap">${c}</span>`).join('')}
-      </div>
-      <a href="${d.href}" class="director-btn">${d.label} →</a>
-    </div>
-  </div>`;
-}
-
-/* ── KPIs ── */
-async function loadKPIs() {
-  const companyId = _user?.profile?.company_id;
-  const strip = document.getElementById('kpi-strip');
-  if (!strip || !companyId) return;
-
+/* ── LOAD PULSE ──────────────────────────────────────────────────────────── */
+async function loadPulse() {
   try {
-    const [leadsRes, profilesRes, actRes] = await Promise.all([
-      _db.from('leads').select('id,status,pipeline_value,created_at').eq('company_id', companyId).limit(1000),
-      _db.from('profiles').select('id,role').eq('company_id', companyId),
-      _db.from('activity_logs').select('id,created_at').eq('company_id', companyId)
-        .gte('created_at', new Date(Date.now()-30*864e5).toISOString())
-        .like('action','%claude%').limit(500),
-    ]);
-
-    const leads    = leadsRes.data  || [];
-    const profiles = profilesRes.data || [];
-    const acts     = actRes.data    || [];
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-
-    const pipeline   = leads.filter(l=>!['ganado','perdido','cancelado'].includes(l.status)).reduce((s,l)=>s+(l.pipeline_value||0),0);
-    const activos    = leads.filter(l=>!['ganado','perdido','cancelado'].includes(l.status)).length;
-    const ganadosMes = leads.filter(l=>l.status==='ganado'&&l.created_at>=monthStart).length;
-    const enRiesgo   = leads.filter(l=>l.status==='en_riesgo'||l.status==='perdido').length;
-    const usuarios   = profiles.length;
-    const aiQueries  = acts.length;
-
-    _kpis = { pipeline, activos, ganadosMes, enRiesgo, usuarios, aiQueries };
-
-    const fmt = n => n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+n.toFixed(0);
-
-    strip.innerHTML = `
-      <div class="kpi-card" style="--kpi-color:${pipeline>0?'#00ff88':'#888'}">
-        <div class="kpi-label">Pipeline Total</div>
-        <div class="kpi-value">${fmt(pipeline)}</div>
-        <div class="kpi-sub">${activos} deals activos</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#00e5ff">
-        <div class="kpi-label">Deals Activos</div>
-        <div class="kpi-value">${activos}</div>
-        <div class="kpi-sub">En proceso</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#00ff88">
-        <div class="kpi-label">Ganados Mes</div>
-        <div class="kpi-value">${ganadosMes}</div>
-        <div class="kpi-sub">Deals cerrados</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:${enRiesgo>0?'#ff4646':'#888'}">
-        <div class="kpi-label">En Riesgo</div>
-        <div class="kpi-value" style="color:${enRiesgo>0?'#ff4646':'inherit'}">${enRiesgo}</div>
-        <div class="kpi-sub">Requieren atención</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#b966ff">
-        <div class="kpi-label">Usuarios</div>
-        <div class="kpi-value">${usuarios}</div>
-        <div class="kpi-sub">En plataforma</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#ffb400">
-        <div class="kpi-label">IA Queries</div>
-        <div class="kpi-value">${aiQueries}</div>
-        <div class="kpi-sub">Últimos 30 días</div>
-      </div>`;
-
-    const el = document.getElementById('last-refresh');
-    if (el) el.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    // Intentar RPC primero
+    const { data: rpcData } = await _db.rpc('get_org_pulse_latest');
+    if (rpcData && rpcData.length > 0) {
+      _pulse = rpcData[0];
+    } else {
+      // Fallback: calcular desde tablas directas
+      _pulse = await computePulseFromDB();
+      // Guardar snapshot para futura referencia
+      savePulseSnapshot(_pulse);
+    }
   } catch(e) {
-    console.warn('loadKPIs:', e);
-    const el = document.getElementById('last-refresh');
-    if (el) el.textContent = 'Error cargando KPIs';
+    // RPC no existe aún — computar desde DB
+    try { _pulse = await computePulseFromDB(); } catch(e2) { console.warn('loadPulse:', e2); }
   }
+  renderPulse();
 }
 
-/* ── CEO Briefing ── */
-async function generateBriefing(type) {
-  if (_briefingStreaming) return;
-  const out  = document.getElementById('briefing-out');
-  const btns = ['btn-daily','btn-strategy','btn-risk','btn-week'].map(id => document.getElementById(id));
-  if (!out) return;
+async function computePulseFromDB() {
+  const companyId = _user?.profile?.company_id;
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const days7  = new Date(Date.now() - 7*864e5).toISOString();
+  const days30 = new Date(Date.now() - 30*864e5).toISOString();
 
-  _briefingStreaming = true;
-  btns.forEach(b => { if(b) b.disabled = true; });
-  out.classList.add('streaming');
-  out.innerHTML = `<div style="color:var(--text-faint);padding:30px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><span class="spin spin-cyan"></span> Generando análisis estratégico...</div>`;
+  const [leadsR, invOutR, invInR, ocR, reqR, profilesR, actR] = await Promise.all([
+    _db.from('leads').select('id,status,pipeline_value,created_at').eq('company_id', companyId).limit(2000),
+    _db.from('invoices_out').select('id,total_amount,due_date,status').eq('company_id', companyId).limit(1000),
+    _db.from('invoices_in').select('id,total_amount,due_date,status').eq('company_id', companyId).limit(1000),
+    _db.from('purchase_orders').select('id,total_amount,status').eq('company_id', companyId).limit(500),
+    _db.from('requisitions').select('id,status').eq('company_id', companyId).limit(500),
+    _db.from('profiles').select('id').eq('company_id', companyId),
+    _db.from('activity_logs').select('id').eq('company_id', companyId).gte('created_at', new Date(Date.now()-864e5).toISOString()).like('action','%claude%').limit(500),
+  ]);
 
-  const fecha  = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const fmt    = n => n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+n.toFixed(0);
-  const kpiCtx = `
-INDICADORES EJECUTIVOS — ${fecha}:
-• Pipeline: ${fmt(_kpis.pipeline||0)} | Deals activos: ${_kpis.activos||0} | Ganados mes: ${_kpis.ganadosMes||0} | En riesgo: ${_kpis.enRiesgo||0}
-• Usuarios plataforma: ${_kpis.usuarios||0} | Consultas IA (30d): ${_kpis.aiQueries||0}
-`;
+  const leads    = leadsR.data  || [];
+  const invOut   = invOutR.data || [];
+  const invIn    = invInR.data  || [];
+  const ocs      = ocR.data     || [];
+  const reqs     = reqR.data    || [];
+  const profiles = profilesR.data || [];
+  const acts     = actR.data    || [];
+  const today    = new Date().toISOString().split('T')[0];
+  const days30Fwd = new Date(Date.now() + 30*864e5).toISOString().split('T')[0];
 
-  const briefingTypes = {
-    daily: { prompt: `Genera un BRIEFING DIARIO para el CEO de IBANOR SA de CV / MetaTronix:\n${kpiCtx}\nEstructura:\n<h2>📊 Estado del Negocio — ${fecha}</h2>\n<h3>Semáforo Ejecutivo</h3>\n<h3>Prioridades del Día (Top 3)</h3>\n<h3>Alertas que Requieren Decisión</h3>\n<h3>Métricas Clave vs. Objetivos</h3>\n<h3>Recomendación Ejecutiva</h3>\nSé directo y accionable. Máximo 400 palabras.` },
-    strategy: { prompt: `Genera una REVISIÓN ESTRATÉGICA para IBANOR SA de CV / MetaTronix:\n${kpiCtx}\nEstructura:\n<h2>🎯 Revisión Estratégica — ${fecha}</h2>\n<h3>Posición Competitiva Actual</h3>\n<h3>Oportunidades de Crecimiento Inmediatas</h3>\n<h3>Brechas Críticas a Cerrar</h3>\n<h3>Iniciativas Prioritarias Q2 2026</h3>\n<h3>Plan de 90 Días</h3>\nConcreto, cuantificado, ejecutable.` },
-    risk: { prompt: `Genera un ANÁLISIS DE RIESGOS EJECUTIVO para IBANOR SA de CV / MetaTronix:\n${kpiCtx}\nEstructura:\n<h2>🚨 Matriz de Riesgos — ${fecha}</h2>\nTabla: Riesgo | Probabilidad | Impacto | Acción Mitigadora\n<h3>Riesgos Críticos</h3>\n<h3>Riesgos Monitoreados</h3>\n<h3>Decisiones Necesarias Esta Semana</h3>\nCuantifica impactos en pesos cuando sea posible.` },
-    week: { prompt: `Genera un CIERRE SEMANAL para IBANOR SA de CV / MetaTronix:\n${kpiCtx}\nEstructura:\n<h2>📊 Cierre Semanal — ${fecha}</h2>\n<h3>Logros de la Semana</h3>\n<h3>Métricas vs. Meta</h3>\nTabla: Métrica | Real | Meta | Variación\n<h3>Pendientes Semana Siguiente</h3>\n<h3>Agenda Prioritaria</h3>\nEjecutivo, honesto, sin maquillaje de cifras.` },
+  const active     = leads.filter(l=>!['ganado','perdido','cancelado'].includes(l.status));
+  const pipeline   = active.reduce((s,l)=>s+(l.pipeline_value||0),0);
+  const ganadosMes = leads.filter(l=>l.status==='ganado'&&l.created_at>=monthStart).length;
+  const enRiesgo   = leads.filter(l=>['en_riesgo','perdido'].includes(l.status)).length;
+  const leads7d    = leads.filter(l=>l.created_at>=days7).length;
+  const closedLst30= leads.filter(l=>l.created_at>=days30&&['ganado','perdido'].includes(l.status));
+  const convRate   = closedLst30.length > 0 ? Math.round(closedLst30.filter(l=>l.status==='ganado').length / closedLst30.length * 100) : 0;
+
+  const unpaidOut  = invOut.filter(i=>!['pagada','cancelada'].includes(i.status));
+  const cxcTotal   = unpaidOut.reduce((s,i)=>s+(i.total_amount||0),0);
+  const cxcVencida = unpaidOut.filter(i=>(i.due_date||'9999')<today).reduce((s,i)=>s+(i.total_amount||0),0);
+  const cobUrg     = unpaidOut.filter(i=>{const d=new Date(i.due_date||'9999'); return (new Date()-d)>60*864e5;}).length;
+
+  const unpaidIn   = invIn.filter(i=>!['pagada','cancelada'].includes(i.status));
+  const cxpTotal   = unpaidIn.reduce((s,i)=>s+(i.total_amount||0),0);
+  const cxp30      = unpaidIn.filter(i=>{const d=(i.due_date||''); return d>=today&&d<=days30Fwd;}).reduce((s,i)=>s+(i.total_amount||0),0);
+
+  const ocPend     = ocs.filter(o=>['pendiente','borrador','enviada'].includes(o.status));
+  const ocMonto    = ocPend.reduce((s,o)=>s+(o.total_amount||0),0);
+  const reqOpen    = reqs.filter(r=>['borrador','pendiente','aprobada'].includes(r.status)).length;
+
+  // Health score
+  const health = computeHealthScore({
+    pipeline, cxcTotal, cxcVencida, active: active.length, enRiesgo,
+    cobUrg, ocPend: ocPend.length, ai24h: acts.length, convRate
+  });
+
+  return {
+    captured_at: new Date().toISOString(), source: 'browser',
+    pipeline_total: pipeline, deals_activos: active.length,
+    deals_ganados_mes: ganadosMes, deals_en_riesgo: enRiesgo,
+    leads_nuevos_7d: leads7d, conversion_rate: convRate,
+    cxc_total: cxcTotal, cxc_vencida: cxcVencida,
+    cxp_total: cxpTotal, cxp_proximos_30d: cxp30,
+    flujo_neto: cxcTotal - cxpTotal,
+    cobranza_urgente: cobUrg,
+    oc_pendientes: ocPend.length, oc_monto_pendiente: ocMonto,
+    requisiciones_abiertas: reqOpen,
+    usuarios_activos: profiles.length,
+    ai_queries_24h: acts.length, ai_queries_7d: 0,
+    org_health_score: health.total, health_breakdown: health,
   };
+}
 
-  const cfg = briefingTypes[type] || briefingTypes.daily;
+function computeHealthScore({ pipeline, cxcTotal, cxcVencida, active, enRiesgo, cobUrg, ocPend, ai24h, convRate }) {
+  const s_pipe  = pipeline>5e6?25:pipeline>1e6?20:pipeline>5e5?15:pipeline>1e5?10:pipeline>0?5:0;
+  const pctVen  = cxcTotal>0?cxcVencida/cxcTotal:0;
+  const s_cxc   = pctVen<0.10?20:pctVen<0.25?15:pctVen<0.40?10:pctVen<0.60?5:0;
+  const pctRisk = active>0?enRiesgo/active:0;
+  const s_risk  = enRiesgo===0?15:pctRisk<0.10?12:pctRisk<0.20?9:pctRisk<0.35?5:0;
+  const s_cob   = cobUrg===0?15:cobUrg<=2?12:cobUrg<=5?8:cobUrg<=10?4:0;
+  const s_oc    = ocPend===0?10:ocPend<=3?8:ocPend<=8?5:ocPend<=15?3:0;
+  const s_ai    = ai24h>=20?10:ai24h>=10?8:ai24h>=5?6:ai24h>=1?3:0;
+  const s_conv  = convRate>=30?5:convRate>=20?4:convRate>=10?3:convRate>=5?2:1;
+  const total   = s_pipe+s_cxc+s_risk+s_cob+s_oc+s_ai+s_conv;
+  return { total, pipeline:s_pipe, cxc:s_cxc, riesgo:s_risk, cobranza:s_cob, compras:s_oc, ai:s_ai, conv:s_conv };
+}
+
+async function savePulseSnapshot(pulse) {
+  try {
+    await _db.from('org_pulse').insert({
+      ...pulse,
+      company_id: _user?.profile?.company_id,
+      source: 'browser',
+    });
+  } catch(e) { /* silente — tabla puede no existir aún */ }
+}
+
+/* ── RENDER PULSE ─────────────────────────────────────────────────────────── */
+function renderPulse() {
+  const p = _pulse;
+  const fmt = n => { const v=parseFloat(n)||0; return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v.toFixed(0); };
+  const num = n => (parseInt(n)||0).toLocaleString('es-MX');
+
+  // Health bar
+  const score = p.org_health_score || 0;
+  const hColor = score>=80?'#00ff88':score>=60?'#ffb400':score>=40?'#ff8c00':'#ff4646';
+  const hLabel = score>=80?'Excelente':score>=60?'Saludable':score>=40?'Atención':'Crítico';
+  const ts = p.captured_at ? new Date(p.captured_at).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '—';
+
+  const healthSlot = document.getElementById('health-bar-slot');
+  if (healthSlot) healthSlot.innerHTML = `
+    <div class="health-bar">
+      <div>
+        <div class="health-label">Salud Org</div>
+        <div class="health-score" style="color:${hColor}">${score}</div>
+      </div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span class="health-sub" style="color:${hColor}">${hLabel}</span>
+          <span class="ts-badge">${p.source==='cron'?'🕐':'🔄'} ${ts}</span>
+        </div>
+        <div class="health-track"><div class="health-fill" style="width:${score}%;background:${hColor}"></div></div>
+      </div>
+    </div>`;
+
+  // Pulse strip — 12 métricas
+  const strip = document.getElementById('pulse-strip');
+  if (!strip) return;
+
+  const cxcPct = p.cxc_total>0 ? Math.round((p.cxc_vencida/p.cxc_total)*100) : 0;
+  const riskPct= p.deals_activos>0 ? Math.round((p.deals_en_riesgo/p.deals_activos)*100) : 0;
+
+  const cards = [
+    { label:'Pipeline', value:fmt(p.pipeline_total), sub:num(p.deals_activos)+' deals activos', color:'#00ff88' },
+    { label:'Ganados Mes', value:num(p.deals_ganados_mes), sub:'Deals cerrados', color:'#00ff88' },
+    { label:'Leads 7d', value:num(p.leads_nuevos_7d), sub:`Conv. ${p.conversion_rate||0}%`, color:'#00e5ff' },
+    { label:'En Riesgo', value:num(p.deals_en_riesgo), sub:`${riskPct}% del pipeline`, color:p.deals_en_riesgo>0?'#ff4646':'#888' },
+    { label:'CXC Total', value:fmt(p.cxc_total), sub:'Por cobrar', color:'#00e5ff' },
+    { label:'CXC Vencida', value:fmt(p.cxc_vencida), sub:`${cxcPct}% del total`, color:cxcPct>25?'#ff4646':cxcPct>10?'#ffb400':'#00ff88' },
+    { label:'CXP Total', value:fmt(p.cxp_total), sub:'Por pagar', color:'#b966ff' },
+    { label:'CXP 30d', value:fmt(p.cxp_proximos_30d), sub:'Vence en 30 días', color:'#ffb400' },
+    { label:'Cobranza Urg', value:num(p.cobranza_urgente), sub:'Facturas >60d', color:p.cobranza_urgente>0?'#ff4646':'#888' },
+    { label:'OC Pendientes', value:num(p.oc_pendientes), sub:fmt(p.oc_monto_pendiente), color:'#ff8c00' },
+    { label:'Usuarios', value:num(p.usuarios_activos), sub:'En plataforma', color:'#b966ff' },
+    { label:'IA 24h', value:num(p.ai_queries_24h), sub:'Consultas IA hoy', color:'#ffb400' },
+  ];
+
+  strip.innerHTML = cards.map(c=>`
+    <div class="pulse-card" style="--pc:${c.color}">
+      <div class="pc-label">${c.label}</div>
+      <div class="pc-value">${c.value}</div>
+      <div class="pc-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+/* ── QUERY BAR ────────────────────────────────────────────────────────────── */
+function setQuery(btn) {
+  const inp = document.getElementById('query-input');
+  if (inp) { inp.value = btn.textContent; inp.focus(); autoResize(inp); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+async function sendQuery() {
+  if (_queryBusy) return;
+  const inp = document.getElementById('query-input');
+  const btn = document.getElementById('query-send-btn');
+  const out = document.getElementById('query-response');
+  if (!inp || !out) return;
+
+  const question = inp.value.trim();
+  if (!question) return;
+
+  _queryBusy = true;
+  if (btn) btn.disabled = true;
+  out.className = 'query-response active';
+  out.innerHTML = `<div style="color:var(--text-faint);display:flex;align-items:center;gap:10px;padding:10px 0"><span class="spin spin-cyan"></span> Consultando toda la organización...</div>`;
+  out.scrollIntoView({ behavior:'smooth', block:'nearest' });
 
   try {
     const session = await getSession();
@@ -384,38 +560,35 @@ INDICADORES EJECUTIVOS — ${fecha}:
     const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
     if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado');
 
-    const resp = await fetch(proxyUrl, {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:3000,
-        system:`Eres el Chief Strategy Officer IA de IBANOR SA de CV / MetaTronix.
-Generas análisis ejecutivos de máxima calidad para el CEO.
-Perspectiva: pensamiento estratégico de McKinsey + rigor analítico de Anthropic.
-Formato: HTML semántico (h2, h3, p, ul, ol, table, strong, em). Sin DOCTYPE, html, head, body.
+    // Usar /ceo-query si existe, sino fallback a proxy estándar con contexto completo
+    const ceoQueryUrl = proxyUrl.replace(/\/(claude|groq|proxy)$/, '') + '/ceo-query';
 
-PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
-1. SOLO afirma lo EXPLÍCITAMENTE presente en los datos de esta conversación
-2. NUNCA inventes cifras, porcentajes, nombres ni fechas — dato ausente = escribe "Sin dato disponible"
-3. HECHO vs ANÁLISIS: usa "Los datos muestran X" para hechos; "Esto podría indicar Y" para análisis
-4. INCERTIDUMBRE: si no es certeza, usa "aparentemente", "podría ser", "requiere verificación previa"
-5. CAUSALIDAD: nunca la atribuyas sin evidencia directa — escribe "correlación posible, no causalidad confirmada"
-6. EXTRAPOLACIÓN: no proyectes más allá del rango explícito de los datos proporcionados
-7. AMBIGÜEDAD: si la consulta es incompleta, solicita el dato faltante — no supongas ni rellenes
-8. RECOMENDACIONES EJECUTIVAS: termina cada una con "⚠ Verificar con datos actuales antes de implementar"
-9. DATOS FINANCIEROS/KPIs: añade al final "† Basado en información proporcionada — auditar antes de decisiones ejecutivas"`,
-        messages:[{role:'user', content:cfg.prompt}],
-        stream:true,
-      }),
-      signal:AbortSignal.timeout(120000),
-    });
+    let usedFallback = false;
+    let resp;
 
-    if (!resp.ok) { const err = await resp.json().catch(()=>({error:resp.statusText})); throw new Error(err.error||'Error '+resp.status); }
+    try {
+      resp = await fetch(ceoQueryUrl, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+        body:JSON.stringify({ question, pulse: _pulse, query_type:'ad_hoc' }),
+        signal: AbortSignal.timeout(90000),
+      });
+      if (resp.status === 404) throw new Error('endpoint not found');
+    } catch (fetchErr) {
+      // Fallback: usar proxy estándar con contexto embebido
+      usedFallback = true;
+      resp = await runQueryFallback(question, jwt, proxyUrl);
+    }
+
+    if (!resp || !resp.ok) {
+      const errJson = await resp?.json().catch(()=>({error:'Error '+resp?.status}));
+      throw new Error(errJson.error || 'Error ' + resp?.status);
+    }
 
     const reader = resp.body.getReader();
     const dec = new TextDecoder();
-    let buf=''; let html='';
+    let buf='', html='', domains=[];
+
     out.innerHTML = '';
 
     while(true) {
@@ -427,24 +600,232 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
         if(!line.startsWith('data:')) continue;
         const d = line.slice(5).trim();
         if(d==='[DONE]') break;
-        try { const j=JSON.parse(d); if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html+=j.delta.text; } catch {}
+        try {
+          const j = JSON.parse(d);
+          if(j.type==='content_block_delta'&&j.delta?.type==='text_delta') html += j.delta.text;
+          if(j.type==='meta') domains = j.domains || [];
+        } catch {}
       }
       out.innerHTML = html;
       out.scrollTop = out.scrollHeight;
     }
-    out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta.</em>';
+
+    // Render final con metadata
+    if (html) {
+      out.innerHTML = html + `
+        <div class="query-meta">
+          ${domains.map(d=>`<span class="domain-badge">${d}</span>`).join('')}
+          <span style="font-size:10px;color:var(--text-faint);margin-left:auto">
+            ${usedFallback?'Proxy estándar':'CEO Query Router'} · ${new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}
+          </span>
+        </div>`;
+
+      // Guardar en historial
+      saveDecision({ question, response: html, domains, pulse: _pulse });
+    }
+
   } catch(e) {
-    out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+    out.innerHTML = `<span style="color:#ff4646">⚠ Error: ${escHtml ? escHtml(e.message) : e.message}</span>`;
   } finally {
-    _briefingStreaming = false;
-    btns.forEach(b => { if(b) b.disabled = false; });
+    _queryBusy = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* Fallback cuando /ceo-query no está en el Worker aún */
+async function runQueryFallback(question, jwt, proxyUrl) {
+  const fmt = n => { const v=parseFloat(n)||0; return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v.toFixed(0); };
+  const p = _pulse;
+
+  const orgCtx = `
+ESTADO ORGANIZACIONAL — ${new Date().toLocaleDateString('es-MX')}
+Score de Salud: ${p.org_health_score||0}/100
+
+VENTAS: Pipeline ${fmt(p.pipeline_total)} | Deals activos: ${p.deals_activos||0} | Ganados mes: ${p.deals_ganados_mes||0} | En riesgo: ${p.deals_en_riesgo||0} | Conversión: ${p.conversion_rate||0}%
+FINANZAS: CXC ${fmt(p.cxc_total)} (vencida: ${fmt(p.cxc_vencida)}) | CXP ${fmt(p.cxp_total)} (próx.30d: ${fmt(p.cxp_proximos_30d)}) | Flujo neto: ${fmt(p.flujo_neto)}
+COBRANZA: Urgente (>60d): ${p.cobranza_urgente||0} facturas
+COMPRAS: OC pendientes: ${p.oc_pendientes||0} (${fmt(p.oc_monto_pendiente)}) | Req. abiertas: ${p.requisiciones_abiertas||0}
+PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} consultas`;
+
+  return fetch(proxyUrl, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6', max_tokens:2000, stream:true,
+      system:`Eres el Consejero Ejecutivo IA de IBANOR SA de CV / MetaTronix.
+Responde preguntas del CEO con DATOS REALES del sistema.
+PROTOCOLO AHL NIVEL EJECUTIVO: SOLO usa datos del contexto. Cita la fuente de cada número. Distingue hecho de análisis. Añade ⚠ en recomendaciones. Formato HTML (h2,h3,p,ul,table). Sin DOCTYPE.`,
+      messages:[{role:'user',content:`${orgCtx}\n\nPREGUNTA DEL CEO: "${question}"\n\nResponde directo, citando datos del contexto anterior.`}],
+    }),
+    signal: AbortSignal.timeout(90000),
+  });
+}
+
+/* ── GUARDAR DECISIÓN ─────────────────────────────────────────────────────── */
+async function saveDecision({ question, response, domains, pulse }) {
+  try {
+    await _db.from('executive_decisions').insert({
+      company_id: _user?.profile?.company_id,
+      user_id: _user?.id,
+      query_text: question.substring(0,1000),
+      response_text: response.substring(0,8000),
+      query_type: 'ad_hoc',
+      domains_queried: domains,
+      pulse_snapshot: pulse,
+      model_used: 'claude-sonnet-4-6',
+    });
+    setTimeout(loadDecisions, 1000);
+  } catch(e) { /* silente — tabla puede no existir */ }
+}
+
+/* ── DECISION HISTORY ─────────────────────────────────────────────────────── */
+async function loadDecisions() {
+  const list = document.getElementById('decision-list');
+  if (!list) return;
+
+  try {
+    const { data } = await _db
+      .from('executive_decisions')
+      .select('id,query_text,response_text,domains_queried,query_type,created_at')
+      .eq('user_id', _user?.id)
+      .order('created_at', { ascending:false })
+      .limit(20);
+
+    _decisions = data || [];
+    renderDecisions();
+  } catch(e) {
+    if (list) list.innerHTML = '<div class="empty-state">Ejecuta la primera consulta para ver el historial aquí.</div>';
+  }
+}
+
+function renderDecisions() {
+  const list = document.getElementById('decision-list');
+  if (!list) return;
+
+  if (!_decisions.length) {
+    list.innerHTML = `<div class="empty-state">
+      <div style="font-size:24px;margin-bottom:8px">🧠</div>
+      Usa el Query Bar para hacer tu primera pregunta organizacional.<br>Todas las consultas quedarán registradas aquí.
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = _decisions.map(d => {
+    const ts = new Date(d.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const domains = (d.domains_queried||[]).slice(0,3).join(', ') || d.query_type;
+    const preview = d.response_text ? d.response_text.replace(/<[^>]+>/g,'').substring(0,120)+'...' : '';
+    return `
+    <div class="decision-item" onclick="expandDecision('${d.id}')">
+      <div class="decision-q">${escHtml ? escHtml(d.query_text) : d.query_text}</div>
+      <div class="decision-meta">
+        <span class="decision-ts">${ts}</span>
+        ${domains ? `<span class="decision-dom">${domains}</span>` : ''}
+      </div>
+      ${preview ? `<div class="decision-preview">${preview}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function expandDecision(id) {
+  const dec = _decisions.find(d=>d.id===id);
+  if (!dec) return;
+  const qr = document.getElementById('query-response');
+  const inp = document.getElementById('query-input');
+  if (inp) { inp.value = dec.query_text; autoResize(inp); }
+  if (qr) {
+    qr.className = 'query-response active';
+    qr.innerHTML = dec.response_text || '<em style="color:var(--text-faint)">Sin respuesta guardada.</em>';
+    qr.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+}
+
+/* ── CEO BRIEFING ─────────────────────────────────────────────────────────── */
+async function generateBriefing(type) {
+  if (_briefingBusy) return;
+  const out  = document.getElementById('briefing-out');
+  const btns = ['btn-daily','btn-strategy','btn-risk','btn-week'].map(id=>document.getElementById(id));
+  if (!out) return;
+
+  _briefingBusy = true;
+  btns.forEach(b=>{ if(b) b.disabled=true; });
+  out.classList.add('streaming');
+  out.innerHTML = `<div style="color:var(--text-faint);padding:24px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><span class="spin spin-cyan"></span> Generando análisis con datos reales...</div>`;
+
+  const fecha = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const fmt   = n=>{const v=parseFloat(n)||0;return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v.toFixed(0);};
+  const p = _pulse;
+
+  const kpiCtx = `
+DATOS REALES — ${fecha}
+Score de Salud Org: ${p.org_health_score||0}/100
+
+VENTAS: Pipeline ${fmt(p.pipeline_total)} | Deals activos: ${p.deals_activos||0} | Ganados mes: ${p.deals_ganados_mes||0} | En riesgo: ${p.deals_en_riesgo||0} | Leads 7d: ${p.leads_nuevos_7d||0} | Conversión: ${p.conversion_rate||0}%
+FINANZAS: CXC ${fmt(p.cxc_total)} (vencida ${fmt(p.cxc_vencida)}) | CXP ${fmt(p.cxp_total)} (30d: ${fmt(p.cxp_proximos_30d)}) | Flujo neto: ${fmt(p.flujo_neto)}
+COBRANZA: Urgente: ${p.cobranza_urgente||0} facturas | Sin contacto: ${p.cobranza_sin_contacto||0}
+COMPRAS: OC pendientes: ${p.oc_pendientes||0} (${fmt(p.oc_monto_pendiente)}) | Req. abiertas: ${p.requisiciones_abiertas||0}
+PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} | IA 7d: ${p.ai_queries_7d||0}`;
+
+  const prompts = {
+    daily: `Genera un BRIEFING DIARIO ejecutivo:\n${kpiCtx}\n\nEstructura:\n<h2>⚡ Briefing Diario — ${fecha}</h2>\n<h3>🚦 Semáforo Ejecutivo</h3>\n(tabla: Área | Estado | Nota)\n<h3>🎯 Top 3 Prioridades del Día</h3>\n<h3>⚠ Alertas que Requieren Decisión</h3>\n<h3>📊 Métricas Clave</h3>\nMáximo 350 palabras. Directo, ejecutivo.`,
+    strategy: `Genera una REVISIÓN ESTRATÉGICA:\n${kpiCtx}\n\nEstructura:\n<h2>🎯 Revisión Estratégica — ${fecha}</h2>\n<h3>Posición Actual</h3>\n<h3>Oportunidades Inmediatas</h3>\n<h3>Brechas Críticas</h3>\n<h3>Plan 90 Días</h3>\nCuantificado, accionable, máximo 400 palabras.`,
+    risk: `Genera un ANÁLISIS DE RIESGOS:\n${kpiCtx}\n\nEstructura:\n<h2>🚨 Matriz de Riesgos — ${fecha}</h2>\n(tabla: Riesgo | Prob. | Impacto $ | Acción)\n<h3>Riesgos Críticos</h3>\n<h3>Decisiones Esta Semana</h3>\nCuantifica impactos en MXN cuando posible.`,
+    week: `Genera un CIERRE SEMANAL:\n${kpiCtx}\n\nEstructura:\n<h2>📊 Cierre Semanal — ${fecha}</h2>\n<h3>Logros</h3>\n(tabla: Métrica | Real | Meta | Δ)\n<h3>Pendientes Semana Siguiente</h3>\n<h3>Agenda Prioritaria</h3>\nHonesto, sin maquillaje.`,
+  };
+
+  try {
+    const session = await getSession();
+    const jwt = session?.access_token || '';
+    const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
+    if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado');
+
+    const resp = await fetch(proxyUrl, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6', max_tokens:2500, stream:true,
+        system:`Eres el Chief Strategy Officer IA de IBANOR SA de CV / MetaTronix.
+PROTOCOLO ANTI-ALUCINACIÓN: SOLO usa datos del contexto. Cita fuente de cada número (Fuente: Pipeline/CXC/etc). NUNCA inventes cifras. Hecho vs análisis claramente diferenciados. ⚠ en recomendaciones. † en KPIs financieros. HTML semántico sin DOCTYPE.`,
+        messages:[{role:'user',content:prompts[type]||prompts.daily}],
+      }),
+      signal:AbortSignal.timeout(120000),
+    });
+
+    if(!resp.ok){const e=await resp.json().catch(()=>({error:resp.statusText}));throw new Error(e.error||'Error '+resp.status);}
+
+    const reader=resp.body.getReader();const dec=new TextDecoder();let buf='',html='';
+    out.innerHTML='';
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n');buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data:'))continue;
+        const d=line.slice(5).trim();if(d==='[DONE]')break;
+        try{const j=JSON.parse(d);if(j.type==='content_block_delta'&&j.delta?.type==='text_delta')html+=j.delta.text;}catch{}
+      }
+      out.innerHTML=html;out.scrollTop=out.scrollHeight;
+    }
+    out.innerHTML=html||'<em style="color:var(--text-faint)">Sin respuesta.</em>';
+
+    // Guardar como decisión
+    if(html) saveDecision({ question:`Briefing ${type}: ${fecha}`, response:html, domains:['estrategia'], pulse:p });
+
+  } catch(e) {
+    out.innerHTML=`<span style="color:#ff4646">Error: ${escHtml?escHtml(e.message):e.message}</span>`;
+  } finally {
+    _briefingBusy=false;
+    btns.forEach(b=>{if(b)b.disabled=false;});
     out.classList.remove('streaming');
   }
 }
 
 function clearBriefing() {
-  const out = document.getElementById('briefing-out');
-  if (out) out.innerHTML = '<div class="briefing-placeholder">Selecciona un tipo de análisis para generar el briefing ejecutivo.<br>Los datos del pipeline se incluyen automáticamente.</div>';
+  const o=document.getElementById('briefing-out');
+  if(o) o.innerHTML='<div class="placeholder-msg">Selecciona un tipo de análisis o usa el Query Bar arriba.</div>';
+}
+
+async function refreshAll() {
+  await Promise.all([loadPulse(), loadDecisions()]);
 }
 
 init();
