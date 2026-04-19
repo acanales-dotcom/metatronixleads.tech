@@ -402,7 +402,7 @@ BEGIN
     'supplier_quotes','invoices_out','invoices_in','contracts']
   LOOP
     EXECUTE format('
-      CREATE TRIGGER trg_%I_updated_at
+      CREATE OR REPLACE TRIGGER trg_%I_updated_at
       BEFORE UPDATE ON %I
       FOR EACH ROW EXECUTE FUNCTION set_updated_at()',
       t, t);
