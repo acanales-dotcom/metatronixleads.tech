@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTX — Setup Base de Datos</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'JetBrains Mono',monospace;background:#0a0f1c;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:#111827;border:1px solid #1e2d45;border-radius:16px;padding:40px;max-width:680px;width:100%}
+    .logo{font-size:12px;letter-spacing:.1em;color:#00ff88;margin-bottom:24px}
+    h1{font-size:20px;font-weight:700;color:#f1f5f9;margin-bottom:8px}
+    .sub{font-size:13px;color:#64748b;margin-bottom:28px;line-height:1.6}
+    label{display:block;font-size:11px;color:#94a3b8;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+    input{width:100%;background:#0d1526;border:1px solid #1e2d45;border-radius:8px;padding:10px 14px;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:20px;outline:none}
+    input:focus{border-color:#00ff88}
+    .btn{width:100%;background:#00ff88;color:#0a0f1c;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;letter-spacing:.05em}
+    .btn:hover{background:#00e07a}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+    #log{background:#050a14;border:1px solid #1e2d45;border-radius:8px;padding:16px;margin-top:20px;font-size:12px;line-height:1.8;max-height:420px;overflow-y:auto;display:none;white-space:pre-wrap;word-break:break-all}
+    .ok{color:#00ff88}.err{color:#ff4444}.warn{color:#f59e0b}.dim{color:#475569}
+    .done{background:#0d2b1e;border:1px solid #00ff88;border-radius:10px;padding:20px;text-align:center;margin-top:16px;display:none}
+    .done h2{color:#00ff88;font-size:18px;margin-bottom:6px}
+    .done p{font-size:12px;color:#64748b}
+    a{color:#00c2e0;text-decoration:none}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">▸ METATRONIX · DATABASE SETUP</div>
+  <h1>Activar módulos de Administración</h1>
+  <p class="sub">
+    Crea las tablas necesarias para Compras, Cobranza y Facturación.<br>
+    Solo necesitas tu <strong style="color:#f1f5f9">Supabase Personal Access Token</strong>
+    (<a href="https://supabase.com/dashboard/account/tokens" target="_blank">obtenerlo aquí</a>).
+    Empieza con <code style="color:#00ff88">sbp_</code>
+  </p>
+
+  <label>Personal Access Token (sbp_...)</label>
+  <input type="password" id="pat" placeholder="sbp_xxxxxxxxxxxxxxxx" autocomplete="off">
+
+  <button class="btn" id="run-btn" onclick="runMigration()">▶ Ejecutar Schema</button>
+
+  <div id="log"></div>
+  <div class="done" id="done-box">
+    <h2>✅ Base de datos configurada</h2>
+    <p>Todos los módulos de administración están activos.<br>Puedes cerrar esta página.</p>
+  </div>
+</div>
+
+<script>
+const PROJECT_REF = 'hodrfonbpmqulkyzrzpq';
+const API = `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
+
+// SQL embebido — todas las tablas del módulo de administración
+const SQL_BLOCKS = [
+{label:'suppliers', sql:`
+CREATE TABLE IF NOT EXISTS suppliers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL, rfc TEXT, email TEXT, phone TEXT, address TEXT,
+  payment_terms INTEGER DEFAULT 30, category TEXT,
+  status TEXT NOT NULL DEFAULT 'activo' CHECK (status IN ('activo','inactivo','bloqueado')),
+  rating NUMERIC(3,2), notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='suppliers' AND policyname='suppliers_sel') THEN
+    CREATE POLICY suppliers_sel ON suppliers FOR SELECT USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY suppliers_ins ON suppliers FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY suppliers_upd ON suppliers FOR UPDATE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_suppliers_company ON suppliers(company_id);
+CREATE INDEX IF NOT EXISTS idx_suppliers_status ON suppliers(status);
+`},
+{label:'requisitions', sql:`
+CREATE TABLE IF NOT EXISTS requisitions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  folio TEXT NOT NULL, title TEXT NOT NULL, description TEXT, category TEXT,
+  amount_estimated NUMERIC(14,2), currency TEXT NOT NULL DEFAULT 'MXN',
+  requested_by UUID REFERENCES auth.users(id),
+  requested_date DATE NOT NULL DEFAULT CURRENT_DATE, needed_date DATE,
+  status TEXT NOT NULL DEFAULT 'borrador' CHECK (status IN ('borrador','pendiente','aprobada','rechazada','cancelada','completada')),
+  approved_by UUID REFERENCES auth.users(id), approved_at TIMESTAMPTZ, rejection_note TEXT,
+  purchase_order_id UUID, attachments JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE requisitions ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='requisitions' AND policyname='req_sel') THEN
+    CREATE POLICY req_sel ON requisitions FOR SELECT USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY req_ins ON requisitions FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY req_upd ON requisitions FOR UPDATE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_req_company ON requisitions(company_id);
+CREATE INDEX IF NOT EXISTS idx_req_status ON requisitions(status);
+`},
+{label:'purchase_orders', sql:`
+CREATE TABLE IF NOT EXISTS purchase_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  folio TEXT NOT NULL, requisition_id UUID REFERENCES requisitions(id),
+  supplier_id UUID REFERENCES suppliers(id), title TEXT NOT NULL,
+  items JSONB NOT NULL DEFAULT '[]',
+  subtotal NUMERIC(14,2) NOT NULL DEFAULT 0, iva NUMERIC(14,2) NOT NULL DEFAULT 0,
+  total NUMERIC(14,2) NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'MXN',
+  payment_terms INTEGER DEFAULT 30, delivery_date DATE,
+  status TEXT NOT NULL DEFAULT 'borrador' CHECK (status IN ('borrador','enviada','confirmada','parcial','completada','cancelada')),
+  received_at TIMESTAMPTZ, notes TEXT, created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE purchase_orders ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='purchase_orders' AND policyname='po_sel') THEN
+    CREATE POLICY po_sel ON purchase_orders FOR SELECT USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY po_ins ON purchase_orders FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY po_upd ON purchase_orders FOR UPDATE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_po_company ON purchase_orders(company_id);
+CREATE INDEX IF NOT EXISTS idx_po_supplier ON purchase_orders(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_po_status ON purchase_orders(status);
+`},
+{label:'FK circular req→po', sql:`
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name='fk_req_po') THEN
+    ALTER TABLE requisitions ADD CONSTRAINT fk_req_po FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id);
+  END IF;
+END $$;
+`},
+{label:'supplier_quotes', sql:`
+CREATE TABLE IF NOT EXISTS supplier_quotes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  requisition_id UUID REFERENCES requisitions(id), supplier_id UUID REFERENCES suppliers(id),
+  folio_proveedor TEXT, items JSONB NOT NULL DEFAULT '[]',
+  subtotal NUMERIC(14,2) NOT NULL DEFAULT 0, iva NUMERIC(14,2) NOT NULL DEFAULT 0,
+  total NUMERIC(14,2) NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'MXN',
+  validity_date DATE, delivery_days INTEGER,
+  status TEXT NOT NULL DEFAULT 'recibida' CHECK (status IN ('recibida','en_revision','aceptada','rechazada')),
+  ai_analysis TEXT, notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE supplier_quotes ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='supplier_quotes' AND policyname='sq_sel') THEN
+    CREATE POLICY sq_sel ON supplier_quotes FOR SELECT USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY sq_ins ON supplier_quotes FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY sq_upd ON supplier_quotes FOR UPDATE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_sq_company ON supplier_quotes(company_id);
+CREATE INDEX IF NOT EXISTS idx_sq_supplier ON supplier_quotes(supplier_id);
+`},
+{label:'invoices_out (CXC)', sql:`
+CREATE TABLE IF NOT EXISTS invoices_out (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  lead_id UUID, folio TEXT NOT NULL, uuid_cfdi TEXT,
+  customer_name TEXT NOT NULL, customer_rfc TEXT, customer_email TEXT,
+  items JSONB NOT NULL DEFAULT '[]',
+  subtotal NUMERIC(14,2) NOT NULL DEFAULT 0, iva NUMERIC(14,2) NOT NULL DEFAULT 0,
+  total NUMERIC(14,2) NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'MXN',
+  issue_date DATE NOT NULL DEFAULT CURRENT_DATE, due_date DATE, payment_date DATE,
+  status TEXT NOT NULL DEFAULT 'emitida' CHECK (status IN ('borrador','emitida','enviada','parcial','pagada','vencida','cancelada')),
+  days_overdue INTEGER GENERATED ALWAYS AS (
+    CASE WHEN status NOT IN ('pagada','cancelada') AND due_date < CURRENT_DATE
+    THEN CURRENT_DATE - due_date ELSE 0 END
+  ) STORED,
+  collection_priority TEXT DEFAULT 'normal' CHECK (collection_priority IN ('urgente','alta','normal','baja')),
+  last_contact_at TIMESTAMPTZ, ai_collection_note TEXT, notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE invoices_out ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='invoices_out' AND policyname='inv_out_sel') THEN
+    CREATE POLICY inv_out_sel ON invoices_out FOR SELECT USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY inv_out_ins ON invoices_out FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY inv_out_upd ON invoices_out FOR UPDATE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_inv_out_company ON invoices_out(company_id);
+CREATE INDEX IF NOT EXISTS idx_inv_out_status ON invoices_out(status);
+CREATE INDEX IF NOT EXISTS idx_inv_out_due ON invoices_out(due_date);
+`},
+{label:'invoices_in (CXP)', sql:`
+CREATE TABLE IF NOT EXISTS invoices_in (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  supplier_id UUID REFERENCES suppliers(id), purchase_order_id UUID REFERENCES purchase_orders(id),
+  folio_proveedor TEXT, uuid_cfdi TEXT, supplier_name TEXT NOT NULL, supplier_rfc TEXT,
+  items JSONB NOT NULL DEFAULT '[]',
+  subtotal NUMERIC(14,2) NOT NULL DEFAULT 0, iva NUMERIC(14,2) NOT NULL DEFAULT 0,
+  total NUMERIC(14,2) NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'MXN',
+  issue_date DATE NOT NULL DEFAULT CURRENT_DATE, due_date DATE, payment_date DATE,
+  status TEXT NOT NULL DEFAULT 'recibida' CHECK (status IN ('recibida','revisada','aprobada','programada','pagada','rechazada')),
+  notes TEXT, created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE invoices_in ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='invoices_in' AND policyname='inv_in_sel') THEN
+    CREATE POLICY inv_in_sel ON invoices_in FOR SELECT USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY inv_in_ins ON invoices_in FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY inv_in_upd ON invoices_in FOR UPDATE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_inv_in_company ON invoices_in(company_id);
+CREATE INDEX IF NOT EXISTS idx_inv_in_supplier ON invoices_in(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_inv_in_due ON invoices_in(due_date);
+`},
+{label:'payments', sql:`
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('cobro','pago')),
+  invoice_out_id UUID REFERENCES invoices_out(id), invoice_in_id UUID REFERENCES invoices_in(id),
+  amount NUMERIC(14,2) NOT NULL, currency TEXT NOT NULL DEFAULT 'MXN',
+  payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  method TEXT CHECK (method IN ('transferencia','cheque','efectivo','tarjeta','otro')),
+  reference TEXT, uuid_complemento TEXT,
+  status TEXT NOT NULL DEFAULT 'registrado' CHECK (status IN ('registrado','conciliado','cancelado')),
+  notes TEXT, created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='payments' AND policyname='pay_sel') THEN
+    CREATE POLICY pay_sel ON payments FOR SELECT USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY pay_ins ON payments FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY pay_upd ON payments FOR UPDATE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_pay_company ON payments(company_id);
+CREATE INDEX IF NOT EXISTS idx_pay_date ON payments(payment_date);
+`},
+{label:'contracts', sql:`
+CREATE TABLE IF NOT EXISTS contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('cliente','proveedor','laboral','otro')),
+  counterpart_name TEXT NOT NULL, counterpart_rfc TEXT,
+  title TEXT NOT NULL, description TEXT, start_date DATE, end_date DATE,
+  value NUMERIC(14,2), currency TEXT NOT NULL DEFAULT 'MXN',
+  status TEXT NOT NULL DEFAULT 'activo' CHECK (status IN ('borrador','activo','vencido','renovado','cancelado')),
+  auto_renew BOOLEAN DEFAULT FALSE, alert_days INTEGER DEFAULT 30,
+  attachments JSONB DEFAULT '[]', ai_summary TEXT, clauses_flags JSONB DEFAULT '[]',
+  lead_id UUID, supplier_id UUID REFERENCES suppliers(id),
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='contracts' AND policyname='con_sel') THEN
+    CREATE POLICY con_sel ON contracts FOR SELECT USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY con_ins ON contracts FOR INSERT WITH CHECK (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+    CREATE POLICY con_upd ON contracts FOR UPDATE USING (company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid()));
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_con_company ON contracts(company_id);
+CREATE INDEX IF NOT EXISTS idx_con_status ON contracts(status);
+CREATE INDEX IF NOT EXISTS idx_con_end ON contracts(end_date);
+`},
+{label:'triggers updated_at + RPC financiero', sql:`
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
+$$;
+DO $$
+DECLARE t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['suppliers','requisitions','purchase_orders','supplier_quotes','invoices_out','invoices_in','contracts']
+  LOOP
+    EXECUTE format('
+      CREATE OR REPLACE TRIGGER trg_%I_updated_at
+      BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION set_updated_at()', t, t);
+  END LOOP;
+END $$;
+CREATE OR REPLACE FUNCTION get_financial_summary(p_company_id UUID)
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_cxc NUMERIC; v_cxc_v NUMERIC; v_cxp NUMERIC; v_cxp_p NUMERIC; v_co NUMERIC; v_pa NUMERIC;
+BEGIN
+  SELECT COALESCE(SUM(total),0) INTO v_cxc FROM invoices_out WHERE company_id=p_company_id AND status NOT IN ('pagada','cancelada');
+  SELECT COALESCE(SUM(total),0) INTO v_cxc_v FROM invoices_out WHERE company_id=p_company_id AND status NOT IN ('pagada','cancelada') AND due_date<CURRENT_DATE;
+  SELECT COALESCE(SUM(total),0) INTO v_cxp FROM invoices_in WHERE company_id=p_company_id AND status NOT IN ('pagada','rechazada');
+  SELECT COALESCE(SUM(total),0) INTO v_cxp_p FROM invoices_in WHERE company_id=p_company_id AND status NOT IN ('pagada','rechazada') AND due_date BETWEEN CURRENT_DATE AND CURRENT_DATE+30;
+  SELECT COALESCE(SUM(amount),0) INTO v_co FROM payments WHERE company_id=p_company_id AND type='cobro' AND DATE_TRUNC('month',payment_date)=DATE_TRUNC('month',CURRENT_DATE);
+  SELECT COALESCE(SUM(amount),0) INTO v_pa FROM payments WHERE company_id=p_company_id AND type='pago' AND DATE_TRUNC('month',payment_date)=DATE_TRUNC('month',CURRENT_DATE);
+  RETURN JSON_BUILD_OBJECT('cxc_total',v_cxc,'cxc_vencida',v_cxc_v,'cxp_total',v_cxp,'cxp_proxima30',v_cxp_p,'cobros_mes',v_co,'pagos_mes',v_pa,'flujo_neto_mes',v_co-v_pa);
+END;
+$$;
+REVOKE ALL ON FUNCTION get_financial_summary(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_financial_summary(UUID) TO authenticated;
+`}
+];
+
+async function runQuery(token, sql) {
+  const r = await fetch(API, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query: sql })
+  });
+  const body = await r.text();
+  return { ok: r.ok, status: r.status, body };
+}
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  el.style.display = 'block';
+  const line = document.createElement('span');
+  if (cls) line.className = cls;
+  line.textContent = msg + '\n';
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function runMigration() {
+  const token = document.getElementById('pat').value.trim();
+  if (!token.startsWith('sbp_')) {
+    alert('El token debe empezar con sbp_ — obtenlo en supabase.com/dashboard/account/tokens');
+    return;
+  }
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Ejecutando...';
+  document.getElementById('log').innerHTML = '';
+
+  log('══════════════════════════════════════', 'dim');
+  log('  MTX Admin Schema Deploy', '');
+  log('══════════════════════════════════════\n', 'dim');
+
+  // Verificar token
+  log('🔑 Verificando token...', 'dim');
+  try {
+    const vr = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!vr.ok) {
+      const b = await vr.text();
+      log(`❌ HTTP ${vr.status}: ${b}`, 'err');
+      btn.disabled = false; btn.textContent = '▶ Ejecutar Schema';
+      return;
+    }
+    const proj = await vr.json();
+    log(`✅ Proyecto: ${proj.name} (${proj.region})\n`, 'ok');
+  } catch(e) {
+    log(`❌ Error de red: ${e.message}`, 'err');
+    btn.disabled = false; btn.textContent = '▶ Ejecutar Schema';
+    return;
+  }
+
+  // Ejecutar bloques
+  let errors = 0;
+  for (const block of SQL_BLOCKS) {
+    log(`▶ ${block.label}...`, 'dim');
+    const { ok, status, body } = await runQuery(token, block.sql);
+    if (ok) {
+      log(`  ✅ OK`, 'ok');
+    } else {
+      log(`  ⚠️  HTTP ${status}: ${body.slice(0,200)}`, 'warn');
+      errors++;
+    }
+  }
+
+  // Verificar
+  log('\n🔍 Verificando tablas creadas...', 'dim');
+  const { ok, body } = await runQuery(token, `
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema='public'
+    AND table_name IN ('suppliers','requisitions','purchase_orders',
+                       'supplier_quotes','invoices_out','invoices_in','payments','contracts')
+    ORDER BY table_name`);
+
+  const expected = ['suppliers','requisitions','purchase_orders','supplier_quotes',
+                    'invoices_out','invoices_in','payments','contracts'];
+  if (ok) {
+    try {
+      const rows = JSON.parse(body);
+      const found = rows.map(r => Array.isArray(r) ? r[0] : r.table_name);
+      for (const t of expected) {
+        log(`  ${found.includes(t) ? '✅' : '❌'} ${t}`, found.includes(t) ? 'ok' : 'err');
+      }
+      const missing = expected.filter(t => !found.includes(t));
+      if (missing.length === 0) {
+        log('\n✅ Todos los módulos activos.', 'ok');
+        document.getElementById('done-box').style.display = 'block';
+      } else {
+        log(`\n❌ Faltantes: ${missing.join(', ')}`, 'err');
+      }
+    } catch(e) {
+      log(`  Raw: ${body.slice(0,300)}`, 'dim');
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶ Ejecutar Schema';
+}
+</script>
+</body>
+</html>
