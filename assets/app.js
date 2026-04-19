@@ -807,7 +807,8 @@ function selectCompany(company) {
       observer.disconnect();
     }
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  const target = document.body || document.documentElement;
+  if (target) observer.observe(target, { childList: true, subtree: true });
 })();
 
 function handleAlertClick(alertId, leadId) {
