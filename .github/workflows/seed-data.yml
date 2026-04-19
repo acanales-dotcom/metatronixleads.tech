@@ -2,23 +2,20 @@
 # seed-data.yml
 # Inserta seed data en las tablas de Supabase vía Management API.
 # REQUIERE: secret SUPABASE_ACCESS_TOKEN en GitHub repository settings.
-# Se activa SOLO manualmente (workflow_dispatch).
+# Trigger: push a este archivo (auto-ejecución única) o workflow_dispatch.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Seed Data → Supabase
 
 on:
+  push:
+    paths:
+      - '.github/workflows/seed-data.yml'
   workflow_dispatch:
-    inputs:
-      confirm:
-        description: 'Escribir "seed" para confirmar inserción'
-        required: true
-        default: ''
 
 jobs:
   seed:
     name: Insertar seed data
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.confirm == 'seed' }}
 
     steps:
       - name: Checkout
