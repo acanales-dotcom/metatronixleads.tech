@@ -8,7 +8,7 @@
 -- ─────────────────────────────────────────────────────────────
 -- 0. LIMPIEZA PREVIA (idempotente — borra todo antes de recrear)
 -- ─────────────────────────────────────────────────────────────
-DROP FUNCTION IF EXISTS get_financial_summary(UUID) CASCADE;
+DROP FUNCTION IF EXISTS get_financial_summary(TEXT) CASCADE;
 DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
 DROP TABLE IF EXISTS contracts CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
@@ -24,7 +24,7 @@ DROP TABLE IF EXISTS suppliers CASCADE;
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS suppliers (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
   rfc             TEXT,
   email           TEXT,
@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_suppliers_status  ON suppliers(status);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS requisitions (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   folio           TEXT NOT NULL,              -- REQ-2026-001
   title           TEXT NOT NULL,
   description     TEXT,
@@ -111,7 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_requisitions_status  ON requisitions(status);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS purchase_orders (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   folio           TEXT NOT NULL,              -- OC-2026-001
   requisition_id  UUID REFERENCES requisitions(id),
   supplier_id     UUID REFERENCES suppliers(id),
@@ -163,7 +163,7 @@ ALTER TABLE requisitions
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS supplier_quotes (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   requisition_id  UUID REFERENCES requisitions(id),
   supplier_id     UUID REFERENCES suppliers(id),
   folio_proveedor TEXT,
@@ -207,7 +207,7 @@ CREATE INDEX IF NOT EXISTS idx_quotes_supplier ON supplier_quotes(supplier_id);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS invoices_out (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   lead_id         UUID,                       -- FK opcional a leads
   folio           TEXT NOT NULL,              -- F-2026-001
   uuid_cfdi       TEXT,                       -- UUID SAT
@@ -261,7 +261,7 @@ CREATE INDEX IF NOT EXISTS idx_inv_out_due_date ON invoices_out(due_date);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS invoices_in (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   supplier_id     UUID REFERENCES suppliers(id),
   purchase_order_id UUID REFERENCES purchase_orders(id),
   folio_proveedor TEXT,
@@ -310,7 +310,7 @@ CREATE INDEX IF NOT EXISTS idx_inv_in_due_date   ON invoices_in(due_date);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS payments (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   type            TEXT NOT NULL CHECK (type IN ('cobro','pago')),  -- cobro=CXC, pago=CXP
   invoice_out_id  UUID REFERENCES invoices_out(id),
   invoice_in_id   UUID REFERENCES invoices_in(id),
@@ -353,7 +353,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_type    ON payments(type);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS contracts (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
   type            TEXT NOT NULL CHECK (type IN ('cliente','proveedor','laboral','otro')),
   counterpart_name TEXT NOT NULL,
   counterpart_rfc  TEXT,
@@ -424,7 +424,7 @@ $$;
 -- ─────────────────────────────────────────────────────────────
 -- RPC: Resumen financiero para copiloto (usado por finanzas.html)
 -- ─────────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION get_financial_summary(p_company_id UUID)
+CREATE OR REPLACE FUNCTION get_financial_summary(p_company_id TEXT)
 RETURNS JSON
 LANGUAGE sql SECURITY DEFINER AS $$
   SELECT JSON_BUILD_OBJECT(
@@ -461,8 +461,8 @@ LANGUAGE sql SECURITY DEFINER AS $$
 $$;
 
 -- Restringir RPC a usuarios autenticados
-REVOKE ALL ON FUNCTION get_financial_summary(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION get_financial_summary(UUID) TO authenticated;
+REVOKE ALL ON FUNCTION get_financial_summary(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_financial_summary(TEXT) TO authenticated;
 
 -- ─────────────────────────────────────────────────────────────
 -- DATOS DE PRUEBA — comentar en producción
