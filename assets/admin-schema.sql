@@ -415,7 +415,7 @@ $$;
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION get_financial_summary(p_company_id UUID)
 RETURNS JSON
-LANGUAGE plpgsql SECURITY DEFINER AS $$
+LANGUAGE plpgsql SECURITY DEFINER AS $fin$
 DECLARE
   v_cxc_total     NUMERIC;
   v_cxc_vencida   NUMERIC;
@@ -424,57 +424,32 @@ DECLARE
   v_cobros_mes    NUMERIC;
   v_pagos_mes     NUMERIC;
 BEGIN
-  -- CXC: total pendiente de cobrar
   SELECT COALESCE(SUM(total),0) INTO v_cxc_total
-  FROM invoices_out
-  WHERE company_id = p_company_id
-    AND status NOT IN ('pagada','cancelada');
+  FROM invoices_out WHERE company_id = p_company_id AND status NOT IN ('pagada','cancelada');
 
-  -- CXC vencida (días_vencidos > 0)
   SELECT COALESCE(SUM(total),0) INTO v_cxc_vencida
-  FROM invoices_out
-  WHERE company_id = p_company_id
-    AND status NOT IN ('pagada','cancelada')
-    AND due_date < CURRENT_DATE;
+  FROM invoices_out WHERE company_id = p_company_id AND status NOT IN ('pagada','cancelada') AND due_date < CURRENT_DATE;
 
-  -- CXP: total pendiente de pagar
   SELECT COALESCE(SUM(total),0) INTO v_cxp_total
-  FROM invoices_in
-  WHERE company_id = p_company_id
-    AND status NOT IN ('pagada','rechazada');
+  FROM invoices_in WHERE company_id = p_company_id AND status NOT IN ('pagada','rechazada');
 
-  -- CXP próximos 30 días
   SELECT COALESCE(SUM(total),0) INTO v_cxp_proxima
-  FROM invoices_in
-  WHERE company_id = p_company_id
-    AND status NOT IN ('pagada','rechazada')
-    AND due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 30;
+  FROM invoices_in WHERE company_id = p_company_id AND status NOT IN ('pagada','rechazada') AND due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 30;
 
-  -- Cobros este mes
   SELECT COALESCE(SUM(amount),0) INTO v_cobros_mes
-  FROM payments
-  WHERE company_id = p_company_id
-    AND type = 'cobro'
-    AND DATE_TRUNC('month', payment_date) = DATE_TRUNC('month', CURRENT_DATE);
+  FROM payments WHERE company_id = p_company_id AND type = 'cobro' AND DATE_TRUNC('month', payment_date) = DATE_TRUNC('month', CURRENT_DATE);
 
-  -- Pagos este mes
   SELECT COALESCE(SUM(amount),0) INTO v_pagos_mes
-  FROM payments
-  WHERE company_id = p_company_id
-    AND type = 'pago'
-    AND DATE_TRUNC('month', payment_date) = DATE_TRUNC('month', CURRENT_DATE);
+  FROM payments WHERE company_id = p_company_id AND type = 'pago' AND DATE_TRUNC('month', payment_date) = DATE_TRUNC('month', CURRENT_DATE);
 
   RETURN JSON_BUILD_OBJECT(
-    'cxc_total',     v_cxc_total,
-    'cxc_vencida',   v_cxc_vencida,
-    'cxp_total',     v_cxp_total,
-    'cxp_proxima30', v_cxp_proxima,
-    'cobros_mes',    v_cobros_mes,
-    'pagos_mes',     v_pagos_mes,
+    'cxc_total', v_cxc_total, 'cxc_vencida', v_cxc_vencida,
+    'cxp_total', v_cxp_total, 'cxp_proxima30', v_cxp_proxima,
+    'cobros_mes', v_cobros_mes, 'pagos_mes', v_pagos_mes,
     'flujo_neto_mes', v_cobros_mes - v_pagos_mes
   );
 END;
-$$;
+$fin$;
 
 -- Restringir RPC a usuarios autenticados
 REVOKE ALL ON FUNCTION get_financial_summary(UUID) FROM PUBLIC;
