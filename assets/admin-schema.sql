@@ -224,10 +224,7 @@ CREATE TABLE IF NOT EXISTS invoices_out (
   payment_date    DATE,
   status          TEXT NOT NULL DEFAULT 'emitida'
                   CHECK (status IN ('borrador','emitida','enviada','parcial','pagada','vencida','cancelada')),
-  days_overdue    INTEGER GENERATED ALWAYS AS (
-                    CASE WHEN status NOT IN ('pagada','cancelada') AND due_date < CURRENT_DATE
-                    THEN CURRENT_DATE - due_date ELSE 0 END
-                  ) STORED,
+  days_overdue    INTEGER DEFAULT 0,
   collection_priority TEXT DEFAULT 'normal'
                   CHECK (collection_priority IN ('urgente','alta','normal','baja')),
   last_contact_at TIMESTAMPTZ,
