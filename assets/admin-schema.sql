@@ -24,7 +24,7 @@ DROP TABLE IF EXISTS suppliers CASCADE;
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS suppliers (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL,
   name            TEXT NOT NULL,
   rfc             TEXT,
   email           TEXT,
@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_suppliers_status  ON suppliers(status);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS requisitions (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL,
   folio           TEXT NOT NULL,              -- REQ-2026-001
   title           TEXT NOT NULL,
   description     TEXT,
@@ -111,7 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_requisitions_status  ON requisitions(status);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS purchase_orders (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL,
   folio           TEXT NOT NULL,              -- OC-2026-001
   requisition_id  UUID REFERENCES requisitions(id),
   supplier_id     UUID REFERENCES suppliers(id),
@@ -163,7 +163,7 @@ ALTER TABLE requisitions
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS supplier_quotes (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL,
   requisition_id  UUID REFERENCES requisitions(id),
   supplier_id     UUID REFERENCES suppliers(id),
   folio_proveedor TEXT,
@@ -207,7 +207,7 @@ CREATE INDEX IF NOT EXISTS idx_quotes_supplier ON supplier_quotes(supplier_id);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS invoices_out (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL,
   lead_id         UUID,                       -- FK opcional a leads
   folio           TEXT NOT NULL,              -- F-2026-001
   uuid_cfdi       TEXT,                       -- UUID SAT
@@ -261,7 +261,7 @@ CREATE INDEX IF NOT EXISTS idx_inv_out_due_date ON invoices_out(due_date);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS invoices_in (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL,
   supplier_id     UUID REFERENCES suppliers(id),
   purchase_order_id UUID REFERENCES purchase_orders(id),
   folio_proveedor TEXT,
@@ -310,7 +310,7 @@ CREATE INDEX IF NOT EXISTS idx_inv_in_due_date   ON invoices_in(due_date);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS payments (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL,
   type            TEXT NOT NULL CHECK (type IN ('cobro','pago')),  -- cobro=CXC, pago=CXP
   invoice_out_id  UUID REFERENCES invoices_out(id),
   invoice_in_id   UUID REFERENCES invoices_in(id),
@@ -353,7 +353,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_type    ON payments(type);
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS contracts (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  company_id      TEXT NOT NULL,
   type            TEXT NOT NULL CHECK (type IN ('cliente','proveedor','laboral','otro')),
   counterpart_name TEXT NOT NULL,
   counterpart_rfc  TEXT,
