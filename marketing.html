@@ -2668,7 +2668,7 @@ async function runAgentImage(id, output) {
     setP(100, '✅ Imagen lista');
     output.innerHTML = `
       <div style="margin-top:6px">
-        <img src="${url}" style="width:100%;border-radius:8px;display:block;max-height:400px;object-fit:contain;border:1px solid rgba(167,139,250,.2)">
+        <img src="${url}" alt="Imagen generada por IA" style="width:100%;border-radius:8px;display:block;max-height:400px;object-fit:contain;border:1px solid rgba(167,139,250,.2)">
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           <a href="${url}" download="flux2-metatronix-${Date.now()}.png"
             style="padding:6px 14px;background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.25);border-radius:6px;text-decoration:none;font-size:11px;font-weight:700;font-family:'Inter',sans-serif">

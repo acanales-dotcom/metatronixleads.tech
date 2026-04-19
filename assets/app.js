@@ -490,7 +490,7 @@ function renderHeader(user, activePage) {
   .company-switcher-item.active { color: var(--cyan); font-weight: 700; }
   .company-switcher-item.active::after { content: '✓'; margin-left: auto; font-size: 10px; }
   </style>
-  <aside class="app-sidebar">
+  <aside class="app-sidebar" aria-label="Panel lateral">
 
     <!-- Brand -->
     <a href="/home.html" class="sidebar-brand" style="text-decoration:none">
@@ -517,7 +517,7 @@ function renderHeader(user, activePage) {
     </div>` : ''}
 
     <!-- Navigation — 5 primary modules + tools -->
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" aria-label="Navegación principal" role="navigation">
 
       <!-- PRIMARY 5 MODULES (always visible, top) -->
       <a href="/home.html" class="sidebar-nav-link ${activePage==='home'?'active':''}" id="nav-home">
