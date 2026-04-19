@@ -580,6 +580,61 @@ Estructura tu respuesta con:
 }
 
 /* ═══════════════════════════════════════════════════════════
+   HANDLER: Supabase DB Migrate Proxy
+   Ruta: POST /db-migrate
+   Body: { sql: string }
+   Header: X-Supa-Pat: <Personal Access Token sbp_...>
+   Auth: Supabase JWT (solo admin/super_admin) + PAT en header
+   Propósito: Ejecutar DDL en Supabase Management API desde el
+   browser, sin restricciones de CORS ni de IP de GitHub Actions.
+   ═══════════════════════════════════════════════════════════ */
+async function handleDbMigrate(request, env, origin) {
+  // Verificar que es admin via JWT
+  const { user, err } = await requireAuth(request, env, origin);
+  if (err) return err;
+
+  // Obtener PAT del header especial
+  const pat = request.headers.get('X-Supa-Pat') || '';
+  if (!pat.startsWith('sbp_')) {
+    return jsonResp({ error: 'X-Supa-Pat header requerido (debe empezar con sbp_)' }, 400, origin);
+  }
+
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResp({ error: 'Body JSON inválido' }, 400, origin);
+  }
+
+  const { sql, project_ref } = body;
+  if (!sql) return jsonResp({ error: 'Campo sql requerido' }, 400, origin);
+
+  const ref = project_ref || 'hodrfonbpmqulkyzrzpq';
+
+  try {
+    const supaResp = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({ query: sql }),
+    });
+
+    const respBody = await supaResp.text();
+
+    return new Response(respBody, {
+      status: supaResp.status,
+      headers: {
+        ...corsHeaders(origin),
+        ...SECURITY_HEADERS,
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (e) {
+    return jsonResp({ error: 'Error conectando con Supabase API: ' + e.message }, 502, origin);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    ROUTER PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 export default {
@@ -602,9 +657,10 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
 
-    if (path === '/hf')         return handleHF(request, env, origin);
-    if (path === '/groq')       return handleGroq(request, env, origin);
-    if (path === '/ceo-query')  return handleCeoQuery(request, env, origin);
+    if (path === '/hf')          return handleHF(request, env, origin);
+    if (path === '/groq')        return handleGroq(request, env, origin);
+    if (path === '/ceo-query')   return handleCeoQuery(request, env, origin);
+    if (path === '/db-migrate')  return handleDbMigrate(request, env, origin);
 
     return handleClaude(request, env, origin);
   },
