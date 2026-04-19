@@ -296,6 +296,28 @@ function buildShell() {
   </div>`;
 }
 
+function showSchemaSetup(tableName) {
+  const root = document.querySelector('.cobr-root') || document.querySelector('main');
+  if (!root || document.getElementById('schema-setup-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'schema-setup-banner';
+  banner.style.cssText = 'background:#1a0a00;border:2px solid #ffb400;border-radius:12px;padding:24px 28px;margin-bottom:20px';
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <span style="font-size:24px">⚠️</span>
+      <div>
+        <div style="font-weight:700;font-size:15px;color:#ffb400">Tablas de base de datos no creadas</div>
+        <div style="font-size:12px;color:#a07040;margin-top:2px">La tabla <code style="background:rgba(255,180,0,.1);padding:2px 6px;border-radius:4px;color:#ffd080">${tableName}</code> no existe en Supabase todavía.</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#c0a060;line-height:1.6;margin-bottom:16px">Necesitas ejecutar el schema SQL una sola vez en el SQL Editor de Supabase. Abre el link, pega el contenido del archivo <strong>assets/admin-schema.sql</strong> y presiona Run.</p>
+    <a href="https://supabase.com/dashboard/project/hodrfonbpmqulkyzrzpq/sql/new" target="_blank"
+       style="background:#ffb400;color:#000;font-weight:700;font-size:12px;padding:9px 18px;border-radius:6px;text-decoration:none;display:inline-block">
+      🗃️ Abrir Supabase SQL Editor →
+    </a>`;
+  root.insertBefore(banner, root.firstChild);
+}
+
 async function loadInvoices() {
   const btn = document.getElementById('btn-refresh');
   if (btn) { btn.disabled=true; btn.textContent='⏳'; }
@@ -309,6 +331,7 @@ async function loadInvoices() {
       .lte('due_date', new Date().toISOString().split('T')[0])  // solo vencidas
       .order('days_overdue', { ascending: false })
       .limit(100);
+    if (error?.code === '42P01') { showSchemaSetup('invoices_out'); _invoices = []; if (btn) { btn.disabled=false; btn.textContent='↺ Actualizar'; } return; }
     if (error) throw error;
     _invoices = data || [];
   } catch(e) {
