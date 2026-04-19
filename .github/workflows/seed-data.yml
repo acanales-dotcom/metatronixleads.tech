@@ -7,15 +7,18 @@
 name: Seed Data → Supabase
 
 on:
-  push:
-    paths:
-      - '.github/workflows/seed-data.yml'
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribir "seed" para confirmar inserción'
+        required: true
+        default: ''
 
 jobs:
   seed:
     name: Insertar seed data
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'seed' || github.event_name == 'push' }}
 
     steps:
       - name: Checkout
