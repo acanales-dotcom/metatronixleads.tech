@@ -162,9 +162,17 @@
 
   /* ── Init ───────────────────────────────────────────────── */
   async function init () {
-    db          = typeof getDB === 'function' ? getDB() : null;
-    sessionId   = SESSION_KEY;
-    currentUser = typeof getCurrentUser === 'function' ? await getCurrentUser() : null;
+    db        = typeof getDB === 'function' ? getDB() : null;
+    sessionId = SESSION_KEY;
+
+    // Retry hasta 4 veces con 600ms de espera — auth puede tardar más de 800ms
+    if (typeof getCurrentUser === 'function') {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        currentUser = await getCurrentUser();
+        if (currentUser) break;
+        await new Promise(r => setTimeout(r, 600));
+      }
+    }
 
     if (!currentUser) return;
 
@@ -1183,7 +1191,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     document.addEventListener('DOMContentLoaded', init);
   } else {
     // Small delay to ensure app.js auth is ready
-    setTimeout(init, 800);
+    setTimeout(init, 1200);
   }
 
 })();
