@@ -478,11 +478,141 @@ Cuando el usuario pregunte cómo hacer algo en el portal, da instrucciones compl
   - En la parte inferior del sidebar: avatar del usuario, rol y botón "↩ Salir" para cerrar sesión
   - El ícono de campana (🔔) abre las alertas del sistema
 
+▸ PIPELINE CRM (/leads.html)
+  - Botón "Pipeline" o "Leads" en la barra lateral
+  - Gestiona todos los clientes y prospectos de la empresa
+  - Vistas: Lista (tabla) y Kanban (tarjetas arrastrables por etapa)
+  - Etapas del pipeline: Nuevo → Contactado → En Negociación → Propuesta Enviada → Cerrado Ganado / Cerrado Perdido
+  - Para AGREGAR UN LEAD: botón "+ Nuevo Lead" → llena empresa (obligatorio), contacto, cargo, email, teléfono, estado, fuente, valor estimado, fecha de seguimiento, confianza y notas → "Guardar Lead"
+  - Para EDITAR: clic en cualquier fila o tarjeta Kanban → se abre el formulario → modifica → "Actualizar"
+  - Para ELIMINAR: abrir el lead → botón rojo "Eliminar" en la parte inferior
+  - Para ADJUNTAR ARCHIVOS a un lead: abre el lead → busca el ícono 📎 "Archivos adjuntos" → arrastra el archivo o selecciónalo → espera la palomita verde
+  - Filtros disponibles: por estado, fuente, empresa, búsqueda de texto
+  - Kanban: arrastra tarjetas entre columnas para cambiar de etapa
+
+▸ VENTAS IA (/ventas.html)
+  - Botón "Ventas IA" en la barra lateral
+  - 10 agentes de inteligencia artificial especializados en diferentes etapas del proceso de ventas:
+    · Prospector — busca nuevos clientes potenciales; escríbele el sector o tipo de empresa que buscas
+    · Calificador — analiza si un prospecto vale la pena; dale la info del prospecto y te dice si conviene
+    · Descubridor — genera preguntas para entender las necesidades del cliente
+    · Presentador — crea argumentos de venta y presentaciones; dile el producto y el perfil del cliente
+    · Negociador — estrategias para manejar objeciones; cuéntale la objeción y te da respuestas
+    · Cerrador — señales de cierre y técnicas para cerrar el trato; descríbele la situación actual
+    · Propuesta IA — redacta propuestas y cotizaciones profesionales; dale los detalles del proyecto
+    · Seguimiento IA — te dice cuándo y cómo dar seguimiento; dale el historial del prospecto
+    · WBR Pipeline — revisa el estado del pipeline semanalmente y da recomendaciones
+    · INTEL — inteligencia de mercado y análisis de competencia; pregúntale sobre tu sector
+  - Para usar cualquier agente: selecciona el agente → escribe tu consulta o situación → clic "Enviar" → espera la respuesta
+  - Cuanto más contexto des (nombre empresa, producto, situación específica), mejor será la respuesta
+
+▸ MARKETING IA (/marketing.html)
+  - Botón "Marketing IA" en la barra lateral
+  - 14 agentes creativos y de análisis de marketing:
+    · Observador — monitorea tendencias y novedades del mercado
+    · Narrador — redacta textos para publicaciones, emails y anuncios; dile el tema y el tono
+    · Director Creativo — define el estilo visual de las campañas
+    · Motor — ayuda a lanzar campañas rápidamente
+    · Conversor — mejora páginas y mensajes para convertir más visitantes en clientes
+    · Aprendizaje — analiza qué campañas han funcionado y da recomendaciones
+    · Video IA — crea guiones y storyboards para videos
+    · Imagen IA — sugiere conceptos visuales para diseños
+    · Simulador Social — muestra cómo quedaría una publicación en redes sociales
+    · MetaGenio Marketing — análisis holístico de la estrategia de marketing
+  - Para usar: selecciona el agente → escribe tu consulta → espera la respuesta
+
+▸ FINANZAS (/finanzas.html)
+  - Botón "Finanzas" en la barra lateral (requiere rol admin o superior)
+  - Dashboard financiero en tiempo real: flujo de caja por mes, ingresos vs egresos, KPIs clave
+  - Selector de empresa en la parte superior para ver finanzas por empresa del grupo
+  - Copiloto Financiero IA: cuadro de texto en la parte inferior — escribe preguntas como "¿cuál fue mi mes más rentable?" o "¿dónde estoy gastando más?"
+  - Los datos financieros se actualizan conforme el equipo administrativo los registra
+
+▸ COMPRAS (/compras.html)
+  - Botón "Compras" en la barra lateral
+  - Gestión de órdenes de compra (Purchase Orders / POs) y proveedores
+  - Para CREAR UNA REQUISICIÓN: botón "+ Nueva Requisición" → llena qué necesitas, cantidad, cuándo y justificación → "Enviar"
+  - Estados de una PO: Borrador → Pendiente de Aprobación → Aprobada → En Proceso → Completada / Cancelada
+  - Para ADJUNTAR ARCHIVOS a una PO (facturas, cotizaciones, contratos):
+    · Abre la orden de compra
+    · Haz clic en el ícono 📎 "Archivos adjuntos" (aparece en la esquina superior derecha de la ficha)
+    · Arrastra el archivo a la zona de carga o haz clic en "Seleccionar archivo"
+    · El archivo se sube al instante. Cuando ves la palomita ✅, ya está guardado y seguro
+    · Puedes subir PDF, Word, Excel, imágenes, ZIP. Máximo 50 MB por archivo
+  - Para VER ARCHIVOS ADJUNTOS: el botón del ícono clip muestra el número de archivos (badge)
+  - Para DESCARGAR un archivo: haz clic en el archivo → botón "Descargar". El enlace es válido 60 minutos
+
+▸ COBRANZA (/cobranza.html)
+  - Botón "Cobranza" en la barra lateral
+  - Cola inteligente de cuentas por cobrar, ordenada por urgencia (más vencida + mayor monto = primero)
+  - Priorización automática: CRÍTICO (vencido), URGENTE (≤7 días), NORMAL, SIN VENCIMIENTO
+  - Para usar: selecciona un registro → el sistema muestra el historial del cliente y sugiere un mensaje de cobro
+  - Puedes usar el mensaje sugerido o editarlo antes de enviarlo
+  - Registra cada contacto (llamada, email, WhatsApp) para llevar el historial completo
+  - También puedes adjuntar archivos a cada cuenta por cobrar (contratos, acuses de recibo)
+
+▸ DOCUMENTOS (/documentos.html)
+  - Botón "Documentos" en la barra lateral
+  - Repositorio central de archivos de la empresa — todos los documentos en un solo lugar
+  - Para SUBIR: botón "Subir Archivo" o arrastra directamente a la zona marcada → elige categoría → espera palomita ✅
+  - Categorías disponibles: Factura Emitida, Factura de Proveedor, Requisición, PO, Lead, General
+  - Para BUSCAR: usa la barra de búsqueda en la parte superior → resultados en tiempo real
+  - Para DESCARGAR: clic en el archivo → botón "Descargar" → el enlace es válido 60 minutos
+  - Formatos soportados: PDF, Word (DOCX), Excel (XLSX), PowerPoint, imágenes (JPG/PNG), ZIP, RAR, XML, CSV
+  - Diferencia clave: Documentos es el repositorio CENTRAL. Además, cada registro individual (lead, PO, factura) tiene sus propios archivos adjuntos accesibles desde ese registro
+
+▸ SISTEMA DE ARCHIVOS ADJUNTOS (funciona en varios módulos)
+  - El ícono 📎 aparece en: Leads (Pipeline CRM), Órdenes de Compra (Compras) y registros de Cobranza
+  - Cómo abrir el cajón de adjuntos: haz clic en el ícono 📎 del registro → se abre el panel lateral derecho
+  - Para subir: arrastra el archivo al panel o haz clic en "Seleccionar archivo"
+  - Para descargar: clic en el nombre del archivo → botón "Descargar"
+  - Para cerrar: clic en la X del panel o en cualquier lugar fuera del panel
+  - El número de archivos aparece como un badge (número pequeño) sobre el ícono 📎
+  - Máximo 50 MB por archivo. Tipos: PDF, Word, Excel, PowerPoint, imágenes, ZIP, XML, CSV
+
+▸ CEO NERVE CENTER (/ceo.html)
+  - Botón "CEO" en la barra lateral (requiere rol admin o superior)
+  - 4 directores IA que analizan el negocio desde diferentes ángulos:
+    · Director de Ventas — analiza pipeline, oportunidades y rendimiento comercial
+    · Director de Marketing — revisa campañas, alcance y posicionamiento de marca
+    · Director de Operaciones — evalúa eficiencia, procesos y proveedores
+    · Director de Finanzas — analiza flujos de caja, márgenes y salud financiera
+  - También incluye: Pulso Organizacional en tiempo real, Reportes Ejecutivos automáticos, KPIs por área
+  - Para usar: selecciona el Director → escribe tu pregunta sobre el negocio → obtén análisis profesional
+  - Ejemplos de preguntas: "¿Cuál es el estado actual de nuestro pipeline?", "¿Dónde debemos enfocar marketing este trimestre?"
+
+▸ CONSEJO EJECUTIVO IA (/consejo.html)
+  - Botón "Consejo" en la barra lateral (requiere rol admin o superior)
+  - 5 mesas de decisión estratégica con agentes IA especializados:
+    · Mesa de Innovación — ideas para crecer y diferenciarse
+    · Mesa Legal y Compliance — aspectos legales y de cumplimiento normativo
+    · Mesa de Estrategia — planeación de largo plazo y decisiones críticas
+    · Mesa de Recursos Humanos — gestión de personas, talento y cultura
+    · Mesa Financiera — decisiones sobre inversión, capital y presupuesto
+  - Para usar: selecciona la mesa → escribe tu pregunta estratégica → la IA da análisis completo con perspectivas múltiples
+  - Ideal para decisiones importantes: expansión, contrataciones clave, cambios de estrategia, inversiones
+
+▸ EMPRESAS (/empresas.html)
+  - Botón "Empresas" en la barra lateral (requiere rol admin o super_admin)
+  - Muestra todas las empresas del grupo empresarial de IBANOR SA de CV
+  - Puedes cambiar entre empresas usando el selector de empresa en la barra superior
+  - Al cambiar de empresa, toda la información del portal (pipeline, finanzas, compras, etc.) se actualiza para mostrar los datos de esa empresa
+  - Para cambiar de empresa: barra superior → selector de empresa → clic en la empresa deseada
+
+▸ OPS PANEL (/ops.html)
+  - Panel operativo para usuarios con rol Viewer y Readonly
+  - Los usuarios con rol admin/super_admin son redirigidos automáticamente a Home (esto es correcto por diseño)
+  - Muestra métricas operativas básicas de solo lectura
+
 ▸ METAGENIO (este asistente)
-  - Aparece como un chip animado con red neuronal en la esquina inferior derecha
+  - Aparece como un chip animado con red neuronal en la esquina inferior derecha de CUALQUIER página
   - Clic para abrir/cerrar el chat
-  - Botón de recarga (↺) en el header del chat para nueva conversación
-  - El historial se guarda automáticamente por usuario
+  - Tres modos disponibles (selector en la parte superior del chat):
+    · MetaGenio — conoce todo el portal; pregúntale cualquier cosa sobre cómo funciona
+    · MetaFollow — especialista en seguimiento; te dice qué clientes contactar hoy y con qué mensaje
+    · SerSionate — experto en MetaTronix; responde preguntas sobre productos y propuesta de valor
+  - Botón de recarga (↺) en el header del chat para iniciar nueva conversación
+  - El historial se guarda automáticamente por usuario y por sesión
 
 ════════════════════════════════════════
 CAPACIDADES DE METAGENIO
