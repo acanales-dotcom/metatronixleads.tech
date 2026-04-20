@@ -2,7 +2,7 @@
    MetaTronix Portal — Service Worker
    Stale-while-revalidate para assets estáticos
    ============================================================ */
-const CACHE = 'mtx-v20260420c';
+const CACHE = 'mtx-v20260420f';
 const STATIC = [
   '/assets/style.css',
   '/assets/app.js',
@@ -41,8 +41,8 @@ self.addEventListener('fetch', e => {
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith('/supabase') || url.hostname.includes('workers.dev')) return;
 
-  // JS siempre fresco desde la red (nunca stale)
-  if (url.pathname.endsWith('.js')) {
+  // JS y HTML siempre frescos desde la red (network-first, nunca stale)
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.html') || url.pathname === '/') {
     e.respondWith(
       fetch(e.request).then(resp => {
         if (resp.ok) caches.open(CACHE).then(c => c.put(e.request, resp.clone()));
@@ -52,7 +52,7 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // CSS/HTML/imágenes: stale-while-revalidate
+  // CSS/imágenes/fuentes: stale-while-revalidate
   e.respondWith(
     caches.open(CACHE).then(cache =>
       cache.match(e.request).then(cached => {
