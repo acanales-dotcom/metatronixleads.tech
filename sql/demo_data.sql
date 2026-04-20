@@ -10,16 +10,9 @@ INSERT INTO companies (id, slug, name, rfc, status) VALUES
   ('d0000000-0000-0000-0000-000000000001', 'nexus-demo', 'Grupo Nexus SA de CV', 'GNX900101AAA', 'activo')
 ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;
 
--- 2. Usuario demo en auth.users (requiere Supabase Auth API — ver workflow)
--- El perfil se crea aquí asumiendo que el usuario ya existe en auth
-INSERT INTO profiles (id, email, full_name, role, company_id)
-VALUES ('00000000-0000-0000-0000-000000000099', 'demo@mttxai.com', 'Demo MTTX AI', 'admin', 'd0000000-0000-0000-0000-000000000001')
-ON CONFLICT (id) DO UPDATE SET role='admin', company_id='d0000000-0000-0000-0000-000000000001';
-
--- Membresía: demo tiene acceso a su empresa
-INSERT INTO user_companies (user_id, company_id, role)
-VALUES ('00000000-0000-0000-0000-000000000099', 'd0000000-0000-0000-0000-000000000001', 'admin')
-ON CONFLICT DO NOTHING;
+-- 2. Usuario demo: se crea manualmente desde el Supabase Auth dashboard
+-- (demo@mttxai.com / role=admin / company=Grupo Nexus)
+-- No se puede crear vía Management API SQL porque requiere auth.users
 
 -- ============================================================
 -- LEADS / PIPELINE
@@ -78,12 +71,14 @@ ON CONFLICT DO NOTHING;
 -- ============================================================
 -- REQUISICIONES
 -- ============================================================
-INSERT INTO requisitions (id, company_id, folio, title, category, requested_date, needed_date, amount_estimated, status, requested_by)
+-- Requisitions: requested_by usa un admin existente de IBANOR (acanales@ibanormexico.com)
+-- Si no existe ningún perfil, se omite el campo (NULL permitido)
+INSERT INTO requisitions (id, company_id, folio, title, category, requested_date, needed_date, amount_estimated, status)
 VALUES
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-001', 'Licencias Microsoft 365 E3 — 50 usuarios', 'Software',     CURRENT_DATE-8,  CURRENT_DATE+7,  185000.00, 'aprobada',  '00000000-0000-0000-0000-000000000099'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-002', 'Servidores AWS EC2 Q2',                    'Infraestructura',CURRENT_DATE-3, CURRENT_DATE+14, 92000.00,  'pendiente', '00000000-0000-0000-0000-000000000099'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-003', 'Material de oficina trimestral',           'Papelería',    CURRENT_DATE-1,  CURRENT_DATE+5,  18500.00,  'borrador',  '00000000-0000-0000-0000-000000000099'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-004', 'Consultoría transformación digital',       'Consultoría',  CURRENT_DATE-15, CURRENT_DATE-5,  350000.00, 'completada','00000000-0000-0000-0000-000000000099')
+  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-001', 'Licencias Microsoft 365 E3 — 50 usuarios', 'Software',      CURRENT_DATE-8,  CURRENT_DATE+7,  185000.00, 'aprobada'),
+  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-002', 'Servidores AWS EC2 Q2',                    'Infraestructura',CURRENT_DATE-3, CURRENT_DATE+14, 92000.00,  'pendiente'),
+  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-003', 'Material de oficina trimestral',           'Papelería',     CURRENT_DATE-1,  CURRENT_DATE+5,  18500.00,  'borrador'),
+  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-004', 'Consultoría transformación digital',       'Consultoría',   CURRENT_DATE-15, CURRENT_DATE-5,  350000.00, 'completada')
 ON CONFLICT DO NOTHING;
 
 SELECT 'Demo data Grupo Nexus insertado correctamente' AS resultado;
