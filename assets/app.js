@@ -656,6 +656,10 @@ function renderHeader(user, activePage) {
       <a href="/admin.html" class="sidebar-nav-link ${activePage==='admin'?'active':''}">
         <span class="nav-icon">⚙</span>
         <span class="nav-label">Panel Sistema</span>
+      </a>
+      <a href="/empresas.html" class="sidebar-nav-link ${activePage==='empresas'?'active':''}">
+        <span class="nav-icon">🏢</span>
+        <span class="nav-label">Empresas</span>
       </a>` : ''}
       ${isSuperAdmin ? `
       <a href="/security-audit.html" class="sidebar-nav-link ${activePage==='security-audit'?'active':''}" style="color:var(--red)">

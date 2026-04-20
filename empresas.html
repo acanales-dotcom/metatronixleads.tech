@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Empresas — MetaTronix</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=20260418">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/config.js?v=20260418"></script>
+  <script src="/assets/app.js?v=20260418"></script>
+  <style>
+    .emp-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1300px; margin:0 auto; }
+
+    /* Stats row */
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+    .stat-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 20px; }
+    .stat-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+    .stat-val { font-family:var(--font-head); font-size:2rem; color:var(--accent); line-height:1; }
+    .stat-sub { font-size:11px; color:var(--text-muted); margin-top:4px; }
+
+    /* Grid layout */
+    .emp-grid { display:grid; grid-template-columns:1fr 380px; gap:20px; align-items:start; }
+    @media(max-width:900px){ .emp-grid{ grid-template-columns:1fr; } }
+
+    /* Company list */
+    .company-list { display:flex; flex-direction:column; gap:10px; }
+    .company-card {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:var(--radius-lg); padding:16px 20px;
+      cursor:pointer; transition:.15s; display:flex; align-items:center; gap:16px;
+    }
+    .company-card:hover { border-color:var(--accent); background:var(--surface3); }
+    .company-card.selected { border-color:var(--accent); background:rgba(0,255,136,.04); }
+    .company-icon { width:40px; height:40px; border-radius:var(--radius); background:var(--surface3); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .company-info { flex:1; min-width:0; }
+    .company-name { font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .company-meta { font-size:11px; color:var(--text-muted); margin-top:2px; font-family:var(--font-mono); }
+    .company-badges { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+    .badge-users { background:rgba(0,194,224,.12); color:var(--cyan); border-radius:20px; padding:2px 10px; font-size:11px; font-weight:700; }
+    .badge-status { border-radius:20px; padding:2px 10px; font-size:10px; font-weight:700; letter-spacing:.05em; }
+    .badge-status.activo { background:rgba(0,255,136,.12); color:var(--accent); }
+    .badge-status.inactivo { background:rgba(255,80,80,.1); color:var(--danger); }
+
+    /* Right panel */
+    .right-panel { display:flex; flex-direction:column; gap:16px; position:sticky; top:24px; }
+    .panel-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; }
+    .panel-title { font-family:var(--font-head); font-size:1.1rem; color:var(--text); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+
+    /* Form */
+    .form-group { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+    .form-label { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); }
+    .form-input {
+      background:var(--surface3); border:1px solid var(--border); border-radius:var(--radius);
+      color:var(--text); font-size:13px; padding:8px 12px; width:100%; box-sizing:border-box;
+      font-family:var(--font-sans); transition:.15s;
+    }
+    .form-input:focus { outline:none; border-color:var(--accent); }
+    .form-input::placeholder { color:var(--text-muted); }
+    .form-select { background:var(--surface3); border:1px solid var(--border); border-radius:var(--radius); color:var(--text); font-size:13px; padding:8px 12px; width:100%; box-sizing:border-box; }
+
+    /* Members list */
+    .members-wrap { display:none; }
+    .members-wrap.visible { display:block; }
+    .member-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+    .member-row:last-child { border:none; }
+    .member-avatar { width:30px; height:30px; border-radius:50%; background:var(--surface3); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--accent); flex-shrink:0; }
+    .member-info { flex:1; min-width:0; }
+    .member-email { font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .member-role { font-size:10px; color:var(--text-muted); font-family:var(--font-mono); }
+    .member-remove { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; padding:2px 6px; border-radius:4px; transition:.15s; flex-shrink:0; }
+    .member-remove:hover { color:var(--danger); background:rgba(255,80,80,.1); }
+
+    /* Assign user form */
+    .assign-row { display:flex; gap:8px; }
+    .assign-row .form-input { flex:1; }
+
+    /* Empty states */
+    .empty-state { text-align:center; padding:32px; color:var(--text-muted); font-size:13px; }
+    .empty-state .empty-icon { font-size:2rem; margin-bottom:8px; }
+
+    /* Section header */
+    .section-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .section-hdr-title { font-family:var(--font-head); font-size:1.3rem; color:var(--text); }
+
+    /* Toast */
+    #toast { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+    .toast-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; font-size:13px; color:var(--text); box-shadow:0 4px 20px rgba(0,0,0,.4); animation:slideIn .25s ease; min-width:240px; display:flex; align-items:center; gap:10px; }
+    .toast-item.success { border-left:3px solid var(--accent); }
+    .toast-item.error   { border-left:3px solid var(--danger); }
+    @keyframes slideIn { from{transform:translateX(40px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    .divider { height:1px; background:var(--border); margin:12px 0; }
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page">
+  <div class="o-cp" style="margin-bottom:0">
+    <div class="o-cp-top">
+      <nav class="o-breadcrumbs">
+        <a href="/home.html">MetaTronix</a>
+        <span class="o-breadcrumbs-sep">›</span>
+        <span class="o-breadcrumbs-current">Empresas</span>
+      </nav>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="loadAll()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Actualizar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="emp-root">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Empresas</div>
+        <div class="stat-val" id="stat-total">—</div>
+        <div class="stat-sub">registradas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Activas</div>
+        <div class="stat-val" id="stat-active">—</div>
+        <div class="stat-sub">en operación</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Usuarios</div>
+        <div class="stat-val" id="stat-users">—</div>
+        <div class="stat-sub">asignados en total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Empresa activa</div>
+        <div class="stat-val" style="font-size:1.1rem;padding-top:4px" id="stat-current">—</div>
+        <div class="stat-sub">tu sesión actual</div>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="emp-grid">
+
+      <!-- LEFT: company list -->
+      <div>
+        <div class="section-hdr">
+          <span class="section-hdr-title">🏢 Empresas registradas</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input class="form-input" style="width:200px;padding:6px 10px" placeholder="Buscar empresa..." id="search-input" oninput="filterCompanies()">
+          </div>
+        </div>
+        <div class="company-list" id="company-list">
+          <div class="empty-state"><div class="empty-icon">⏳</div>Cargando empresas...</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: panels -->
+      <div class="right-panel">
+
+        <!-- Nueva empresa -->
+        <div class="panel-card">
+          <div class="panel-title">➕ Nueva empresa</div>
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input class="form-input" id="new-name" placeholder="Empresa SA de CV">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Slug (URL-friendly)</label>
+            <input class="form-input" id="new-slug" placeholder="empresa-sa">
+          </div>
+          <div class="form-group">
+            <label class="form-label">RFC</label>
+            <input class="form-input" id="new-rfc" placeholder="ESA900101XXX" style="text-transform:uppercase">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select class="form-select" id="new-status">
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="createCompany()">Crear empresa</button>
+        </div>
+
+        <!-- Miembros (visible al seleccionar empresa) -->
+        <div class="panel-card members-wrap" id="members-panel">
+          <div class="panel-title" id="members-title">👥 Miembros</div>
+
+          <!-- Assign user -->
+          <div class="form-group">
+            <label class="form-label">Agregar usuario por email</label>
+            <div class="assign-row">
+              <input class="form-input" id="assign-email" placeholder="user@empresa.com" type="email">
+              <select class="form-select" style="width:110px" id="assign-role">
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+            <button class="btn btn-accent" style="width:100%;margin-top:8px" onclick="assignUser()">Agregar</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Members list -->
+          <div id="members-list">
+            <div class="empty-state"><div class="empty-icon">👥</div>Sin miembros asignados</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Company actions -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="toggleStatus()" id="btn-toggle-status">Desactivar</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="confirmDelete()">Eliminar empresa</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   EMPRESAS.HTML — Gestión multiempresa
+   Requiere: super_admin o admin
+══════════════════════════════════════════════════════ */
+
+let _sb = null;
+let _companies = [];
+let _selectedCompany = null;
+let _userMap = {};   // uuid → {email, full_name}
+
+/* ─── Init ─────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', async () => {
+  await MTX.waitForUser();
+  const user = window._mtxCurrentUser;
+  if (!user) { location.href = '/index.html'; return; }
+  const role = user.profile?.role;
+  if (!['admin','super_admin'].includes(role)) {
+    document.querySelector('.emp-root').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">🔒</div>Acceso restringido — solo administradores</div>';
+    return;
+  }
+
+  _sb = window._supabase || supabase.createClient(
+    window.MTX_CONFIG.SUPABASE_URL,
+    window.MTX_CONFIG.SUPABASE_ANON_KEY
+  );
+
+  // Current company name
+  const currentId = window.getActiveCompanyId?.() || user.profile?.company_id;
+  if (currentId) {
+    const { data } = await _sb.from('companies').select('name').eq('id', currentId).single();
+    document.getElementById('stat-current').textContent = data?.name || '—';
+  }
+
+  await loadAll();
+});
+
+/* ─── Load ─────────────────────────────────────────── */
+async function loadAll() {
+  await loadCompanies();
+  await loadUserMap();
+  renderStats();
+}
+
+async function loadCompanies() {
+  const { data, error } = await _sb
+    .from('companies')
+    .select('id, slug, name, rfc, status, created_at')
+    .order('name');
+  if (error) { toast('Error cargando empresas: ' + error.message, 'error'); return; }
+  _companies = data || [];
+
+  // Load member counts
+  const { data: uc } = await _sb.from('user_companies').select('company_id');
+  const counts = {};
+  (uc || []).forEach(r => { counts[r.company_id] = (counts[r.company_id] || 0) + 1; });
+  _companies.forEach(c => c._memberCount = counts[c.id] || 0);
+
+  renderCompanyList();
+}
+
+async function loadUserMap() {
+  const { data } = await _sb.from('profiles').select('id, email, full_name');
+  _userMap = {};
+  (data || []).forEach(u => { _userMap[u.id] = u; });
+  document.getElementById('stat-users').textContent =
+    Object.keys(_userMap).length;
+}
+
+/* ─── Render ────────────────────────────────────────── */
+function renderStats() {
+  document.getElementById('stat-total').textContent = _companies.length;
+  document.getElementById('stat-active').textContent =
+    _companies.filter(c => c.status === 'activo').length;
+}
+
+function renderCompanyList() {
+  const list = document.getElementById('company-list');
+  if (!_companies.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🏢</div>No hay empresas registradas</div>';
+    return;
+  }
+  const q = (document.getElementById('search-input').value || '').toLowerCase();
+  const filtered = q
+    ? _companies.filter(c => c.name.toLowerCase().includes(q) || (c.slug||'').includes(q))
+    : _companies;
+
+  list.innerHTML = filtered.map(c => `
+    <div class="company-card${_selectedCompany?.id === c.id ? ' selected' : ''}"
+         onclick="selectCompany('${escHtml(c.id)}')">
+      <div class="company-icon">${companyEmoji(c.name)}</div>
+      <div class="company-info">
+        <div class="company-name">${escHtml(c.name)}</div>
+        <div class="company-meta">${escHtml(c.slug)} ${c.rfc ? '· ' + escHtml(c.rfc) : ''}</div>
+      </div>
+      <div class="company-badges">
+        <span class="badge-users">👥 ${c._memberCount}</span>
+        <span class="badge-status ${escHtml(c.status)}">${escHtml(c.status)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCompanies() { renderCompanyList(); }
+
+function companyEmoji(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('tech') || n.includes('digital') || n.includes('software')) return '💻';
+  if (n.includes('farma') || n.includes('salud') || n.includes('health')) return '💊';
+  if (n.includes('construc') || n.includes('cemex') || n.includes('material')) return '🏗️';
+  if (n.includes('aliment') || n.includes('food') || n.includes('pacifico')) return '🍱';
+  if (n.includes('energia') || n.includes('limpia') || n.includes('solar')) return '⚡';
+  if (n.includes('transporte') || n.includes('veloz') || n.includes('logis')) return '🚛';
+  if (n.includes('retail') || n.includes('express')) return '🛒';
+  if (n.includes('manufactura') || n.includes('precisa')) return '🏭';
+  if (n.includes('deloitte') || n.includes('consultor')) return '📊';
+  return '🏢';
+}
+
+/* ─── Select company ────────────────────────────────── */
+async function selectCompany(id) {
+  _selectedCompany = _companies.find(c => c.id === id);
+  if (!_selectedCompany) return;
+  renderCompanyList(); // update selected state
+
+  // Show members panel
+  const panel = document.getElementById('members-panel');
+  panel.classList.add('visible');
+  document.getElementById('members-title').textContent =
+    '👥 ' + _selectedCompany.name;
+
+  // Toggle status button
+  const btn = document.getElementById('btn-toggle-status');
+  btn.textContent = _selectedCompany.status === 'activo' ? 'Desactivar' : 'Activar';
+
+  await loadMembers(id);
+}
+
+async function loadMembers(companyId) {
+  const { data, error } = await _sb
+    .from('user_companies')
+    .select('user_id, role, created_at')
+    .eq('company_id', companyId)
+    .order('created_at');
+
+  const el = document.getElementById('members-list');
+  if (error) { el.innerHTML = '<div class="empty-state">Error: ' + escHtml(error.message) + '</div>'; return; }
+  if (!data || !data.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div>Sin miembros asignados</div>';
+    return;
+  }
+
+  el.innerHTML = data.map(m => {
+    const profile = _userMap[m.user_id];
+    const email = profile?.email || m.user_id.slice(0,8) + '...';
+    const initials = email.slice(0,2).toUpperCase();
+    return `
+      <div class="member-row" id="member-${escHtml(m.user_id)}">
+        <div class="member-avatar">${initials}</div>
+        <div class="member-info">
+          <div class="member-email">${escHtml(email)}</div>
+          <div class="member-role">${escHtml(m.role)}</div>
+        </div>
+        <button class="member-remove" title="Quitar de empresa"
+          onclick="removeMember('${escHtml(m.user_id)}')">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ─── Create company ────────────────────────────────── */
+async function createCompany() {
+  const name   = document.getElementById('new-name').value.trim();
+  const slug   = document.getElementById('new-slug').value.trim().toLowerCase().replace(/\s+/g,'-');
+  const rfc    = document.getElementById('new-rfc').value.trim().toUpperCase();
+  const status = document.getElementById('new-status').value;
+
+  if (!name || !slug) { toast('Nombre y slug son obligatorios', 'error'); return; }
+
+  const { data, error } = await _sb
+    .from('companies')
+    .insert({ name, slug, rfc: rfc || null, status })
+    .select()
+    .single();
+
+  if (error) {
+    const msg = error.message.includes('unique') ? 'El slug ya existe — elige otro' : error.message;
+    toast('Error: ' + msg, 'error'); return;
+  }
+
+  toast('✅ Empresa "' + name + '" creada', 'success');
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-slug').value = '';
+  document.getElementById('new-rfc').value  = '';
+  await loadCompanies();
+  selectCompany(data.id);
+}
+
+// Auto-fill slug from name
+document.addEventListener('DOMContentLoaded', () => {
+  const nameInput = document.getElementById('new-name');
+  const slugInput = document.getElementById('new-slug');
+  if (nameInput && slugInput) {
+    nameInput.addEventListener('input', () => {
+      if (!slugInput._touched) {
+        slugInput.value = nameInput.value
+          .toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+          .replace(/[^a-z0-9]+/g,'-')
+          .replace(/^-|-$/g,'');
+      }
+    });
+    slugInput.addEventListener('input', () => { slugInput._touched = true; });
+  }
+});
+
+/* ─── Assign user ───────────────────────────────────── */
+async function assignUser() {
+  if (!_selectedCompany) { toast('Selecciona una empresa primero', 'error'); return; }
+  const email = document.getElementById('assign-email').value.trim().toLowerCase();
+  const role  = document.getElementById('assign-role').value;
+  if (!email) { toast('Escribe el email del usuario', 'error'); return; }
+
+  // Find profile by email
+  const { data: profiles } = await _sb
+    .from('profiles')
+    .select('id, email')
+    .eq('email', email)
+    .limit(1);
+
+  if (!profiles || !profiles.length) {
+    toast('Usuario no encontrado: ' + email, 'error'); return;
+  }
+  const userId = profiles[0].id;
+
+  const { error } = await _sb.from('user_companies').insert({
+    user_id: userId,
+    company_id: _selectedCompany.id,
+    role
+  });
+
+  if (error) {
+    const msg = error.message.includes('duplicate') ? 'El usuario ya está en esta empresa'
+              : error.message;
+    toast('Error: ' + msg, 'error'); return;
+  }
+
+  toast('✅ ' + email + ' agregado como ' + role, 'success');
+  document.getElementById('assign-email').value = '';
+  _companies.find(c => c.id === _selectedCompany.id)._memberCount++;
+  await loadMembers(_selectedCompany.id);
+  renderCompanyList();
+}
+
+/* ─── Remove member ─────────────────────────────────── */
+async function removeMember(userId) {
+  if (!_selectedCompany) return;
+  const profile = _userMap[userId];
+  const email = profile?.email || userId.slice(0,8);
+  if (!confirm('¿Quitar a ' + email + ' de ' + _selectedCompany.name + '?')) return;
+
+  const { error } = await _sb.from('user_companies')
+    .delete()
+    .eq('user_id', userId)
+    .eq('company_id', _selectedCompany.id);
+
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  toast('Usuario removido', 'success');
+  const c = _companies.find(c => c.id === _selectedCompany.id);
+  if (c) c._memberCount = Math.max(0, (c._memberCount||1) - 1);
+  document.getElementById('member-' + userId)?.remove();
+  renderCompanyList();
+}
+
+/* ─── Toggle status ─────────────────────────────────── */
+async function toggleStatus() {
+  if (!_selectedCompany) return;
+  const newStatus = _selectedCompany.status === 'activo' ? 'inactivo' : 'activo';
+  const { error } = await _sb.from('companies')
+    .update({ status: newStatus })
+    .eq('id', _selectedCompany.id);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  _selectedCompany.status = newStatus;
+  _companies.find(c => c.id === _selectedCompany.id).status = newStatus;
+  document.getElementById('btn-toggle-status').textContent =
+    newStatus === 'activo' ? 'Desactivar' : 'Activar';
+  toast('Estado actualizado: ' + newStatus, 'success');
+  renderStats();
+  renderCompanyList();
+}
+
+/* ─── Delete ────────────────────────────────────────── */
+async function confirmDelete() {
+  if (!_selectedCompany) return;
+  const name = _selectedCompany.name;
+  const typed = prompt(`Esta acción eliminará "${name}" y todas sus membresías.\nEscribe el nombre exacto para confirmar:`);
+  if (typed !== name) { toast('Nombre incorrecto — cancelado', 'error'); return; }
+
+  const { error } = await _sb.from('companies').delete().eq('id', _selectedCompany.id);
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  toast('Empresa eliminada', 'success');
+  _selectedCompany = null;
+  document.getElementById('members-panel').classList.remove('visible');
+  await loadCompanies();
+}
+
+/* ─── Toast ─────────────────────────────────────────── */
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  const item = document.createElement('div');
+  item.className = 'toast-item ' + type;
+  item.innerHTML = (type === 'success' ? '✅ ' : '❌ ') + escHtml(msg);
+  el.appendChild(item);
+  setTimeout(() => item.remove(), 3500);
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
