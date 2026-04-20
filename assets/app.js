@@ -747,22 +747,52 @@ async function loadCompanySwitcher() {
 
   // Update display name
   const active = window.MTX_ACTIVE_COMPANY;
-  if (nameEl) nameEl.textContent = active?.name || 'Todas las empresas';
+  if (nameEl) nameEl.textContent = active?.name || 'Selecciona empresa';
 
   try {
     const db = getSupabase();
-    const { data: companies, error } = await db
-      .from('companies')
-      .select('id, name, rfc, status')
-      .order('name');
+    const user = window._mtxCurrentUser;
+    const isAdminRole = ['admin','super_admin'].includes(user?.profile?.role);
+
+    let companies, error;
+
+    if (isAdminRole) {
+      // Admins ven todas las empresas activas
+      ({ data: companies, error } = await db
+        .from('companies')
+        .select('id, name, rfc, status')
+        .eq('status','activo')
+        .order('name'));
+    } else {
+      // Usuarios normales: solo empresas a las que pertenecen
+      const { data: memberships, error: mErr } = await db
+        .from('user_companies')
+        .select('company_id, companies(id, name, rfc, status)')
+        .eq('user_id', user?.id);
+      if (mErr) throw mErr;
+      companies = (memberships || [])
+        .map(m => m.companies)
+        .filter(Boolean)
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     if (error) throw error;
 
-    const items = [
-      // "All companies" option for super_admin
-      { id: null, name: 'Todas las empresas', rfc: '', status: 'activo' },
-      ...(companies || [])
-    ];
+    // Auto-seleccionar empresa si solo hay una y no hay activa
+    if (!window.MTX_ACTIVE_COMPANY && companies?.length === 1) {
+      selectCompany(companies[0]);
+      return;
+    }
+
+    // Solo super_admin puede ver "Todas las empresas"
+    const items = isAdminRole
+      ? [{ id: null, name: 'Todas las empresas', rfc: '', status: 'activo' }, ...(companies || [])]
+      : (companies || []);
+
+    if (!items.length) {
+      list.innerHTML = '<div class="company-switcher-item" style="color:var(--text-faint);cursor:default;font-size:12px">Sin empresas asignadas</div>';
+      return;
+    }
 
     list.innerHTML = items.map(c => `
       <div class="company-switcher-item ${(active?.id || null) === c.id ? 'active' : ''}"

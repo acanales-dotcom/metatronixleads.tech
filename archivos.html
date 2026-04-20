@@ -653,6 +653,7 @@
   <div class="fm-tree-panel">
     <div class="fm-tree-head">
       <div class="fm-tree-head-title">📁 Carpetas</div>
+      <div id="company-badge" style="font-size:10px;background:rgba(0,255,136,.12);color:var(--accent);border:1px solid var(--accent-dim);border-radius:20px;padding:2px 8px;font-weight:700;margin-top:4px;text-align:center;font-family:var(--font-mono)">—</div>
     </div>
     <div class="fm-tree-scroll" id="treeScroll">
       <!-- JS lo rellena -->
@@ -837,20 +838,38 @@ const TREE = [
   }
 ];
 
+/* ── Empresa activa ────────────────────────────────────── */
+function getActiveCompanyId() {
+  return window.MTX_ACTIVE_COMPANY?.id || null;
+}
+
+function getActiveCompanyName() {
+  return window.MTX_ACTIVE_COMPANY?.name || 'Empresa';
+}
+
 /* ── Init ─────────────────────────────────────────────── */
 async function init() {
   CU = await requireAuth();
   document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'archivos');
 
-  const email = (CU?.email || '').toLowerCase().trim();
-  if (!IBANOR_EMAILS.includes(email)) {
-    document.getElementById('adScreen').classList.add('show');
-    return;
-  }
-
   document.getElementById('fmLayout').style.display = 'flex';
   fillPeriod();
   await buildTree();
+
+  // Recargar árbol y archivos cuando cambia de empresa
+  window.addEventListener('mtx:companySwitch', () => {
+    CF = null;
+    document.getElementById('fileArea').innerHTML = '';
+    buildTree();
+    updateCompanyBadge();
+  });
+
+  updateCompanyBadge();
+}
+
+function updateCompanyBadge() {
+  const badge = document.getElementById('company-badge');
+  if (badge) badge.textContent = getActiveCompanyName();
 }
 
 /* ── Período ──────────────────────────────────────────── */
@@ -889,11 +908,14 @@ function onPeriod() {
 /* ── Árbol ────────────────────────────────────────────── */
 async function buildTree() {
   const db = getDB();
-  const { data: carpetas } = await db
+  const companyId = getActiveCompanyId();
+  let treeQ = db
     .from('metatronix_docs')
     .select('file_path, title')
     .eq('category','carpeta_admin')
     .like('file_path','admin/%');
+  if (companyId) treeQ = treeQ.eq('company_id', companyId);
+  const { data: carpetas } = await treeQ;
 
   const ents = { clientes:[], proveedores:[] };
   (carpetas||[]).forEach(f => {
@@ -1031,12 +1053,15 @@ async function loadFiles() {
   if (CF.nm) { syncPeriod(); fp += period + '/'; }
 
   const db = getDB();
-  const { data: files, error } = await db
+  const companyId = getActiveCompanyId();
+  let filesQ = db
     .from('metatronix_docs')
     .select('id,title,file_name,file_type,file_size,created_at')
     .eq('category','archivo_admin')
     .like('file_path', fp + '%')
     .order('created_at',{ascending:false});
+  if (companyId) filesQ = filesQ.eq('company_id', companyId);
+  const { data: files, error } = await filesQ;
 
   if (error) {
     toast('Error: ' + error.message,'err');
@@ -1147,6 +1172,7 @@ async function doUpload() {
         file_type: file.type || 'application/octet-stream',
         file_size: file.size,
         file_data: b64,
+        company_id: getActiveCompanyId(),
         uploaded_by: CU?.id || null,
         uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
       });
@@ -1248,6 +1274,7 @@ async function createEnt() {
     file_path: fp,
     file_type: 'folder',
     file_size: 0,
+    company_id: getActiveCompanyId(),
     uploaded_by: CU?.id || null,
     uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
   });

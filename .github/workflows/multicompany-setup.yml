@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# multicompany-setup.yml
+# Ejecuta sql/multicompany_setup.sql en Supabase vía Management API.
+# REQUIERE: secret SUPABASE_ACCESS_TOKEN en GitHub repository settings.
+# Trigger: manual (workflow_dispatch) — confirmar escribiendo "setup"
+# ─────────────────────────────────────────────────────────────────────────────
+name: Multicompany Setup → Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribir "setup" para confirmar'
+        required: true
+        default: ''
+
+jobs:
+  setup:
+    name: Crear companies + user_companies
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'setup' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ejecutar SQL vía Supabase Management API
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Configurando multiempresa en Supabase..."
+          echo "  Proyecto: hodrfonbpmqulkyzrzpq"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          SQL=$(cat sql/multicompany_setup.sql | python3 -c "
+          import sys, json
+          sql = sys.stdin.read()
+          print(json.dumps(sql))
+          ")
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            "https://api.supabase.com/v1/projects/hodrfonbpmqulkyzrzpq/database/query" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\": $SQL}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+            echo "✅ Multicompany setup completado."
+          else
+            echo "❌ Error: HTTP $HTTP_CODE"
+            echo "   Body: $BODY"
+            exit 1
+          fi
+
+      - name: Verificar membresías
+        run: |
+          ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY"
+          BASE="https://hodrfonbpmqulkyzrzpq.supabase.co/rest/v1"
+
+          for TABLE in companies user_companies; do
+            CODE=$(curl -s \
+              -H "apikey: $ANON_KEY" \
+              -H "Authorization: Bearer $ANON_KEY" \
+              -H "Prefer: count=exact" \
+              -o /dev/null -w "%{response_code}" \
+              "$BASE/$TABLE?select=*&limit=0")
+            echo "  $TABLE → HTTP $CODE"
+          done
+
+          echo "✅ Setup verificado. Portal: https://metatronixleads.tech"
