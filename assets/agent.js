@@ -6,6 +6,19 @@
 (function () {
   'use strict';
 
+  /* ── Auto-inject agent.css if not already loaded ────────── */
+  (function injectAgentCSS() {
+    const HREF = '/assets/agent.css';
+    const already = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .some(l => l.href && l.href.includes('agent.css'));
+    if (!already) {
+      const link = document.createElement('link');
+      link.rel  = 'stylesheet';
+      link.href = HREF + '?v=20260420';
+      document.head.appendChild(link);
+    }
+  })();
+
   /* ── Config ─────────────────────────────────────────────── */
   const AGENT_NAME   = 'MetaGenio';
   const AGENT_ROLE   = 'Agente de Seguimiento';
