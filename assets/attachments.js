@@ -7,11 +7,14 @@
 
 /* ── Shim: expone getActiveCompanyId globalmente si app.js aún no lo tiene ── */
 if (typeof window.getActiveCompanyId !== 'function') {
+  const _ATTACH_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   window.getActiveCompanyId = function () {
-    return window.MTX_ACTIVE_COMPANY?.id
-      || window._mtxCurrentUser?.profile?.company_id
-      || window._currentUser?.profile?.company_id
-      || null;
+    const s = window.MTX_ACTIVE_COMPANY?.id;
+    if (s && _ATTACH_UUID_RE.test(s)) return s;
+    const p = window._mtxCurrentUser?.profile?.company_id
+           || window._currentUser?.profile?.company_id;
+    if (p && _ATTACH_UUID_RE.test(p)) return p;
+    return null;
   };
 }
 

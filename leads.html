@@ -886,8 +886,8 @@
 <!-- CORE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260420g"></script>
-<script src="/assets/agent.js?v=20260420g"></script>
+<script src="/assets/app.js?v=20260420h"></script>
+<script src="/assets/agent.js?v=20260422"></script>
 <!-- ALEX: Sales Coach Agent -->
 <script src="/assets/salescoach.js?v=20260420"></script>
 <!-- TEAM CHAT -->
@@ -1366,9 +1366,7 @@ async function loadLeads() {
   const db = getDB();
   // limit(500): previene timeout en tablas grandes; los últimos 500 actualizados cubren
   // el 99% de los casos activos. Para datasets > 500 usar filtro por periodo en futuro.
-  let q = db.from('leads').select('*').order('updated_at',{ascending:false}).limit(500);
-  q = applyUserIsolationFilter(q, 'user_id');
-  const { data, error } = await q;
+  const { data, error } = await db.from('leads').select('*').order('updated_at',{ascending:false}).limit(500);
   if (error) { notify('Error al cargar leads: '+error.message, 'error'); return; }
   allLeads = data || [];
   renderCurrentView();

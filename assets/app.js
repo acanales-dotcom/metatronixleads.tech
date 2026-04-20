@@ -46,109 +46,7 @@ async function requireAuth(adminOnly = false) {
   }
   // Actualizar last_seen
   getDB()?.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {});
-
-  // ── Cache user_companies para isVentasMember() ──────────────
-  const { data: ucs } = await getDB().from('user_companies')
-    .select('company_id, role').eq('user_id', user.id);
-  user._userCompanies = ucs || [];
-  window._mtxCurrentUser = user;
-
-  // ── Contraseña temporal: forzar cambio antes de continuar ──
-  const { data: { user: authUser } } = await getDB().auth.getUser();
-  if (authUser?.user_metadata?.temp_password === true) {
-    await showForcePasswordChange();
-  }
-
   return user;
-}
-
-/* ── Modal de cambio forzado de contraseña ─────────────────── */
-function showForcePasswordChange() {
-  return new Promise(resolve => {
-    // Eliminar modal previo si existe
-    document.getElementById('mtx-pw-modal')?.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'mtx-pw-modal';
-    modal.style.cssText = `
-      position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);
-      display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;
-    `;
-    modal.innerHTML = `
-      <div style="background:#111;border:1px solid #00ff88;border-radius:12px;padding:36px 40px;
-                  max-width:420px;width:90%;box-shadow:0 0 40px rgba(0,255,136,.15);">
-        <div style="color:#00ff88;font-size:22px;font-weight:700;margin-bottom:8px;">
-          🔐 Actualiza tu contraseña
-        </div>
-        <p style="color:#aaa;font-size:14px;margin-bottom:24px;line-height:1.5;">
-          Por seguridad, debes establecer una contraseña personal antes de continuar.
-        </p>
-        <div style="margin-bottom:16px;">
-          <label style="color:#ccc;font-size:12px;display:block;margin-bottom:6px;">NUEVA CONTRASEÑA</label>
-          <input id="mtx-pw-new" type="password" placeholder="Mínimo 8 caracteres"
-            style="width:100%;box-sizing:border-box;padding:10px 14px;background:#1a1a1a;border:1px solid #333;
-                   border-radius:8px;color:#fff;font-size:14px;outline:none;">
-        </div>
-        <div style="margin-bottom:24px;">
-          <label style="color:#ccc;font-size:12px;display:block;margin-bottom:6px;">CONFIRMAR CONTRASEÑA</label>
-          <input id="mtx-pw-confirm" type="password" placeholder="Repite la contraseña"
-            style="width:100%;box-sizing:border-box;padding:10px 14px;background:#1a1a1a;border:1px solid #333;
-                   border-radius:8px;color:#fff;font-size:14px;outline:none;">
-        </div>
-        <div id="mtx-pw-error" style="color:#ff4444;font-size:13px;margin-bottom:16px;display:none;"></div>
-        <button id="mtx-pw-btn"
-          style="width:100%;padding:12px;background:#00ff88;color:#000;border:none;border-radius:8px;
-                 font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;">
-          GUARDAR CONTRASEÑA
-        </button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    const btnEl  = document.getElementById('mtx-pw-btn');
-    const errEl  = document.getElementById('mtx-pw-error');
-    const newEl  = document.getElementById('mtx-pw-new');
-    const confEl = document.getElementById('mtx-pw-confirm');
-
-    btnEl.addEventListener('click', async () => {
-      const pw1 = newEl.value.trim();
-      const pw2 = confEl.value.trim();
-      errEl.style.display = 'none';
-
-      if (pw1.length < 8) {
-        errEl.textContent = 'La contraseña debe tener al menos 8 caracteres.';
-        errEl.style.display = 'block'; return;
-      }
-      if (pw1 !== pw2) {
-        errEl.textContent = 'Las contraseñas no coinciden.';
-        errEl.style.display = 'block'; return;
-      }
-
-      btnEl.textContent = 'Guardando...';
-      btnEl.disabled = true;
-
-      try {
-        const db = getDB();
-        // 1. Cambiar contraseña
-        const { error: pwErr } = await db.auth.updateUser({ password: pw1 });
-        if (pwErr) throw pwErr;
-        // 2. Limpiar flag temp_password
-        await db.auth.updateUser({ data: { temp_password: false } });
-
-        modal.remove();
-        showToast('✅ Contraseña actualizada correctamente', 'success');
-        resolve();
-      } catch (e) {
-        errEl.textContent = e.message || 'Error al actualizar la contraseña.';
-        errEl.style.display = 'block';
-        btnEl.textContent = 'GUARDAR CONTRASEÑA';
-        btnEl.disabled = false;
-      }
-    });
-
-    // Focus automático
-    setTimeout(() => newEl.focus(), 100);
-  });
 }
 
 /* ── Control de uso Claude ─────────────────────────────────── */
@@ -834,12 +732,17 @@ window.MTX_ACTIVE_COMPANY = JSON.parse(sessionStorage.getItem('mtx_active_compan
 
 /**
  * Retorna el company_id activo: primero el switcher, luego el perfil del usuario.
- * Úsalo en cualquier módulo para obtener el filtro correcto.
+ * Solo retorna valores que sean UUIDs válidos (evita slugs como 'ibanor').
  */
+const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUUID(v) { return typeof v === 'string' && _UUID_RE.test(v); }
+
 function getActiveCompanyId() {
-  return window.MTX_ACTIVE_COMPANY?.id
-    || window._mtxCurrentUser?.profile?.company_id
-    || null;
+  const fromSwitcher = window.MTX_ACTIVE_COMPANY?.id;
+  if (isValidUUID(fromSwitcher)) return fromSwitcher;
+  const fromProfile = window._mtxCurrentUser?.profile?.company_id;
+  if (isValidUUID(fromProfile)) return fromProfile;
+  return null;
 }
 
 /**
@@ -849,29 +752,6 @@ function getActiveCompanyId() {
 function applyCompanyFilter(query) {
   const id = getActiveCompanyId();
   return id ? query.eq('company_id', id) : query;
-}
-
-/**
- * Retorna true si el usuario actual es SOLO member (ventas) en todas sus empresas.
- * Estos usuarios no pueden ver a otros members ni sus datos.
- */
-function isVentasMember() {
-  const uc = window._mtxCurrentUser?._userCompanies;
-  if (!uc || !uc.length) return false;
-  return uc.every(m => m.role === 'member');
-}
-
-/**
- * Aplica filtro de usuario (assigned_to o created_by) cuando el usuario
- * es solo ventas/member — aísla sus datos de los de otros members.
- * @param {object} query - Supabase query builder
- * @param {string} [userField='assigned_to'] - columna del usuario asignado
- */
-function applyUserIsolationFilter(query, userField = 'assigned_to') {
-  if (!isVentasMember()) return query;
-  const uid = window._mtxCurrentUser?.id;
-  if (!uid) return query;
-  return query.eq(userField, uid);
 }
 
 /**
@@ -914,7 +794,7 @@ async function loadCompanySwitcher() {
   if (nameEl) nameEl.textContent = active?.name || 'Selecciona empresa';
 
   try {
-    const db = getDB();
+    const db = getSupabase();
     const user = window._mtxCurrentUser;
     const isAdminRole = ['admin','super_admin'].includes(user?.profile?.role);
 
@@ -957,11 +837,9 @@ async function loadCompanySwitcher() {
       return;
     }
 
-    // Store items globally so onclick can reference by index (avoids JSON-in-HTML quote conflicts)
-    window._MTX_COMPANY_LIST = items;
-    list.innerHTML = items.map((c, i) => `
+    list.innerHTML = items.map(c => `
       <div class="company-switcher-item ${(active?.id || null) === c.id ? 'active' : ''}"
-           onclick="selectCompany(window._MTX_COMPANY_LIST[${i}])">
+           onclick="selectCompany(${c.id ? JSON.stringify(c) : 'null'})">
         <span style="font-size:11px">${c.id ? '🏢' : '🌐'}</span>
         <div style="flex:1;min-width:0">
           <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.name)}</div>

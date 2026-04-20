@@ -11,8 +11,8 @@
   <link rel="stylesheet" href="/assets/style.css?v=20260420">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js?v=20260420"></script>
-  <script src="/assets/app.js?v=20260420g"></script>
-  <script src="/assets/attachments.js?v=20260420"></script>
+  <script src="/assets/app.js?v=20260420h"></script>
+  <script src="/assets/attachments.js?v=20260420b"></script>
   <style>
     .docs-root { display:flex; flex-direction:column; gap:20px; padding:24px; max-width:1300px; margin:0 auto; }
 
@@ -380,20 +380,34 @@ async function delDoc(id, path, name) {
 async function uploadGeneral(files) {
   if (!files || !files.length) return;
   const statusEl = document.getElementById('general-upload-status');
-  const cid = getActiveCompanyId() || _user?.profile?.company_id;
-  if (!cid) { statusEl.textContent = 'Error: sin empresa activa'; return; }
+
+  // Obtener company UUID válido
+  let cid = getActiveCompanyId();
+  if (!cid) {
+    // Último recurso: consultar user_companies para obtener UUID real
+    try {
+      const { data: uc } = await _db.from('user_companies')
+        .select('company_id').eq('user_id', _user?.id).limit(1).single();
+      cid = uc?.company_id || null;
+    } catch {}
+  }
+  if (!cid) {
+    statusEl.textContent = '⚠ Selecciona una empresa en el switcher (parte superior) antes de subir.';
+    return;
+  }
 
   statusEl.textContent = `Subiendo ${files.length} archivo(s)…`;
-  let ok = 0, fail = 0;
+  let ok = 0;
+  const errors = [];
 
   for (const file of files) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const path = `${cid}/general/general/${Date.now()}_${safeName}`;
 
     const { error: upErr } = await _db.storage.from('docs').upload(path, file, { upsert: false });
-    if (upErr) { fail++; continue; }
+    if (upErr) { errors.push(`${file.name}: ${upErr.message}`); continue; }
 
-    await _db.from('record_attachments').insert({
+    const { error: dbErr } = await _db.from('record_attachments').insert({
       company_id: cid,
       record_type: 'general',
       record_id: null,
@@ -403,12 +417,23 @@ async function uploadGeneral(files) {
       mime_type: file.type || null,
       storage_path: path,
     });
+    if (dbErr) {
+      // Revertir el archivo subido si el registro falla
+      await _db.storage.from('docs').remove([path]);
+      errors.push(`${file.name}: ${dbErr.message}`);
+      continue;
+    }
     ok++;
   }
 
-  statusEl.textContent = ok > 0
-    ? `✅ ${ok} archivo(s) subido(s)${fail ? ` · ⚠ ${fail} falló` : ''}`
-    : `❌ ${fail} archivo(s) fallaron`;
+  if (ok > 0 && !errors.length) {
+    statusEl.textContent = `✅ ${ok} archivo(s) subido(s)`;
+  } else if (ok > 0) {
+    statusEl.textContent = `✅ ${ok} subido(s) · ⚠ ${errors.length} falló: ${errors[0]}`;
+  } else {
+    statusEl.textContent = `❌ Error: ${errors[0] || 'No se pudo subir'}`;
+    console.error('[MTX Docs] Upload errors:', errors);
+  }
 
   document.getElementById('general-upload-input').value = '';
   if (ok > 0) await loadDocs();
@@ -451,7 +476,7 @@ function setupShell(page) {
 }
 </script>
 
-<script src="/assets/agent.js?v=20260420g"></script>
+<script src="/assets/agent.js?v=20260422"></script>
 <script src="/assets/teamchat.js?v=20260420"></script>
 </body>
 </html>
