@@ -1,0 +1,264 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# companies-setup.yml
+# Crea empresas IBANOR y METATRONIX + perfiles y membresías de todos los usuarios.
+# EJECUCIÓN: GitHub Actions → "Run workflow" → introduce service_role_key
+# ─────────────────────────────────────────────────────────────────────────────
+name: Setup — Empresas IBANOR y METATRONIX
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_role_key:
+        description: 'Supabase service_role key'
+        required: true
+        type: string
+
+jobs:
+  setup:
+    name: Crear empresas, perfiles y membresías
+    runs-on: ubuntu-latest
+
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ github.event.inputs.service_role_key }}
+
+    steps:
+      # ── 0. Verificar conexión ──────────────────────────────────────
+      - name: "Verificar conexión"
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=id&limit=1")
+          echo "Conexión: HTTP $HTTP"
+          [ "$HTTP" = "200" ] || { echo "❌ Fallo de conexión"; exit 1; }
+
+      # ── 1. Crear empresa IBANOR ────────────────────────────────────
+      - name: "Crear empresa IBANOR"
+        run: |
+          echo "🏢 Upsert IBANOR..."
+          curl -s -o /tmp/ibanor.json -w "\nHTTP %{http_code}\n" \
+            -X POST \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=representation" \
+            -d '{
+              "id": "ibanor",
+              "name": "IBANOR SA de CV",
+              "owner_email": "acanales@ibanormexico.com",
+              "plan": "enterprise",
+              "is_active": true
+            }' \
+            "$SB/rest/v1/companies"
+          echo "IBANOR result:" && cat /tmp/ibanor.json
+
+      # ── 2. Crear empresa METATRONIX ───────────────────────────────
+      - name: "Crear empresa METATRONIX"
+        run: |
+          echo "🏢 Upsert METATRONIX..."
+          curl -s -o /tmp/metatronix.json -w "\nHTTP %{http_code}\n" \
+            -X POST \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=representation" \
+            -d '{
+              "id": "metatronix",
+              "name": "MetaTronix",
+              "owner_email": "acanales@ibanormexico.com",
+              "plan": "enterprise",
+              "is_active": true
+            }' \
+            "$SB/rest/v1/companies"
+          echo "METATRONIX result:" && cat /tmp/metatronix.json
+
+      # ── 3. Obtener UUIDs de auth.users ────────────────────────────
+      - name: "Obtener UUIDs de usuarios"
+        run: |
+          echo "🔍 Obteniendo IDs de auth.users..."
+          for EMAIL in \
+            "acanales@ibanormexico.com" \
+            "ncanales@ibanormexico.com" \
+            "nibarra@ibanormexico.com" \
+            "acanalesf@ibanormexico.com" \
+            "jorge@retaillab.com.mx" \
+            "noe@grupoamsg.com"; do
+
+            RESULT=$(curl -s \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              "$SB/auth/v1/admin/users?email=$EMAIL" 2>/dev/null)
+
+            UID=$(echo "$RESULT" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+users = d.get('users', [])
+if users:
+    print(users[0].get('id',''))
+" 2>/dev/null)
+
+            echo "  $EMAIL → $UID"
+            # Guardar en archivo para siguiente step
+            echo "${EMAIL}=${UID}" >> /tmp/user_ids.env
+          done
+          echo "IDs guardados:" && cat /tmp/user_ids.env
+
+      # ── 4. Upsert perfiles ────────────────────────────────────────
+      - name: "Upsert perfiles de todos los usuarios"
+        run: |
+          source /tmp/user_ids.env 2>/dev/null || true
+
+          # Parsear IDs
+          ACANALESE=$(grep "acanales@ibanormexico" /tmp/user_ids.env | head -1 | cut -d= -f2)
+          NCANALES=$(grep "ncanales" /tmp/user_ids.env | cut -d= -f2)
+          NIBARRA=$(grep "nibarra" /tmp/user_ids.env | cut -d= -f2)
+          ACANALESF=$(grep "acanalesf" /tmp/user_ids.env | cut -d= -f2)
+          JORGE=$(grep "jorge" /tmp/user_ids.env | cut -d= -f2)
+          NOE=$(grep "noe@" /tmp/user_ids.env | cut -d= -f2)
+
+          echo "IDs resueltos:"
+          echo "  acanales:  $ACANALESE"
+          echo "  ncanales:  $NCANALES"
+          echo "  nibarra:   $NIBARRA"
+          echo "  acanalesf: $ACANALESF"
+          echo "  jorge:     $JORGE"
+          echo "  noe:       $NOE"
+
+          upsert_profile() {
+            local UID="$1" EMAIL="$2" ROLE="$3" COMPANY="$4" NAME="$5" DEPT="$6" TITLE="$7" LIMIT="$8"
+            [ -z "$UID" ] && { echo "  ⚠ Sin UID para $EMAIL — skip"; return; }
+            HTTP=$(curl -s -o /tmp/p_${UID}.json -w "%{http_code}" \
+              -X POST \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates,return=minimal" \
+              -d "{
+                \"id\": \"$UID\",
+                \"email\": \"$EMAIL\",
+                \"role\": \"$ROLE\",
+                \"company_id\": \"$COMPANY\",
+                \"full_name\": \"$NAME\",
+                \"department\": \"$DEPT\",
+                \"job_title\": \"$TITLE\",
+                \"consejo_limit\": $LIMIT,
+                \"is_active\": true
+              }" \
+              "$SB/rest/v1/profiles")
+            echo "  $EMAIL ($ROLE) → HTTP $HTTP"
+          }
+
+          # METATRONIX — 6 usuarios
+          upsert_profile "$ACANALESE"  "acanales@ibanormexico.com"  "super_admin"       "metatronix" "A. Canales"    "direccion" "CEO"                       9999
+          upsert_profile "$NCANALES"   "ncanales@ibanormexico.com"  "super_admin"       "metatronix" "N. Canales"    "direccion" "CEO"                       9999
+          upsert_profile "$NIBARRA"    "nibarra@ibanormexico.com"   "admin"             "metatronix" "N. Ibarra"     "finanzas"  "Director Admin y Finanzas" 200
+          upsert_profile "$ACANALESF"  "acanalesf@ibanormexico.com" "admin"             "metatronix" "A. Canales F." "finanzas"  "Director Admin y Finanzas" 200
+          upsert_profile "$JORGE"      "jorge@retaillab.com.mx"     "admin_restringido" "metatronix" "Jorge"         "ventas"    "Director de Ventas"        100
+          upsert_profile "$NOE"        "noe@grupoamsg.com"          "admin_restringido" "metatronix" "Noé"           "ventas"    "Director de Ventas"        100
+
+          echo "✅ Perfiles METATRONIX listos"
+
+      # ── 5. Crear membresías user_companies ────────────────────────
+      - name: "Crear membresías en user_companies"
+        run: |
+          ACANALESE=$(grep "acanales@ibanormexico" /tmp/user_ids.env | head -1 | cut -d= -f2)
+          NCANALES=$(grep "ncanales" /tmp/user_ids.env | cut -d= -f2)
+          NIBARRA=$(grep "nibarra" /tmp/user_ids.env | cut -d= -f2)
+          ACANALESF=$(grep "acanalesf" /tmp/user_ids.env | cut -d= -f2)
+          JORGE=$(grep "jorge" /tmp/user_ids.env | cut -d= -f2)
+          NOE=$(grep "noe@" /tmp/user_ids.env | cut -d= -f2)
+
+          add_membership() {
+            local UID="$1" COMPANY="$2" ROLE="$3" EMAIL="$4"
+            [ -z "$UID" ] && { echo "  ⚠ Sin UID para $EMAIL — skip"; return; }
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X POST \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates,return=minimal" \
+              -d "{\"user_id\": \"$UID\", \"company_id\": \"$COMPANY\", \"role\": \"$ROLE\"}" \
+              "$SB/rest/v1/user_companies")
+            echo "  $EMAIL → $COMPANY ($ROLE) HTTP $HTTP"
+          }
+
+          # IBANOR — 3 usuarios (acanales, nibarra, acanalesf)
+          echo "🔗 Membresías IBANOR:"
+          add_membership "$ACANALESE"  "ibanor" "owner" "acanales@ibanormexico.com"
+          add_membership "$NIBARRA"    "ibanor" "admin" "nibarra@ibanormexico.com"
+          add_membership "$ACANALESF"  "ibanor" "admin" "acanalesf@ibanormexico.com"
+
+          # METATRONIX — 6 usuarios
+          echo "🔗 Membresías METATRONIX:"
+          add_membership "$ACANALESE"  "metatronix" "owner"  "acanales@ibanormexico.com"
+          add_membership "$NCANALES"   "metatronix" "owner"  "ncanales@ibanormexico.com"
+          add_membership "$NIBARRA"    "metatronix" "admin"  "nibarra@ibanormexico.com"
+          add_membership "$ACANALESF"  "metatronix" "admin"  "acanalesf@ibanormexico.com"
+          add_membership "$JORGE"      "metatronix" "member" "jorge@retaillab.com.mx"
+          add_membership "$NOE"        "metatronix" "member" "noe@grupoamsg.com"
+
+      # ── 6. Actualizar profile de IBANOR para nibarra/acanalesf ────
+      - name: "Actualizar company_id IBANOR para nibarra y acanalesf"
+        run: |
+          NIBARRA=$(grep "nibarra" /tmp/user_ids.env | cut -d= -f2)
+          ACANALESF=$(grep "acanalesf" /tmp/user_ids.env | cut -d= -f2)
+          ACANALESE=$(grep "acanales@ibanormexico" /tmp/user_ids.env | head -1 | cut -d= -f2)
+
+          # IBANOR profiles (super_admin)
+          for UID_EMAIL in "${ACANALESE}:acanales@ibanormexico.com" "${NIBARRA}:nibarra@ibanormexico.com" "${ACANALESF}:acanalesf@ibanormexico.com"; do
+            UID="${UID_EMAIL%%:*}"
+            EMAIL="${UID_EMAIL##*:}"
+            [ -z "$UID" ] && continue
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X POST \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates,return=minimal" \
+              -d "{
+                \"id\": \"$UID\",
+                \"email\": \"$EMAIL\",
+                \"role\": \"super_admin\",
+                \"company_id\": \"ibanor\",
+                \"consejo_limit\": 9999,
+                \"is_active\": true
+              }" \
+              "$SB/rest/v1/profiles")
+            echo "  IBANOR profile $EMAIL → HTTP $HTTP"
+          done
+
+      # ── 7. Verificación final ──────────────────────────────────────
+      - name: "Verificación final"
+        run: |
+          echo ""
+          echo "══════════════════════════════════════════════════════"
+          echo "  EMPRESAS"
+          echo "══════════════════════════════════════════════════════"
+          curl -s \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/companies?select=id,name,is_active" | \
+            python3 -c "import json,sys; [print(f'  {c[\"id\"]:15} | {c[\"name\"]:20} | activo:{c.get(\"is_active\")}') for c in json.load(sys.stdin)]" 2>/dev/null || true
+
+          echo ""
+          echo "══════════════════════════════════════════════════════"
+          echo "  PERFILES"
+          echo "══════════════════════════════════════════════════════"
+          curl -s \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=email,role,company_id,department,job_title&order=company_id,email" | \
+            python3 -c "
+import json,sys
+users = json.load(sys.stdin)
+for u in users:
+    print(f'  {u.get(\"email\",\"?\"):40} | {u.get(\"role\",\"?\"):20} | {u.get(\"company_id\",\"?\"):12} | {u.get(\"department\",\"?\")}')
+" 2>/dev/null || true
+
+          echo ""
+          echo "══════════════════════════════════════════════════════"
+          echo "  MEMBRESÍAS"
+          echo "══════════════════════════════════════════════════════"
+          curl -s \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/user_companies?select=user_id,company_id,role" | \
+            python3 -c "
+import json,sys
+rows = json.load(sys.stdin)
+print(f'  Total membresías: {len(rows)}')
+" 2>/dev/null || true
+
+          echo ""
+          echo "✅ Setup IBANOR + METATRONIX completado"
