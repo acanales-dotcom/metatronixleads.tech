@@ -796,11 +796,10 @@ async function loadCompanySwitcher() {
     let companies, error;
 
     if (isAdminRole) {
-      // Admins ven todas las empresas activas
+      // Admins ven todas las empresas (sin filtro de status para compatibilidad con ambos esquemas)
       ({ data: companies, error } = await db
         .from('companies')
-        .select('id, name, rfc, status')
-        .eq('status','activo')
+        .select('id, name, rfc, status, slug')
         .order('name'));
     } else {
       // Usuarios normales: solo empresas a las que pertenecen
