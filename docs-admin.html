@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Documentos Administrativos y Fiscales</title>
+  <link rel="stylesheet" href="/assets/style.css?v=20260420">
+  <link rel="stylesheet" href="/assets/agent.css">
+  <style>
+
+    /* ═══════════════════════════════════════════════════
+       LAYOUT PRINCIPAL
+       La barra lateral del portal fija padding-left:224px
+       en el body. Todo el layout vive dentro de eso.
+    ═══════════════════════════════════════════════════ */
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+
+    .fm-layout {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Panel izquierdo: árbol de carpetas ── */
+    .fm-tree-panel {
+      width: 240px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .fm-tree-head {
+      flex-shrink: 0;
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .fm-tree-head-title {
+      font-family: var(--font-head);
+      font-size: .75rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .fm-tree-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0 12px;
+    }
+
+    .fm-tree-scroll::-webkit-scrollbar { width: 3px; }
+    .fm-tree-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Sección raíz (ej. ADMINISTRACIÓN) ── */
+    .sec {}
+
+    .sec-hdr {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px 8px 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text);
+      transition: background .15s;
+    }
+
+    .sec-hdr:hover { background: var(--surface2); }
+
+    .sec-arrow {
+      font-size: 8px;
+      color: var(--text-faint);
+      transition: transform .2s;
+      flex-shrink: 0;
+      width: 10px;
+      text-align: center;
+    }
+
+    .sec.open > .sec-hdr > .sec-arrow { transform: rotate(90deg); }
+
+    .sec-body { display: none; }
+    .sec.open > .sec-body { display: block; }
+
+    /* ── Nodo sub-grupo (ej. Bancos DLLS) ── */
+    .grp {}
+
+    .grp-hdr {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px 5px 22px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: background .15s, color .15s;
+      position: relative;
+    }
+
+    .grp-hdr::before {
+      content: '';
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      width: 5px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .grp-hdr:hover { background: var(--surface2); color: var(--text); }
+
+    .grp-arrow {
+      font-size: 7px;
+      color: var(--text-faint);
+      transition: transform .2s;
+      flex-shrink: 0;
+    }
+
+    .grp.open > .grp-hdr > .grp-arrow { transform: rotate(90deg); }
+
+    .grp-body { display: none; }
+    .grp.open > .grp-body { display: block; }
+
+    /* ── Nodo hoja clickeable (carga archivos) ── */
+    .leaf {
+      display: flex;
+      align-items: center;
+      padding: 5px 10px 5px 32px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-muted);
+      user-select: none;
+      transition: background .15s, color .15s;
+      border-left: 2px solid transparent;
+      position: relative;
+      line-height: 1.35;
+    }
+
+    .leaf::before {
+      content: '';
+      position: absolute;
+      left: 26px;
+      top: 50%;
+      width: 5px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .leaf:hover { background: var(--surface2); color: var(--text); }
+
+    .leaf.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+      border-left-color: var(--accent);
+    }
+
+    /* Hoja de entidad dinámica (empresa) */
+    .ent-hdr {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px 5px 22px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      color: var(--text-muted);
+      transition: background .15s, color .15s;
+      position: relative;
+    }
+
+    .ent-hdr::before {
+      content: '';
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      width: 5px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .ent-hdr:hover { background: var(--surface2); color: var(--text); }
+
+    .ent-arrow {
+      font-size: 7px;
+      color: var(--text-faint);
+      transition: transform .2s;
+      flex-shrink: 0;
+    }
+
+    .ent-wrap.open > .ent-hdr > .ent-arrow { transform: rotate(90deg); }
+    .ent-subs { display: none; }
+    .ent-wrap.open > .ent-subs { display: block; }
+
+    .add-ent-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px 5px 26px;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--accent);
+      opacity: .6;
+      transition: opacity .15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .add-ent-btn:hover { opacity: 1; }
+
+    /* ── Panel derecho: archivos ── */
+    .fm-file-panel {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .fm-toolbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .fm-bc {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fm-bc .cur { color: var(--accent); }
+    .fm-bc .sep { margin: 0 4px; color: var(--border); }
+
+    .btn-up {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .15s;
+    }
+
+    .btn-up:hover { opacity: .85; }
+    .btn-up:disabled { opacity: .35; cursor: not-allowed; }
+
+    .btn-ico {
+      padding: 6px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-ico:hover { border-color: var(--text); color: var(--text); }
+
+    /* Barra de período (Contabilidad) */
+    .period-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 18px;
+      background: var(--accent-dim);
+      border-bottom: 1px solid rgba(0,255,136,.18);
+      flex-shrink: 0;
+    }
+
+    .period-bar.show { display: flex; }
+
+    .period-bar label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--accent);
+    }
+
+    .period-bar select {
+      padding: 4px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .period-bar select:focus { outline: none; border-color: var(--accent); }
+
+    /* Área de archivos */
+    .fm-files {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 18px;
+    }
+
+    .fm-files::-webkit-scrollbar { width: 4px; }
+    .fm-files::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 10px;
+      color: var(--text-faint);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .empty-state .ei { font-size: 2.5rem; opacity: .25; }
+
+    /* Tabla */
+    .ftbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .ftbl th {
+      padding: 8px 10px;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--text-faint);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .ftbl td {
+      padding: 9px 10px;
+      color: var(--text);
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      vertical-align: middle;
+    }
+
+    .ftbl tr:last-child td { border-bottom: none; }
+    .ftbl tr:hover td { background: var(--surface2); }
+
+    .fn-cell { display: flex; align-items: center; gap: 8px; }
+    .fic { font-size: 15px; flex-shrink: 0; }
+    .fn-txt {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 320px;
+    }
+
+    .fmeta {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .fact { display: flex; gap: 6px; }
+
+    .btr {
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+
+    .btr:hover { border-color: var(--accent); color: var(--accent); }
+    .btr.d:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ═══════════════════════════════════════════════════
+       MODALES
+    ═══════════════════════════════════════════════════ */
+    .mbg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mbg.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 420px;
+      max-width: 92vw;
+    }
+
+    .m-title {
+      font-family: var(--font-head);
+      font-size: 1.15rem;
+      letter-spacing: .08em;
+      color: var(--accent);
+      margin: 0 0 18px;
+    }
+
+    .m-title.danger { color: var(--danger); }
+
+    .frow { margin-bottom: 14px; }
+
+    .frow label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .frow input[type="text"],
+    .frow select {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      box-sizing: border-box;
+      transition: border-color .15s;
+    }
+
+    .frow input:focus,
+    .frow select:focus { outline: none; border-color: var(--accent); }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .drop-zone:hover,
+    .drop-zone.over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      color: var(--text);
+    }
+
+    .drop-zone input { display: none; }
+
+    .file-preview { margin-top: 8px; }
+
+    .fp-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-muted);
+      gap: 12px;
+    }
+
+    .fp-row:last-child { border: none; }
+
+    .prog-wrap { display: none; margin-top: 12px; }
+    .prog-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .prog-fill { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+    .prog-txt { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 5px; text-align: center; }
+
+    .mact {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .btn-prim {
+      padding: 8px 18px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+
+    .btn-prim:hover { opacity: .85; }
+    .btn-prim:disabled { opacity: .35; cursor: not-allowed; }
+
+    .btn-dang {
+      padding: 8px 18px;
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-dang:hover { opacity: .85; }
+
+    .btn-can {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-can:hover { border-color: var(--text); color: var(--text); }
+
+    .conf-name {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--text);
+      background: var(--surface2);
+      padding: 7px 10px;
+      border-radius: var(--radius);
+      word-break: break-all;
+      margin: 8px 0;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       TOASTS
+    ═══════════════════════════════════════════════════ */
+    .toasts {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .toast {
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      max-width: 300px;
+      animation: tin .2s ease;
+    }
+
+    .toast.ok  { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); }
+    .toast.err { background: rgba(200,40,40,.12); border: 1px solid var(--danger); color: var(--danger); }
+    .toast.inf { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+
+    @keyframes tin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ═══════════════════════════════════════════════════
+       PANTALLA DE ACCESO DENEGADO
+    ═══════════════════════════════════════════════════ */
+    .ad {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg, #0b0f1a);
+      z-index: 700;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .ad.show { display: flex; }
+
+    .ad-code {
+      font-family: var(--font-head);
+      font-size: 6rem;
+      letter-spacing: .15em;
+      color: var(--danger);
+      line-height: 1;
+    }
+
+    /* spinner */
+    .spin {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: sp .6s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes sp { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Access denied -->
+<div class="ad" id="adScreen">
+  <div class="ad-code">403</div>
+  <div style="font-size:15px;font-weight:600;color:var(--text)">Acceso restringido</div>
+  <div style="color:var(--text-muted);font-size:13px">Esta sección es exclusiva para administradores.</div>
+  <a href="/dashboard.html" style="margin-top:8px;color:var(--accent);font-size:12px;text-decoration:none">← Volver al portal</a>
+</div>
+
+<!-- Portal sidebar -->
+<div id="header-placeholder"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN LAYOUT
+═══════════════════════════════════════════════════════ -->
+<div class="fm-layout" id="fmLayout" style="display:none;">
+
+  <!-- ── Árbol de carpetas ── -->
+  <div class="fm-tree-panel">
+    <div class="fm-tree-head">
+      <div class="fm-tree-head-title">🗃 Docs Administrativos y Fiscales</div>
+    </div>
+    <div class="fm-tree-scroll" id="treeScroll">
+      <!-- JS lo rellena -->
+    </div>
+  </div>
+
+  <!-- ── Panel de archivos ── -->
+  <div class="fm-file-panel">
+
+    <div class="fm-toolbar">
+      <div class="fm-bc" id="bc"><span class="cur">Selecciona una carpeta</span></div>
+      <span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#4d9fff;background:rgba(26,111,255,.12);border:1px solid rgba(26,111,255,.3);border-radius:var(--radius);padding:4px 9px;white-space:nowrap;">🗃 Documentos Administrativos</span>
+      <button class="btn-ico" onclick="refresh()" title="Recargar">⟳</button>
+      <button class="btn-up" id="btnUp" onclick="openUpload()" disabled>↑ Subir archivo</button>
+    </div>
+
+    <!-- Selector de período (Contabilidad) -->
+    <div class="period-bar" id="periodBar">
+      <label>Período:</label>
+      <select id="selMes" onchange="onPeriod()"></select>
+      <select id="selAnio" onchange="onPeriod()"></select>
+    </div>
+
+    <div class="fm-files" id="fileArea">
+      <div class="empty-state">
+        <div class="ei">🗂</div>
+        <div>Selecciona una carpeta del panel izquierdo</div>
+      </div>
+    </div>
+
+  </div><!-- /fm-file-panel -->
+</div><!-- /fm-layout -->
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: Subir archivo
+═══════════════════════════════════════════════════════ -->
+<div class="mbg" id="mUpload">
+  <div class="modal">
+    <div class="m-title">Subir archivo</div>
+
+    <div class="frow">
+      <label>Carpeta destino</label>
+      <input type="text" id="upDest" readonly style="opacity:.6;cursor:default;">
+    </div>
+
+    <div class="frow">
+      <div class="drop-zone" id="dzone" onclick="document.getElementById('fInput').click()">
+        Arrastra archivos aquí o <strong style="color:var(--accent)">haz clic</strong>
+        <div style="font-size:11px;opacity:.5;margin-top:4px">Máx. 10 MB por archivo</div>
+        <input type="file" id="fInput" multiple onchange="onFiles(this.files)">
+      </div>
+      <div class="file-preview" id="fPreview"></div>
+    </div>
+
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+      <div class="prog-txt" id="progTxt">Subiendo…</div>
+    </div>
+
+    <div class="mact">
+      <button class="btn-can" onclick="closeUpload()">Cancelar</button>
+      <button class="btn-prim" id="btnDo" onclick="doUpload()" disabled>Subir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: Agregar cliente / proveedor
+═══════════════════════════════════════════════════════ -->
+<div class="mbg" id="mEnt">
+  <div class="modal">
+    <div class="m-title" id="entTitle">Agregar Cliente</div>
+    <div class="frow">
+      <label id="entLabel">Nombre</label>
+      <input type="text" id="entName" placeholder="Ej: Empresa XYZ SA de CV">
+    </div>
+    <div class="mact">
+      <button class="btn-can" onclick="closeMEnt()">Cancelar</button>
+      <button class="btn-prim" onclick="createEnt()">Crear carpeta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: Confirmar eliminar
+═══════════════════════════════════════════════════════ -->
+<div class="mbg" id="mDel">
+  <div class="modal">
+    <div class="m-title danger">Eliminar archivo</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">¿Confirmas que deseas eliminar este archivo?</div>
+    <div class="conf-name" id="delName"></div>
+    <div class="mact">
+      <button class="btn-can" onclick="closeMDel()">Cancelar</button>
+      <button class="btn-dang" id="btnDel" onclick="confirmDel()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script src="/assets/app.js?v=20260420"></script>
+<script src="/assets/agent.js?v=20260422"></script>
+<!-- ALEX: Sales Coach Agent -->
+<script src="/assets/salescoach.js?v=20260420"></script>
+<!-- TEAM CHAT -->
+<script src="/assets/teamchat.js?v=20260420"></script>
+<script>
+/* ── Estado global ─────────────────────────────────────── */
+let CU = null;          // currentUser
+let CF = null;          // currentFolder { path, label, needsMonth }
+let period = '';        // 'YYYY-MM'
+let pending = [];       // archivos pendientes de subir
+let delId   = null;
+let entCtx  = null;
+
+/* Documentos Administrativos y Fiscales — acceso para usuarios autenticados */
+/* Categorías de documentos administrativos */
+const CAT_FILE   = 'archivo_admin';
+const CAT_FOLDER = 'carpeta_admin';
+const PFX        = 'admin/';
+
+const MAX_MB  = 10 * 1024 * 1024;
+
+/* ── Árbol de carpetas (definición) ────────────────────── */
+const TREE = [
+  {
+    id:'admon', icon:'🏦', label:'Administración',
+    children:[
+      { label:'Bancos DLLS', children:[
+          { label:'Estados de Cuenta DLLS', path:PFX+'administracion/bancos-dlls/estados-cuenta/' }
+      ]},
+      { label:'Bancos Pesos', children:[
+          { label:'Estados de Cuenta Pesos', path:PFX+'administracion/bancos-pesos/estados-cuenta/' }
+      ]}
+    ]
+  },
+  {
+    id:'clientes', icon:'🤝', label:'Clientes',
+    dynamic:true, etype:'cliente',
+    base:PFX+'clientes/',
+    subs:['Cotizaciones','Contratos','POs','Facturas','Varios']
+  },
+  {
+    id:'prov', icon:'🏭', label:'Proveedores',
+    dynamic:true, etype:'proveedor',
+    base:PFX+'proveedores/',
+    subs:['Cotizaciones','Contratos','POs','Facturas','Varios']
+  },
+  {
+    id:'fiscal', icon:'📋', label:'Fiscal',
+    children:[
+      { label:'Facturas Emitidas',           path:PFX+'fiscal/facturas-emitidas/' },
+      { label:'Facturas Asimilados',        path:PFX+'fiscal/facturas-asimilados/' },
+      { label:'Declaraciones Mensuales',    path:PFX+'fiscal/declaraciones-mensuales/' },
+      { label:'Declaraciones Anuales',      path:PFX+'fiscal/declaraciones-anuales/' },
+      { label:'Documentos SAT',             path:PFX+'fiscal/documentos-sat/' },
+      { label:'FIEL',                       path:PFX+'fiscal/fiel/' },
+      { label:'Planeaciones Fiscales',      path:PFX+'fiscal/planeaciones-fiscales/' }
+    ]
+  },
+  {
+    id:'cont', icon:'📊', label:'Contabilidad',
+    children:[
+      { label:'Pagos Pesos · Egresos',      path:PFX+'contabilidad/pagos-pesos/egresos/',      nm:true },
+      { label:'Pagos Pesos · Ingresos',     path:PFX+'contabilidad/pagos-pesos/ingresos/',     nm:true },
+      { label:'Pagos DLLS · Egresos',       path:PFX+'contabilidad/pagos-dlls/egresos/',       nm:true },
+      { label:'Pagos DLLS · Ingresos',      path:PFX+'contabilidad/pagos-dlls/ingresos/',      nm:true },
+      { label:'Pólizas DLLS · Egresos',     path:PFX+'contabilidad/polizas-dlls/egresos/',     nm:true },
+      { label:'Pólizas DLLS · Ingresos',    path:PFX+'contabilidad/polizas-dlls/ingresos/',    nm:true },
+      { label:'Pólizas Pesos · Egresos',    path:PFX+'contabilidad/polizas-pesos/egresos/',    nm:true },
+      { label:'Pólizas Pesos · Ingresos',   path:PFX+'contabilidad/polizas-pesos/ingresos/',   nm:true }
+    ]
+  },
+  {
+    id:'acta', icon:'📜', label:'Acta Constitutiva',
+    children:[
+      { label:'Cambios y Asambleas',        path:PFX+'acta-constitutiva/cambios-asambleas/' },
+      { label:'Docs Representante Legal',   path:PFX+'acta-constitutiva/representante-legal/' },
+      { label:'Alejandro Canales Farías',   path:PFX+'acta-constitutiva/alejandro-canales-farias/' },
+      { label:'Alejandro Canales Ibarra',   path:PFX+'acta-constitutiva/alejandro-canales-ibarra/' },
+      { label:'Norma B Canales Ibarra',     path:PFX+'acta-constitutiva/norma-b-canales-ibarra/' }
+    ]
+  }
+];
+
+/* ── Init ─────────────────────────────────────────────── */
+async function init() {
+  CU = await requireAuth();
+  document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'docs-admin');
+
+  const email = (CU?.email || '').toLowerCase().trim();
+  if (!IBANOR_EMAILS.includes(email)) {
+    document.getElementById('adScreen').classList.add('show');
+    return;
+  }
+
+  document.getElementById('fmLayout').style.display = 'flex';
+  fillPeriod();
+  await buildTree();
+}
+
+/* ── Período ──────────────────────────────────────────── */
+function fillPeriod() {
+  const MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+              'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const now = new Date();
+  const sm = document.getElementById('selMes');
+  const sy = document.getElementById('selAnio');
+
+  MN.forEach((m,i) => {
+    const o = new Option(m, String(i+1).padStart(2,'0'));
+    if (i+1 === now.getMonth()+1) o.selected = true;
+    sm.appendChild(o);
+  });
+
+  for (let y = now.getFullYear(); y >= now.getFullYear()-5; y--) {
+    const o = new Option(y, y);
+    if (y === now.getFullYear()) o.selected = true;
+    sy.appendChild(o);
+  }
+  syncPeriod();
+}
+
+function syncPeriod() {
+  const m = document.getElementById('selMes').value;
+  const y = document.getElementById('selAnio').value;
+  period = `${y}-${m}`;
+}
+
+function onPeriod() {
+  syncPeriod();
+  if (CF?.nm) loadFiles();
+}
+
+/* ── Árbol ────────────────────────────────────────────── */
+async function buildTree() {
+  const db = getDB();
+  const { data: carpetas } = await db
+    .from('metatronix_docs')
+    .select('file_path, title')
+    .eq('category', CAT_FOLDER)
+    .like('file_path', PFX + '%');
+
+  const ents = { clientes:[], proveedores:[] };
+  (carpetas||[]).forEach(f => {
+    const m = f.file_path.match(/^admin\/(clientes|proveedores)\/([^/]+)\//);
+    if (!m) return;
+    const arr = ents[m[1]];
+    const slug = m[2];
+    if (!arr.find(e => e.slug===slug)) arr.push({ slug, name: f.title||slug });
+  });
+
+  const container = document.getElementById('treeScroll');
+  container.innerHTML = '';
+
+  TREE.forEach(section => {
+    const secEl = mkSec(section, ents);
+    container.appendChild(secEl);
+  });
+}
+
+function mkSec(section, ents) {
+  const div = document.createElement('div');
+  div.className = 'sec open'; // abierto por defecto
+
+  /* Header de sección */
+  const hdr = document.createElement('div');
+  hdr.className = 'sec-hdr';
+  hdr.innerHTML = `<span class="sec-arrow">▶</span><span>${section.icon}</span><span>${section.label.toUpperCase()}</span>`;
+  hdr.onclick = () => div.classList.toggle('open');
+
+  /* Cuerpo de sección */
+  const body = document.createElement('div');
+  body.className = 'sec-body';
+
+  if (section.dynamic) {
+    const group = section.etype === 'cliente' ? 'clientes' : 'proveedores';
+    ents[group].forEach(e => body.appendChild(mkEnt(e, section.base, section.subs)));
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-ent-btn';
+    addBtn.textContent = `＋ Agregar ${section.etype}`;
+    addBtn.onclick = () => openMEnt(section.etype, section.base, section.subs, body, addBtn);
+    body.appendChild(addBtn);
+
+  } else {
+    (section.children||[]).forEach(child => {
+      if (child.children) {
+        body.appendChild(mkGrp(child));
+      } else {
+        body.appendChild(mkLeaf(child));
+      }
+    });
+  }
+
+  div.appendChild(hdr);
+  div.appendChild(body);
+  return div;
+}
+
+/* Sub-grupo con hijos (ej. Bancos DLLS > Estados de Cuenta) */
+function mkGrp(node) {
+  const grp = document.createElement('div');
+  grp.className = 'grp';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'grp-hdr';
+  hdr.innerHTML = `<span class="grp-arrow">▶</span>${node.label}`;
+  hdr.onclick = () => grp.classList.toggle('open');
+
+  const body = document.createElement('div');
+  body.className = 'grp-body';
+  node.children.forEach(ch => body.appendChild(mkLeaf(ch, true)));
+
+  grp.appendChild(hdr);
+  grp.appendChild(body);
+  return grp;
+}
+
+/* Hoja clickeable que carga archivos */
+function mkLeaf(node, indent) {
+  const el = document.createElement('div');
+  el.className = 'leaf' + (indent ? ' leaf-ind' : '');
+  el.textContent = node.label;
+  if (indent) el.style.paddingLeft = '42px';
+  el.onclick = () => selectFolder(node, el);
+  return el;
+}
+
+/* Entidad dinámica (empresa cliente/proveedor) */
+function mkEnt(entity, base, subs) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ent-wrap';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'ent-hdr';
+  hdr.innerHTML = `<span class="ent-arrow">▶</span>🏢 ${h(entity.name)}`;
+  hdr.onclick = () => wrap.classList.toggle('open');
+
+  const subsEl = document.createElement('div');
+  subsEl.className = 'ent-subs';
+
+  subs.forEach(sf => {
+    const slug = sf.toLowerCase().replace(/\s+/g,'-');
+    subsEl.appendChild(mkLeaf({
+      label: sf,
+      path: `${base}${entity.slug}/${slug}/`
+    }, true));
+  });
+
+  wrap.appendChild(hdr);
+  wrap.appendChild(subsEl);
+  return wrap;
+}
+
+/* ── Seleccionar carpeta ───────────────────────────────── */
+function selectFolder(node, el) {
+  document.querySelectorAll('.leaf.active').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+
+  CF = node;
+
+  const pb = document.getElementById('periodBar');
+  node.nm ? pb.classList.add('show') : pb.classList.remove('show');
+
+  document.getElementById('btnUp').disabled = false;
+  loadFiles();
+}
+
+/* ── Cargar archivos ──────────────────────────────────── */
+async function loadFiles() {
+  if (!CF) return;
+  updateBc();
+  document.getElementById('fileArea').innerHTML = '<div class="empty-state"><span class="spin"></span> Cargando…</div>';
+
+  let fp = CF.path;
+  if (CF.nm) { syncPeriod(); fp += period + '/'; }
+
+  const db = getDB();
+  const { data: files, error } = await db
+    .from('metatronix_docs')
+    .select('id,title,file_name,file_type,file_size,created_at')
+    .eq('category', CAT_FILE)
+    .like('file_path', fp + '%')
+    .order('created_at',{ascending:false});
+
+  if (error) {
+    toast('Error: ' + error.message,'err');
+    document.getElementById('fileArea').innerHTML = '<div class="empty-state"><div class="ei">⚠️</div><div>Error al cargar</div></div>';
+    return;
+  }
+
+  renderFiles(files||[]);
+}
+
+function renderFiles(files) {
+  const area = document.getElementById('fileArea');
+  if (!files.length) {
+    area.innerHTML = '<div class="empty-state"><div class="ei">📭</div><div>Carpeta vacía</div><div style="font-size:11px;opacity:.5;margin-top:4px">Sube archivos con el botón ↑ superior</div></div>';
+    return;
+  }
+
+  const rows = files.map(f => {
+    const ico = fIcon(f.file_type);
+    const name = f.file_name || f.title || 'archivo';
+    return `<tr>
+      <td><div class="fn-cell"><span class="fic">${ico}</span><span class="fn-txt" title="${h(name)}">${h(name)}</span></div></td>
+      <td class="fmeta">${fmtSz(f.file_size)}</td>
+      <td class="fmeta">${fmtDt(f.created_at)}</td>
+      <td><div class="fact">
+        <button class="btr" onclick="dlFile('${f.id}')">↓ Descargar</button>
+        <button class="btr d" onclick="openMDel('${f.id}','${h(name)}')">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  area.innerHTML = `<table class="ftbl">
+    <thead><tr><th>Archivo</th><th>Tamaño</th><th>Fecha</th><th>Acciones</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function updateBc() {
+  const bc = document.getElementById('bc');
+  if (!CF) { bc.innerHTML = '<span class="cur">Selecciona una carpeta</span>'; return; }
+  let lbl = CF.label;
+  if (CF.nm && period) {
+    const [y,m] = period.split('-');
+    const MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    lbl += `<span class="sep">/</span><span class="cur">${MN[parseInt(m)-1]} ${y}</span>`;
+  }
+  bc.innerHTML = `Admin<span class="sep">/</span>${lbl}`;
+}
+
+/* ── Upload ───────────────────────────────────────────── */
+function openUpload() {
+  if (!CF) return;
+  let fp = CF.path;
+  if (CF.nm) { syncPeriod(); fp += period + '/'; }
+  document.getElementById('upDest').value = fp;
+  document.getElementById('fPreview').innerHTML = '';
+  document.getElementById('fInput').value = '';
+  document.getElementById('btnDo').disabled = true;
+  document.getElementById('progWrap').style.display = 'none';
+  pending = [];
+  document.getElementById('mUpload').classList.add('open');
+}
+
+function closeUpload() { document.getElementById('mUpload').classList.remove('open'); }
+
+function onFiles(fl) {
+  pending = [];
+  const prev = document.getElementById('fPreview');
+  prev.innerHTML = '';
+  Array.from(fl).forEach(f => {
+    if (f.size > MAX_MB) { toast(`"${f.name}" supera 10 MB`,'err'); return; }
+    pending.push(f);
+    prev.innerHTML += `<div class="fp-row"><span>📄 ${h(f.name)}</span><span>${fmtSz(f.size)}</span></div>`;
+  });
+  document.getElementById('btnDo').disabled = !pending.length;
+}
+
+const dz = document.getElementById('dzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); onFiles(e.dataTransfer.files); });
+
+async function doUpload() {
+  if (!pending.length) return;
+  const db   = getDB();
+  const dest = document.getElementById('upDest').value;
+  const btn  = document.getElementById('btnDo');
+  const pw   = document.getElementById('progWrap');
+  const pf   = document.getElementById('progFill');
+  const pt   = document.getElementById('progTxt');
+
+  btn.disabled = true;
+  pw.style.display = 'block';
+
+  for (let i = 0; i < pending.length; i++) {
+    const file = pending[i];
+    pt.textContent = `Subiendo ${i+1}/${pending.length}: ${file.name}…`;
+    pf.style.width = `${(i/pending.length)*100}%`;
+    try {
+      const b64 = await toB64(file);
+      const { error } = await db.from('metatronix_docs').insert({
+        title: file.name,
+        description: `Documento Administrativo · ${CF.label}`,
+        category: CAT_FILE,
+        visibility: 'admin',
+        file_name: file.name,
+        file_path: dest,
+        file_type: file.type || 'application/octet-stream',
+        file_size: file.size,
+        file_data: b64,
+        uploaded_by: CU?.id || null,
+        uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
+      });
+      if (error) throw error;
+    } catch(e) { toast(`Error: ${file.name} — ${e.message}`,'err'); }
+  }
+
+  pf.style.width = '100%';
+  pt.textContent = '¡Completado!';
+  setTimeout(() => { closeUpload(); toast(`${pending.length} archivo(s) subido(s)`,'ok'); loadFiles(); }, 500);
+}
+
+function toB64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        const bytes = new Uint8Array(e.target.result);
+        let binary = '';
+        const CHUNK = 8192;
+        for (let i = 0; i < bytes.length; i += CHUNK) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+        }
+        res(btoa(binary));
+      } catch(err) { rej(err); }
+    };
+    r.onerror = rej;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+/* ── Descarga ─────────────────────────────────────────── */
+async function dlFile(id) {
+  const { data, error } = await getDB()
+    .from('metatronix_docs')
+    .select('file_data,file_name,file_type')
+    .eq('id',id).single();
+
+  if (error||!data) { toast('Error al descargar','err'); return; }
+  try {
+    const bin = atob(data.file_data);
+    const arr = new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([arr],{type:data.file_type||'application/octet-stream'}));
+    a.download = data.file_name || 'archivo';
+    a.click();
+  } catch(e) { toast('Error decodificando archivo','err'); }
+}
+
+/* ── Eliminar ─────────────────────────────────────────── */
+function openMDel(id, name) {
+  delId = id;
+  document.getElementById('delName').textContent = name;
+  document.getElementById('mDel').classList.add('open');
+}
+
+function closeMDel() { delId=null; document.getElementById('mDel').classList.remove('open'); }
+
+async function confirmDel() {
+  if (!delId) return;
+  const btn = document.getElementById('btnDel');
+  btn.disabled=true; btn.textContent='Eliminando…';
+  const { error } = await getDB().from('metatronix_docs').delete().eq('id',delId);
+  closeMDel(); btn.disabled=false; btn.textContent='Eliminar';
+  if (error) { toast('Error: '+error.message,'err'); return; }
+  toast('Archivo eliminado','ok');
+  loadFiles();
+}
+
+/* ── Entidad (cliente / proveedor) ────────────────────── */
+function openMEnt(etype, base, subs, bodyEl, addBtn) {
+  entCtx = { etype, base, subs, bodyEl, addBtn };
+  const isCli = etype === 'cliente';
+  document.getElementById('entTitle').textContent = isCli ? 'Agregar Cliente' : 'Agregar Proveedor';
+  document.getElementById('entLabel').textContent  = isCli ? 'Nombre del cliente' : 'Nombre del proveedor';
+  document.getElementById('entName').value = '';
+  document.getElementById('mEnt').classList.add('open');
+}
+
+function closeMEnt() { entCtx=null; document.getElementById('mEnt').classList.remove('open'); }
+
+async function createEnt() {
+  const name = document.getElementById('entName').value.trim();
+  if (!name) { toast('Ingresa un nombre','err'); return; }
+
+  const slug = name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+
+  const fp = entCtx.base + slug + '/';
+
+  const { error } = await getDB().from('metatronix_docs').insert({
+    title: name,
+    description: `Carpeta Admin ${entCtx.etype}: ${name}`,
+    category: CAT_FOLDER,
+    visibility: 'admin',
+    file_name: '',
+    file_path: fp,
+    file_type: 'folder',
+    file_size: 0,
+    uploaded_by: CU?.id || null,
+    uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
+  });
+
+  if (error) { toast('Error: '+error.message,'err'); return; }
+  closeMEnt();
+  toast(`Carpeta "${name}" creada`,'ok');
+
+  const entEl = mkEnt({slug, name}, entCtx.base, entCtx.subs);
+  entCtx.bodyEl.insertBefore(entEl, entCtx.addBtn);
+}
+
+/* ── Refresh ──────────────────────────────────────────── */
+async function refresh() {
+  await buildTree();
+  if (CF) loadFiles();
+}
+
+/* ── Utils ────────────────────────────────────────────── */
+function fIcon(mime) {
+  if (!mime) return '📄';
+  if (mime.includes('pdf'))   return '📕';
+  if (mime.includes('image')) return '🖼️';
+  if (mime.includes('spreadsheet')||mime.includes('excel')||mime.includes('csv')) return '📊';
+  if (mime.includes('word')||mime.includes('document')) return '📝';
+  if (mime.includes('zip')||mime.includes('rar')) return '🗜️';
+  return '📦';
+}
+
+function fmtSz(b) {
+  if (!b) return '—';
+  if (b<1024) return b+' B';
+  if (b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(2)+' MB';
+}
+
+function fmtDt(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-MX',{year:'numeric',month:'short',day:'2-digit'});
+}
+
+function h(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function toast(msg, type='inf') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+/* ── Arranque ─────────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>

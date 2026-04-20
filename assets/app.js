@@ -634,14 +634,14 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">📁</span>
         <span class="nav-label">Docs MetaTronix</span>
       </a>
+      <a href="/docs-admin.html" class="sidebar-nav-link ${activePage==='docs-admin'?'active':''}">
+        <span class="nav-icon">🗃</span>
+        <span class="nav-label">Docs Administrativos</span>
+      </a>
       ${hasIbanorAccess ? `
       <a href="/archivos.html" class="sidebar-nav-link ${activePage==='archivos'?'active':''}">
         <span class="nav-icon">🗂</span>
         <span class="nav-label">Archivos Starke</span>
-      </a>
-      <a href="/archivos-ibanor.html" class="sidebar-nav-link ${activePage==='archivos-ibanor'?'active':''}">
-        <span class="nav-icon">🏢</span>
-        <span class="nav-label">Archivos IBANOR</span>
       </a>` : ''}
 
       <div class="sidebar-divider"></div>
