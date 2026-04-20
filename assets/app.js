@@ -46,7 +46,103 @@ async function requireAuth(adminOnly = false) {
   }
   // Actualizar last_seen
   getDB()?.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {});
+
+  // ── Contraseña temporal: forzar cambio antes de continuar ──
+  const { data: { user: authUser } } = await getDB().auth.getUser();
+  if (authUser?.user_metadata?.temp_password === true) {
+    await showForcePasswordChange();
+  }
+
   return user;
+}
+
+/* ── Modal de cambio forzado de contraseña ─────────────────── */
+function showForcePasswordChange() {
+  return new Promise(resolve => {
+    // Eliminar modal previo si existe
+    document.getElementById('mtx-pw-modal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'mtx-pw-modal';
+    modal.style.cssText = `
+      position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);
+      display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;
+    `;
+    modal.innerHTML = `
+      <div style="background:#111;border:1px solid #00ff88;border-radius:12px;padding:36px 40px;
+                  max-width:420px;width:90%;box-shadow:0 0 40px rgba(0,255,136,.15);">
+        <div style="color:#00ff88;font-size:22px;font-weight:700;margin-bottom:8px;">
+          🔐 Actualiza tu contraseña
+        </div>
+        <p style="color:#aaa;font-size:14px;margin-bottom:24px;line-height:1.5;">
+          Por seguridad, debes establecer una contraseña personal antes de continuar.
+        </p>
+        <div style="margin-bottom:16px;">
+          <label style="color:#ccc;font-size:12px;display:block;margin-bottom:6px;">NUEVA CONTRASEÑA</label>
+          <input id="mtx-pw-new" type="password" placeholder="Mínimo 8 caracteres"
+            style="width:100%;box-sizing:border-box;padding:10px 14px;background:#1a1a1a;border:1px solid #333;
+                   border-radius:8px;color:#fff;font-size:14px;outline:none;">
+        </div>
+        <div style="margin-bottom:24px;">
+          <label style="color:#ccc;font-size:12px;display:block;margin-bottom:6px;">CONFIRMAR CONTRASEÑA</label>
+          <input id="mtx-pw-confirm" type="password" placeholder="Repite la contraseña"
+            style="width:100%;box-sizing:border-box;padding:10px 14px;background:#1a1a1a;border:1px solid #333;
+                   border-radius:8px;color:#fff;font-size:14px;outline:none;">
+        </div>
+        <div id="mtx-pw-error" style="color:#ff4444;font-size:13px;margin-bottom:16px;display:none;"></div>
+        <button id="mtx-pw-btn"
+          style="width:100%;padding:12px;background:#00ff88;color:#000;border:none;border-radius:8px;
+                 font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;">
+          GUARDAR CONTRASEÑA
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const btnEl  = document.getElementById('mtx-pw-btn');
+    const errEl  = document.getElementById('mtx-pw-error');
+    const newEl  = document.getElementById('mtx-pw-new');
+    const confEl = document.getElementById('mtx-pw-confirm');
+
+    btnEl.addEventListener('click', async () => {
+      const pw1 = newEl.value.trim();
+      const pw2 = confEl.value.trim();
+      errEl.style.display = 'none';
+
+      if (pw1.length < 8) {
+        errEl.textContent = 'La contraseña debe tener al menos 8 caracteres.';
+        errEl.style.display = 'block'; return;
+      }
+      if (pw1 !== pw2) {
+        errEl.textContent = 'Las contraseñas no coinciden.';
+        errEl.style.display = 'block'; return;
+      }
+
+      btnEl.textContent = 'Guardando...';
+      btnEl.disabled = true;
+
+      try {
+        const db = getDB();
+        // 1. Cambiar contraseña
+        const { error: pwErr } = await db.auth.updateUser({ password: pw1 });
+        if (pwErr) throw pwErr;
+        // 2. Limpiar flag temp_password
+        await db.auth.updateUser({ data: { temp_password: false } });
+
+        modal.remove();
+        showToast('✅ Contraseña actualizada correctamente', 'success');
+        resolve();
+      } catch (e) {
+        errEl.textContent = e.message || 'Error al actualizar la contraseña.';
+        errEl.style.display = 'block';
+        btnEl.textContent = 'GUARDAR CONTRASEÑA';
+        btnEl.disabled = false;
+      }
+    });
+
+    // Focus automático
+    setTimeout(() => newEl.focus(), 100);
+  });
 }
 
 /* ── Control de uso Claude ─────────────────────────────────── */
