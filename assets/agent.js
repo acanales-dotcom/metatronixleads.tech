@@ -287,7 +287,7 @@
       <p>${text}</p>
       <p style="margin-top:4px;font-size:11px;color:#5a6a85">Haz clic en mí para abrir el chat 💬</p>`;
 
-    bubble.addEventListener('click', (e) => {
+    bubble.addEventListener('pointerup', (e) => {
       if (e.target.classList.contains('mgenio-bubble-close')) return;
       bubble.remove();
       togglePanel(true);
