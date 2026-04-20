@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>MTX Uploader — Propuesta B2C</title>
+<style>
+  body { font-family: monospace; background: #010a1b; color: #e8f0ff; display: flex;
+         align-items: center; justify-content: center; height: 100vh; margin: 0; flex-direction: column; gap: 18px; }
+  .box { background: #0c1d3a; border: 1px solid rgba(26,111,255,.3); border-radius: 12px;
+         padding: 32px 40px; max-width: 520px; text-align: center; }
+  h2 { color: #1a6fff; font-size: 1.2rem; margin-bottom: 8px; }
+  p  { color: #7fa0d4; font-size: 13px; margin-top: 8px; line-height: 1.6; }
+  #status { font-size: 14px; font-weight: 700; margin-top: 16px; padding: 10px 20px;
+             border-radius: 8px; display: none; }
+  .ok  { background: rgba(15,204,136,.15); color: #0fcc88; border: 1px solid rgba(15,204,136,.3); }
+  .err { background: rgba(255,64,96,.12); color: #ff4060; border: 1px solid rgba(255,64,96,.3); }
+  .spin { display: inline-block; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg) } }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>MetaTronix · Subiendo Plantilla</h2>
+  <p><strong>Propuesta Comercial B2C · MetaTronix</strong><br>
+  Procesando y subiendo al portal...</p>
+  <div id="status"></div>
+</div>
+<script>
+// Legacy upload page — use Supabase dashboard for uploads
+
+const SUPABASE_URL = 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
+
+// LEGACY PAGE — payload defined below
+const payload = null; // Payload too large for inline — use Supabase directly</script>\n</body>\n</html>\n", "uploaded_by_name": "Alejandro Canales", "uploaded_by_role": "super_admin"};
+
+const st = document.getElementById('status');
+st.style.display = 'block';
+st.innerHTML = '<span class="spin">⚙️</span> Subiendo plantilla a Supabase...';
+
+fetch(SUPABASE_URL + '/rest/v1/metatronix_docs', {
+  method: 'POST',
+  headers: {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  },
+  body: JSON.stringify(payload)
+})
+.then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+.then(({ ok, data }) => {
+  if (ok && (Array.isArray(data) ? data[0]?.id : data?.id)) {
+    const id = Array.isArray(data) ? data[0].id : data.id;
+    st.className = 'ok';
+    st.innerHTML = '✅ Plantilla subida exitosamente<br><small>ID: ' + id + '</small><br><small style="margin-top:6px;display:block">Puedes cerrar esta ventana.</small>';
+  } else {
+    st.className = 'err';
+    st.innerHTML = '❌ Error: ' + JSON.stringify(data);
+  }
+})
+.catch(e => {
+  st.className = 'err';
+  st.innerHTML = '❌ Error de red: ' + e.message;
+});
+</script>
+</body>
+</html>
