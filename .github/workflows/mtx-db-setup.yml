@@ -18,47 +18,130 @@ jobs:
       - name: Verificar conexion
         run: |
           HTTP=$(curl -s -o /dev/null -w "%{http_code}" -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/profiles?select=id&limit=1")
-          echo "HTTP $HTTP"
+          echo "Profiles HTTP: $HTTP"
           [ "$HTTP" = "200" ] || exit 1
 
       - name: Crear empresas
         run: |
-          curl -s -w "\nHTTP %{http_code}\n" -X POST -H "apikey: $SK" -H "Authorization: Bearer $SK" -H "Content-Type: application/json" -H "Prefer: resolution=merge-duplicates,return=minimal" -d '{"id":"ibanor","name":"IBANOR SA de CV","owner_email":"acanales@ibanormexico.com","plan":"enterprise","is_active":true}' "$SB/rest/v1/companies"
-          curl -s -w "\nHTTP %{http_code}\n" -X POST -H "apikey: $SK" -H "Authorization: Bearer $SK" -H "Content-Type: application/json" -H "Prefer: resolution=merge-duplicates,return=minimal" -d '{"id":"metatronix","name":"MetaTronix","owner_email":"acanales@ibanormexico.com","plan":"enterprise","is_active":true}' "$SB/rest/v1/companies"
+          echo "=== IBANOR ==="
+          curl -s -w "\nHTTP %{http_code}\n" -X POST \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=minimal" \
+            -d '{"id":"ibanor","name":"IBANOR SA de CV","owner_email":"acanales@ibanormexico.com","plan":"enterprise","is_active":true}' \
+            "$SB/rest/v1/companies"
+          echo "=== METATRONIX ==="
+          curl -s -w "\nHTTP %{http_code}\n" -X POST \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=minimal" \
+            -d '{"id":"metatronix","name":"MetaTronix","owner_email":"acanales@ibanormexico.com","plan":"enterprise","is_active":true}' \
+            "$SB/rest/v1/companies"
 
-      - name: Obtener UIDs
+      - name: Obtener UIDs de auth.users
         run: |
-          for EMAIL in acanales@ibanormexico.com ncanales@ibanormexico.com nibarra@ibanormexico.com acanalesf@ibanormexico.com jorge@retaillab.com.mx noe@grupoamsg.com; do
-            UID=$(curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/auth/v1/admin/users?email=${EMAIL}" | python3 -c "import json,sys; d=json.load(sys.stdin); u=d.get('users',[]); print(u[0]['id'] if u else '')" 2>/dev/null)
-            echo "${EMAIL}=${UID}" | tee -a /tmp/uids.env
-          done
+          # Fetch ALL users (up to 1000) and extract IDs by email
+          ALL=$(curl -s \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/auth/v1/admin/users?page=1&per_page=1000")
+          
+          echo "Response preview: ${ALL:0:200}"
+
+          python3 << 'PYEOF'
+import json, os, sys
+
+raw = os.popen('curl -s -H "apikey: ' + os.environ["SK"] + '" -H "Authorization: Bearer ' + os.environ["SK"] + '" "' + os.environ["SB"] + '/auth/v1/admin/users?page=1&per_page=1000"').read()
+data = json.loads(raw)
+
+users = data.get("users", [])
+if not users and isinstance(data, list):
+    users = data
+
+print(f"Found {len(users)} users")
+
+emails = [
+    "acanales@ibanormexico.com",
+    "ncanales@ibanormexico.com",
+    "nibarra@ibanormexico.com",
+    "acanalesf@ibanormexico.com",
+    "jorge@retaillab.com.mx",
+    "noe@grupoamsg.com"
+]
+
+with open("/tmp/uids.env", "w") as f:
+    for u in users:
+        email = u.get("email", "").lower()
+        uid = u.get("id", "")
+        if email in emails:
+            f.write(f"{email}={uid}\n")
+            print(f"  {email} => {uid}")
+PYEOF
+          echo "UIDs saved:"
+          cat /tmp/uids.env
 
       - name: Upsert perfiles METATRONIX
         run: |
-          P() { UID=$1 E=$2 R=$3 C=$4 N=$5 D=$6 T=$7 L=$8; [ -z "$UID" ] && { echo "SKIP $E"; return; }; HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "apikey: $SK" -H "Authorization: Bearer $SK" -H "Content-Type: application/json" -H "Prefer: resolution=merge-duplicates,return=minimal" --data-raw "{\"id\":\"$UID\",\"email\":\"$E\",\"role\":\"$R\",\"company_id\":\"$C\",\"full_name\":\"$N\",\"department\":\"$D\",\"job_title\":\"$T\",\"consejo_limit\":$L,\"is_active\":true}" "$SB/rest/v1/profiles"); echo "$E $R $C HTTP$HTTP"; }
+          P() {
+            local UID="$1" E="$2" R="$3" C="$4" N="$5" D="$6" T="$7" L="$8"
+            [ -z "$UID" ] && { echo "SKIP $E (no UID)"; return 0; }
+            HTTP=$(curl -s -o /tmp/prof_resp.json -w "%{http_code}" -X POST \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates,return=minimal" \
+              --data-raw "{\"id\":\"$UID\",\"email\":\"$E\",\"role\":\"$R\",\"company_id\":\"$C\",\"full_name\":\"$N\",\"department\":\"$D\",\"job_title\":\"$T\",\"consejo_limit\":$L,\"is_active\":true}" \
+              "$SB/rest/v1/profiles")
+            echo "$E $R @ $C : HTTP $HTTP"
+            [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ] && [ "$HTTP" != "204" ] && cat /tmp/prof_resp.json || true
+          }
           G() { grep "^$1=" /tmp/uids.env | cut -d= -f2; }
-          P "$(G acanales@ibanormexico.com)"  acanales@ibanormexico.com  super_admin       metatronix "A. Canales"    direccion CEO                 9999
-          P "$(G ncanales@ibanormexico.com)"  ncanales@ibanormexico.com  super_admin       metatronix "N. Canales"    direccion CEO                 9999
-          P "$(G nibarra@ibanormexico.com)"   nibarra@ibanormexico.com   admin             metatronix "N. Ibarra"     finanzas  "Dir Admin"          200
-          P "$(G acanalesf@ibanormexico.com)" acanalesf@ibanormexico.com admin             metatronix "A. Canales F." finanzas  "Dir Admin"          200
-          P "$(G jorge@retaillab.com.mx)"     jorge@retaillab.com.mx     admin_restringido metatronix "Jorge"         ventas    "Dir Ventas"         100
-          P "$(G noe@grupoamsg.com)"          noe@grupoamsg.com          admin_restringido metatronix "Noe"           ventas    "Dir Ventas"         100
+
+          P "$(G acanales@ibanormexico.com)"  "acanales@ibanormexico.com"  "super_admin"       "metatronix" "A. Canales"    "direccion" "CEO"          9999
+          P "$(G ncanales@ibanormexico.com)"  "ncanales@ibanormexico.com"  "super_admin"       "metatronix" "N. Canales"    "direccion" "CEO"          9999
+          P "$(G nibarra@ibanormexico.com)"   "nibarra@ibanormexico.com"   "admin"             "metatronix" "N. Ibarra"     "finanzas"  "Dir Admin"    200
+          P "$(G acanalesf@ibanormexico.com)" "acanalesf@ibanormexico.com" "admin"             "metatronix" "A. Canales F." "finanzas"  "Dir Admin"    200
+          P "$(G jorge@retaillab.com.mx)"     "jorge@retaillab.com.mx"     "admin_restringido" "metatronix" "Jorge"         "ventas"    "Dir Ventas"   100
+          P "$(G noe@grupoamsg.com)"          "noe@grupoamsg.com"          "admin_restringido" "metatronix" "Noe"           "ventas"    "Dir Ventas"   100
 
       - name: Upsert perfiles IBANOR
         run: |
-          P() { UID=$1 E=$2 R=$3 C=$4 N=$5 D=$6 T=$7 L=$8; [ -z "$UID" ] && { echo "SKIP $E"; return; }; HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "apikey: $SK" -H "Authorization: Bearer $SK" -H "Content-Type: application/json" -H "Prefer: resolution=merge-duplicates,return=minimal" --data-raw "{\"id\":\"$UID\",\"email\":\"$E\",\"role\":\"$R\",\"company_id\":\"$C\",\"full_name\":\"$N\",\"department\":\"$D\",\"job_title\":\"$T\",\"consejo_limit\":$L,\"is_active\":true}" "$SB/rest/v1/profiles"); echo "$E $R $C HTTP$HTTP"; }
+          P() {
+            local UID="$1" E="$2" R="$3" C="$4" N="$5" D="$6" T="$7" L="$8"
+            [ -z "$UID" ] && { echo "SKIP $E (no UID)"; return 0; }
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates,return=minimal" \
+              --data-raw "{\"id\":\"$UID\",\"email\":\"$E\",\"role\":\"$R\",\"company_id\":\"$C\",\"full_name\":\"$N\",\"department\":\"$D\",\"job_title\":\"$T\",\"consejo_limit\":$L,\"is_active\":true}" \
+              "$SB/rest/v1/profiles")
+            echo "$E $R @ $C : HTTP $HTTP"
+          }
           G() { grep "^$1=" /tmp/uids.env | cut -d= -f2; }
-          P "$(G acanales@ibanormexico.com)"  acanales@ibanormexico.com  super_admin ibanor "A. Canales"    direccion CEO       9999
-          P "$(G nibarra@ibanormexico.com)"   nibarra@ibanormexico.com   super_admin ibanor "N. Ibarra"     finanzas  "Dir"    9999
-          P "$(G acanalesf@ibanormexico.com)" acanalesf@ibanormexico.com super_admin ibanor "A. Canales F." finanzas  "Dir"    9999
+
+          P "$(G acanales@ibanormexico.com)"  "acanales@ibanormexico.com"  "super_admin" "ibanor" "A. Canales"    "direccion" "CEO"   9999
+          P "$(G nibarra@ibanormexico.com)"   "nibarra@ibanormexico.com"   "super_admin" "ibanor" "N. Ibarra"     "finanzas"  "Dir"   9999
+          P "$(G acanalesf@ibanormexico.com)" "acanalesf@ibanormexico.com" "super_admin" "ibanor" "A. Canales F." "finanzas"  "Dir"   9999
 
       - name: Crear membresias
         run: |
-          M() { UID=$1 C=$2 R=$3 E=$4; [ -z "$UID" ] && { echo "SKIP $E"; return; }; HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "apikey: $SK" -H "Authorization: Bearer $SK" -H "Content-Type: application/json" -H "Prefer: resolution=merge-duplicates,return=minimal" -d "{\"user_id\":\"$UID\",\"company_id\":\"$C\",\"role\":\"$R\"}" "$SB/rest/v1/user_companies"); echo "$E $C $R HTTP$HTTP"; }
+          M() {
+            local UID="$1" C="$2" R="$3" E="$4"
+            [ -z "$UID" ] && { echo "SKIP $E"; return 0; }
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates,return=minimal" \
+              -d "{\"user_id\":\"$UID\",\"company_id\":\"$C\",\"role\":\"$R\"}" \
+              "$SB/rest/v1/user_companies")
+            echo "$E -> $C ($R): HTTP $HTTP"
+          }
           G() { grep "^$1=" /tmp/uids.env | cut -d= -f2; }
-          M "$(G acanales@ibanormexico.com)"  ibanor     owner  acanales
-          M "$(G nibarra@ibanormexico.com)"   ibanor     admin  nibarra
-          M "$(G acanalesf@ibanormexico.com)" ibanor     admin  acanalesf
+
+          echo "=== IBANOR ===" 
+          M "$(G acanales@ibanormexico.com)"  ibanor owner  acanales
+          M "$(G nibarra@ibanormexico.com)"   ibanor admin  nibarra
+          M "$(G acanalesf@ibanormexico.com)" ibanor admin  acanalesf
+
+          echo "=== METATRONIX ==="
           M "$(G acanales@ibanormexico.com)"  metatronix owner  acanales
           M "$(G ncanales@ibanormexico.com)"  metatronix owner  ncanales
           M "$(G nibarra@ibanormexico.com)"   metatronix admin  nibarra
@@ -68,7 +151,19 @@ jobs:
 
       - name: Verificacion final
         run: |
-          echo "=== EMPRESAS ===" && curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/companies?select=id,name,is_active" | python3 -c "import json,sys; [print(f'  {c[\"id\"]:15} {c[\"name\"]:20} {c.get(\"is_active\")}') for c in json.load(sys.stdin)]"
-          echo "=== PERFILES ===" && curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/profiles?select=email,role,company_id,department&order=company_id,email" | python3 -c "import json,sys; [print(f'  {u[\"email\"]:40} {u[\"role\"]:20} {u.get(\"company_id\",\"?\")}') for u in json.load(sys.stdin)]"
-          echo "=== MEMBRESIAS ===" && curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/user_companies?select=user_id,company_id,role" | python3 -c "import json,sys; r=json.load(sys.stdin); print(f'  Total: {len(r)}')"
+          echo "=== EMPRESAS ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/companies?select=id,name,is_active" | \
+            python3 -c "import json,sys; [print(f'  {c[\"id\"]:15} {c[\"name\"]:20} activo:{c.get(\"is_active\")}') for c in json.load(sys.stdin)]"
+
+          echo "=== PERFILES ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=email,role,company_id,department&order=company_id,email" | \
+            python3 -c "import json,sys; [print(f'  {u[\"email\"]:40} {u[\"role\"]:20} {u.get(\"company_id\",\"?\")}') for u in json.load(sys.stdin)]"
+
+          echo "=== MEMBRESIAS ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/user_companies?select=user_id,company_id,role" | \
+            python3 -c "import json,sys; r=json.load(sys.stdin); print(f'  Total membresías: {len(r)}')"
+
           echo "DONE"
