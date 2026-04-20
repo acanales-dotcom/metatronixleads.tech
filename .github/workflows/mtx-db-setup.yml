@@ -69,7 +69,10 @@ jobs:
 
       - name: Verificacion final
         run: |
-          echo "=== EMPRESAS ===" && curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/companies?select=id,name,is_active" | python3 -c "import json,sys; [print(f'  {c[\"id\"]:15} {c[\"name\"]}') for c in json.load(sys.stdin)]"
-          echo "=== PERFILES ===" && curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/profiles?select=email,role,company_id&order=company_id,email" | python3 -c "import json,sys; [print(f'  {u[\"email\"]:40} {u[\"role\"]:20} {u.get(\"company_id\",\"?\")}') for u in json.load(sys.stdin)]"
-          echo "=== MEMBRESIAS ===" && curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/user_companies?select=user_id,company_id,role" | python3 -c "import json,sys; r=json.load(sys.stdin); print(f'  Total: {len(r)}')"
+          echo "=== EMPRESAS ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/companies?select=id,name,is_active" | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f'  {c.get(\"id\",\"?\"):15} {c.get(\"name\",\"?\")}') for c in d] if isinstance(d,list) else print('  ERR:',json.dumps(d)[:200])" || true
+          echo "=== PERFILES ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/profiles?select=email,role,company_id&order=company_id,email" | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f'  {u.get(\"email\",\"?\"):40} {u.get(\"role\",\"?\"):20} {u.get(\"company_id\",\"?\")}') for u in d] if isinstance(d,list) else print('  ERR:',json.dumps(d)[:200])" || true
+          echo "=== MEMBRESIAS ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" "$SB/rest/v1/user_companies?select=user_id,company_id,role" | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'  Total membresias: {len(d)}') if isinstance(d,list) else print('  ERR:',json.dumps(d)[:200])" || true
           echo "DONE"
