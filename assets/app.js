@@ -631,18 +631,13 @@ function renderHeader(user, activePage) {
         <span class="nav-label">Adm. de Venta</span>
       </a>
       <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
-        <span class="nav-icon">📁</span>
-        <span class="nav-label">Docs MetaTronix</span>
+        <span class="nav-icon">🤝</span>
+        <span class="nav-label">Docs Compartidos Org</span>
       </a>
       <a href="/docs-admin.html" class="sidebar-nav-link ${activePage==='docs-admin'?'active':''}">
         <span class="nav-icon">🗃</span>
         <span class="nav-label">Docs Administrativos</span>
       </a>
-      ${hasIbanorAccess ? `
-      <a href="/archivos.html" class="sidebar-nav-link ${activePage==='archivos'?'active':''}">
-        <span class="nav-icon">🗂</span>
-        <span class="nav-label">Archivos Starke</span>
-      </a>` : ''}
 
       <div class="sidebar-divider"></div>
 
