@@ -928,9 +928,11 @@ async function loadCompanySwitcher() {
       return;
     }
 
-    list.innerHTML = items.map(c => `
+    // Store items globally so onclick can reference by index (avoids JSON-in-HTML quote conflicts)
+    window._MTX_COMPANY_LIST = items;
+    list.innerHTML = items.map((c, i) => `
       <div class="company-switcher-item ${(active?.id || null) === c.id ? 'active' : ''}"
-           onclick="selectCompany(${c.id ? JSON.stringify(c) : 'null'})">
+           onclick="selectCompany(window._MTX_COMPANY_LIST[${i}])">
         <span style="font-size:11px">${c.id ? '🏢' : '🌐'}</span>
         <div style="flex:1;min-width:0">
           <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.name)}</div>
