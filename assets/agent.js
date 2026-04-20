@@ -49,11 +49,11 @@
         { icon:'📣', msg:'¿Qué ha hecho el Orquestador de Marketing recientemente? Dame un resumen.',          label:'Reporte Orquestador Mktg' },
       ]
     },
-    sersionate: {
-      label: 'SerSionate',
+    dalipx: {
+      label: 'Dalipx',
       role:  'Especialista MetaTronix',
       color: '#ff6d00',
-      welcome: '🦊 Soy SerSionate. Hablo exclusivamente sobre MetaTronix: productos, servicios, procesos internos y cultura de empresa. ¿Qué quieres saber?',
+      welcome: '🦊 Soy Dalipx. Hablo exclusivamente sobre MetaTronix: productos, servicios, procesos internos y cultura de empresa. ¿Qué quieres saber?',
       quickActions: [
         { icon:'🏢', msg:'¿Cuáles son todos los productos y servicios de MetaTronix e IBANOR SA de CV?',          label:'Productos y servicios' },
         { icon:'🌐', msg:'¿Cuáles son las subsidiarias de MetaTronix y a qué se dedica cada una?',               label:'Subsidiarias' },
@@ -317,7 +317,7 @@
 
   function buildSystemPrompt () {
     if (currentMode === 'metafollow') return buildMetaFollowPrompt();
-    if (currentMode === 'sersionate') return buildSerSionatePrompt();
+    if (currentMode === 'dalipx') return buildDalipxPrompt();
     const page     = detectPage();
     const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador';
     const userRole = currentUser?.profile?.role || 'user';
@@ -610,7 +610,7 @@ Cuando el usuario pregunte cómo hacer algo en el portal, da instrucciones compl
   - Tres modos disponibles (selector en la parte superior del chat):
     · MetaGenio — conoce todo el portal; pregúntale cualquier cosa sobre cómo funciona
     · MetaFollow — especialista en seguimiento; te dice qué clientes contactar hoy y con qué mensaje
-    · SerSionate — experto en MetaTronix; responde preguntas sobre productos y propuesta de valor
+    · Dalipx — experto en MetaTronix; responde preguntas sobre productos y propuesta de valor
   - Botón de recarga (↺) en el header del chat para iniciar nueva conversación
   - El historial se guarda automáticamente por usuario y por sesión
 
@@ -687,8 +687,8 @@ REGLAS:
 4. Cuando no tengas datos en tiempo real, indícalo claramente y sugiere dónde verificar`;
   }
 
-  /* ── SerSionate system prompt ───────────────────────────── */
-  function buildSerSionatePrompt () {
+  /* ── Dalipx system prompt ───────────────────────────── */
+  function buildDalipxPrompt () {
     const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador';
     let mtxKnowledge = '';
     if (websiteSources.length) {
@@ -697,7 +697,7 @@ REGLAS:
     if (sharedDocs.length) {
       sharedDocs.filter(d => d.text_content).forEach(d => { mtxKnowledge += `\n▸ ${d.title}:\n${d.text_content?.slice(0,2000)}\n`; });
     }
-    return `Eres SerSionate, el Especialista de Marca MetaTronix.
+    return `Eres Dalipx, el Especialista de Marca MetaTronix.
 
 IDENTIDAD: Agente de conocimiento profundo sobre MetaTronix e IBANOR SA de CV. Tu único propósito es responder preguntas sobre MetaTronix: productos, servicios, subsidiarias, procesos internos, cultura, propuesta de valor y estrategia comercial.
 
@@ -705,7 +705,7 @@ USUARIO: ${userName}
 
 REGLA ABSOLUTA: Solo hablas de MetaTronix, IBANOR SA de CV, y sus subsidiarias y productos.
 Si alguien pregunta sobre cualquier otro tema (política, deportes, tecnología general, competidores, etc.), respondes amablemente:
-"Soy SerSionate, especialista exclusivo de MetaTronix. Solo puedo ayudarte con preguntas sobre MetaTronix, IBANOR SA de CV, sus productos y servicios. ¿En qué aspecto de MetaTronix puedo ayudarte?"
+"Soy Dalipx, especialista exclusivo de MetaTronix. Solo puedo ayudarte con preguntas sobre MetaTronix, IBANOR SA de CV, sus productos y servicios. ¿En qué aspecto de MetaTronix puedo ayudarte?"
 
 ÁREAS DE CONOCIMIENTO METATRONIX:
 - Productos y servicios de MetaTronix e IBANOR SA de CV
@@ -960,7 +960,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
       <div class="agent-mode-tabs">
         <button class="mode-tab active" data-mode="metagenio">MetaGenio</button>
         <button class="mode-tab" data-mode="metafollow">MetaFollow</button>
-        <button class="mode-tab" data-mode="sersionate">SerSionate</button>
+        <button class="mode-tab" data-mode="dalipx">Dalipx</button>
       </div>
 
       <!-- Messages -->
