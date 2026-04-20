@@ -1,9 +1,19 @@
 /* ============================================================
    ATTACHMENTS.JS — Panel contextual de documentos adjuntos
    Uso: openAttachments('invoice_out', id, 'FAC-2026-001')
-   Requiere: app.js (getDB, getActiveCompanyId, MTX_LOG)
+   Requiere: app.js (getDB)
    Aislamiento: cada empresa ve solo sus propios archivos
    ============================================================ */
+
+/* ── Shim: expone getActiveCompanyId globalmente si app.js aún no lo tiene ── */
+if (typeof window.getActiveCompanyId !== 'function') {
+  window.getActiveCompanyId = function () {
+    return window.MTX_ACTIVE_COMPANY?.id
+      || window._mtxCurrentUser?.profile?.company_id
+      || window._currentUser?.profile?.company_id
+      || null;
+  };
+}
 
 (function () {
   'use strict';
