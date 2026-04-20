@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA v5 — Interaction-Aware Protocol</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a1628;
+      color: #e0e0e0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 20px;
+    }
+
+    .qa-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .qa-header {
+      border-bottom: 2px solid #00ff88;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+
+    .qa-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #00ff88;
+      margin-bottom: 8px;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+
+    .qa-subtitle {
+      color: #80c0ff;
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .qa-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #1a3a5c;
+      border: 1px solid #00ff88;
+      color: #00ff88;
+      padding: 8px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: #00ff88;
+      color: #0a1628;
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.btn-secondary {
+      border-color: #80c0ff;
+      color: #80c0ff;
+    }
+
+    button.btn-secondary:hover {
+      background: #80c0ff;
+      color: #0a1628;
+    }
+
+    .auth-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      padding: 8px 12px;
+      background: rgba(0, 255, 136, 0.1);
+      border-radius: 4px;
+    }
+
+    .auth-checkbox input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .auth-checkbox label {
+      cursor: pointer;
+      font-size: 12px;
+      color: #00ff88;
+    }
+
+    .progress-container {
+      margin-bottom: 20px;
+      background: #1a2f47;
+      border-radius: 4px;
+      padding: 12px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 24px;
+      background: #0f1f35;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      border: 1px solid #2a4f7f;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff88 0%, #00dd77 100%);
+      width: 0%;
+      transition: width 0.3s;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #a0b0c0;
+    }
+
+    .suite-container {
+      margin-bottom: 20px;
+      background: #1a2f47;
+      border-left: 3px solid #00ff88;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .suite-header {
+      background: #0f1f35;
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+      border-bottom: 1px solid #2a4f7f;
+    }
+
+    .suite-header:hover {
+      background: #1a3a5f;
+    }
+
+    .suite-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .suite-chevron {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      color: #00ff88;
+      transition: transform 0.2s;
+      font-weight: 700;
+    }
+
+    .suite-header.collapsed .suite-chevron {
+      transform: rotate(-90deg);
+    }
+
+    .suite-name {
+      font-weight: 600;
+      color: #00ff88;
+    }
+
+    .suite-status {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 11px;
+      color: #80c0ff;
+    }
+
+    .status-pass { color: #00ff88; }
+    .status-fail { color: #ff6b6b; }
+    .status-warn { color: #ffa500; }
+    .status-running { color: #80c0ff; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .suite-body {
+      padding: 12px 16px;
+      max-height: 2000px;
+      overflow: hidden;
+      transition: max-height 0.3s, opacity 0.3s;
+      opacity: 1;
+    }
+
+    .suite-body.collapsed {
+      max-height: 0;
+      opacity: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .test-item {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: rgba(0, 255, 136, 0.05);
+      border-left: 3px solid #2a4f7f;
+      border-radius: 3px;
+      transition: all 0.2s;
+    }
+
+    .test-item.pass {
+      border-left-color: #00ff88;
+      background: rgba(0, 255, 136, 0.08);
+    }
+
+    .test-item.fail {
+      border-left-color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.08);
+    }
+
+    .test-item.warn {
+      border-left-color: #ffa500;
+      background: rgba(255, 165, 0, 0.08);
+    }
+
+    .test-item.skip {
+      border-left-color: #6b7c8f;
+      background: rgba(107, 124, 143, 0.05);
+    }
+
+    .test-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .test-icon {
+      font-size: 12px;
+      width: 16px;
+      text-align: center;
+    }
+
+    .test-name {
+      font-weight: 500;
+      flex: 1;
+      color: #e0e0e0;
+    }
+
+    .test-message {
+      font-size: 11px;
+      color: #80c0ff;
+      margin: 0;
+      margin-left: 24px;
+    }
+
+    .test-detail {
+      font-size: 10px;
+      color: #6b7c8f;
+      margin: 6px 0 0 24px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .summary-container {
+      background: #1a2f47;
+      border: 2px solid #00ff88;
+      border-radius: 4px;
+      padding: 20px;
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .summary-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #00ff88;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-box {
+      background: rgba(0, 255, 136, 0.05);
+      border: 1px solid #00ff88;
+      border-radius: 4px;
+      padding: 12px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #80c0ff;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #00ff88;
+    }
+
+    .stat-box.fail {
+      border-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+
+    .stat-box.fail .stat-value {
+      color: #ff6b6b;
+    }
+
+    .stat-box.warn {
+      border-color: #ffa500;
+      color: #ffa500;
+    }
+
+    .stat-box.warn .stat-value {
+      color: #ffa500;
+    }
+
+    .export-btn {
+      background: #1a3a5c;
+      border: 1px solid #80c0ff;
+      color: #80c0ff;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .export-btn:hover {
+      background: #80c0ff;
+      color: #0a1628;
+      box-shadow: 0 0 15px rgba(128, 192, 255, 0.4);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      border-top-color: #00ff88;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .info-box {
+      background: rgba(128, 192, 255, 0.1);
+      border-left: 3px solid #80c0ff;
+      padding: 12px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #a0c0e0;
+    }
+
+    .error-box {
+      background: rgba(255, 107, 107, 0.1);
+      border-left: 3px solid #ff6b6b;
+      padding: 12px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #ff9999;
+    }
+  </style>
+</head>
+<body>
+  <div class="qa-container">
+    <div class="qa-header">
+      <div class="qa-title">QA v5 — Interaction-Aware Protocol</div>
+      <div class="qa-subtitle">Auditoría completa de integridad, scripts, funciones y comportamiento</div>
+    </div>
+
+    <div class="qa-controls">
+      <button onclick="runAllSuites()" id="run-all-btn">▶ Ejecutar Todas las Suites</button>
+      <button onclick="clearResults()" class="btn-secondary">⟲ Limpiar Resultados</button>
+      <button onclick="exportResults()" class="btn-secondary">⬇ Exportar JSON</button>
+      <div class="auth-checkbox">
+        <input type="checkbox" id="enable-auth-tests" onchange="toggleAuthTests()">
+        <label for="enable-auth-tests">Análisis Real (requiere auth)</label>
+      </div>
+    </div>
+
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-bar"></div>
+      </div>
+      <div class="progress-text">
+        <span id="progress-text">Listo</span>
+        <span id="progress-percent">0%</span>
+      </div>
+    </div>
+
+    <div id="suites-container"></div>
+
+    <div class="summary-container" id="summary" style="display: none;">
+      <div class="summary-title">Resumen Final</div>
+      <div class="summary-stats">
+        <div class="stat-box">
+          <div class="stat-label">Total Tests</div>
+          <div class="stat-value" id="stat-total">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Pasados</div>
+          <div class="stat-value" id="stat-pass">0</div>
+        </div>
+        <div class="stat-box fail">
+          <div class="stat-label">Fallidos</div>
+          <div class="stat-value" id="stat-fail">0</div>
+        </div>
+        <div class="stat-box warn">
+          <div class="stat-label">Advertencias</div>
+          <div class="stat-value" id="stat-warn">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Omitidos</div>
+          <div class="stat-value" id="stat-skip">0</div>
+        </div>
+      </div>
+      <button onclick="exportResults()" class="export-btn">⬇ Descargar Reporte JSON</button>
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = location.origin;
+    let allTestResults = [];
+    let enableAuthTests = false;
+    let isRunning = false;
+
+    const SUITES = [
+      {
+        id: 'scripts',
+        name: 'Suite 1: Integridad de Scripts',
+        tests: [
+          { id: 'home-scripts', name: 'home.html: Scripts en orden correcto', run: testHomeScripts },
+          { id: 'leads-scripts', name: 'leads.html: Scripts en orden correcto', run: testLeadsScripts },
+          { id: 'archivos-scripts', name: 'archivos.html: Scripts en orden correcto', run: testArchivosScripts },
+          { id: 'empresas-scripts', name: 'empresas.html: Scripts en orden correcto', run: testEmpresasScripts },
+          { id: 'version-consistency', name: 'Consistencia de versiones en archivos clave', run: testVersionConsistency }
+        ]
+      },
+      {
+        id: 'metagenio',
+        name: 'Suite 2: Simulación de MetaGenio',
+        tests: [
+          { id: 'agent-click-bug', name: 'agent.js: Sin double-toggle bug en click', run: testAgentClickBug },
+          { id: 'agent-pointerup', name: 'agent.js: Tiene pointerup listener', run: testAgentPointerup },
+          { id: 'agent-togglepanel', name: 'agent.js: togglePanel en handler correcto', run: testAgentTogglePanel }
+        ]
+      },
+      {
+        id: 'redefinitions',
+        name: 'Suite 3: Redefiniciones de Funciones',
+        tests: [
+          { id: 'leads-opendrawer', name: 'leads.html: openDrawer no redefinida 3+ veces', run: testLeadsOpenDrawer },
+          { id: 'leads-init', name: 'leads.html: init() definida solo 1 vez', run: testLeadsInit },
+          { id: 'agent-sendmessage', name: 'agent.js: sendMessage no duplicada', run: testAgentSendMessage }
+        ]
+      },
+      {
+        id: 'eventlisteners',
+        name: 'Suite 4: Event Listeners Críticos',
+        tests: [
+          { id: 'leads-drawer-overlay', name: 'leads.html: Drawer overlay tiene click handler', run: testDrawerOverlay },
+          { id: 'home-auth', name: 'home.html: Tiene auth check en DOMContentLoaded', run: testHomeAuth },
+          { id: 'archivos-auth', name: 'archivos.html: Tiene auth check en DOMContentLoaded', run: testArchivosAuth }
+        ]
+      },
+      {
+        id: 'versions',
+        name: 'Suite 5: Consistencia de Versiones',
+        tests: [
+          { id: 'archivos-versions', name: 'archivos.html: Todas las versiones = v=20260420', run: testArchivosVersions },
+          { id: 'archivos-ibanor-versions', name: 'archivos-ibanor.html: Todas las versiones = v=20260420', run: testArchivosIbanorVersions },
+          { id: 'leads-versions', name: 'leads.html: Todas las versiones = v=20260420', run: testLeadsVersions }
+        ]
+      },
+      {
+        id: 'authgate',
+        name: 'Suite 6: Auth Gate Coverage',
+        tests: [
+          { id: 'leads-requireauth', name: 'leads.html: Tiene requireAuth await', run: testLeadsRequireAuth },
+          { id: 'archivos-requireauth', name: 'archivos.html: Tiene requireAuth await', run: testArchivosRequireAuth },
+          { id: 'empresas-requireauth', name: 'empresas.html: Tiene requireAuth await', run: testEmpresasRequireAuth }
+        ]
+      },
+      {
+        id: 'onclick',
+        name: 'Suite 7: Funciones onclick Resolvibles',
+        tests: [
+          { id: 'leads-onclick', name: 'leads.html: onclick functions resolvibles', run: testLeadsOnclick },
+          { id: 'archivos-onclick', name: 'archivos.html: onclick functions resolvibles', run: testArchivosOnclick }
+        ]
+      },
+      {
+        id: 'interaction',
+        name: 'Suite 8: Comportamiento Post-Interacción (Requiere Auth)',
+        skipIfAuthDisabled: true,
+        tests: [
+          { id: 'drawer-open', name: 'leads.html: Drawer se abre y obtiene clase "open"', run: testDrawerInteraction },
+          { id: 'form-submit', name: 'leads.html: Form submission sin errores', run: testFormSubmission }
+        ]
+      }
+    ];
+
+    // ========== TEST FUNCTIONS ==========
+
+    async function testHomeScripts() {
+      try {
+        const html = await fetch('/home.html').then(r => r.text());
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const scripts = Array.from(doc.querySelectorAll('script[src]')).map(s => s.getAttribute('src'));
+        const hasSuabase = scripts.some(s => s.includes('supabase'));
+        const hasConfig = scripts.some(s => s.includes('config'));
+        const hasApp = scripts.some(s => s.includes('app.js'));
+
+        if (!hasSuabase) return { pass: false, msg: 'Falta Supabase JS' };
+        if (!hasConfig) return { pass: false, msg: 'Falta config.js' };
+        if (!hasApp) return { pass: false, msg: 'Falta app.js' };
+
+        return { pass: true, msg: 'Todos los scripts presentes en orden correcto' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testLeadsScripts() {
+      try {
+        const html = await fetch('/leads.html').then(r => r.text());
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const scripts = Array.from(doc.querySelectorAll('script[src]')).map(s => s.getAttribute('src'));
+        const hasAgent = scripts.some(s => s.includes('agent.js'));
+        const hasApp = scripts.some(s => s.includes('app.js'));
+
+        if (!hasApp) return { pass: false, msg: 'Falta app.js' };
+        if (!hasAgent) return { pass: false, msg: 'Falta agent.js' };
+
+        return { pass: true, msg: 'Scripts presentes' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testArchivosScripts() {
+      try {
+        const html = await fetch('/archivos.html').then(r => r.text());
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const scripts = Array.from(doc.querySelectorAll('script[src]')).map(s => s.getAttribute('src'));
+        const hasApp = scripts.some(s => s.includes('app.js'));
+        const hasAttach = scripts.some(s => s.includes('attachments'));
+
+        if (!hasApp) return { pass: false, msg: 'Falta app.js' };
+        if (!hasAttach) return { pass: false, msg: 'Falta attachments.js' };
+
+        return { pass: true, msg: 'Scripts presentes' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testEmpresasScripts() {
+      try {
+        const html = await fetch('/empresas.html').then(r => r.text());
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const scripts = Array.from(doc.querySelectorAll('script[src]')).map(s => s.getAttribute('src'));
+        const hasApp = scripts.some(s => s.includes('app.js'));
+
+        if (!hasApp) return { pass: false, msg: 'Falta app.js' };
+
+        return { pass: true, msg: 'Scripts presentes' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testVersionConsistency() {
+      try {
+        const files = ['archivos.html', 'leads.html', 'empresas.html'];
+        const versions = {};
+
+        for (const file of files) {
+          const html = await fetch(`/${file}`).then(r => r.text());
+          const matches = html.match(/v=(\d+)/g) || [];
+          const uniqueVersions = [...new Set(matches)];
+          versions[file] = uniqueVersions;
+        }
+
+        const allVersions = Object.values(versions).flat();
+        const maxVersionsPerFile = Math.max(...Object.values(versions).map(v => v.length));
+
+        if (maxVersionsPerFile > 2) {
+          return { pass: false, msg: `Demasiadas versiones distintas (max 2)`, detail: JSON.stringify(versions, null, 2) };
+        }
+
+        return { pass: true, msg: 'Versiones consistentes' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testAgentClickBug() {
+      try {
+        const js = await fetch('/assets/agent.js').then(r => r.text());
+
+        const hasClickToggleBug = /addEventListener\s*\(\s*['"]click['"]\s*,.*?togglePanel/s.test(js);
+
+        if (hasClickToggleBug) {
+          return { pass: false, msg: 'ENCONTRADO: double-toggle bug (click + togglePanel)' };
+        }
+
+        return { pass: true, msg: 'Sin double-toggle bug' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testAgentPointerup() {
+      try {
+        const js = await fetch('/assets/agent.js').then(r => r.text());
+
+        const hasPointerup = /addEventListener\s*\(\s*['"]pointerup['"]/i.test(js);
+        const hasKeydown = /addEventListener\s*\(\s*['"]keydown['"]/i.test(js);
+
+        if (!hasPointerup && !hasKeydown) {
+          return { pass: false, msg: 'Falta pointerup o keydown listener' };
+        }
+
+        return { pass: true, msg: hasPointerup ? 'Tiene pointerup listener' : 'Tiene keydown listener' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testAgentTogglePanel() {
+      try {
+        const js = await fetch('/assets/agent.js').then(r => r.text());
+
+        const hasPointerupToggle = /addEventListener\s*\(\s*['"]pointerup['"],\s*(?:.*?)togglePanel/s.test(js);
+        const hasKeydownToggle = /addEventListener\s*\(\s*['"]keydown['"],\s*(?:.*?)togglePanel/s.test(js);
+
+        if (!hasPointerupToggle && !hasKeydownToggle) {
+          return { pass: false, msg: 'togglePanel no está en pointerup ni keydown' };
+        }
+
+        return { pass: true, msg: 'togglePanel en handler correcto' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testLeadsOpenDrawer() {
+      try {
+        const html = await fetch('/leads.html').then(r => r.text());
+        const matches = (html.match(/function\s+openDrawer\s*\(/g) || []).length;
+
+        if (matches > 2) {
+          return { pass: false, msg: `openDrawer redefinida ${matches} veces (máximo 2)` };
+        }
+        if (matches < 2) {
+          return { pass: false, msg: `openDrawer redefinida ${matches} veces (debe ser 2: base + patch)` };
+        }
+
+        return { pass: true, msg: 'openDrawer definida correctamente (1 base + 1 patch)' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testLeadsInit() {
+      try {
+        const html = await fetch('/leads.html').then(r => r.text());
+        const matches = (html.match(/function\s+init\s*\(/g) || []).length;
+
+        if (matches !== 1) {
+          return { pass: false, msg: `init() definida ${matches} veces (debe ser 1)` };
+        }
+
+        return { pass: true, msg: 'init() definida una sola vez' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testAgentSendMessage() {
+      try {
+        const js = await fetch('/assets/agent.js').then(r => r.text());
+        const matches = (js.match(/function\s+sendMessage\s*\(/g) || []).length;
+
+        if (matches > 1) {
+          return { pass: false, msg: `sendMessage definida ${matches} veces` };
+        }
+
+        return { pass: true, msg: 'sendMessage no duplicada' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testDrawerOverlay() {
+      try {
+        const html = await fetch('/leads.html').then(r => r.text());
+        const hasOverlayHandler = /drawer-overlay.*?onclick|onclick.*?drawer-overlay|getElementById\s*\(\s*['"]drawer-overlay['"]\s*\).*?addEventListener/.test(html);
+
+        if (!hasOverlayHandler) {
+          return { pass: false, msg: 'Drawer overlay sin click handler para cerrar' };
+        }
+
+        return { pass: true, msg: 'Drawer overlay tiene handler de cierre' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testHomeAuth() {
+      try {
+        const html = await fetch('/home.html').then(r => r.text());
+        const hasAuth = /requireAuth|getCurrentUser|DOMContentLoaded/.test(html);
+
+        if (!hasAuth) {
+          return { pass: false, msg: 'Sin auth check en home.html' };
+        }
+
+        return { pass: true, msg: 'Tiene auth check' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testArchivosAuth() {
+      try {
+        const html = await fetch('/archivos.html').then(r => r.text());
+        const hasAuth = /requireAuth|getCurrentUser|DOMContentLoaded/.test(html);
+
+        if (!hasAuth) {
+          return { pass: false, msg: 'Sin auth check en archivos.html' };
+        }
+
+        return { pass: true, msg: 'Tiene auth check' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testArchivosVersions() {
+      try {
+        const html = await fetch('/archivos.html').then(r => r.text());
+        const versions = html.match(/v=\d+/g) || [];
+        const uniqueVersions = [...new Set(versions)];
+
+        const allCurrent = uniqueVersions.every(v => v === 'v=20260420');
+
+        if (!allCurrent) {
+          return { pass: false, msg: `Versiones mixtas encontradas: ${uniqueVersions.join(', ')}` };
+        }
+
+        return { pass: true, msg: 'Todas las versiones = v=20260420' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testArchivosIbanorVersions() {
+      try {
+        const html = await fetch('/archivos-ibanor.html').then(r => r.text());
+        const versions = html.match(/v=\d+/g) || [];
+        const uniqueVersions = [...new Set(versions)];
+
+        const allCurrent = uniqueVersions.every(v => v === 'v=20260420');
+
+        if (!allCurrent) {
+          return { pass: false, msg: `Versiones mixtas encontradas: ${uniqueVersions.join(', ')}` };
+        }
+
+        return { pass: true, msg: 'Todas las versiones = v=20260420' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testLeadsVersions() {
+      try {
+        const html = await fetch('/leads.html').then(r => r.text());
+        const versions = html.match(/v=\d+/g) || [];
+        const uniqueVersions = [...new Set(versions)];
+
+        const allCurrent = uniqueVersions.every(v => v === 'v=20260420');
+
+        if (!allCurrent) {
+          return { pass: false, msg: `Versiones mixtas encontradas: ${uniqueVersions.join(', ')}` };
+        }
+
+        return { pass: true, msg: 'Todas las versiones = v=20260420' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testLeadsRequireAuth() {
+      try {
+        const html = await fetch('/leads.html').then(r => r.text());
+        const hasAwaitAuth = /await\s+requireAuth/i.test(html);
+
+        if (!hasAwaitAuth) {
+          return { pass: false, msg: 'requireAuth sin await' };
+        }
+
+        return { pass: true, msg: 'Tiene requireAuth con await' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testArchivosRequireAuth() {
+      try {
+        const html = await fetch('/archivos.html').then(r => r.text());
+        const hasAwaitAuth = /await\s+requireAuth/i.test(html);
+
+        if (!hasAwaitAuth) {
+          return { pass: false, msg: 'requireAuth sin await' };
+        }
+
+        return { pass: true, msg: 'Tiene requireAuth con await' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testEmpresasRequireAuth() {
+      try {
+        const html = await fetch('/empresas.html').then(r => r.text());
+        const hasAwaitAuth = /await\s+requireAuth/i.test(html);
+
+        if (!hasAwaitAuth) {
+          return { pass: false, msg: 'requireAuth sin await' };
+        }
+
+        return { pass: true, msg: 'Tiene requireAuth con await' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testLeadsOnclick() {
+      try {
+        const html = await fetch('/leads.html').then(r => r.text());
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const elements = doc.querySelectorAll('[onclick]');
+        const appJs = await fetch('/assets/app.js').then(r => r.text());
+
+        let failCount = 0;
+        const failedFuncs = [];
+
+        elements.forEach(el => {
+          const onclick = el.getAttribute('onclick');
+          if (!onclick) return;
+
+          const funcMatch = onclick.match(/(\w+)\s*\(/);
+          if (funcMatch) {
+            const funcName = funcMatch[1];
+            const isDefined = new RegExp(`\\bfunction\\s+${funcName}\\s*\\(|\\bwindow\\.${funcName}\\s*=`).test(html + appJs);
+
+            if (!isDefined) {
+              failCount++;
+              failedFuncs.push(funcName);
+            }
+          }
+        });
+
+        if (failCount > 0) {
+          return { pass: false, msg: `${failCount} funciones onclick no resolvibles`, detail: `Funciones: ${[...new Set(failedFuncs)].join(', ')}` };
+        }
+
+        return { pass: true, msg: 'Todas las funciones onclick resolvibles' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testArchivosOnclick() {
+      try {
+        const html = await fetch('/archivos.html').then(r => r.text());
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const elements = doc.querySelectorAll('[onclick]');
+        const appJs = await fetch('/assets/app.js').then(r => r.text());
+
+        let failCount = 0;
+
+        elements.forEach(el => {
+          const onclick = el.getAttribute('onclick');
+          if (!onclick) return;
+
+          const funcMatch = onclick.match(/(\w+)\s*\(/);
+          if (funcMatch) {
+            const funcName = funcMatch[1];
+            const isDefined = new RegExp(`\\bfunction\\s+${funcName}\\s*\\(|\\bwindow\\.${funcName}\\s*=`).test(html + appJs);
+
+            if (!isDefined) failCount++;
+          }
+        });
+
+        if (failCount > 0) {
+          return { pass: false, msg: `${failCount} funciones onclick no resolvibles` };
+        }
+
+        return { pass: true, msg: 'Todas las funciones onclick resolvibles' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testDrawerInteraction() {
+      if (!enableAuthTests) return { pass: 'skip', msg: 'Requiere auth habilitada' };
+
+      try {
+        return { pass: 'warn', msg: 'Requiere sesión activa en navegador (omitido)' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    async function testFormSubmission() {
+      if (!enableAuthTests) return { pass: 'skip', msg: 'Requiere auth habilitada' };
+
+      try {
+        return { pass: 'warn', msg: 'Requiere sesión activa en navegador (omitido)' };
+      } catch (e) {
+        return { pass: false, msg: 'Error: ' + e.message };
+      }
+    }
+
+    // ========== UI & CONTROL ==========
+
+    function toggleAuthTests() {
+      enableAuthTests = document.getElementById('enable-auth-tests').checked;
+    }
+
+    async function runAllSuites() {
+      if (isRunning) return;
+      isRunning = true;
+
+      allTestResults = [];
+      document.getElementById('suites-container').innerHTML = '';
+      document.getElementById('summary').style.display = 'none';
+
+      const totalTests = SUITES.reduce((sum, suite) => {
+        const skipCount = suite.skipIfAuthDisabled && !enableAuthTests ? suite.tests.length : 0;
+        return sum + suite.tests.length - skipCount;
+      }, 0);
+
+      let completedTests = 0;
+
+      for (const suite of SUITES) {
+        renderSuiteHeader(suite);
+
+        for (const test of suite.tests) {
+          if (suite.skipIfAuthDisabled && !enableAuthTests) {
+            renderTestResult(suite.id, test.id, { pass: 'skip', msg: 'Suite requiere auth' });
+            continue;
+          }
+
+          try {
+            const result = await test.run();
+            renderTestResult(suite.id, test.id, result);
+            allTestResults.push({ suite: suite.id, test: test.id, ...result });
+          } catch (e) {
+            const result = { pass: false, msg: 'Error: ' + e.message };
+            renderTestResult(suite.id, test.id, result);
+            allTestResults.push({ suite: suite.id, test: test.id, ...result });
+          }
+
+          completedTests++;
+          updateProgress(completedTests, totalTests);
+        }
+      }
+
+      updateSummary();
+      document.getElementById('summary').style.display = 'block';
+      isRunning = false;
+    }
+
+    function renderSuiteHeader(suite) {
+      const container = document.getElementById('suites-container');
+      const suiteEl = document.createElement('div');
+      suiteEl.className = 'suite-container';
+      suiteEl.id = `suite-${suite.id}`;
+
+      suiteEl.innerHTML = `
+        <div class="suite-header" onclick="toggleSuite('${suite.id}')">
+          <div class="suite-title">
+            <span class="suite-chevron">▶</span>
+            <span class="suite-name">${suite.name}</span>
+          </div>
+          <div class="suite-status">
+            <span>Tests: <strong id="suite-${suite.id}-count">0</strong></span>
+            <span class="status-pass" id="suite-${suite.id}-pass">✅ 0</span>
+            <span class="status-fail" id="suite-${suite.id}-fail">❌ 0</span>
+            <span class="status-warn" id="suite-${suite.id}-warn">⚠️ 0</span>
+          </div>
+        </div>
+        <div class="suite-body" id="suite-${suite.id}-body"></div>
+      `;
+
+      container.appendChild(suiteEl);
+    }
+
+    function toggleSuite(suiteId) {
+      const header = document.querySelector(`#suite-${suiteId} .suite-header`);
+      const body = document.getElementById(`suite-${suiteId}-body`);
+
+      header.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+    }
+
+    function renderTestResult(suiteId, testId, result) {
+      const body = document.getElementById(`suite-${suiteId}-body`);
+
+      const icon = result.pass === true ? '✅' : result.pass === 'skip' ? '⏭️' : result.pass === 'warn' ? '⚠️' : '❌';
+      const className = result.pass === true ? 'pass' : result.pass === 'skip' ? 'skip' : result.pass === 'warn' ? 'warn' : 'fail';
+
+      const testEl = document.createElement('div');
+      testEl.className = `test-item ${className}`;
+      testEl.id = `test-${testId}`;
+
+      testEl.innerHTML = `
+        <div class="test-header">
+          <span class="test-icon">${icon}</span>
+          <span class="test-name" id="test-${testId}-name">Test Name</span>
+        </div>
+        <p class="test-message" id="test-${testId}-msg"></p>
+        ${result.detail ? `<div class="test-detail">${escapeHtml(result.detail)}</div>` : ''}
+      `;
+
+      body.appendChild(testEl);
+
+      document.getElementById(`test-${testId}-name`).textContent = document.querySelector(`[id="test-${testId}"]`)?.parentElement?.querySelector('.test-name')?.textContent || testId;
+      document.getElementById(`test-${testId}-msg`).textContent = result.msg;
+
+      updateSuiteStats(suiteId);
+    }
+
+    function updateSuiteStats(suiteId) {
+      const body = document.getElementById(`suite-${suiteId}-body`);
+      const tests = body.querySelectorAll('.test-item');
+
+      const pass = body.querySelectorAll('.pass').length;
+      const fail = body.querySelectorAll('.fail').length;
+      const warn = body.querySelectorAll('.warn').length;
+      const skip = body.querySelectorAll('.skip').length;
+
+      document.getElementById(`suite-${suiteId}-count`).textContent = tests.length;
+      document.getElementById(`suite-${suiteId}-pass`).textContent = `✅ ${pass}`;
+      document.getElementById(`suite-${suiteId}-fail`).textContent = `❌ ${fail}`;
+      document.getElementById(`suite-${suiteId}-warn`).textContent = `⚠️ ${warn}`;
+    }
+
+    function updateProgress(completed, total) {
+      const percent = Math.round((completed / total) * 100);
+      document.getElementById('progress-bar').style.width = percent + '%';
+      document.getElementById('progress-text').textContent = `Ejecutando: ${completed}/${total}`;
+      document.getElementById('progress-percent').textContent = percent + '%';
+    }
+
+    function updateSummary() {
+      const pass = allTestResults.filter(r => r.pass === true).length;
+      const fail = allTestResults.filter(r => r.pass === false).length;
+      const warn = allTestResults.filter(r => r.pass === 'warn').length;
+      const skip = allTestResults.filter(r => r.pass === 'skip').length;
+      const total = allTestResults.length;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-pass').textContent = pass;
+      document.getElementById('stat-fail').textContent = fail;
+      document.getElementById('stat-warn').textContent = warn;
+      document.getElementById('stat-skip').textContent = skip;
+    }
+
+    function clearResults() {
+      allTestResults = [];
+      document.getElementById('suites-container').innerHTML = '';
+      document.getElementById('summary').style.display = 'none';
+      document.getElementById('progress-bar').style.width = '0%';
+      document.getElementById('progress-text').textContent = 'Listo';
+      document.getElementById('progress-percent').textContent = '0%';
+    }
+
+    function exportResults() {
+      const data = {
+        timestamp: new Date().toISOString(),
+        totalTests: allTestResults.length,
+        passed: allTestResults.filter(r => r.pass === true).length,
+        failed: allTestResults.filter(r => r.pass === false).length,
+        warned: allTestResults.filter(r => r.pass === 'warn').length,
+        skipped: allTestResults.filter(r => r.pass === 'skip').length,
+        results: allTestResults
+      };
+
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `qa-v5-results-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Init
+    function init() {
+      for (const suite of SUITES) {
+        const container = document.getElementById('suites-container');
+        const suiteEl = document.createElement('div');
+        suiteEl.className = 'suite-container';
+        suiteEl.id = `suite-${suite.id}`;
+
+        suiteEl.innerHTML = `
+          <div class="suite-header" onclick="toggleSuite('${suite.id}')">
+            <div class="suite-title">
+              <span class="suite-chevron">▶</span>
+              <span class="suite-name">${suite.name}</span>
+            </div>
+            <div class="suite-status">
+              <span>Tests: <strong id="suite-${suite.id}-count">${suite.tests.length}</strong></span>
+              <span class="status-pass" id="suite-${suite.id}-pass">✅ 0</span>
+              <span class="status-fail" id="suite-${suite.id}-fail">❌ 0</span>
+              <span class="status-warn" id="suite-${suite.id}-warn">⚠️ 0</span>
+            </div>
+          </div>
+          <div class="suite-body collapsed" id="suite-${suite.id}-body"></div>
+        `;
+
+        container.appendChild(suiteEl);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Pipeline CRM</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="stylesheet" href="/assets/style.css?v=20260418">
+  <link rel="stylesheet" href="/assets/style.css?v=20260420">
   <link rel="stylesheet" href="/assets/agent.css">
   <!-- GOOGLE FONTS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -886,12 +886,12 @@
 <!-- CORE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260419"></script>
+<script src="/assets/app.js?v=20260420"></script>
 <script src="/assets/agent.js?v=20260420"></script>
 <!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js?v=20260418"></script>
+<script src="/assets/salescoach.js?v=20260420"></script>
 <!-- TEAM CHAT -->
-<script src="/assets/teamchat.js?v=20260418"></script>
+<script src="/assets/teamchat.js?v=20260420"></script>
 <script>
 
 /* ════════════════════════════════════════════════════════
@@ -4222,44 +4222,6 @@ init();
 setTimeout(init_taskUI, 1500);
 
 
-function openDrawer(leadId) {
-  currentLeadId = leadId;
-  const lead = allLeads.find(l=>l.id===leadId);
-  if (!lead) return;
-  const stage = getLeadStage(lead);
-  document.getElementById('drawer-company').textContent = lead.empresa;
-  // Stage bar
-  const stageBar = document.getElementById('drawer-stage-bar');
-  if (stageBar) {
-    const stageKeys = ['generacion','primer_contacto','calificacion','propuesta','negociacion','cierre','postventa','retencion','fidelizacion'];
-    stageBar.innerHTML = stageKeys.map(k => {
-      const st = STAGES[k]||{};
-      const isActive = k === stage;
-      const isClosed = k === 'cerrado_perdido';
-      return `<button class="o-stage-btn ${isActive?'active':''}" onclick="moveLeadStage('${leadId}','${k}');renderDrawerStageBar('${leadId}')" title="${st.label}">${st.icon} ${st.label}</button>`;
-    }).join('');
-  }
-  // Smart buttons
-  const smartEl = document.getElementById('drawer-smartbtns');
-  if (smartEl) {
-    const commsCount = LS.comms(leadId).length;
-    const chatCount  = LS.chat(leadId).length;
-    const docsCount  = Object.keys(LS.docs(leadId)).filter(k=>!k.includes('_file')).length;
-    const planCount  = LS.plans().filter(p=>p.lead_id===leadId).length;
-    smartEl.innerHTML = [
-      [commsCount, 'Actividades', '💬', "switchTab('historial')"],
-      [chatCount,  'Mensajes',    '👥', "switchTab('chat')"],
-      [docsCount,  'Documentos',  '📁', "switchTab('docs')"],
-      [planCount,  'Planes',      '📅', "switchTab('plan')"],
-    ].map(([n,l,ico,fn])=>`<button class="o-smartbtn" onclick="${fn}">
-      <span class="o-smartbtn-num">${n}</span>
-      <span class="o-smartbtn-lbl">${ico} ${l}</span>
-    </button>`).join('');
-  }
-  document.getElementById('lead-drawer').classList.add('open');
-  document.getElementById('drawer-overlay').classList.add('visible');
-  switchTab(currentDrawerTab);
-}
 
 function renderDrawerStageBar(leadId) {
   const lead = allLeads.find(l=>l.id===leadId);
