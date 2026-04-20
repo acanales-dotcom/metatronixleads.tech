@@ -238,10 +238,20 @@ let _companies = [];
 let _selectedCompany = null;
 let _userMap = {};   // uuid → {email, full_name}
 
+/* ─── Wait helper ───────────────────────────────────── */
+async function waitForUser() {
+  for (let i = 0; i < 30; i++) {
+    const u = window._mtxCurrentUser || window._currentUser;
+    if (u) return u;
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return null;
+}
+
 /* ─── Init ─────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
-  await MTX.waitForUser();
-  const user = window._mtxCurrentUser;
+  await waitForUser();
+  const user = window._mtxCurrentUser || window._currentUser;
   if (!user) { location.href = '/index.html'; return; }
   const role = user.profile?.role;
   if (!['admin','super_admin'].includes(role)) {
@@ -250,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  _sb = window._supabase || supabase.createClient(
+  _sb = (typeof getDB === 'function') ? getDB() : supabase.createClient(
     window.MTX_CONFIG.SUPABASE_URL,
     window.MTX_CONFIG.SUPABASE_ANON_KEY
   );

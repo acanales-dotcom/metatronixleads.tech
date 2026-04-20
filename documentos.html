@@ -211,7 +211,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function waitForUser() {
   for (let i = 0; i < 30; i++) {
-    if (window._currentUser) return window._currentUser;
+    const u = window._mtxCurrentUser || window._currentUser;
+    if (u) return u;
     await new Promise(r => setTimeout(r, 200));
   }
   return null;
