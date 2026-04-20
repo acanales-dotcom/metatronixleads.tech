@@ -8,9 +8,9 @@
   <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
-  <link rel="stylesheet" href="/assets/style.css?v=20260418">
+  <link rel="stylesheet" href="/assets/style.css?v=20260420">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/config.js?v=20260418"></script>
+  <script src="/config.js?v=20260420"></script>
   <script src="/assets/app.js?v=20260419"></script>
   <script src="/assets/attachments.js?v=20260420"></script>
   <style>
@@ -314,7 +314,7 @@ function renderDocs() {
         <td><span class="type-badge type-${meta.cls}">${meta.label}</span></td>
         <td class="file-size">${d.file_size ? fmtSize(d.file_size) : '—'}</td>
         <td class="file-date">${fmtDT(d.created_at)}</td>
-        <td class="uploader">${escHtml(d.uploaded_by ? '—' : '—')}</td>
+        <td class="uploader">${escHtml(d.uploaded_by_name || d.uploaded_by || '—')}</td>
         <td style="white-space:nowrap">
           <button class="btn-dl" onclick="dlDoc('${escHtml(d.storage_path)}','${escHtml(d.file_name)}')">⬇ Descargar</button>
           <button class="btn-del" title="Eliminar" onclick="delDoc('${d.id}','${escHtml(d.storage_path)}','${escHtml(d.file_name)}')">🗑</button>
@@ -451,7 +451,7 @@ function setupShell(page) {
 }
 </script>
 
-<script src="/assets/agent.js?v=20260419"></script>
+<script src="/assets/agent.js?v=20260420"></script>
 <script src="/assets/teamchat.js?v=20260419"></script>
 </body>
 </html>

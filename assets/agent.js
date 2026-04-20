@@ -1113,9 +1113,14 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
       tab.addEventListener('click', () => switchMode(tab.dataset.mode));
     });
 
-    // Toggle panel — initAgentDrag handles pointerup; this click fires only if
-    // e.preventDefault() wasn't called (non-pointer devices fallback)
-    btn.addEventListener('click', (e) => { if (!e._fromDrag) togglePanel(); });
+    // Toggle panel — initAgentDrag handles pointerup (includes non-drag clicks).
+    // NO click listener here — it would fire AFTER pointerup causing a double-toggle
+    // that makes the panel open and immediately close. initAgentDrag's pointerup
+    // already calls togglePanel() for all clicks (pointer + touch + keyboard).
+    // Fallback for keyboards only (Enter/Space on focused button):
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePanel(); }
+    });
 
     // Send message
     send.addEventListener('click', () => sendMessage());
