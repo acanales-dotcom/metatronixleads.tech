@@ -378,10 +378,12 @@ const IBANOR_EMAILS = ['acanales@ibanormexico.com','nibarra@ibanormexico.com','a
 
 function renderHeader(user, activePage) {
   const role = user?.profile?.role;
+  const department = (user?.profile?.department || '').toLowerCase().trim();
   const isAdmin = role === 'admin';
   const isSuperAdmin = role === 'super_admin';
   const isRestrictedAdmin = role === 'admin_restringido';
   const hasAdminAccess = ADMIN_ROLES.includes(role);
+  const isDirVentas = isRestrictedAdmin && department === 'ventas';
   const userEmail = (user?.email || '').toLowerCase().trim();
   const hasIbanorAccess = IBANOR_EMAILS.includes(userEmail);
   const name = user?.profile?.full_name || user?.email || '—';
@@ -415,12 +417,14 @@ function renderHeader(user, activePage) {
     : '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Sin alertas</div>';
 
   const roleBadge = isSuperAdmin
-    ? '<span class="sidebar-role-badge" style="background:#7c3aed;color:#fff">SuperAdmin</span>'
+    ? '<span class="sidebar-role-badge" style="background:#7c3aed;color:#fff">CEO</span>'
     : isAdmin
-      ? '<span class="sidebar-role-badge" style="background:var(--accent);color:#fff">Admin</span>'
-      : isRestrictedAdmin
-        ? '<span class="sidebar-role-badge" style="background:var(--warning);color:#000">Visor</span>'
-        : '';
+      ? '<span class="sidebar-role-badge" style="background:var(--accent);color:#000">Director</span>'
+      : isDirVentas
+        ? '<span class="sidebar-role-badge" style="background:#f97316;color:#fff">Dir. Ventas</span>'
+        : isRestrictedAdmin
+          ? '<span class="sidebar-role-badge" style="background:var(--warning);color:#000">Gerente</span>'
+          : '';
 
   return `
   <style>
@@ -571,8 +575,8 @@ function renderHeader(user, activePage) {
 
       <div class="sidebar-divider"></div>
 
-      <!-- ADMINISTRACIÓN (admin roles only) — aparece después de Marketing -->
-      ${hasAdminAccess ? `
+      <!-- ADMINISTRACIÓN (admin/super_admin — NO Director de Ventas) -->
+      ${hasAdminAccess && !isDirVentas ? `
       <div class="sidebar-section-label">Administración</div>
       <a href="/ceo.html" class="sidebar-nav-link ${activePage==='ceo'?'active':''}">
         <span class="nav-icon">🎯</span>
