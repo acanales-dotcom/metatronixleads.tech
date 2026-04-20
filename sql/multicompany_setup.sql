@@ -5,22 +5,13 @@
 -- ============================================================
 
 -- 1. Migrar tabla companies al nuevo schema UUID-based
---    La tabla ya existe con id TEXT. La recreamos limpia.
+--    DROP CASCADE elimina la tabla vieja (con id TEXT) y cualquier
+--    FK/policy que dependa de ella. CREATE reconstruye limpia.
 
--- a) Eliminar tabla antigua (y sus políticas) si existe con el schema viejo (id TEXT)
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'companies' AND column_name = 'id'
-    AND data_type = 'text'
-  ) THEN
-    DROP TABLE IF EXISTS companies CASCADE;
-  END IF;
-END $$;
+DROP TABLE IF EXISTS user_companies CASCADE;
+DROP TABLE IF EXISTS companies CASCADE;
 
--- b) Crear tabla companies con schema correcto (UUID)
-CREATE TABLE IF NOT EXISTS companies (
+CREATE TABLE companies (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug       TEXT UNIQUE NOT NULL,
   name       TEXT NOT NULL,
