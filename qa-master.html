@@ -390,7 +390,7 @@ const SUITE_MASTER = [
     return bad.length===0?pass('10/10 páginas con cache-bust'):fail(bad.length+' sin ?v=: '+bad.join(', '));
   }},
   {id:'MTX-INF-004', name:'app.js accesible (200 OK)', run:async()=>{
-    try{const r=await fetch(BASE+'/assets/app.js?v='+ASSET_V);return r.ok?pass('app.js OK'):fail('HTTP '+r.status);}catch(e){return fail(e.message);}
+    try{const r=await fetch(BASE+'/assets/app.js?v=20260423'+ASSET_V);return r.ok?pass('app.js OK'):fail('HTTP '+r.status);}catch(e){return fail(e.message);}
   }},
   {id:'MTX-INF-005', name:'salescoach.js accesible', run:async()=>{
     try{const r=await fetch(BASE+'/assets/salescoach.js?v='+ASSET_V);return r.ok?pass('salescoach.js OK'):fail('HTTP '+r.status);}catch(e){return fail(e.message);}

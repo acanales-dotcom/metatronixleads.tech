@@ -2,14 +2,11 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Marketing IA</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="/assets/style.css?v=20260420">
-  <link rel="stylesheet" href="/assets/agent.css?v=20260421">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/agent.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -34,8 +31,72 @@
       };
     }
   </script>
-  <!-- CRM_LLM compartido — módulo central con retry y JWT auth -->
-  <script src="/assets/crm-llm.js?v=20260420" defer></script>
+  <script>
+    // CRM_LLM — usa Cloudflare Worker como proxy a Claude API (sin descarga local)
+    if (!window.CRM_LLM) {
+      window.CRM_LLM = {
+        engine: true,   // siempre "activo" — no requiere inicialización local
+        _workerUrl: (window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev'),
+        async init(cb) {
+          // Verifica conectividad con el Worker
+          if (cb) cb({ progress: 0.2, text: 'Verificando conexión con Claude API...' });
+          try {
+            const probe = await fetch(this._workerUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:5, messages:[{role:'user',content:'hi'}] }),
+              signal: AbortSignal.timeout(8000)
+            });
+            if (cb) cb({ progress: 1.0, text: 'Claude API conectada ✓' });
+          } catch(e) {
+            if (cb) cb({ progress: 1.0, text: 'Modo directo activo ✓' });
+          }
+          this.engine = true;
+        },
+        async chat(sys, msg) {
+          const url = this._workerUrl;
+          let fullText = '';
+          try {
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 1500,
+                system: sys,
+                messages: [{ role: 'user', content: msg }],
+                stream: true
+              }),
+              signal: AbortSignal.timeout(30000)
+            });
+            if (!resp.ok) { throw new Error('Worker error ' + resp.status); }
+            // Read SSE stream
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+              for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6);
+                if (data === '[DONE]') break;
+                try {
+                  const parsed = JSON.parse(data);
+                  const delta = parsed.delta?.text || parsed.delta?.content?.[0]?.text || '';
+                  fullText += delta;
+                } catch(e2) {}
+              }
+            }
+            return fullText || '(sin respuesta)';
+          } catch(e) {
+            throw new Error('Failed to fetch');
+          }
+        }
+      };
+    }
+  </script>
 
   <style>
 /* ── Marketing IA — Estilos específicos ────────────────────── */
@@ -99,7 +160,7 @@
 }
 .agent-card-meta { flex:1; min-width:0; }
 .agent-name { font-family:var(--font-head); font-size:1rem; letter-spacing:.04em; color:var(--navy); line-height:1; margin-bottom:4px; }
-.agent-desc { font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:2px; }
+.agent-desc { font-size:12px; color:var(--text-muted); line-height:1.4; }
 .agent-status {
   display:inline-flex; align-items:center; gap:4px;
   font-size:10px; font-weight:700; padding:2px 7px;
@@ -111,7 +172,7 @@
 .agent-status.idle   { background:#F8FAFC; color:#94A3B8; }
 
 /* Agent models badges */
-.agent-models { display:none; }
+.agent-models { display:flex; gap:4px; flex-wrap:wrap; padding:8px 18px; border-bottom:1px solid var(--border); background:var(--surface); }
 .model-tag {
   font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px;
   background:#EFF6FF; color:#2563EB; letter-spacing:.02em;
@@ -216,302 +277,6 @@
 
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-
-/* ══════════════════════════════════════════════════════════
-   PREDICTOR DE CAMPAÑAS — Panel predictivo pre-lanzamiento
-   Esquema índigo/violeta · mismo lenguaje visual que INTEL
-   ══════════════════════════════════════════════════════════ */
-@keyframes pred-in   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-@keyframes pred-scan { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
-@keyframes pred-dot  { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
-@keyframes pred-fill { from{width:0} to{width:var(--w)} }
-@keyframes pred-num  { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
-
-.pred-panel {
-  background:linear-gradient(160deg,#0C0D22 0%,#090A1A 100%);
-  border:1px solid rgba(99,102,241,.32);
-  border-radius:14px; overflow:hidden; position:relative;
-  animation:pred-in .5s cubic-bezier(.22,1,.36,1) forwards;
-  box-shadow:0 12px 48px rgba(0,0,0,.5), 0 0 0 1px rgba(99,102,241,.08),
-             inset 0 1px 0 rgba(255,255,255,.04);
-}
-.pred-panel::before {
-  content:''; position:absolute; inset:0; pointer-events:none;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 3px);
-  z-index:0;
-}
-.pred-scanline {
-  position:absolute; top:0; left:0; right:0; height:60px;
-  background:linear-gradient(to bottom,rgba(99,102,241,.04),transparent);
-  animation:pred-scan 6s linear infinite; z-index:1; pointer-events:none;
-}
-.pred-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:11px 16px; border-bottom:1px solid rgba(99,102,241,.18);
-  background:rgba(99,102,241,.06); position:relative; z-index:2;
-}
-.pred-header-left { display:flex; align-items:center; gap:10px; }
-.pred-dot {
-  width:7px; height:7px; border-radius:50%; background:#6366F1; flex-shrink:0;
-  animation:pred-dot 2s ease-in-out infinite;
-  box-shadow:0 0 8px #6366F1;
-}
-.pred-title {
-  font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;
-  color:#818CF8; letter-spacing:.12em; text-transform:uppercase;
-}
-.pred-subtitle {
-  font-size:11px; color:rgba(255,255,255,.4); margin-top:2px;
-}
-.pred-badge {
-  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
-  padding:3px 9px; border-radius:4px; border:1px solid;
-  letter-spacing:.08em; text-transform:uppercase;
-}
-.pred-body { padding:14px 16px; position:relative; z-index:2; display:flex; flex-direction:column; gap:12px; }
-
-/* Zone 1: gauge + metrics */
-.pred-top-row { display:grid; grid-template-columns:130px 1fr; gap:14px; align-items:start; }
-.pred-score-box {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  padding:14px 10px; border-radius:10px;
-  background:rgba(255,255,255,.03); border:1px solid rgba(99,102,241,.15);
-  text-align:center;
-}
-.pred-score-num {
-  font-family:'JetBrains Mono',monospace; font-size:52px; font-weight:900;
-  line-height:1; animation:pred-num .6s ease forwards;
-}
-.pred-score-denom { font-family:'JetBrains Mono',monospace; font-size:13px; color:rgba(255,255,255,.3); margin-top:2px; }
-.pred-score-label { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:.12em; color:rgba(255,255,255,.35); margin-top:6px; text-transform:uppercase; }
-.pred-right { display:flex; flex-direction:column; gap:8px; }
-
-/* Metric bars */
-.pred-metric-row { display:flex; flex-direction:column; gap:4px; }
-.pred-metric-label { display:flex; justify-content:space-between; align-items:center; }
-.pred-metric-name  { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.45); letter-spacing:.06em; text-transform:uppercase; }
-.pred-metric-val   { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#A5B4FC; }
-.pred-metric-track { height:4px; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden; }
-.pred-metric-fill  { height:100%; border-radius:2px; animation:pred-fill .9s ease forwards; }
-.pred-metric-range { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(165,180,252,.4); margin-top:2px; }
-
-/* Zone 2: channels */
-.pred-channels-title { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(99,102,241,.6); letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
-.pred-channel-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
-.pred-channel-name { font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(255,255,255,.6); width:88px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pred-channel-track { flex:1; height:4px; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden; }
-.pred-channel-fill  { height:100%; border-radius:2px; animation:pred-fill .9s ease forwards; }
-.pred-channel-val   { font-family:'JetBrains Mono',monospace; font-size:10px; width:32px; text-align:right; flex-shrink:0; }
-.pred-channel-reason { font-size:10px; color:rgba(255,255,255,.3); margin-left:4px; font-style:italic; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-/* Zone 3: tags */
-.pred-tags { display:flex; flex-wrap:wrap; gap:5px; }
-.pred-tags-title { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.3); letter-spacing:.08em; text-transform:uppercase; width:100%; margin-bottom:2px; }
-.pred-tag {
-  font-size:10px; padding:3px 9px; border-radius:20px; border:1px solid; font-weight:600;
-  display:inline-flex; align-items:center; gap:4px;
-}
-.pred-tag-ok     { background:rgba(74,222,128,.08);  color:#4ADE80; border-color:rgba(74,222,128,.2); }
-.pred-tag-warn   { background:rgba(252,211,77,.08);  color:#FCD34D; border-color:rgba(252,211,77,.2); }
-.pred-tag-danger { background:rgba(248,113,113,.08); color:#F87171; border-color:rgba(248,113,113,.2); }
-
-/* Zone 4: recommendation */
-.pred-rec {
-  padding:10px 14px; border-radius:8px;
-  background:rgba(99,102,241,.06); border:1px solid rgba(99,102,241,.2);
-}
-.pred-rec-label { font-family:'JetBrains Mono',monospace; font-size:9px; color:#818CF8; letter-spacing:.1em; text-transform:uppercase; margin-bottom:5px; }
-.pred-rec-text  { font-size:12px; color:rgba(255,255,255,.7); line-height:1.6; }
-
-/* Loading */
-.pred-loading { display:flex; align-items:center; gap:12px; padding:20px 16px; color:rgba(99,102,241,.6); font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.05em; }
-.pred-spinner { width:16px; height:16px; border:2px solid rgba(99,102,241,.2); border-top-color:#6366F1; border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
-
-/* ── Barra de progreso con gatitos — marketing (azul) ── */
-@keyframes cat-bounce-a { 0%,100%{transform:translateY(0px) rotate(-3deg) scaleX(1)} 30%{transform:translateY(-4px) rotate(2deg) scaleX(1.05)} 60%{transform:translateY(-2px) rotate(-4deg) scaleX(.97)} }
-@keyframes cat-bounce-b { 0%,100%{transform:translateY(-2px) rotate(2deg) scaleX(.98)} 40%{transform:translateY(-5px) rotate(-3deg) scaleX(1.04)} 70%{transform:translateY(0px) rotate(3deg) scaleX(1)} }
-.ap-cat-a { animation:cat-bounce-a .38s ease-in-out infinite; display:inline-block; font-size:15px; line-height:1; }
-.ap-cat-b { animation:cat-bounce-b .38s ease-in-out infinite .16s; display:inline-block; font-size:15px; line-height:1; margin-left:-3px; }
-#agency-progress { display:none; margin-top:10px; background:rgba(2,132,199,.07); border:1px solid rgba(14,165,233,.2); border-radius:10px; padding:10px 14px; }
-.ap-inner { display:flex; align-items:center; gap:10px; }
-.ap-label { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:rgba(0,194,224,.6); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
-.ap-track-wrap { flex:1; position:relative; height:22px; }
-.ap-track { position:absolute; bottom:3px; left:0; right:0; height:3px; background:rgba(255,255,255,.08); border-radius:2px; overflow:hidden; }
-.ap-fill { height:100%; width:0%; border-radius:2px; background:linear-gradient(90deg,#0EA5E9,#0284C7); transition:width .35s ease; }
-.ap-cats { position:absolute; bottom:5px; left:0%; transform:translateX(-50%); transition:left .35s ease; display:flex; align-items:flex-end; pointer-events:none; }
-.ap-pct { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#0EA5E9; width:34px; text-align:right; flex-shrink:0; }
-.ap-count { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.3); white-space:nowrap; flex-shrink:0; }
-
-/* ── Propuesta de Campaña — Genio Marketing ── */
-@keyframes camp-in { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
-@keyframes camp-score-up { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
-.camp-panel {
-  background:linear-gradient(160deg,#071A1F 0%,#050F14 100%);
-  border:1px solid rgba(6,182,212,.32); border-radius:14px; overflow:hidden; position:relative;
-  animation:camp-in .5s cubic-bezier(.22,1,.36,1) forwards;
-  box-shadow:0 12px 48px rgba(0,0,0,.5),0 0 0 1px rgba(6,182,212,.08),inset 0 1px 0 rgba(255,255,255,.04);
-}
-.camp-panel::before {
-  content:''; position:absolute; inset:0; pointer-events:none;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 3px); z-index:0;
-}
-.camp-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:11px 16px; border-bottom:1px solid rgba(6,182,212,.18);
-  background:rgba(6,182,212,.06); position:relative; z-index:2;
-}
-.camp-dot {
-  width:7px; height:7px; border-radius:50%; background:#06B6D4; flex-shrink:0;
-  animation:pred-dot 2s ease-in-out infinite; box-shadow:0 0 8px #06B6D4;
-}
-.camp-title { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#22D3EE; letter-spacing:.12em; text-transform:uppercase; }
-.camp-subtitle { font-size:11px; color:rgba(255,255,255,.4); margin-top:2px; }
-.camp-body { padding:14px 16px; position:relative; z-index:2; }
-.camp-delta-row {
-  display:flex; align-items:center; gap:10px; margin-bottom:14px;
-  padding:10px 14px; border-radius:8px;
-  background:rgba(6,182,212,.06); border:1px solid rgba(6,182,212,.18); flex-wrap:wrap;
-}
-.camp-score-from { font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:900; color:#94A3B8; line-height:1; }
-.camp-arrow { font-size:18px; color:#06B6D4; }
-.camp-score-to { font-family:'JetBrains Mono',monospace; font-size:42px; font-weight:900; color:#22D3EE; line-height:1; animation:camp-score-up .5s ease; }
-.camp-campaign-name { font-size:14px; font-weight:700; color:#E0F2FE; margin-left:auto; text-align:right; max-width:220px; line-height:1.3; }
-.camp-strategy { font-size:11.5px; color:rgba(255,255,255,.55); margin-bottom:14px; line-height:1.7; }
-.camp-posts-title {
-  font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(6,182,212,.6);
-  letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px;
-  display:flex; align-items:center; gap:8px;
-}
-.camp-avg-badge {
-  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
-  padding:2px 8px; border-radius:3px; background:rgba(74,222,128,.12);
-  color:#4ADE80; border:1px solid rgba(74,222,128,.25);
-}
-.camp-post-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(205px,1fr)); gap:8px; margin-bottom:12px; }
-.camp-post-card {
-  background:rgba(255,255,255,.03); border:1px solid rgba(6,182,212,.15); border-radius:8px;
-  padding:10px 11px; display:flex; flex-direction:column; gap:6px; transition:border-color .2s;
-}
-.camp-post-card:hover { border-color:rgba(6,182,212,.4); }
-.camp-post-top { display:flex; align-items:center; gap:6px; }
-.camp-platform-badge { font-size:9px; font-weight:700; padding:2px 7px; border-radius:3px; letter-spacing:.04em; flex-shrink:0; white-space:nowrap; }
-.camp-post-format { font-family:'JetBrains Mono',monospace; font-size:8px; color:rgba(255,255,255,.3); letter-spacing:.04em; }
-.camp-post-hook { font-size:11px; font-weight:700; color:#E0F2FE; line-height:1.4; }
-.camp-post-copy { font-size:10.5px; color:rgba(255,255,255,.5); line-height:1.5; }
-.camp-post-score-row { display:flex; align-items:center; gap:6px; margin-top:2px; }
-.camp-post-score-track { flex:1; height:3px; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden; }
-.camp-post-score-fill { height:100%; border-radius:2px; }
-.camp-post-score-val { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#4ADE80; flex-shrink:0; }
-.camp-post-razon { font-size:9px; color:rgba(255,255,255,.3); font-style:italic; }
-
-/* Visual asset section per post */
-.camp-visual-section {
-  margin-top:6px; padding:7px 9px; border-radius:6px;
-  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07);
-}
-.camp-visual-top { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
-.camp-visual-badge {
-  font-size:9px; font-weight:700; padding:2px 7px; border-radius:3px;
-  letter-spacing:.04em; flex-shrink:0;
-}
-.camp-visual-prompt {
-  font-family:'JetBrains Mono',monospace; font-size:8.5px; color:rgba(255,255,255,.4);
-  line-height:1.6; word-break:break-word;
-}
-.camp-visual-copy {
-  font-size:9px; font-weight:700; padding:2px 8px; border-radius:3px; border:none;
-  background:rgba(255,255,255,.06); color:rgba(255,255,255,.45); cursor:pointer;
-  margin-left:auto; white-space:nowrap; transition:all .2s; flex-shrink:0;
-}
-.camp-visual-copy:hover { background:rgba(6,182,212,.15); color:#22D3EE; }
-
-.camp-network-picker { padding:20px; text-align:center; }
-.camp-network-q { font-size:13px; color:rgba(255,255,255,.7); margin-bottom:14px; line-height:1.6; }
-.camp-network-grid { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
-.camp-net-btn {
-  font-size:11px; font-weight:700; padding:7px 14px; border-radius:6px;
-  border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04);
-  color:#C8D4E8; cursor:pointer; transition:all .2s; letter-spacing:.03em;
-}
-.camp-net-btn:hover { background:rgba(6,182,212,.12); border-color:rgba(6,182,212,.4); color:#22D3EE; }
-
-/* ═══════════════════════ USAGE BLOCKER ═════════════════ */
-@keyframes blocker-in { from{opacity:0;transform:scale(.94) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
-.usage-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);animation:fadeIn .2s ease; }
-.usage-modal { background:linear-gradient(145deg,#0D1117,#161B22);border:1px solid rgba(239,68,68,.35);border-radius:16px;max-width:440px;width:100%;overflow:hidden;animation:blocker-in .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 60px rgba(239,68,68,.18),0 24px 80px rgba(0,0,0,.5);position:relative; }
-.usage-modal::before { content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 3px); }
-.usage-modal-header { padding:18px 22px 14px;border-bottom:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.06);position:relative;z-index:1; }
-.usage-modal-icon { font-size:36px;display:block;margin-bottom:8px; }
-.usage-modal-title { font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#FCA5A5;letter-spacing:.08em;margin-bottom:3px; }
-.usage-modal-sub { font-size:11px;color:rgba(252,165,165,.5);letter-spacing:.04em;font-family:Inter,sans-serif; }
-.usage-modal-body { padding:18px 22px;position:relative;z-index:1; }
-.usage-bar-wrap { margin:14px 0; }
-.usage-bar-label { display:flex;justify-content:space-between;margin-bottom:6px;font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.45); }
-.usage-bar-track { height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden; }
-.usage-bar-fill { height:100%;border-radius:4px;background:linear-gradient(90deg,#EF4444,#F97316);transition:width .6s ease; }
-.usage-msg { font-size:13px;line-height:1.7;color:rgba(255,255,255,.65);font-family:Inter,sans-serif;margin-bottom:14px; }
-.usage-reset-date { display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.4);font-family:'JetBrains Mono',monospace;margin-bottom:18px; }
-.usage-modal-actions { display:flex;gap:8px;flex-wrap:wrap; }
-.usage-btn-primary { flex:1;padding:10px 16px;background:linear-gradient(135deg,#7C3AED,#6D28D9);border:none;border-radius:8px;color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:all .15s; }
-.usage-btn-primary:hover { background:linear-gradient(135deg,#8B5CF6,#7C3AED);transform:translateY(-1px); }
-.usage-btn-ghost { padding:10px 14px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.45);font-size:12px;font-family:Inter,sans-serif;cursor:pointer;transition:all .15s; }
-.usage-btn-ghost:hover { border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.7); }
-
-/* ═══════════════════════ GENIE ═══════════════════════ */
-@keyframes genie-appear { 0%{opacity:0;transform:translateY(40px) scale(.95)} 60%{opacity:1;transform:translateY(-6px) scale(1.01)} 100%{transform:translateY(0) scale(1)} }
-@keyframes lamp-float { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-10px) rotate(4deg)} }
-@keyframes lamp-glow { 0%,100%{box-shadow:0 0 30px 8px rgba(251,191,36,.25),0 0 60px 16px rgba(251,191,36,.08)} 50%{box-shadow:0 0 55px 18px rgba(251,191,36,.45),0 0 90px 30px rgba(251,191,36,.18)} }
-@keyframes smoke-1 { 0%{opacity:.7;transform:translateX(0) translateY(0) scale(1)} 100%{opacity:0;transform:translateX(-20px) translateY(-80px) scale(2.5)} }
-@keyframes smoke-2 { 0%{opacity:.6;transform:translateX(0) translateY(0) scale(1)} 100%{opacity:0;transform:translateX(18px) translateY(-70px) scale(2)} }
-@keyframes smoke-3 { 0%{opacity:.5;transform:translateX(0) translateY(0) scale(1)} 100%{opacity:0;transform:translateX(-8px) translateY(-90px) scale(3)} }
-@keyframes genie-face-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-@keyframes section-slide { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
-@keyframes star-spin { 0%{transform:rotate(0deg) scale(1);opacity:.9} 50%{transform:rotate(180deg) scale(1.3);opacity:1} 100%{transform:rotate(360deg) scale(1);opacity:.9} }
-.genie-panel { background:linear-gradient(145deg,#12071F 0%,#1A0B2E 35%,#0E1A2E 65%,#0A1215 100%); border:1px solid rgba(251,191,36,.35); border-radius:16px; overflow:hidden; position:relative; animation:genie-appear .7s cubic-bezier(.34,1.56,.64,1) forwards; box-shadow:0 0 60px rgba(251,191,36,.12),0 24px 80px rgba(0,0,0,.4); }
-.genie-panel::before { content:''; position:absolute; inset:0; pointer-events:none; z-index:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 3px); }
-.genie-stars { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
-.genie-star { position:absolute; width:3px; height:3px; border-radius:50%; background:#FBF0A0; animation:star-spin 3s ease-in-out infinite; }
-.genie-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid rgba(251,191,36,.2); background:rgba(251,191,36,.05); position:relative; z-index:1; }
-.genie-title-block { display:flex; align-items:center; gap:12px; }
-.genie-lamp-wrap { width:52px; height:52px; position:relative; display:flex; align-items:center; justify-content:center; animation:lamp-glow 2.2s ease-in-out infinite; border-radius:50%; }
-.genie-lamp-emoji { font-size:32px; line-height:1; animation:lamp-float 3s ease-in-out infinite; display:block; }
-.genie-smoke { position:absolute; top:-4px; left:50%; transform:translateX(-50%); pointer-events:none; }
-.genie-smoke span { display:block; width:8px; height:8px; border-radius:50%; background:rgba(251,191,36,.55); position:absolute; }
-.genie-smoke span:nth-child(1) { left:-4px; animation:smoke-1 2s ease-out infinite; }
-.genie-smoke span:nth-child(2) { left:4px;  animation:smoke-2 2s ease-out infinite; animation-delay:.5s; }
-.genie-smoke span:nth-child(3) { left:0;    animation:smoke-3 2s ease-out infinite; animation-delay:1s; }
-.genie-title-text { display:flex; flex-direction:column; gap:2px; }
-.genie-title-main { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; color:#FDE68A; letter-spacing:.08em; }
-.genie-title-sub { font-size:11px; color:rgba(253,230,138,.5); font-family:Inter,sans-serif; letter-spacing:.04em; }
-.genie-close { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15); border-radius:8px; padding:5px 12px; color:rgba(255,255,255,.5); font-size:12px; cursor:pointer; font-family:Inter,sans-serif; transition:all .15s; }
-.genie-close:hover { background:rgba(255,255,255,.12); color:#fff; }
-.genie-body { padding:20px 24px; position:relative; z-index:1; }
-.genie-face { display:flex; align-items:center; gap:14px; margin-bottom:20px; padding:14px 16px; background:rgba(251,191,36,.06); border:1px solid rgba(251,191,36,.15); border-radius:10px; }
-.genie-avatar { font-size:40px; line-height:1; animation:genie-face-bob 3s ease-in-out infinite; flex-shrink:0; }
-.genie-speech { font-size:13px; color:rgba(253,230,138,.8); font-style:italic; line-height:1.7; font-family:Inter,sans-serif; }
-.genie-sections { display:flex; flex-direction:column; gap:12px; }
-.genie-section { border-radius:10px; overflow:hidden; animation:section-slide .4s ease forwards; border:1px solid transparent; }
-.genie-section-header { display:flex; align-items:center; gap:10px; padding:10px 14px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.1em; }
-.genie-section-body { padding:12px 14px; font-size:13px; line-height:1.8; white-space:pre-wrap; font-family:Inter,sans-serif; }
-.gs-resumen   { background:rgba(139,92,246,.08); border-color:rgba(139,92,246,.25); }
-.gs-resumen .genie-section-header   { background:rgba(139,92,246,.12); color:#C4B5FD; }
-.gs-resumen .genie-section-body     { color:#DDD6FE; }
-.gs-aplicar   { background:rgba(16,185,129,.07); border-color:rgba(16,185,129,.22); }
-.gs-aplicar .genie-section-header   { background:rgba(16,185,129,.1); color:#6EE7B7; }
-.gs-aplicar .genie-section-body     { color:#A7F3D0; }
-.gs-primero   { background:rgba(251,191,36,.08); border-color:rgba(251,191,36,.3); }
-.gs-primero .genie-section-header   { background:rgba(251,191,36,.12); color:#FDE68A; }
-.gs-primero .genie-section-body     { color:#FEF3C7; }
-.gs-plan      { background:rgba(99,102,241,.08); border-color:rgba(99,102,241,.22); }
-.gs-plan .genie-section-header      { background:rgba(99,102,241,.1); color:#A5B4FC; }
-.gs-plan .genie-section-body        { color:#C7D2FE; }
-.gs-prediccion { background:rgba(239,68,68,.07); border-color:rgba(239,68,68,.22); }
-.gs-prediccion .genie-section-header { background:rgba(239,68,68,.1); color:#FCA5A5; }
-.gs-prediccion .genie-section-body   { color:#FECACA; }
-.genie-loading-dots { display:inline-flex; gap:5px; align-items:center; padding:4px 0; }
-.genie-loading-dots span { width:7px; height:7px; border-radius:50%; background:#FDE68A; animation:hud-blink 1s ease-in-out infinite; }
-.genie-loading-dots span:nth-child(2) { animation-delay:.2s; }
-.genie-loading-dots span:nth-child(3) { animation-delay:.4s; }
 
 /* ── AGENT HQ — HUD videojuego ──────────────────────── */
 @keyframes hud-pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
@@ -672,7 +437,9 @@
         <span class="kb-status" onclick="toggleKB()" id="kb-status-btn">
           🧠 Base de Conocimiento <span id="kb-status-dot">●</span>
         </span>
-        <span id="usage-badge" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:10px;background:rgba(0,194,224,.08);color:#00C2E0;border:1px solid rgba(0,194,224,.2);font-family:var(--font-mono)" title="Usos de IA este mes"></span>
+        <button class="btn btn-primary btn-sm" onclick="initLLM()">
+          ⚡ Activar LLM
+        </button>
         <span id="gpu-badge" style="display:none;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;background:rgba(0,194,224,.1);color:#00C2E0;border:1px solid rgba(0,194,224,.2)"></span>
       </div>
     </div>
@@ -732,72 +499,72 @@
         <span class="hq-title-dot"></span>
         AGENT HQ — CUARTEL DE OPERACIONES
       </div>
-      <div class="hq-meta">10 AGENTES ACTIVOS &nbsp;·&nbsp; SISTEMA EN LÍNEA &nbsp;·&nbsp; METATRONIX v3.0</div>
+      <div class="hq-meta">15 AGENTES ACTIVOS &nbsp;·&nbsp; SISTEMA EN LÍNEA &nbsp;·&nbsp; METATRONIX v2.1</div>
     </div>
 
     <!-- Row 1: Contenido & CRM -->
-    <div class="hq-row-label">FILA A — LOS 7 MECANISMOS · RESONANCIA INEVITABLE</div>
+    <div class="hq-row-label">FILA A — CONTENIDO · CRM · COMUNIDAD</div>
     <div class="hq-slots">
-      <div class="hq-slot" onclick="toggleAgent('observador')" title="Observador de Mercado">
+      <div class="hq-slot" onclick="toggleAgent('investigacion')" title="Investigación de Mercado">
         <div class="hq-slot-tl"></div>
         <div class="hq-slot-num">01</div>
-        <span class="hq-slot-icon">🔭</span>
-        <div class="hq-slot-name">Observador</div>
+        <span class="hq-slot-icon">🔍</span>
+        <div class="hq-slot-name">Investigación</div>
         <div class="hq-slot-cat">Mercado</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
-      <div class="hq-slot" onclick="toggleAgent('narrador')" title="Narrador">
+      <div class="hq-slot" onclick="toggleAgent('contenido')" title="Agente Contenido">
         <div class="hq-slot-tl"></div>
         <div class="hq-slot-num">02</div>
         <span class="hq-slot-icon">✍️</span>
-        <div class="hq-slot-name">Narrador</div>
-        <div class="hq-slot-cat">Copy · Narrativa</div>
+        <div class="hq-slot-name">Contenido</div>
+        <div class="hq-slot-cat">Copy</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
-      <div class="hq-slot" onclick="toggleAgent('director')" title="Director de Producción">
+      <div class="hq-slot" onclick="toggleAgent('publicidad')" title="Agente Publicidad">
         <div class="hq-slot-tl"></div>
         <div class="hq-slot-num">03</div>
-        <span class="hq-slot-icon">🎬</span>
-        <div class="hq-slot-name">Director</div>
-        <div class="hq-slot-cat">Producción</div>
+        <span class="hq-slot-icon">📢</span>
+        <div class="hq-slot-name">Publicidad</div>
+        <div class="hq-slot-cat">Ads</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
-      <div class="hq-slot" onclick="toggleAgent('motor')" title="Motor de Distribución">
+      <div class="hq-slot" onclick="toggleAgent('youtube')" title="YouTube SEO">
         <div class="hq-slot-tl"></div>
         <div class="hq-slot-num">04</div>
-        <span class="hq-slot-icon">📡</span>
-        <div class="hq-slot-name">Motor</div>
-        <div class="hq-slot-cat">Distribución</div>
+        <span class="hq-slot-icon">📺</span>
+        <div class="hq-slot-name">YouTube SEO</div>
+        <div class="hq-slot-cat">Video SEO</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
-      <div class="hq-slot" onclick="toggleAgent('conversor')" title="Conversor">
+      <div class="hq-slot" onclick="toggleAgent('larry')" title="Larry AI SDR">
         <div class="hq-slot-tl"></div>
         <div class="hq-slot-num">05</div>
-        <span class="hq-slot-icon">⚡</span>
-        <div class="hq-slot-name">Conversor</div>
-        <div class="hq-slot-cat">Conversión</div>
+        <span class="hq-slot-icon">🤖</span>
+        <div class="hq-slot-name">Larry SDR</div>
+        <div class="hq-slot-cat">CRM IA</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
-      <div class="hq-slot" onclick="toggleAgent('aprendizaje')" title="Sistema de Aprendizaje">
+      <div class="hq-slot" onclick="toggleAgent('streams')" title="Agente Comunidad">
         <div class="hq-slot-tl"></div>
         <div class="hq-slot-num">06</div>
-        <span class="hq-slot-icon">🧠</span>
-        <div class="hq-slot-name">Aprendizaje</div>
-        <div class="hq-slot-cat">LTV/CAC</div>
+        <span class="hq-slot-icon">📡</span>
+        <div class="hq-slot-name">Comunidad</div>
+        <div class="hq-slot-cat">Lives</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
-      <div class="hq-slot" onclick="toggleAgent('orquestador')" title="Orquestador">
+      <div class="hq-slot" onclick="toggleAgent('clio')" title="Clio Onboarding">
         <div class="hq-slot-tl"></div>
         <div class="hq-slot-num">07</div>
         <span class="hq-slot-icon">🎯</span>
-        <div class="hq-slot-name">Orquestador</div>
-        <div class="hq-slot-cat">Campaign</div>
+        <div class="hq-slot-name">Clio</div>
+        <div class="hq-slot-cat">Onboarding</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
     </div>
 
     <!-- Row 2: Media & Inteligencia -->
-    <div class="hq-row-label">FILA B — INFRAESTRUCTURA COMPARTIDA · PRODUCCIÓN VISUAL</div>
+    <div class="hq-row-label">FILA B — MEDIA · INTELIGENCIA · PUBLICACIÓN</div>
     <div class="hq-slots" style="padding-top:2px">
       <div class="hq-slot" onclick="toggleAgent('video')" title="Video IA Wan2.1">
         <div class="hq-slot-tl"></div>
@@ -815,12 +582,52 @@
         <div class="hq-slot-cat">FLUX.2</div>
         <div class="hq-slot-status"><div class="hq-slot-dot orange"></div></div>
       </div>
-      <div class="hq-slot" onclick="toggleAgent('social_sim')" title="Simulación Social">
+      <div class="hq-slot" onclick="toggleAgent('editor')" title="Editor de Video IA">
         <div class="hq-slot-tl"></div>
         <div class="hq-slot-num">10</div>
+        <span class="hq-slot-icon">🎞</span>
+        <div class="hq-slot-name">Editor IA</div>
+        <div class="hq-slot-cat">Canvas</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('geo')" title="Geo Inteligencia">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">11</div>
+        <span class="hq-slot-icon">🗺</span>
+        <div class="hq-slot-name">Geo Intel</div>
+        <div class="hq-slot-cat">Territorio</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('social_sim')" title="Simulación Social">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">12</div>
         <span class="hq-slot-icon">🧬</span>
         <div class="hq-slot-name">Sim Social</div>
         <div class="hq-slot-cat">32 Personas</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('orchestrator')" title="Orquestador">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">13</div>
+        <span class="hq-slot-icon">🎯</span>
+        <div class="hq-slot-name">Orquestador</div>
+        <div class="hq-slot-cat">Campaign</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('publisher')" title="Publisher Social">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">14</div>
+        <span class="hq-slot-icon">📲</span>
+        <div class="hq-slot-name">Publisher</div>
+        <div class="hq-slot-cat">IG · TT · LI</div>
+        <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
+      </div>
+      <div class="hq-slot" onclick="toggleAgent('monitor')" title="Monitor de Redes Sociales">
+        <div class="hq-slot-tl"></div>
+        <div class="hq-slot-num">15</div>
+        <span class="hq-slot-icon">📡</span>
+        <div class="hq-slot-name">Monitor</div>
+        <div class="hq-slot-cat">ALERTAS · IA</div>
         <div class="hq-slot-status"><div class="hq-slot-dot"></div></div>
       </div>
     </div>
@@ -836,89 +643,12 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════════
-       COMMAND CENTER — UN PROMPT, TODA LA AGENCIA DE MARKETING
-       ══════════════════════════════════════════════════════════ -->
-  <div id="command-center" style="margin:0 24px 14px;background:linear-gradient(135deg,#06111A 0%,#071620 100%);border:1px solid rgba(0,194,224,.28);border-radius:14px;overflow:hidden;position:relative">
-    <div style="position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.07) 3px,rgba(0,0,0,.07) 4px)"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid rgba(0,194,224,.15);position:relative;z-index:1;background:rgba(0,194,224,.04)">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#00C2E0;letter-spacing:.12em;display:flex;align-items:center;gap:9px">
-        <span style="width:8px;height:8px;border-radius:50%;background:#00C2E0;display:inline-block;animation:hud-blink 1.4s ease-in-out infinite"></span>
-        MISIÓN CENTRAL — PON A TRABAJAR A TODA LA AGENCIA
-      </div>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,194,224,.4);letter-spacing:.1em">1 PROMPT · 15 AGENTES · RESULTADOS EN PARALELO</span>
-    </div>
-    <div style="padding:16px 18px;position:relative;z-index:1">
-      <div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px;line-height:1.6">
-        Describe tu objetivo de marketing: <strong style="color:#00C2E0">producto o campaña, audiencia, contexto del mercado y qué quieres lograr</strong>. Todos los agentes trabajarán simultáneamente.
-      </div>
-      <textarea id="mission-input"
-        rows="4"
-        placeholder="Ej: Quiero lanzar MetaTronix CRM para el segmento de directores de ventas en retail México. Mi objetivo es generar 50 leads calificados este mes. Presupuesto de marketing $3,000 USD. Necesito la estrategia completa: narrativa, contenido, ads, email y medición."
-        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(0,194,224,.25);border-radius:8px;padding:12px 14px;color:#fff;font-family:'DM Sans',Inter,sans-serif;font-size:13px;line-height:1.7;resize:vertical;outline:none;transition:border-color .2s"
-        onfocus="this.style.borderColor='rgba(0,194,224,.6)'"
-        onblur="this.style.borderColor='rgba(0,194,224,.25)'"
-      ></textarea>
-      <div style="margin-top:10px;margin-bottom:14px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,194,224,.45);letter-spacing:.12em;margin-bottom:7px">EJEMPLOS RÁPIDOS — HAZ CLIC PARA CARGAR:</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          <button onclick="loadExampleMkt('lanzamiento')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer" >🚀 Lanzar producto nuevo</button>
-          <button onclick="loadExampleMkt('contenido')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer">✍️ Plan de contenido mensual</button>
-          <button onclick="loadExampleMkt('leads')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer">🎯 Generar leads calificados</button>
-          <button onclick="loadExampleMkt('competencia')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer">🔭 Analizar competencia</button>
-          <button onclick="loadExampleMkt('reactivar')" style="padding:5px 11px;background:rgba(0,194,224,.08);border:1px solid rgba(0,194,224,.22);border-radius:20px;color:#7DD3FC;font-size:11px;font-family:Inter,sans-serif;cursor:pointer">📧 Campaña de reactivación</button>
-        </div>
-      </div>
-      <div style="background:rgba(0,0,0,.25);border:1px solid rgba(0,194,224,.1);border-radius:8px;padding:10px 14px;margin-bottom:14px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,194,224,.5);letter-spacing:.12em;margin-bottom:8px">QUÉ OBTENDRÁS — 15 RESULTADOS SIMULTÁNEOS:</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:5px">
-          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🔭</span> Análisis de mercado y tendencias</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>✍️</span> Narrativa y mensajes clave</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🎯</span> Estrategia de audiencias</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📣</span> Anuncios y copy para ads</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📱</span> Contenido para redes sociales</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📧</span> Campañas de email marketing</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>📊</span> Plan de medición y KPIs</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px"><span>🎯</span> Orquestador con plan de campaña</div>
-        </div>
-      </div>
-      <button id="launch-btn" onclick="launchAllAgents()" style="width:100%;padding:14px 20px;background:linear-gradient(135deg,#0369A1,#0284C7);border:none;border-radius:10px;color:#fff;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;letter-spacing:.08em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s;text-transform:uppercase" onmouseover="this.style.background='linear-gradient(135deg,#0284C7,#0EA5E9)';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='linear-gradient(135deg,#0369A1,#0284C7)';this.style.transform='translateY(0)'">
-        <span id="launch-icon">🚀</span>
-        <span id="launch-text">LANZAR TODA LA AGENCIA — 15 AGENTES EN PARALELO</span>
-      </button>
-
-      <!-- Barra de progreso con gatitos -->
-      <div id="agency-progress">
-        <div class="ap-inner">
-          <div class="ap-label">Procesando</div>
-          <div class="ap-track-wrap">
-            <div class="ap-track"><div class="ap-fill" id="ap-fill"></div></div>
-            <div class="ap-cats" id="ap-cats">
-              <span class="ap-cat-a">🐱</span><span class="ap-cat-b">🐱</span>
-            </div>
-          </div>
-          <div class="ap-pct" id="ap-pct">0%</div>
-          <div class="ap-count" id="ap-count">0/0</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- View Toggle -->
   <div style="display:flex;gap:6px;padding:0 24px 12px;align-items:center">
     <button class="mkt-view-btn active" id="vbtn-grid" onclick="setMktView('grid',this)">⊞ Agentes</button>
     <button class="mkt-view-btn" id="vbtn-dash" onclick="setMktView('dash',this)">🎮 Dashboard Pixel</button>
     <span style="font-size:10px;color:#4A5568;font-family:Inter,sans-serif;margin-left:4px">Inspirado en pixel-agents (pablodelucca)</span>
   </div>
-
-  <!-- PREDICTOR CONTAINER — análisis predictivo pre-lanzamiento -->
-  <div id="predictor-container" style="display:none;padding:0 24px 16px"></div>
-
-  <!-- GENIE CONTAINER -->
-  <div id="genie-container" style="display:none;padding:0 24px 32px"></div>
-
-  <!-- CAMPAIGN PROPOSAL CONTAINER — Genio propuesta de campaña -->
-  <div id="campaign-container" style="display:none;padding:0 24px 32px"></div>
 
   <!-- Agents Grid View -->
   <div id="view-grid">
@@ -938,14 +668,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js?v=20260423"></script>
-<script src="/assets/agent.js?v=20260422"></script>
-<script src="/assets/salescoach.js?v=20260420"></script>
-<script src="/assets/teamchat.js?v=20260420"></script>
+<script src="/assets/agent.js?v=4"></script>
+<script src="/assets/salescoach.js?v=4"></script>
+<script src="/assets/teamchat.js?v=4"></script>
 <script>
 /* ════════════════════════════════════════════════════════
    MetaTronix — Marketing IA
-   10 Agentes: 7 Mecanismos + 3 Infraestructura Compartida
-   Arquitectura de Resonancia Inevitable v3.0
+   14 Agentes de Marketing IA — 100% sin APIs de pago
+   Modelos: HuggingFace Xenova/ + WebLLM SmolLM2-360M
    ════════════════════════════════════════════════════════ */
 
 let currentUser = null;
@@ -1012,94 +742,102 @@ REGLAS:
 
 /* ── AGENTS DEFINITION ──────────────────────────────── */
 const AGENTS = [
-  /* ── CAPA 1: LOS 7 MECANISMOS ─────────────────────── */
   {
-    id: 'observador',
-    icon: '🔭',
+    id: 'investigacion',
+    icon: '🔍',
     iconBg: 'linear-gradient(135deg,#EFF6FF,#DBEAFE)',
-    name: 'OBSERVADOR DE MERCADO',
-    desc: 'Monitorea qué está pasando en tu mercado, qué hace la competencia y qué quiere tu audiencia. Te avisa antes de que las tendencias te pasen por encima.',
-    models: ['CRM_LLM', 'Señales Audiencia', 'Análisis Competitivo'],
-    inputLabel: '¿Qué oportunidad o señal de mercado quieres analizar?',
-    inputPlaceholder: 'Ej: Tendencias IA para retail LATAM Q2 2026, o: Movimientos recientes de Salesforce y HubSpot en México',
-    run: runAgentObservador,
+    name: 'AGENTE INVESTIGACIÓN',
+    desc: 'Monitorea tendencias del sector, analiza competidores e identifica oportunidades de contenido y mercado.',
+    models: ['CRM_AI.zeroShot', 'CRM_AI.ner', 'CRM_LLM'],
+    inputLabel: '¿Qué sector o tema quieres investigar?',
+    inputPlaceholder: 'Ej: Tendencias de IA para retail en México 2026, o: Análisis de competidores de CRM en LATAM',
+    outputTabs: ['Tendencias', 'Competidores', 'Oportunidades'],
+    run: runAgentInvestigacion,
   },
   {
-    id: 'narrador',
+    id: 'contenido',
     icon: '✍️',
     iconBg: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)',
-    name: 'NARRADOR',
-    desc: 'Crea el mensaje principal del mes y lo adapta para cada canal: anuncios, redes sociales, emails y videos. Una sola historia contada de mil formas consistentes.',
-    models: ['CRM_LLM', 'Narrativa Central', 'Multi-Canal'],
-    inputLabel: 'Oportunidad del Observador o contexto de marca para este período',
-    inputPlaceholder: 'Ej: Lanzamos QuantumTron para retail — necesito narrativa del mes + copy para todos los canales',
-    run: runAgentNarrador,
+    name: 'AGENTE CONTENIDO',
+    desc: 'Genera scripts de Reels, posts, emails y blogs listos para publicar con la voz de tu marca.',
+    models: ['CRM_LLM', 'SmolLM2-360M'],
+    inputLabel: 'Tema o producto para generar contenido',
+    inputPlaceholder: 'Ej: Cómo la IA reduce costos en retail, o: Beneficios de QuantumTron para empresas medianas',
+    outputTabs: ['Reel Script', 'Post LinkedIn', 'Email', 'Blog Intro'],
+    run: runAgentContenido,
   },
   {
-    id: 'director',
-    icon: '🎬',
+    id: 'publicidad',
+    icon: '📢',
     iconBg: 'linear-gradient(135deg,#FFF7ED,#FFEDD5)',
-    name: 'DIRECTOR DE PRODUCCIÓN',
-    desc: 'Traduce la estrategia en instrucciones claras para crear cada pieza visual o de video. Sin ambigüedad: cada creativo sabe exactamente qué hacer y por qué.',
-    models: ['CRM_LLM', 'Brief Estructurado', 'Video IA · Imagen IA'],
-    inputLabel: 'Copy o narrativa del Narrador + tipo de pieza visual necesaria',
-    inputPlaceholder: 'Ej: Necesito 3 briefs para reel vertical, imagen de LinkedIn y thumbnail YouTube. Narrativa: QuantumTron transforma datos en decisiones.',
-    run: runAgentDirector,
+    name: 'AGENTE PUBLICIDAD',
+    desc: 'Genera variaciones de copy para Meta Ads, Google Ads y LinkedIn Ads. 10 creativos por ejecución.',
+    models: ['CRM_LLM', 'CRM_AI.summary'],
+    inputLabel: 'Producto/servicio y audiencia objetivo',
+    inputPlaceholder: 'Ej: Metaview Systems para directores de operaciones de retail con 50+ tiendas',
+    outputTabs: ['Headlines', 'Descripciones', 'CTAs', 'Variaciones Completas'],
+    run: runAgentPublicidad,
   },
   {
-    id: 'motor',
+    id: 'youtube',
+    icon: '📺',
+    iconBg: 'linear-gradient(135deg,#FEF2F2,#FEE2E2)',
+    name: 'AGENTE YOUTUBE SEO',
+    desc: 'Optimiza títulos, descripciones, tags y conceptos de thumbnail para maximizar el alcance orgánico.',
+    models: ['CRM_LLM', 'CRM_AI.ner'],
+    inputLabel: 'Tema del video',
+    inputPlaceholder: 'Ej: Cómo implementé IA en mi empresa en 1 semana y reduje costos 40%',
+    outputTabs: ['Títulos (10x)', 'Descripción SEO', 'Tags', 'Thumbnail Concept'],
+    run: runAgentYoutube,
+  },
+  {
+    id: 'larry',
+    icon: '🤖',
+    iconBg: 'linear-gradient(135deg,#F5F3FF,#EDE9FE)',
+    name: 'LARRY — AI SDR',
+    desc: 'Califica leads automáticamente, genera emails personalizados y responde objeciones en tiempo real.',
+    models: ['CRM_LLM', 'CRM_AI.sentiment', 'CRM_AI.zeroShot'],
+    inputLabel: 'Selecciona un lead o escribe datos del prospecto',
+    inputPlaceholder: 'Ej: Empresa: Liverpool, Contacto: Carlos Mendoza, Cargo: Director TI, Pain: seguridad en tiendas',
+    outputTabs: ['Email Calificación', 'Email Seguimiento', 'Resp. Objeciones', 'Voice Note Script'],
+    run: runAgentLarry,
+    hasCRM: true,
+  },
+  {
+    id: 'streams',
     icon: '📡',
     iconBg: 'linear-gradient(135deg,#ECFEFF,#CFFAFE)',
-    name: 'MOTOR DE DISTRIBUCIÓN',
-    desc: 'Distribuye tu contenido donde está tu audiencia y optimiza el presupuesto en tiempo real. Cubre SEO, anuncios pagados, email y redes sociales al mismo tiempo.',
-    models: ['CRM_LLM', 'Paid Media', 'SEO · SEM · Email'],
-    inputLabel: 'Piezas aprobadas + presupuesto + objetivo de campaña',
-    inputPlaceholder: 'Ej: Campaña awareness QuantumTron, presupuesto $30K MXN, objetivo 500 demos calificadas, plazo 30 días',
-    run: runAgentMotor,
+    name: 'AGENTE COMUNIDAD',
+    desc: 'Genera guiones para live streams y webinars. Identifica creencias a romper y construye confianza.',
+    models: ['CRM_LLM', 'CRM_AI.zeroShot'],
+    inputLabel: 'Objeciones o preguntas frecuentes de tus leads',
+    inputPlaceholder: 'Ej: "La IA es muy cara", "No tenemos datos suficientes", "Mi equipo no sabe usarla"',
+    outputTabs: ['Guión Stream', 'Creencias a Romper', 'Preguntas Clave', 'CTA del Stream'],
+    run: runAgentStreams,
   },
   {
-    id: 'conversor',
-    icon: '⚡',
-    iconBg: 'linear-gradient(135deg,#FEFCE8,#FEF08A)',
-    name: 'CONVERSOR',
-    desc: 'Se asegura de que el cliente que llegó a tu página termine comprando. Optimiza landing pages, correos de bienvenida y el recorrido completo hasta la conversión.',
-    models: ['CRM_LLM', 'CRO', 'A/B Testing · Funnel'],
-    inputLabel: '¿Qué parte del funnel quieres optimizar?',
-    inputPlaceholder: 'Ej: Landing page de QuantumTron tiene 12% conversión. Analiza los 3 puntos de fricción principales y genera variantes A/B.',
-    run: runAgentConversor,
-  },
-  {
-    id: 'aprendizaje',
-    icon: '🧠',
-    iconBg: 'linear-gradient(135deg,#FDF4FF,#FAE8FF)',
-    name: 'SISTEMA DE APRENDIZAJE',
-    desc: 'Analiza cada campaña al terminar: qué funcionó, qué no y por qué. No solo reporta, aprende y mejora automáticamente las estrategias de los otros agentes.',
-    models: ['CRM_LLM', 'Autopsia', 'LTV/CAC · ROAS'],
-    inputLabel: 'Datos de la campaña completada para analizar',
-    inputPlaceholder: 'Ej: Campaña Q1 — inversión $50K MXN, 320 leads, 28 cierres, ROAS 2.8x. ¿Qué funcionó? ¿Qué modificar?',
-    run: runAgentAprendizaje,
-  },
-  {
-    id: 'orquestador',
+    id: 'clio',
     icon: '🎯',
-    iconBg: 'linear-gradient(135deg,#1C1917,#292524)',
-    name: 'ORQUESTADOR',
-    desc: 'Tu director de marketing virtual. Cuéntale qué necesitas y coordina a todos los demás agentes para ejecutarlo. Una sola conversación, todo el equipo trabajando.',
-    models: ['CRM_LLM', 'Todos los Mecanismos', 'Campaign Brief'],
-    inputLabel: 'Instrucción o consulta de campaña en lenguaje natural',
-    inputPlaceholder: 'Ej: "Lanza campaña awareness para QuantumTron en LinkedIn y Meta, presupuesto $80K MXN, objetivo 200 demos en 45 días" — o consulta el estado de una campaña activa',
-    run: runAgentOrquestador, isOrquestadorAgent: true, accentColor: '#F97316',
+    iconBg: 'linear-gradient(135deg,#FDF4FF,#FAE8FF)',
+    name: 'CLIO — ONBOARDING',
+    desc: 'Formulario de 28 preguntas que extrae la voz de marca, análisis de competidores y genera SOPs automáticos.',
+    models: ['CRM_LLM', 'CRM_AI.ner', 'CRM_AI.summary'],
+    inputLabel: 'Inicia el formulario de onboarding del cliente',
+    inputPlaceholder: null,
+    outputTabs: ['Voz de Marca', 'Análisis Competencia', 'SOPs Iniciales', 'Copy de Ventas'],
+    run: runAgentClio,
+    hasForm: true,
   },
-  /* ── CAPA 2: INFRAESTRUCTURA COMPARTIDA ──────────── */
   {
     id: 'video',
     icon: '🎬',
     iconBg: 'linear-gradient(135deg,#0A0E1A,#0D1629)',
     name: 'VIDEO IA — Wan2.1',
-    desc: 'Convierte tu texto o brief en un video listo para publicar. Escribe lo que quieres mostrar y el agente lo produce automáticamente.',
+    desc: 'Genera videos desde texto con Wan2.1-T2V-1.3B. Requiere GPU RTX 3060+ o token HuggingFace. Uso individual.',
     models: ['Wan2.1-T2V-1.3B', 'HF Inference API', 'RTX 3060+'],
     inputLabel: 'Prompt del video (en inglés para mejores resultados)',
     inputPlaceholder: 'A professional sales team celebrating a deal in a modern office, cinematic lighting, 4K quality...',
+    outputTabs: ['Video MP4'],
     run: runAgentVideo,
     isMediaAgent: true,
     mediaType: 'video',
@@ -1110,25 +848,78 @@ const AGENTS = [
     icon: '🖼',
     iconBg: 'linear-gradient(135deg,#0D0719,#160B2B)',
     name: 'IMAGEN IA — FLUX.2',
-    desc: 'Crea imágenes profesionales a partir de una descripción. Desde fotos de producto hasta creativos para anuncios, todo sin necesitar a un diseñador.',
+    desc: 'Genera imágenes fotorrealistas con FLUX.2-dev-NVFP4. Requiere GPU RTX 4070+ o token HuggingFace. Uso individual.',
     models: ['FLUX.2-dev-NVFP4', 'HF Inference API', 'RTX 4070+'],
     inputLabel: 'Prompt de la imagen (en inglés para mejores resultados)',
     inputPlaceholder: 'A CEO shaking hands with a tech executive in a modern glass office, photorealistic, 8K, sharp focus...',
+    outputTabs: ['Imagen PNG'],
     run: runAgentImage,
     isMediaAgent: true,
     mediaType: 'image',
     accentColor: '#A78BFA',
   },
   {
+    id: 'editor',
+    icon: '🎞',
+    iconBg: 'linear-gradient(135deg,#0A1628,#0D2040)',
+    name: 'EDITOR DE VIDEO IA',
+    desc: 'Crea videos animados profesionales con Canvas + IA. 6 templates MetaTronix. Exporta WebM. Inspirado en Remotion — 100% browser, sin instalación.',
+    models: ['Canvas API', 'MediaRecorder', 'CRM_LLM', 'Sin GPU requerida'],
+    inputLabel: null, inputPlaceholder: null,
+    run: runAgentEditor, isEditorAgent: true, accentColor: '#F59E0B',
+  },
+  {
+    id: 'geo',
+    icon: '🗺',
+    iconBg: 'linear-gradient(135deg,#052E16,#064E3B)',
+    name: 'GEO INTELIGENCIA',
+    desc: 'Análisis de territorio, zonas de influencia, densidad competitiva y segmentación local. Inspirado en Mesa + Mesa-Geo. Devuelve segmentos accionables por zona.',
+    models: ['Leaflet.js', 'GeoJSON', 'CRM_LLM', 'Heurística Mesa-style'],
+    inputLabel: 'Ciudad y contexto de análisis',
+    inputPlaceholder: 'Ej: Monterrey NL — tiendas retail con radio 5km, ticket promedio $800 MXN, segmento ABC+',
+    run: runAgentGeo, accentColor: '#10B981',
+  },
+  {
     id: 'social_sim',
     icon: '🧬',
     iconBg: 'linear-gradient(135deg,#1E1B4B,#312E81)',
     name: 'SIMULACIÓN SOCIAL',
-    desc: 'Antes de publicar, 32 perfiles virtuales de tu audiencia LATAM reaccionan a tu campaña. Predice si va a gustar, qué objeciones van a surgir y si va a convertir.',
+    desc: 'Simula la reacción de tu audiencia antes de publicar. 32 personas IA con perfiles LATAM — predice engagement, objeciones y probabilidad de conversión.',
     models: ['CRM_LLM', 'Multi-persona', 'Oficina Virtual'],
     inputLabel: 'Contenido o campaña a simular',
     inputPlaceholder: 'Ej: "Lanzamos MetaTronix CRM con IA por $299/mes. Implementación en 1 semana. Sin contratos." — post para LinkedIn dirigido a directores de ventas LATAM',
     run: runAgentSocialSim, accentColor: '#818CF8', isSocialSimAgent: true,
+  },
+  {
+    id: 'orchestrator',
+    icon: '🎯',
+    iconBg: 'linear-gradient(135deg,#1C1917,#292524)',
+    name: 'ORQUESTADOR',
+    desc: 'Reúne los outputs de todos los agentes activos en un Campaign Brief visual listo para aprobar y publicar. Un solo clic para generar la campaña completa.',
+    models: ['Todos los agentes', 'CRM_LLM', 'Campaign Brief'],
+    inputLabel: 'Objetivo de la campaña',
+    inputPlaceholder: 'Ej: Campaña de lanzamiento Q2 2026 — MetaTronix CRM para empresas retail en México. Meta: 50 demos agendadas en 30 días.',
+    run: runAgentOrchestrator, isOrchestratorAgent: true, accentColor: '#F97316',
+  },
+  {
+    id: 'publisher',
+    icon: '📲',
+    iconBg: 'linear-gradient(135deg,#0F172A,#1E293B)',
+    name: 'PUBLISHER SOCIAL',
+    desc: 'Conecta Instagram, TikTok y LinkedIn para publicar automáticamente el contenido aprobado. Gestiona credenciales y programa publicaciones.',
+    models: ['Meta Graph API', 'LinkedIn API', 'TikTok API', 'CF Workers'],
+    inputLabel: null, inputPlaceholder: null,
+    run: runAgentPublisher, isPublisherAgent: true, accentColor: '#EC4899',
+  },
+  {
+    id: 'monitor',
+    icon: '📡',
+    iconBg: 'linear-gradient(135deg,#052818,#064E3B)',
+    name: 'MONITOR DE REDES',
+    desc: 'Monitorea tus redes y las de la competencia en tiempo real. Detecta cambios de patrones, envía alertas y genera recomendaciones de post para el Agente de Contenido.',
+    models: ['CRM_LLM', 'Pattern Analysis', 'Alert Engine', 'Content Feed'],
+    inputLabel: null, inputPlaceholder: null,
+    run: runAgentMonitor, isMonitorAgent: true, accentColor: '#10B981',
   },
 ];
 
@@ -1151,18 +942,20 @@ function renderAgents() {
         <span class="model-tag" style="background:#F0FDF4;color:#16A34A">Free 🆓</span>
       </div>
       <div class="agent-workspace" id="ws-${a.id}" style="display:none" onclick="event.stopPropagation()">
-        ${a.isMediaAgent ? renderMediaAgentForm(a) : a.isSocialSimAgent ? renderSocialSimForm(a) : a.inputLabel ? `
+        ${a.hasForm ? renderClioForm() : a.hasCRM ? renderLarryCRM(a) : a.isEditorAgent ? renderEditorForm(a) : a.isMediaAgent ? renderMediaAgentForm(a) : a.isPublisherAgent ? renderPublisherForm(a) : a.isOrchestratorAgent ? renderOrchestratorForm(a) : a.isSocialSimAgent ? renderSocialSimForm(a) : a.isMonitorAgent ? renderMonitorForm(a) : `
           <div class="agent-input-row">
             <label style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.04em">${a.inputLabel}</label>
             <textarea id="input-${a.id}" placeholder="${a.inputPlaceholder}" rows="3"></textarea>
-          </div>` : ''}
-        ${!a.isSocialSimAgent ? `<button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')" style="${a.isOrquestadorAgent ? 'background:linear-gradient(135deg,#C2410C,#EA580C)' : ''}">
-          <span>⚡ Ejecutar ${a.name}</span>
+          </div>`}
+        ${(!a.isSocialSimAgent && !a.isPublisherAgent) ? `<button class="agent-run-btn" id="btn-${a.id}" onclick="event.stopPropagation();runAgent('${a.id}')" style="${a.isMonitorAgent ? 'background:linear-gradient(135deg,#064E3B,#065F46)' : ''}">
+          <span>${a.isMonitorAgent ? '📡 Analizar Redes' : '⚡ Ejecutar ' + a.name}</span>
         </button>` : ''}
         <div id="output-${a.id}" class="agent-output"></div>
       </div>
     </div>
   `).join('');
+  // Init Larry CRM dropdown
+  loadLarryLeads();
 }
 
 function toggleAgent(id) {
@@ -1251,29 +1044,16 @@ async function runAgent(id) {
   const status = document.getElementById(`status-${id}`);
   if (!output) return;
 
-  // ── Control de uso ──
-  if (llmReady) {
-    const ok = await _runAgentWithUsage(id);
-    if (!ok) return;
-  }
-
   setAgentBusy(id, true, status, btn);
   output.className = 'agent-output show';
   output.innerHTML = `<div class="agent-loading"><div class="agent-spinner"></div> Procesando con IA...</div>`;
 
-  let usedLLM = false;
   try {
-    const _origChat = window.CRM_LLM?.chat?.bind(window.CRM_LLM);
-    if (_origChat && window.CRM_LLM) {
-      window.CRM_LLM.chat = async (...args) => { usedLLM = true; return _origChat(...args); };
-    }
     await agent.run(id, output);
-    if (_origChat && window.CRM_LLM) window.CRM_LLM.chat = _origChat;
   } catch(e) {
-    output.innerHTML = `<div style="color:var(--danger)">❌ Error: ${escHtml(e.message||String(e))}</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Verifica tu conexión a internet.</div>`;
+    output.innerHTML = `<div style="color:var(--danger)">❌ Error: ${e.message}</div><div style="font-size:11px;color:var(--text-faint);margin-top:6px">Consejo: Activa el LLM con ⚡ o verifica la conexión a internet para los modelos HuggingFace.</div>`;
   } finally {
     setAgentBusy(id, false, status, btn);
-    if (usedLLM) await _postRunIncrement();
   }
 }
 
@@ -1306,196 +1086,168 @@ function saveToKB(el) {
   if (typeof Notiflix!=='undefined') Notiflix.Notify.info('Para guardar en la base de conocimiento, añádelo en la sección 🧠 Base de Conocimiento');
 }
 
-/* ── MECANISMO SYSTEM PROMPT ──────────────────────────── */
-function buildMecanismoPrompt(mecanismoName, mision) {
-  const kb = getKB();
-  return `Eres el ${mecanismoName} de MetaTronix — Agencia de Marketing de Resonancia Inevitable.
-
-EMPRESA: ${kb.empresa || 'MetaTronix — Soluciones IA para empresas en LATAM'}
-PRODUCTOS: ${kb.productos || 'Metaview Systems (computer vision), QuantumTron (data platform), Aria New Gen (educación IA), NeuroTron Lab (agentes autónomos)'}
-AUDIENCIA: ${kb.audiencia || 'Directores de tecnología, CEOs de PYMES, startups FinTech, empresas retail e industrial en México y LATAM'}
-PROPUESTA DE VALOR: ${kb.valor || 'IA especializada para LATAM, soporte 24/7 en español, implementación en 1 semana, 30% del costo de Salesforce'}
-TONO: ${kb.tono || 'Experto pero accesible, innovador, orientado a resultados'}
-COMPETIDORES: ${kb.competidores || 'Salesforce, HubSpot, SAP, Oracle, Zoho CRM'}
-MISIÓN DEL MECANISMO: ${mision}
-
-REGLAS DEL SISTEMA:
-1. Responde siempre en español. Sé específico y accionable.
-2. Cada respuesta termina con una RECOMENDACIÓN EJECUTABLE concreta.
-3. Métrica única de éxito: LTV/CAC. Todo lo demás es vanity metric.
-4. Si un mecanismo no mueve el LTV/CAC, se rediseña. Nunca olvides esto.`;
-}
-
-/* ── AGENT IMPLEMENTATIONS — LOS 7 MECANISMOS ──────── */
-
-async function runAgentObservador(id, output) {
-  const query = getInput(id) || 'Tendencias de IA para empresas en LATAM Q2 2026';
-  const sys = buildMecanismoPrompt('Observador de Mercado',
-    'Detectar oportunidades accionables antes de que sean masivas. Input: señales de audiencia, menciones de marca, movimientos competitivos, tendencias culturales. Output: briefing de oportunidades y riesgos con acción recomendada.');
+/* ── AGENT IMPLEMENTATIONS ──────────────────────────── */
+async function runAgentInvestigacion(id, output) {
+  const query = getInput(id) || 'Tendencias de IA para empresas en México 2026';
+  const sys = buildSystemPrompt('Agente de Investigación e Inteligencia');
 
   if (window.CRM_LLM?.engine) {
-    const result = await window.CRM_LLM.chat(sys,
-      `Analiza este tema como Observador de Mercado. Estructura tu respuesta en:\n\n1. 🔭 SEÑALES DETECTADAS (top 5 tendencias emergentes con datos)\n2. 🎯 MOVIMIENTOS COMPETITIVOS (qué hacen los competidores que es relevante)\n3. 📊 CAMBIOS DE SENTIMIENTO DE AUDIENCIA (qué está cambiando en la mentalidad del cliente)\n4. ⚡ OPORTUNIDAD ACCIONABLE (1 oportunidad clara que se abre ahora)\n5. ⚠️ RIESGO A MONITOREAR (1 amenaza que podría volverse crítica)\n\nTema: ${query}`);
-    output.innerHTML = `<div class="output-section"><div class="output-title">🔭 Observador — Briefing de Mercado</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="passToMechanism('narrador',this.closest('.agent-output').innerText.slice(0,400))">✍️ Pasar al Narrador</button></div>`;
+    const result = await window.CRM_LLM.chat(sys, `Analiza este tema y provee: (1) Top 5 tendencias actuales, (2) Análisis de 3 competidores clave, (3) 3 oportunidades de contenido específicas.\n\nTema: ${query}`);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📊 Análisis: ${escHtml(query)}</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
     return;
   }
+
+  // Fallback: structured analysis without LLM
   const kb = getKB();
   renderOutput(output, [
-    { title: '🔭 Señales Detectadas',
-      items: ['Adopción de IA generativa en ventas B2B +340% YoY en LATAM', 'CRMs con IA conversacional reemplazando SDR humanos — 23% de empresas ya en piloto', 'WhatsApp Business + IA: canal #1 de contacto en México (78% de empresas B2B)', 'Demanda de demos en español +180% en Q1 — brecha de mercado vs soluciones en inglés', 'Presupuesto IA en PYMES LATAM: $15K-$50K MXN/año disponible sin aprobación de board'] },
-    { title: '🎯 Movimientos Competitivos',
-      items: [`${kb.competidores?.split(',')[0]||'Salesforce'} lanzó Einstein copilot en español — respuesta tardía`, 'HubSpot reduce precios 25% en LATAM para retener cuentas medianas', 'Zoho agresivo en precio pero sin soporte local — oportunidad de diferenciación'] },
-    { title: '⚡ Oportunidad Accionable',
-      items: [`Campaña "CRM en español que sí se usa" — momento de mercado óptimo. Presupuesto recomendado: $40K MXN. Ventana: 30 días antes de que ${kb.competidores?.split(',')[0]||'Salesforce'} reactive su campaña LATAM.`] },
+    { title: '📈 Tendencias Detectadas (Template)',
+      items: ['Adopción de IA generativa en ventas B2B (+340% YoY)', 'Automatización de SDR con IA conversacional', 'Integración CRM + WhatsApp Business como canal principal', 'Computer vision para retail analytics en expansión', 'Demanda de IA en español para mercado LATAM'] },
+    { title: '🔍 Análisis de Competencia',
+      items: [`Competidores de ${kb.empresa||'tu empresa'}: ${kb.competidores||'Salesforce, HubSpot'}`, 'Gaps identificados: soporte en español, precio para PYMES, implementación rápida'] },
+    { title: '💡 Oportunidades de Contenido',
+      items: ['Caso de éxito: "Cómo redujimos costos 40% con IA en 30 días"', 'Educacional: "5 errores que cometen las PYMES al adoptar IA"', 'Demo: "Metaview Systems en vivo: detección de pérdidas en retail"'] },
   ]);
 }
 
-async function runAgentNarrador(id, output) {
-  const contexto = getInput(id) || 'Lanzamiento QuantumTron para retail LATAM';
-  const sys = buildMecanismoPrompt('Narrador',
-    'Definir la narrativa central del mes y traducirla en TODAS sus formas textuales. Una sola voz cruzando todos los canales. No hay disonancia entre piezas porque nacen del mismo cerebro.');
+async function runAgentContenido(id, output) {
+  const tema = getInput(id) || 'Beneficios de la IA para empresas LATAM';
+  const sys  = buildSystemPrompt('Agente de Contenido');
+  const kb   = getKB();
 
   if (window.CRM_LLM?.engine) {
-    const result = await window.CRM_LLM.chat(sys,
-      `Define la arquitectura narrativa para este período y genera el copy de cada pieza:\n\n1. 🎯 NARRATIVA CENTRAL (1 oración que resume la historia del mes — máx 15 palabras)\n2. 📱 SCRIPT DE REEL (60 seg: hook 3s + desarrollo 45s + CTA 12s)\n3. 💼 POST LINKEDIN (150-180 palabras, incluye datos y CTA suave)\n4. 📧 EMAIL SUBJECT LINES (5 variaciones A/B listas para testear)\n5. 🎬 GUIÓN PARA AGENTES VISUALES (brief narrativo para Video IA e Imagen IA)\n6. 🏠 PRIMERA LÍNEA LANDING PAGE (hook que captura atención en 3 segundos)\n\nContexto/Oportunidad: ${contexto}`);
-    output.innerHTML = `<div class="output-section"><div class="output-title">✍️ Narrador — Arquitectura Narrativa</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar todo</button><button class="btn btn-ghost btn-sm" onclick="passToMechanism('director',this.closest('.agent-output').innerText.slice(0,500))">🎬 Pasar al Director</button></div>`;
+    const prompt = `Genera contenido de marketing para: "${tema}"\n\nNecesito:\n1. Script de Reel (60 segundos, hook + desarrollo + CTA)\n2. Post LinkedIn (150 palabras)\n3. Email subject line (5 variaciones)\n4. Primera línea de blog SEO-optimizada`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">✍️ Contenido generado para: "${escHtml(tema)}"</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar todo</button></div>`;
     return;
   }
-  const kb = getKB();
+
+  // Template fallback
   renderOutput(output, [
-    { title: '🎯 Narrativa Central del Mes',
-      items: [`"${kb.empresa||'MetaTronix'}: La IA que convierte datos en decisiones que cierran."`] },
-    { title: '📱 Script de Reel (60 seg)',
-      items: [`HOOK (0-3s): "Tu competencia ya toma decisiones con IA. Tú sigues usando Excel."\nDESARROLLO (3-45s): Muestra en tiempo real cómo ${contexto} transforma operaciones. Datos reales, sin demos fake.\nCTA (45-60s): "Link en bio — demo gratuita esta semana. Máximo 3 cupos."`] },
+    { title: '🎬 Script de Reel (60 seg)',
+      items: [
+        `HOOK (0-3s): "¿Sabías que el 70% de las empresas LATAM aún no usa IA? Aquí está lo que están perdiendo..."`,
+        `DESARROLLO (3-45s): Muestra [${tema}] con datos reales. Incluye transformación antes/después.`,
+        `CTA (45-60s): "¿Quieres implementarlo en tu empresa? Link en bio para agendar demo gratuita."`,
+      ] },
     { title: '💼 Post LinkedIn',
-      items: [`Las empresas que adoptaron IA en sus operaciones en 2024 cerraron 31% más negocios.\n\nNo porque sean más inteligentes. Sino porque tomaron decisiones 10x más rápido.\n\nEn ${kb.empresa||'MetaTronix'} implementamos ${contexto} en 1 semana. Sin código. Sin meses de capacitación.\n\n¿Tu equipo sigue esperando el momento correcto?\n\nEl momento correcto era ayer. El siguiente es ahora. → [link en bio]`] },
-    { title: '📧 Subject Lines (A/B)',
-      items: ['A: [Urgente] Tu competencia ya usa IA para esto', 'B: Cómo [empresa similar] cerró 40% más en 30 días', 'C: El CRM que tu equipo realmente va a usar', 'D: Demo: IA implementada en 1 semana — sin código', 'E: [Nombre], ¿cuánto te cuesta no usar IA este trimestre?'] },
+      items: [`"${tema}" ya no es una ventaja competitiva — es una necesidad.\n\n${kb.empresa||'MetaTronix'} ha ayudado a +50 empresas en LATAM a [resultado específico].\n\n¿Tu empresa ya está usando IA? Comenta 👇"`] },
+    { title: '📧 Subject Lines (5 variaciones)',
+      items: [`1. [Urgente] Tu competencia ya usa ${tema.slice(0,30)}...`, `2. Cómo [empresa similar] logró X con ${tema.slice(0,25)}`, `3. El error que cometen el 70% de las empresas con IA`, `4. Demo exclusiva: ${tema.slice(0,35)}`, `5. [Primer nombre], ¿ya tienes tu plan de IA para 2026?`] },
   ]);
 }
 
-async function runAgentDirector(id, output) {
-  const input = getInput(id) || 'Narrativa: QuantumTron transforma datos en decisiones. Necesito reel vertical, imagen LinkedIn y thumbnail YouTube.';
-  const sys = buildMecanismoPrompt('Director de Producción',
-    'Convertir narrativa en briefs tan precisos que los agentes de video e imagen no pueden malinterpretarlos. Definir emoción objetivo, jerarquía visual, referentes y el único trabajo de cada pieza.');
+async function runAgentPublicidad(id, output) {
+  const input = getInput(id) || 'Metaview Systems para directores de operaciones de retail';
+  const sys   = buildSystemPrompt('Agente de Publicidad');
 
   if (window.CRM_LLM?.engine) {
-    const result = await window.CRM_LLM.chat(sys,
-      `Genera briefs estructurados para los agentes de producción visual. Para CADA pieza define:\n\n🎬 BRIEF FORMATO: [nombre de la pieza]\n- EMOCIÓN OBJETIVO: [qué debe sentir quien lo ve]\n- JERARQUÍA VISUAL: [qué ve primero, segundo, tercero]\n- PROMPT EXACTO PARA IA: [prompt en inglés listo para usar en Video IA o Imagen IA]\n- PROMPT NEGATIVO: [qué evitar]\n- FORMATO Y DURACIÓN: [specs técnicos]\n- EL ÚNICO TRABAJO DE ESTA PIEZA: [1 frase — qué debe lograr]\n\nInput del Narrador / solicitud: ${input}`);
-    output.innerHTML = `<div class="output-section"><div class="output-title">🎬 Director — Briefs de Producción Visual</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar briefs</button><button class="btn btn-ghost btn-sm" onclick="toggleAgent('video')">🎬 Ir a Video IA</button><button class="btn btn-ghost btn-sm" onclick="toggleAgent('image')">🖼 Ir a Imagen IA</button></div>`;
+    const prompt = `Genera copy de publicidad para Meta Ads y Google Ads:\n\nProducto/Audiencia: ${input}\n\nNecesito:\n1. 5 headlines (máx 40 chars)\n2. 3 descripciones primarias (máx 125 chars)\n3. 3 CTAs poderosos\n4. 1 anuncio completo (headline + descripción + CTA)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📢 Copy de Publicidad</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
     return;
   }
+
   renderOutput(output, [
-    { title: '🎬 Brief 01 — Reel Vertical (9:16)',
-      items: ['EMOCIÓN OBJETIVO: Urgencia mezclada con esperanza — "esto me aplica a mí ahora"', 'JERARQUÍA VISUAL: 1° Número impactante en pantalla. 2° Cara del CEO reaccionando. 3° Logo MetaTronix.', 'PROMPT IA: "A Latin American CEO in a modern glass office, looking at a data dashboard that shows +40% growth, cinematic lighting, dark blue and green accent colors, 4K photorealistic"', 'PROMPT NEGATIVO: "blurry, stock photo look, generic business suit, white background"', 'EL ÚNICO TRABAJO: Hacer que el Director de TI diga "eso lo necesito en mi empresa"'] },
-    { title: '🖼 Brief 02 — Imagen LinkedIn (1:1)',
-      items: ['EMOCIÓN OBJETIVO: Confianza profesional — "estos son los expertos que busco"', 'JERARQUÍA VISUAL: 1° Dato de resultado. 2° Contexto visual de empresa. 3° Branding sutil.', 'PROMPT IA: "Clean data visualization dashboard with green and blue metrics showing ROI improvement, dark background, professional B2B SaaS aesthetic, 1080x1080"', 'EL ÚNICO TRABAJO: Detener el scroll y generar clicks hacia el post'] },
-    { title: '🖼 Brief 03 — Thumbnail YouTube',
-      items: ['EMOCIÓN OBJETIVO: Curiosidad + FOMO — "necesito ver esto"', 'PROMPT IA: "Mexican tech executive surprised face looking at laptop screen, text overlay space on left side, dark navy background, vibrant accent lighting, thumbnail format 1280x720"', 'EL ÚNICO TRABAJO: Lograr CTR >8% en el primer día de publicación'] },
+    { title: '📣 Headlines (máx 40 chars)',
+      items: ['¿IA para tu empresa en 1 semana?', 'Reduce costos 40% con IA LATAM', 'Computer Vision para tu negocio', 'Sin Salesforce, sin costos extra', 'MetaTronix: IA que habla español'] },
+    { title: '📝 Descripciones primarias',
+      items: ['Implementa visión artificial en tu operación. Sin código. Sin meses de espera. Demo gratuita hoy.', 'Más de 50 empresas LATAM ya usan MetaTronix. ¿Tu competencia también? Agenda demo →', 'La única plataforma IA diseñada para México y LATAM. Soporte 24/7 en español. Precio PYME.'] },
+    { title: '⚡ CTAs',
+      items: ['Agenda tu demo gratuita →', 'Ver caso de éxito →', 'Calcula tu ROI en 2 min →'] },
   ]);
 }
 
-async function runAgentMotor(id, output) {
-  const input = getInput(id) || 'Campaña awareness QuantumTron, $30K MXN, 200 demos en 30 días';
-  const sys = buildMecanismoPrompt('Motor de Distribución',
-    'Toda la ejecución técnica: SEO, SEM, paid media, email, redes. Decide dónde, cuándo y con cuánto. ROAS creciente trimestre a trimestre es el kill criterion.');
+async function runAgentYoutube(id, output) {
+  const tema = getInput(id) || 'Cómo implementé IA en mi empresa y reduje costos 40%';
+  const sys  = buildSystemPrompt('Agente de YouTube SEO');
 
   if (window.CRM_LLM?.engine) {
-    const result = await window.CRM_LLM.chat(sys,
-      `Genera la estrategia de distribución completa para esta campaña:\n\n1. 📊 ASIGNACIÓN DE PRESUPUESTO (desglose por canal con justificación)\n2. 📅 CALENDARIO DE DISTRIBUCIÓN (semana a semana, días y horarios óptimos)\n3. 🎯 ESTRUCTURA DE AUDIENCIAS (segmentos, remarketing, lookalikes)\n4. 📱 SPECS POR CANAL (Meta Ads, LinkedIn, Google, Email — formatos y copys)\n5. 📈 KPIs Y BENCHMARKS (métricas esperadas en 48h, 7 días, 14 días)\n6. ⚡ RECOMENDACIÓN EJECUTABLE INMEDIATA\n\nCampaña: ${input}`);
-    output.innerHTML = `<div class="output-section"><div class="output-title">📡 Motor — Estrategia de Distribución</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar estrategia</button></div>`;
+    const prompt = `Optimiza este video de YouTube:\nTema: "${tema}"\n\nGenera:\n1. 10 títulos SEO (click-baity pero verídicos)\n2. Descripción completa (300 palabras, primera línea hook, incluye keywords)\n3. 15 tags relevantes\n4. Concepto de thumbnail (descripción visual)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📺 YouTube SEO: "${escHtml(tema)}"</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
     return;
   }
+
   renderOutput(output, [
-    { title: '📊 Asignación de Presupuesto (template)',
-      items: ['Meta Ads (FB/IG): 40% — mayor volumen y segmentación B2B en LATAM', 'LinkedIn Ads: 30% — decisores con cargo exacto, ROAS más lento pero calidad alta', 'Google Search: 20% — captura demanda existente ("CRM con IA México")', 'Email/Retargeting: 10% — reactivación leads tibios con costo mínimo'] },
-    { title: '📅 Calendario Semana 1',
-      items: ['L-M: Lanzamiento Meta + LinkedIn con creativos A', 'M-J: Activar Google Search. Revisar CTR de Meta.', 'V: Si CTR Meta < 1.5%, pausar creativos débiles. Escalar ganadores.', 'S-D: Solo retargeting activo. Mínimo gasto. Máximo ROI.'] },
-    { title: '📈 KPIs Esperados (30 días)',
-      items: ['CTR Meta Ads: >2.1% (benchmark SaaS B2B LATAM)', 'CPL LinkedIn: <$280 MXN por lead calificado', 'ROAS objetivo: >3.0x agregado', 'Email open rate: >28% (secuencia de 4 correos)'] },
+    { title: '🎬 Títulos SEO (mejores 5)',
+      items: [`Cómo ${tema} (Resultados REALES en 30 días)`, `NO implementes IA sin ver esto primero — ${tema}`, `${tema}: El método que nadie te enseña`, `De 0 a IA en 7 días: ${tema}`, `¿Vale la pena? ${tema} — Mi experiencia honesta`] },
+    { title: '🔖 Tags Keywords',
+      items: ['inteligencia artificial México, IA para empresas, MetaTronix, computer vision retail, automatización LATAM, CRM con IA, implementar IA empresa, reduce costos IA'] },
+    { title: '🖼 Thumbnail Concept',
+      items: ['Fondo: gradiente navy → azul. TEXTO GRANDE: resultado numérico (ej: -40% costos). Foto: director de empresa sorprendido. Logo MetaTronix esquina inferior. Colores: #08255F #1A6FFF #00FF88'] },
   ]);
 }
 
-async function runAgentConversor(id, output) {
-  const input = getInput(id) || 'Landing page con 12% conversión. Analiza puntos de fricción y genera variantes A/B.';
-  const sys = buildMecanismoPrompt('Conversor',
-    'Reducir la distancia entre atención y cliente pagando. Todo lo que ocurre después del primer clic: landing pages, nurturing, onboarding, retención. Tasa de conversión creciente es el kill criterion.');
+async function runAgentLarry(id, output) {
+  const leadData = getInput('larry') || 'Prospecto genérico del sector retail';
+  const sys = buildSystemPrompt('Larry — AI SDR (Sales Development Representative)');
 
   if (window.CRM_LLM?.engine) {
-    const result = await window.CRM_LLM.chat(sys,
-      `Analiza y optimiza la conversión para este funnel:\n\n1. 🔍 DIAGNÓSTICO DE FRICCIÓN (top 3 puntos donde se pierde al cliente y por qué)\n2. 🏠 LANDING PAGE (headline A/B + estructura óptima + CTA principal)\n3. 📧 SECUENCIA DE NURTURING (5 emails — asunto + 1 línea de cuerpo + CTA de cada uno)\n4. ⚡ EXPERIMENTOS A/B (3 tests para ejecutar esta semana, de menor a mayor impacto)\n5. 🎯 QUICK WIN (1 cambio que se implementa en menos de 2 horas y puede mover la conversión)\n\nContexto: ${input}`);
-    output.innerHTML = `<div class="output-section"><div class="output-title">⚡ Conversor — Plan de Optimización</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar plan</button></div>`;
+    const prompt = `Genera secuencia de ventas para este prospecto:\n\n${leadData}\n\nNecesito:\n1. Email de calificación (asunto + cuerpo, máx 5 líneas)\n2. Email de seguimiento 3 días después\n3. Respuesta a objeción "Es muy caro"\n4. Script de voice note (30 segundos, natural, no suene a ventas)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🤖 Secuencia SDR generada</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
     return;
   }
-  const kb = getKB();
+
   renderOutput(output, [
-    { title: '🔍 Diagnóstico de Fricción (top 3)',
-      items: ['FRICCIÓN 1: Hero no comunica propuesta de valor en <3 segundos — fix: cambiar headline a resultado específico', 'FRICCIÓN 2: Formulario de 8 campos en mobile — fix: reducir a 3 campos (nombre, empresa, email)', 'FRICCIÓN 3: Sin prueba social visible en el above-the-fold — fix: añadir logo de 3 clientes + testimonio de 1 línea'] },
-    { title: '🏠 Headlines A/B para Landing',
-      items: [`A: "De 0 a ${kb.empresa||'MetaTronix'} en 7 días — sin código, sin consultores"`, 'B: "El CRM que tu equipo usará de verdad — implementación en 1 semana o no pagás"', 'C: "Reduce 40% el tiempo de tu equipo de ventas. Demo gratuita en 15 minutos."'] },
-    { title: '⚡ Quick Win (implementar hoy)',
-      items: ['Añadir contador de urgencia en el CTA: "Quedan 3 demos disponibles esta semana" — incrementa conversión 15-35% en industria SaaS B2B según benchmark CXL Institute'] },
+    { title: '📧 Email de Calificación',
+      items: [`Asunto: Re: Tu consulta sobre IA para ${leadData.split('\n')[0]?.split(':')[1]?.trim()||'tu empresa'}`,
+               `Hola [nombre],\n\nVi que visitaste nuestra página. En MetaTronix hemos ayudado a empresas como la tuya a reducir costos operativos 40% con IA.\n\n¿Tienes 15 minutos esta semana? Te muestro exactamente cómo lo haríamos en tu caso.\n\n[Tu nombre]`] },
+    { title: '📧 Seguimiento D+3',
+      items: [`Asunto: [Video] Caso de éxito empresa similar a la tuya\n\nHola [nombre],\n\nTe comparto este video donde mostramos resultados reales: [link]. Similar a tu caso.\n\n¿Lo revisaste? Cuéntame qué te parece.\n\n[Tu nombre]`] },
+    { title: '💬 Respuesta objeción "Es muy caro"',
+      items: [`"Entiendo. Permíteme reformularlo: Actualmente ¿cuánto te cuesta [problema que tienen]? Nuestros clientes recuperan la inversión en 6-8 meses. El ROI promedio es 4x. ¿Te parece bien si calculamos juntos el tuyo?"`] },
   ]);
 }
 
-async function runAgentAprendizaje(id, output) {
-  const input = getInput(id) || 'Campaña Q1 — inversión $50K MXN, 320 leads, 28 cierres, ROAS 2.8x. ¿Qué funcionó?';
-  const sys = buildMecanismoPrompt('Sistema de Aprendizaje',
-    'Hacer la autopsia completa de cada campaña. No entregar reportes: modificar los prompts y flujos de los otros mecanismos. La agencia aprende porque este mecanismo no permite repetir errores. Kill criterion: si el LTV/CAC no sube 2 trimestres seguidos, se reemplaza.');
+async function runAgentStreams(id, output) {
+  const objeciones = getInput(id) || '"La IA es muy cara", "No tenemos tiempo", "Mi equipo no sabe usarla"';
+  const sys = buildSystemPrompt('Agente de Comunidad y Live Streams');
 
   if (window.CRM_LLM?.engine) {
-    const result = await window.CRM_LLM.chat(sys,
-      `Realiza la autopsia completa de esta campaña:\n\n1. 📊 ROI REAL vs ESTIMADO (análisis de desvíos y causas)\n2. 🏆 CREATIVOS GANADORES (qué mensajes, formatos y audiencias rindieron más y por qué)\n3. ❌ CREATIVOS PERDEDORES (qué no funcionó y la hipótesis de por qué)\n4. 🎯 AUDIENCIAS QUE RESPONDIERON (segmentos con mejor CAC)\n5. 📡 CANALES QUE RINDIERON (ROAS por canal)\n6. 🔧 MODIFICACIONES AL SISTEMA (cambios específicos que hay que hacer en cada mecanismo — Observador, Narrador, Director, Motor, Conversor)\n7. ⚡ RECOMENDACIÓN: ¿se escala, se rediseña o se elimina este enfoque?\n\nDatos de campaña: ${input}`);
-    output.innerHTML = `<div class="output-section"><div class="output-title">🧠 Aprendizaje — Autopsia de Campaña</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar autopsia</button></div>`;
+    const prompt = `Planifica un live stream de 90 minutos basado en estas objeciones de prospectos:\n\n${objeciones}\n\nGenera:\n1. Guión completo (intro, 3 secciones principales, cierre)\n2. Top 5 creencias a romper\n3. 10 preguntas para la audiencia\n4. CTA final del stream (sin sonar a ventas)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">📡 Guión de Live Stream</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button></div>`;
     return;
   }
+
   renderOutput(output, [
-    { title: '📊 Diagnóstico de Performance',
-      items: ['LTV/CAC actual: revisar si los 28 cierres tienen LTV > 3x CAC para justificar escalar', 'ROAS 2.8x está por debajo del benchmark mínimo de 3.0x — revisar mix de canales', 'CPL real: $50,000 / 320 leads = $156 MXN — benchmark saludable para B2B SaaS LATAM'] },
-    { title: '🔧 Modificaciones al Sistema',
-      items: ['→ Observador: buscar señales que expliquen por qué 292 leads no cerraron (objeción principal)', '→ Narrador: cambiar narrativa — el mensaje de precio no resonó. Probar narrativa de velocidad.', '→ Motor: reasignar 15% de Meta hacia LinkedIn — leads más calificados aunque más caros', '→ Conversor: analizar el drop entre lead y demo agendada — ahí está el cuello de botella'] },
-    { title: '⚡ Veredicto del Sistema',
-      items: ['ESCALAR con ajustes: el sistema funciona pero tiene 2 fugas. Próximo trimestre con las 4 modificaciones aplicadas, proyección: ROAS 3.5x y cierre >12%.'] },
+    { title: '📡 Estructura del Live Stream (90 min)',
+      items: ['INTRO (10 min): "Hoy vamos a destruir los mitos sobre IA que te están costando dinero..."', 'SECCIÓN 1 (25 min): Muestra el sistema en vivo. No expliques — demuestra.', 'SECCIÓN 2 (25 min): Casos de éxito reales. Números específicos.', 'SECCIÓN 3 (20 min): Q&A sobre las objeciones específicas de tu audiencia.', 'CIERRE (10 min): "Para los que quieran ver si esto aplica a su negocio, link fijo en el chat."'] },
+    { title: '🧠 Creencias a Romper',
+      items: objeciones.split('",').map((o,i)=>`${i+1}. "${o.replace(/[",]/g,'').trim()}" → Realidad: [argumento contrario con datos]`) },
+    { title: '⚡ CTA del Stream',
+      items: ['Un solo CTA en todo el stream: link fijo en el chat para agendar llamada. Nunca hacer pitch directamente. La confianza se construye con 8+ horas de contenido consumido.'] },
   ]);
 }
 
-async function runAgentOrquestador(id, output) {
-  const instruccion = getInput(id) || 'Lanza campaña Q2 para QuantumTron en LinkedIn y Meta, $80K MXN, objetivo 200 demos en 45 días';
-  const sys = buildMecanismoPrompt('Orquestador',
-    'Única interfaz con el humano. Recibir instrucciones en lenguaje natural, descomponerlas, asignar a los mecanismos correctos y sintetizar respuestas unificadas. Operar con silencio por defecto y memoria de ciclo completo.');
+async function runAgentClio(id, output) {
+  const sys  = buildSystemPrompt('Clio — Agente de Onboarding');
+  // Gather form answers
+  const answers = [];
+  for (let i = 1; i <= 6; i++) {
+    const val = document.getElementById(`clio-q${i}`)?.value?.trim();
+    if (val) answers.push(val);
+  }
+  if (!answers.length) { output.innerHTML = '<div style="color:var(--danger)">Por favor completa al menos una pregunta del formulario.</div>'; output.className = 'agent-output show'; return; }
+
+  const context = answers.map((a,i)=>`Respuesta ${i+1}: ${a}`).join('\n');
 
   if (window.CRM_LLM?.engine) {
-    const result = await window.CRM_LLM.chat(sys,
-      `Como Orquestador, procesa esta instrucción y genera el plan de campaña unificado:\n\n1. 🎯 DESCOMPOSICIÓN DE LA INSTRUCCIÓN (qué mecanismo ejecuta qué)\n2. 📋 CAMPAIGN BRIEF EJECUTIVO (todo lo que el equipo necesita para arrancar HOY)\n3. ⏱️ UMBRALES DE EVALUACIÓN (cuándo revisar: 48h, 7 días, 14 días, 21 días — ajustados por canal y presupuesto)\n4. 🚦 ESTADO INICIAL: ACTIVA (qué pasa en los próximos 72 horas)\n5. ⚡ PRIMERA ACCIÓN EJECUTABLE (lo más importante a hacer en las próximas 2 horas)\n\nInstrucción: ${instruccion}`);
-    output.innerHTML = `
-      <div class="output-section">
-        <div class="output-title">🎯 Orquestador — Campaign Brief Unificado</div>
-        <div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-        <button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar brief</button>
-        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('observador')">🔭 Observador</button>
-        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('narrador')">✍️ Narrador</button>
-        <button class="btn btn-ghost btn-sm" onclick="toggleAgent('motor')">📡 Motor</button>
-      </div>`;
+    const prompt = `Analiza estas respuestas de onboarding de un nuevo cliente y genera:\n\n${context}\n\n1. Voz de marca (3-5 adjetivos + ejemplo de frase)\n2. Posicionamiento único\n3. Top 3 mensajes de ventas\n4. SOP inicial de marketing (5 pasos)`;
+    const result = await window.CRM_LLM.chat(sys, prompt);
+    output.innerHTML = `<div class="output-section"><div class="output-title">🎯 Perfil de Onboarding Generado</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="saveToKB()">💾 Guardar en KB</button></div>`;
     return;
   }
-  const kb = getKB();
-  renderOutput(output, [
-    { title: '🎯 Descomposición de la Instrucción',
-      items: ['→ Observador: briefing de mercado + movimientos competitivos actuales', '→ Narrador: narrativa del mes + copy para LinkedIn y Meta Ads', '→ Director: 3 briefs de producción visual (reel, imagen LinkedIn, banner)', '→ Motor: estrategia de distribución con $80K MXN desglosado por canal', '→ Conversor: landing page + secuencia de nurturing para los leads entrantes'] },
-    { title: '⏱️ Umbrales de Evaluación',
-      items: ['48-72h: revisar CTR Meta (benchmark >2.1%). Si está por debajo, pausar anuncios débiles.', 'Día 7: evaluación formal. Reasignar presupuesto a canales con mejor CPA.', 'Día 14: decisión de escalar creativos ganadores o cerrar líneas que no funcionan.', 'Día 21: autopsia + aprendizaje integrado al sistema. Ajustar Día 22-45.'] },
-    { title: '⚡ Primera Acción (próximas 2 horas)',
-      items: [`Ejecuta el Observador con: "Movimientos competitivos de ${kb.competidores?.split(',')[0]||'Salesforce'} en LinkedIn Q2 2026 + oportunidades de gap". Su output alimenta al Narrador.`] },
-  ]);
-}
 
-/* Helper: pasar output de un mecanismo al siguiente */
-function passToMechanism(targetId, text) {
-  const input = document.getElementById(`input-${targetId}`);
-  if (input) { input.value = text; }
-  toggleAgent(targetId);
+  renderOutput(output, [
+    { title: '🎨 Voz de Marca (inferida)',
+      items: ['Adjetivos: Experto, Confiable, Innovador, Cercano, Orientado a resultados', `Tono: Hablas como el mejor amigo que también es el experto en tu industria.`, 'Frase de posicionamiento: "Transformamos [negocio] con IA que realmente funciona para LATAM."'] },
+    { title: '💬 Mensajes de Ventas',
+      items: answers.slice(0,3).map((a,i)=>`M${i+1}: Basado en "${a.slice(0,50)}..." → Mensaje clave a desarrollar`) },
+    { title: '📋 SOP Marketing Inicial',
+      items: ['1. Crear video de atracción en YouTube (tema más preguntado)', '2. Configurar landing page con formulario de captura', '3. Activar Larry SDR con secuencia de email personalizada', '4. Publicar 5 Reels/semana con el Agente de Contenido', '5. Live stream semanal respondiendo objeciones detectadas'] },
+  ]);
 }
 
 /* ── LLM INIT ────────────────────────────────────────── */
@@ -1521,7 +1273,7 @@ async function initLLM() {
     await window.CRM_LLM.init(updateProgress);
     llmReady = true;
     if (bar) bar.className = 'llm-init-bar hidden';
-    if(typeof Notiflix!=='undefined') Notiflix.Notify.success('Claude API activa ✓ — 10 agentes en modo IA completo');
+    if(typeof Notiflix!=='undefined') Notiflix.Notify.success('Claude API activa ✓ — 14 agentes en modo IA completo');
     // Update all agent statuses
     AGENTS.forEach(a => {
       const s = document.getElementById(`status-${a.id}`);
@@ -1537,870 +1289,6 @@ async function initLLM() {
   }
 }
 
-/* ══════════════════════════════════════════════════════
-   USAGE CONTROL — Límite mensual de consultas IA
-   ══════════════════════════════════════════════════════ */
-let _usage = { used:0, limit:100, allowed:true, loaded:false };
-
-async function loadUsage() {
-  if (!currentUser) return;
-  try {
-    const result = await checkClaudeAccess(currentUser.id);
-    _usage = { ...result, loaded:true };
-    updateUsageBadge();
-  } catch(_) { _usage.allowed=true; _usage.loaded=true; }
-}
-
-function updateUsageBadge() {
-  const badge = document.getElementById('usage-badge');
-  if (!badge || !_usage.loaded) return;
-  const { used, limit } = _usage;
-  const pct = Math.min(Math.round((used/(limit||1))*100), 100);
-  const warn = pct >= 80, over = pct >= 100;
-  badge.style.display = 'inline-flex';
-  badge.style.color = over ? '#EF4444' : warn ? '#F59E0B' : '';
-  badge.style.borderColor = over ? 'rgba(239,68,68,.3)' : warn ? 'rgba(245,158,11,.3)' : '';
-  badge.style.background = over ? 'rgba(239,68,68,.08)' : warn ? 'rgba(245,158,11,.08)' : '';
-  badge.textContent = `${used} / ${limit} usos`;
-}
-
-function showUsageLimitModal() {
-  const { used, limit } = _usage;
-  const pct = Math.min(Math.round((used/(limit||1))*100), 100);
-  const nextReset = (() => {
-    const d=new Date(); d.setMonth(d.getMonth()+1); d.setDate(1);
-    return d.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
-  })();
-  const overlay = document.createElement('div');
-  overlay.className = 'usage-overlay'; overlay.id = 'usage-overlay';
-  overlay.innerHTML = `
-    <div class="usage-modal">
-      <div class="usage-modal-header">
-        <span class="usage-modal-icon">🔒</span>
-        <div class="usage-modal-title">LÍMITE MENSUAL ALCANZADO</div>
-        <div class="usage-modal-sub">METATRONIX · CONTROL DE ACCESO IA</div>
-      </div>
-      <div class="usage-modal-body">
-        <div class="usage-bar-wrap">
-          <div class="usage-bar-label"><span>Usos este mes</span><span>${used} / ${limit} (${pct}%)</span></div>
-          <div class="usage-bar-track"><div class="usage-bar-fill" style="width:${pct}%"></div></div>
-        </div>
-        <div class="usage-msg">
-          Has llegado al límite de <strong style="color:#FCA5A5">${limit} consultas IA</strong> de tu plan para este mes.<br><br>
-          Tu administrador ha sido <strong style="color:#A5B4FC">notificado automáticamente</strong>. En cuanto autorice la extensión, podrás continuar.
-        </div>
-        <div class="usage-reset-date">🗓 Reset automático: ${nextReset}</div>
-        <div class="usage-modal-actions">
-          <button class="usage-btn-primary" onclick="requestUsageExtension()">📩 Solicitar extensión al admin</button>
-          <button class="usage-btn-ghost" onclick="document.getElementById('usage-overlay').remove()">Cerrar</button>
-        </div>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
-}
-
-async function requestUsageExtension() {
-  document.getElementById('usage-overlay')?.remove();
-  if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('✅ Solicitud enviada — tu administrador recibirá la notificación de inmediato');
-}
-
-async function _runAgentWithUsage(id) {
-  if (_usage.loaded && !_usage.allowed) { showUsageLimitModal(); return false; }
-  if (llmReady && currentUser) {
-    const check = await checkClaudeAccess(currentUser.id).catch(() => ({ allowed:true }));
-    _usage = { ...check, loaded:true }; updateUsageBadge();
-    if (!check.allowed) { showUsageLimitModal(); return false; }
-  }
-  return true;
-}
-
-async function _postRunIncrement() {
-  if (llmReady && currentUser) {
-    await incrementClaudeUsage(currentUser.id).catch(()=>{});
-    _usage.used = (_usage.used||0) + 1; updateUsageBadge();
-  }
-}
-
-/* ══════════════════════════════════════════════════════
-   GENIE — El Genio de la Lámpara de MetaTronix (Marketing)
-   ══════════════════════════════════════════════════════ */
-
-function buildGeniePanelSkeleton() {
-  const stars = Array.from({length:18}, () => {
-    const top=Math.random()*100, left=Math.random()*100, delay=(Math.random()*4).toFixed(1), size=Math.random()>.7?'4px':'2px';
-    return `<div class="genie-star" style="top:${top}%;left:${left}%;width:${size};height:${size};animation-delay:${delay}s"></div>`;
-  }).join('');
-  return `
-  <div class="genie-panel">
-    <div class="genie-stars">${stars}</div>
-    <div class="genie-header">
-      <div class="genie-title-block">
-        <div class="genie-lamp-wrap">
-          <span class="genie-lamp-emoji">🪔</span>
-          <div class="genie-smoke"><span></span><span></span><span></span></div>
-        </div>
-        <div class="genie-title-text">
-          <div class="genie-title-main">🧞 EL GENIO DE METATRONIX</div>
-          <div class="genie-title-sub">Síntesis estratégica de toda la agencia · Plan de acción inmediato</div>
-        </div>
-      </div>
-      <button class="genie-close" onclick="document.getElementById('genie-container').style.display='none'">✕ Cerrar</button>
-    </div>
-    <div class="genie-body">
-      <div class="genie-face">
-        <div class="genie-avatar">🧞</div>
-        <div class="genie-speech" id="genie-speech">
-          Mis agentes han terminado. Analizando todo su trabajo para darte la dirección perfecta…
-          <div class="genie-loading-dots"><span></span><span></span><span></span></div>
-        </div>
-      </div>
-      <div class="genie-sections" id="genie-sections"></div>
-    </div>
-  </div>`;
-}
-
-async function showGenie(mission, agentResults, predResult = null) {
-  const container = document.getElementById('genie-container');
-  if (!container) return;
-  // Ocultar propuesta de campaña previa
-  const campContainer = document.getElementById('campaign-container');
-  if (campContainer) campContainer.style.display = 'none';
-
-  container.style.display = 'block';
-  container.innerHTML = buildGeniePanelSkeleton();
-  container.scrollIntoView({ behavior:'smooth', block:'start' });
-  const sectionsEl = document.getElementById('genie-sections');
-  const speechEl   = document.getElementById('genie-speech');
-  // Reducir outputs para no sobrepasar el límite del Worker
-  const outputsText = agentResults.filter(r=>r.text).map(r=>`[${r.name}] ${r.text.slice(0,200).replace(/\n+/g,' ')}`).join('\n');
-
-  // Contexto del Predictor compacto
-  const predCtx = predResult
-    ? `[PREDICTOR P(éxito):${predResult.probabilidad}% ROAS:${predResult.roas_min}x-${predResult.roas_max}x Canal#1:${predResult.canales?.[0]?.nombre||'N/A'} Timing:${predResult.timing||'adecuado'}]`
-    : '';
-
-  if (!window.CRM_LLM?.engine) {
-    if (speechEl) speechEl.innerHTML = '🪄 Activa el LLM para que el Genio pueda darte su síntesis completa.';
-    buildGenieSections(sectionsEl, {
-      resumen:    `Los 15 agentes de marketing analizaron tu misión: "${mission.slice(0,120)}…"\n\nEl Observador detectó las tendencias clave. El Narrador tiene la historia central. El Activador construyó las audiencias. El Amplificador tiene los anuncios listos. El Orquestador coordina todo el plan.`,
-      aplicar:    `1. Usa el output del Narrador para crear el mensaje principal de tu campaña.\n2. Aplica las audiencias del Activador en tus campañas de ads.\n3. Lanza los primeros 3 contenidos del Creador de Contenido esta semana.\n4. Configura la secuencia de email del Guardián del Email.\n5. Define los KPIs del Analista para medir resultados desde el día 1.`,
-      primero:    `⚡ EN LOS PRÓXIMOS 60 MINUTOS:\nEntra al Orquestador de Marketing → pega tu objetivo y contexto → obtén el plan maestro de campaña. Es el agente que coordina a todos los demás y te dice qué activar primero.`,
-      plan:       `Día 1: Aprueba la narrativa del Narrador y el brief de campaña.\nDía 2: Configura audiencias del Activador en plataformas de pauta.\nDía 3: Lanza primeros contenidos orgánicos del Creador.\nDía 4: Activa anuncios del Amplificador con presupuesto de prueba.\nDía 5: Envía primer email del Guardián al segmento caliente.\nDía 6: Revisa métricas del Analista y ajusta.\nDía 7: WBR de Marketing — decisión de la semana y escalar lo que funciona.`,
-      prediccion: `Si ejecutas este plan los próximos 7 días:\n• Primeros 10-20 leads inbound generados\n• +3x alcance orgánico vs semana anterior\n• Benchmark claro de costo por lead\n\nEn 30 días con disciplina:\n• 50-100 leads calificados en pipeline\n• CAC definido para el canal principal\n• Contenido evergreen generando leads de forma autónoma`,
-    });
-    showCampaignProposal(mission, predResult, agentResults);
-    return;
-  }
-  const sys = `Eres el Genio de MetaTronix — sintetizas la agencia de MARKETING y das dirección estratégica accionable.
-
-MetaTronix: CRM + IA para ventas en LATAM. ICP: Director Ventas/CEO, 20-500 empleados, retail/fintech/industrial. Precios: $299-$2,499/mes.
-
-REGLAS: Español. Si recibes datos del PREDICTOR (P%,ROAS,Canal#1), úsalos para anclar la predicción del Genio con números reales. Menciona agentes por nombre. QUÉ+CUÁNDO+MÉTRICA en cada acción.`;
-  const userMsg = `Misión: "${mission.slice(0,200)}" ${predCtx}\n\nOutputs:\n${outputsText}\n\nResponde con EXACTAMENTE estas 5 secciones:\n\n🔮 RESUMEN EJECUTIVO\n[3 líneas: oportunidad central, alcance y probabilidad de éxito]\n\n💡 CÓMO APLICARLO HOY\n[5 acciones: N. ACCIÓN → qué · cuándo · métrica]\n\n⚡ LO PRIMERO QUE DEBES HACER\n[Acción #1 para los próximos 60 min — ultra específica]\n\n🗓️ PLAN DE 7 DÍAS\n[Día 1-7: una acción concreta por día]\n\n🎯 PREDICCIÓN DEL GENIO\n[Resultado en 7 días y 30 días con números]`;
-  try {
-    if (speechEl) speechEl.innerHTML = '🪄 Sintetizando el trabajo de los agentes…';
-    const result = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:1200, agentName:'Genie', page:'marketing' });
-    if (speechEl) speechEl.innerHTML = '✨ Síntesis lista — sigue cada sección en orden.';
-    buildGenieSections(sectionsEl, parseGenieSections(result));
-  } catch(e) {
-    // Retry con prompt mínimo
-    if (speechEl) speechEl.innerHTML = '🪄 Reintentando con resumen compacto…';
-    try {
-      const mini = agentResults.slice(0,5).map(r=>`[${r.name}] ${r.text.slice(0,100).replace(/\n+/g,' ')}`).join('\n');
-      const r2 = await window.CRM_LLM.chat(sys, `Misión:"${mission.slice(0,150)}"\nOutputs:\n${mini}\nDa: 🔮 RESUMEN EJECUTIVO · 💡 CÓMO APLICARLO HOY · ⚡ LO PRIMERO · 🗓️ PLAN 7 DÍAS · 🎯 PREDICCIÓN`, { maxTokens:900, agentName:'Genie', page:'marketing' });
-      if (speechEl) speechEl.innerHTML = '✨ Síntesis lista (modo compacto).';
-      buildGenieSections(sectionsEl, parseGenieSections(r2));
-    } catch(e2) {
-      if (speechEl) speechEl.innerHTML = '⚡ Síntesis offline basada en outputs de agentes.';
-      buildGenieSections(sectionsEl, {
-        resumen: `La agencia de marketing analizó: "${mission.slice(0,100)}…"\n\n${agentResults.slice(0,3).map(r=>`${r.name}: ${r.text.slice(0,120)}`).join('\n\n')}`,
-        aplicar: agentResults.slice(0,5).map((r,i)=>`${i+1}. ${r.name}: Aplica su recomendación principal hoy.`).join('\n'),
-        primero: `Abre el Orquestador y lanza la campaña con el brief completo para el plan de ataque.`,
-        plan: `Día 1-2: Narrativa con el Narrador.\nDía 3: Producción con Director.\nDía 4-5: Distribución con Motor.\nDía 6: CRO con Conversor.\nDía 7: Análisis con Aprendizaje.`,
-        prediccion: predResult ? `Con P(éxito) del ${predResult.probabilidad}% y ROAS esperado ${predResult.roas_min}x-${predResult.roas_max}x: en 7 días tráfico +40%. En 30 días leads calificados con CAC optimizado.` : `En 7 días: +3 campañas activas. En 30 días: pipeline marketing completo.`,
-      });
-    }
-  }
-  // Siempre lanzar propuesta de campaña al final
-  showCampaignProposal(mission, predResult, agentResults);
-}
-
-function parseGenieSections(text) {
-  const s = { resumen:'', aplicar:'', primero:'', plan:'', prediccion:'' };
-  const patterns = [
-    [/🔮[^\n]*\n([\s\S]*?)(?=💡|$)/, 'resumen'],
-    [/💡[^\n]*\n([\s\S]*?)(?=⚡|$)/, 'aplicar'],
-    [/⚡[^\n]*\n([\s\S]*?)(?=🗓️|$)/, 'primero'],
-    [/🗓️[^\n]*\n([\s\S]*?)(?=🎯|$)/, 'plan'],
-    [/🎯[^\n]*\n([\s\S]*?)(?=$)/, 'prediccion'],
-  ];
-  for (const [re, key] of patterns) { const m=text.match(re); if(m) s[key]=m[1].trim(); }
-  if (!s.resumen && !s.aplicar) s.resumen = text.trim();
-  return s;
-}
-
-function buildGenieSections(container, s) {
-  if (!container) return;
-  const defs = [
-    { key:'resumen',    cls:'gs-resumen',    icon:'🔮', title:'RESUMEN EJECUTIVO' },
-    { key:'aplicar',    cls:'gs-aplicar',    icon:'💡', title:'CÓMO APLICARLO HOY' },
-    { key:'primero',    cls:'gs-primero',    icon:'⚡', title:'LO PRIMERO QUE DEBES HACER' },
-    { key:'plan',       cls:'gs-plan',       icon:'🗓️', title:'PLAN DE 7 DÍAS' },
-    { key:'prediccion', cls:'gs-prediccion', icon:'🎯', title:'PREDICCIÓN DEL GENIO' },
-  ];
-  container.innerHTML = defs.map((d,i) => `
-    <div class="genie-section ${d.cls}" style="animation-delay:${i*.1}s">
-      <div class="genie-section-header"><span style="font-size:16px">${d.icon}</span>${d.title}</div>
-      <div class="genie-section-body">${escHtml(s[d.key]||'—')}</div>
-    </div>`).join('') + `
-    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="btn btn-ghost btn-sm" onclick="copyGenieOutput()" style="color:#FDE68A;border-color:rgba(251,191,36,.3)">📋 Copiar síntesis</button>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mission-input').focus();document.getElementById('command-center').scrollIntoView({behavior:'smooth'})" style="color:#7DD3FC;border-color:rgba(0,194,224,.3)">🚀 Nueva misión</button>
-    </div>`;
-}
-
-function copyGenieOutput() {
-  const panel = document.querySelector('.genie-panel');
-  if (!panel) return;
-  navigator.clipboard?.writeText(panel.innerText).catch(()=>{});
-  if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Síntesis del Genio copiada ✓');
-}
-
-/* ══════════════════════════════════════════════════════════
-   PROPUESTA DE CAMPAÑA — Genio Marketing
-   ══════════════════════════════════════════════════════════ */
-
-const PLATFORM_COLORS = {
-  'LinkedIn':      { bg:'#0077B5', text:'#fff' },
-  'Instagram':     { bg:'#E1306C', text:'#fff' },
-  'Facebook/Meta': { bg:'#1877F2', text:'#fff' },
-  'Facebook':      { bg:'#1877F2', text:'#fff' },
-  'Meta Ads':      { bg:'#1877F2', text:'#fff' },
-  'TikTok':        { bg:'#010101', text:'#69C9D0' },
-  'YouTube':       { bg:'#FF0000', text:'#fff' },
-  'Email':         { bg:'#10B981', text:'#fff' },
-  'WhatsApp':      { bg:'#25D366', text:'#fff' },
-  'Google Ads':    { bg:'#4285F4', text:'#fff' },
-  'Twitter/X':     { bg:'#000', text:'#fff' },
-  'X':             { bg:'#000', text:'#fff' },
-};
-
-function platformBadge(name) {
-  const c = PLATFORM_COLORS[name] || { bg:'#374151', text:'#E5E7EB' };
-  return `<span class="camp-platform-badge" style="background:${c.bg};color:${c.text}">${escHtml(name)}</span>`;
-}
-
-function detectSocialNetwork(mission) {
-  const m = mission.toLowerCase();
-  if (/linkedin/.test(m)) return 'LinkedIn';
-  if (/instagram/.test(m)) return 'Instagram';
-  if (/tiktok|tik tok/.test(m)) return 'TikTok';
-  if (/\bfacebook\b/.test(m)) return 'Facebook/Meta';
-  if (/\bmeta ads\b/.test(m)) return 'Facebook/Meta';
-  if (/youtube/.test(m)) return 'YouTube';
-  if (/whatsapp/.test(m)) return 'WhatsApp';
-  if (/\bx\.com\b|twitter/.test(m)) return 'Twitter/X';
-  if (/google ads|google sem|\bsem\b|search ads/.test(m)) return 'Google Ads';
-  if (/email|correo|newsletter/.test(m)) return 'Email';
-  return null;
-}
-
-async function runCampaignProposal(mission, predResult, agentResults, network) {
-  const container = document.getElementById('campaign-container');
-  if (!container) return;
-  container.style.display = 'block';
-  container.scrollIntoView({ behavior:'smooth', block:'start' });
-
-  const origScore = predResult?.probabilidad || 70;
-  const weakChannels = predResult?.canales
-    ? [...predResult.canales].sort((a,b)=>a.score-b.score).slice(0,2).map(c=>c.nombre).join(', ')
-    : 'canales orgánicos';
-
-  // Loading state
-  container.innerHTML = `
-    <div class="camp-panel">
-      <div class="camp-header">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="camp-dot"></div>
-          <div>
-            <div class="camp-title">🧞 PROPUESTA DE CAMPAÑA — ${escHtml(network.toUpperCase())}</div>
-            <div class="camp-subtitle">El Genio diseña 7 posts para elevar tu score a 95%+</div>
-          </div>
-        </div>
-        <span class="pred-badge" style="color:#22D3EE;border-color:rgba(6,182,212,.3)">GENERANDO…</span>
-      </div>
-      <div class="camp-body" style="display:flex;align-items:center;gap:12px;padding:20px;color:rgba(6,182,212,.6);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.05em">
-        <div style="width:16px;height:16px;border:2px solid rgba(6,182,212,.2);border-top-color:#06B6D4;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div>
-        Diseñando propuesta para ${escHtml(network)}…
-      </div>
-    </div>`;
-
-  const sys = `Eres el Estratega de Campañas de MetaTronix. Generas propuestas de campaña optimizadas para elevar el score del Predictor a 95%+. MetaTronix: CRM IA para LATAM, $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra.`;
-
-  const agentCtx = (agentResults||[]).slice(0,4).map(r=>`[${r.name}] ${r.text.slice(0,80).replace(/\n+/g,' ')}`).join(' | ');
-
-  const userMsg = `Misión: "${mission.slice(0,200)}"
-Score actual Predictor: ${origScore}%
-Red social objetivo: ${network}
-Canales débiles: ${weakChannels}
-Contexto agentes: ${agentCtx}
-
-Responde EXACTAMENTE este JSON. Cada post incluye visual_type (imagen_ia|video_ia|foto_real según formato y red) y visual_prompt (prompt en inglés listo para copiar en Midjourney/DALL-E/Sora/Kling, máx 100 chars, incluye dimensiones y estilo).
-
-{"campaign_name":"<4-6 palabras>","campaign_score":<95-100>,"score_delta":<diferencia vs ${origScore}>,"strategy":"<2 oraciones>","avg_score":<promedio real ≥95>,"posts":[{"platform":"${network}","format":"<Carrusel|Video|Reel|Story|Post texto|Artículo|Imagen>","hook":"<máx 60 chars>","copy":"<máx 120 chars>","score":<90-100>,"razon":"<6-8 palabras>","visual_type":"<imagen_ia|video_ia|foto_real>","visual_prompt":"<prompt inglés máx 100 chars>"},{"platform":"${network}","format":"","hook":"","copy":"","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":97,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":98,"razon":"","visual_type":"","visual_prompt":""}]}`;
-
-  let structured = null;
-  try {
-    const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:1200, agentName:'CampañaGenio', page:'marketing' });
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (m) structured = JSON.parse(m[0]);
-  } catch(_) { /* fallback abajo */ }
-
-  if (!structured || !Array.isArray(structured.posts) || structured.posts.length < 7) {
-    const hooks = [
-      '¿Tu CRM ya genera leads solo? El nuestro sí.',
-      '3 errores que frenan tus ventas (y cómo el CRM los elimina)',
-      'De 0 a 50 leads en 30 días — caso real MetaTronix',
-      'El pipeline de ventas que tu equipo necesita ahora',
-      'IA + CRM = el vendedor que nunca duerme',
-      'Cómo MetaTronix triplicó el ROI de una empresa retail',
-      'Tu competencia ya usa IA en ventas. ¿Tú?',
-    ];
-    const formats = ['Carrusel','Video corto','Post texto','Imagen','Reel','Story','Artículo'];
-    // Visual fallbacks: tipo + prompt por formato
-    const visualFallback = [
-      { visual_type:'imagen_ia',  visual_prompt:'Professional B2B carousel infographic, dark blue corporate style, sales funnel data, 1080x1080px, modern flat design' },
-      { visual_type:'video_ia',   visual_prompt:'Short vertical video 9:16, confident LATAM sales director at modern desk, CRM dashboard screen, cinematic lighting, 15s loop' },
-      { visual_type:'foto_real',  visual_prompt:'Real photo: professional team celebrating sales milestone in modern office, warm light, authentic candid moment, 1200x628px' },
-      { visual_type:'foto_real',  visual_prompt:'Stock photo: close-up laptop screen showing CRM analytics dashboard with green growth charts, shallow depth, 1080x1080' },
-      { visual_type:'video_ia',   visual_prompt:'Vertical Reel 9:16, animated CRM IA logo reveal with data particles, dark industrial aesthetic, 8s loop, #00ff88 accent' },
-      { visual_type:'imagen_ia',  visual_prompt:'Cinematic Story frame 9:16, Latin American executive smiling at phone, blurred city background, modern brand overlay, 1080x1920' },
-      { visual_type:'imagen_ia',  visual_prompt:'Thought leadership header image, abstract data visualization, corporate dark blue, 1200x628px LinkedIn optimal, professional' },
-    ];
-    structured = {
-      campaign_name: `Campaña ${network} MetaTronix`,
-      campaign_score: 96,
-      score_delta: 96 - origScore,
-      strategy: `Combinación de contenido educativo, social proof y CTA directo en ${network} para maximizar el alcance al ICP de MetaTronix y aumentar la tasa de conversión.`,
-      avg_score: 96,
-      posts: hooks.map((hook, i) => ({
-        platform: network, format: formats[i],
-        hook, copy: 'MetaTronix CRM con IA: cierra más ventas con menos esfuerzo. Prueba gratis 14 días → metatronixleads.tech',
-        score: 94 + (i % 5 === 0 ? 4 : i % 5),
-        razon: 'Social proof + urgencia + CTA directo',
-        ...visualFallback[i],
-      })),
-    };
-  }
-
-  container.innerHTML = renderCampaignPanel(structured, origScore, network);
-}
-
-function visualBadgeHtml(vtype) {
-  const map = {
-    imagen_ia:  { icon:'🖼️', label:'IMAGEN IA',  bg:'rgba(167,139,250,.15)', color:'#A78BFA', border:'rgba(167,139,250,.3)' },
-    video_ia:   { icon:'🎬', label:'VIDEO IA',   bg:'rgba(248,113,113,.12)', color:'#F87171', border:'rgba(248,113,113,.3)' },
-    foto_real:  { icon:'📷', label:'FOTO REAL',  bg:'rgba(74,222,128,.12)',  color:'#4ADE80', border:'rgba(74,222,128,.3)'  },
-  };
-  const v = map[vtype] || map['imagen_ia'];
-  return `<span class="camp-visual-badge" style="background:${v.bg};color:${v.color};border:1px solid ${v.border}">${v.icon} ${v.label}</span>`;
-}
-
-function copyVisualPrompt(btn, text) {
-  // text may come from data-prompt attribute (preferred) or legacy argument
-  const prompt = btn.dataset.prompt || text || '';
-  const doCopy = (t) => {
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copiado';
-    btn.style.color = '#4ADE80';
-    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1800);
-  };
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(prompt).then(doCopy).catch(() => {
-      // Fallback para cuando clipboard API falla
-      const ta = document.createElement('textarea');
-      ta.value = prompt; ta.style.position='fixed'; ta.style.opacity='0';
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta); doCopy();
-    });
-  } else {
-    // Fallback sin clipboard API
-    const ta = document.createElement('textarea');
-    ta.value = prompt; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta); doCopy();
-  }
-}
-
-function renderCampaignPanel(s, origScore, network) {
-  const { campaign_name='', campaign_score=96, strategy='', posts=[] } = s;
-  const fromColor = predScoreColor(origScore);
-  const realAvg = posts.length > 0
-    ? Math.round(posts.reduce((a,p) => a + (p.score||95), 0) / posts.length)
-    : s.avg_score || 96;
-  const delta = campaign_score - origScore;
-
-  const postCards = posts.slice(0,7).map((p, i) => {
-    const sc = p.score || 95;
-    const scColor = sc >= 95 ? '#4ADE80' : sc >= 90 ? '#FCD34D' : '#F87171';
-    const vtype = p.visual_type || 'imagen_ia';
-    const vprompt = p.visual_prompt || '';
-    const vpromptId = `vp-${i}-${Date.now()}`;
-    return `
-    <div class="camp-post-card" style="animation:camp-in .4s ease both;animation-delay:${i*.07}s">
-      <div class="camp-post-top">
-        ${platformBadge(p.platform || network)}
-        <span class="camp-post-format">${escHtml(p.format||'Post')}</span>
-      </div>
-      <div class="camp-post-hook">${escHtml(p.hook||'')}</div>
-      <div class="camp-post-copy">${escHtml(p.copy||'')}</div>
-      <div class="camp-post-score-row">
-        <div class="camp-post-score-track">
-          <div class="camp-post-score-fill" style="width:${sc}%;background:linear-gradient(90deg,${scColor},${scColor}cc)"></div>
-        </div>
-        <span class="camp-post-score-val">${sc}%</span>
-      </div>
-      <div class="camp-post-razon">💡 ${escHtml(p.razon||'')}</div>
-      ${vprompt ? `
-      <div class="camp-visual-section">
-        <div class="camp-visual-top">
-          ${visualBadgeHtml(vtype)}
-          <button class="camp-visual-copy" data-prompt="${escHtml(vprompt)}" onclick="copyVisualPrompt(this)">📋 Copiar prompt</button>
-        </div>
-        <div class="camp-visual-prompt">${escHtml(vprompt)}</div>
-      </div>` : ''}
-    </div>`;
-  }).join('');
-
-  return `
-  <div class="camp-panel">
-    <div class="camp-header">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="camp-dot"></div>
-        <div>
-          <div class="camp-title">🧞 PROPUESTA DE CAMPAÑA — ${escHtml(network.toUpperCase())}</div>
-          <div class="camp-subtitle">${escHtml(campaign_name)}</div>
-        </div>
-      </div>
-      <span class="pred-badge" style="color:#4ADE80;border-color:rgba(74,222,128,.3)">AVG ${realAvg}% ✓</span>
-    </div>
-    <div class="camp-body">
-      <!-- Score delta -->
-      <div class="camp-delta-row">
-        <div style="display:flex;flex-direction:column;align-items:center">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.08em;margin-bottom:4px">SCORE ACTUAL</div>
-          <div class="camp-score-from" style="color:${fromColor}">${origScore}</div>
-        </div>
-        <div class="camp-arrow">→</div>
-        <div style="display:flex;flex-direction:column;align-items:center">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(34,211,238,.5);letter-spacing:.08em;margin-bottom:4px">CON PROPUESTA</div>
-          <div class="camp-score-to">${campaign_score}</div>
-        </div>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#4ADE80;align-self:center">+${delta > 0 ? delta : Math.abs(delta)} pts</span>
-        <div class="camp-campaign-name">${escHtml(campaign_name)}</div>
-      </div>
-      <!-- Strategy -->
-      <div class="camp-strategy">${escHtml(strategy)}</div>
-      <!-- Posts grid -->
-      <div class="camp-posts-title">
-        7 POSTS OPTIMIZADOS
-        <span class="camp-avg-badge">PROMEDIO ${realAvg}%</span>
-      </div>
-      <div class="camp-post-grid">${postCards}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-        <button class="btn btn-ghost btn-sm" onclick="copyCampana()" style="color:#22D3EE;border-color:rgba(6,182,212,.3)">📋 Copiar propuesta</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('campaign-container').style.display='none'" style="color:#7E8FA8;border-color:rgba(126,143,168,.2)">✕ Cerrar</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function copyCampana() {
-  const el = document.getElementById('campaign-container');
-  if (!el) return;
-  const text = el.innerText;
-  const done = () => { if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Propuesta de campaña copiada ✓'); };
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(done).catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta); done();
-    });
-  } else {
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta); done();
-  }
-}
-
-function showCampaignProposal(mission, predResult, agentResults) {
-  // Guardar globales para el picker de red social
-  window._lastMission      = mission;
-  window._lastPredResult   = predResult;
-  window._lastAgentResults = agentResults;
-
-  const container = document.getElementById('campaign-container');
-  if (!container) return;
-
-  const network = detectSocialNetwork(mission);
-  if (network) {
-    runCampaignProposal(mission, predResult, agentResults, network);
-    return;
-  }
-
-  // No se detectó red social — mostrar picker
-  container.style.display = 'block';
-  container.innerHTML = `
-  <div class="camp-panel">
-    <div class="camp-header">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="camp-dot"></div>
-        <div>
-          <div class="camp-title">🧞 PROPUESTA DE CAMPAÑA</div>
-          <div class="camp-subtitle">El Genio necesita saber el canal objetivo</div>
-        </div>
-      </div>
-    </div>
-    <div class="camp-body camp-network-picker">
-      <div class="camp-network-q">
-        🧞 Para diseñar los 7 posts con máximo impacto,<br>
-        <strong>¿para qué red social es esta campaña?</strong>
-      </div>
-      <div class="camp-network-grid">
-        ${[
-          ['LinkedIn','💼'],['Instagram','📸'],['TikTok','🎵'],
-          ['Facebook/Meta','📘'],['YouTube','▶️'],['Email','📧'],
-          ['Google Ads','🔍'],['WhatsApp','💬'],
-        ].map(([net, icon]) => `
-          <button class="camp-net-btn"
-            onclick="runCampaignProposal(window._lastMission,window._lastPredResult,window._lastAgentResults,'${net}')">
-            ${icon} ${net}
-          </button>`).join('')}
-      </div>
-    </div>
-  </div>`;
-}
-
-/* ── EJEMPLOS DE MISIÓN — MARKETING ─────────────────── */
-const EJEMPLOS_MKT = {
-  lanzamiento: `Quiero lanzar MetaTronix CRM para el segmento de Directores de Ventas en retail México. Objetivo: generar 50 leads calificados en 30 días. Presupuesto $3,000 USD. Necesito la narrativa del lanzamiento, copy para anuncios de Google y LinkedIn, secuencia de emails de nurturing y el calendario de contenido para el mes.`,
-  contenido:   `Necesito el plan de contenido de mayo para MetaTronix. Audiencia: Directores de Ventas y CEOs de empresas 50-500 empleados en LATAM. Objetivo: posicionarnos como expertos en CRM IA. Quiero ideas para LinkedIn (4 posts/semana), YouTube (1 video/semana) y newsletter semanal. Tono: directo, sin tecnicismos, orientado a resultados.`,
-  leads:       `Quiero generar 100 leads calificados este mes para el pipeline de ventas. ICP: Director de Ventas o CEO, empresa 100-500 empleados, sector retail o fintech, México y Colombia. Presupuesto de pauta $5,000 USD. Necesito la estrategia completa: canales, segmentación, mensajes, landing page y lead magnet.`,
-  competencia: `Necesito un análisis de la competencia de MetaTronix: Salesforce, HubSpot y Pipedrive en el mercado LATAM 2026. Quiero entender qué están haciendo en contenido, posicionamiento y precios, y cómo diferenciarnos. También las oportunidades de mercado que ellos están dejando sin atender.`,
-  reactivar:   `Tengo una lista de 200 leads que se registraron hace 3-6 meses pero nunca compraron. Industrias: retail (40%), fintech (30%), manufactura (30%). Necesito una campaña de reactivación de 4 semanas: secuencia de 5 emails, 2 piezas de contenido y una oferta de reenganche irresistible.`,
-};
-
-function loadExampleMkt(key) {
-  const input = document.getElementById('mission-input');
-  if (input && EJEMPLOS_MKT[key]) {
-    input.value = EJEMPLOS_MKT[key];
-    input.style.borderColor = 'rgba(0,194,224,.6)';
-    input.focus();
-    setTimeout(() => { input.style.borderColor = 'rgba(0,194,224,.25)'; }, 1200);
-  }
-}
-
-/* ══════════════════════════════════════════════════════════
-   PREDICTOR DE CAMPAÑAS — Lógica predictiva
-   ══════════════════════════════════════════════════════════ */
-
-function predScoreColor(p) {
-  return p >= 75 ? '#4ADE80' : p >= 50 ? '#FCD34D' : '#F87171';
-}
-
-function predTimingLabel(t) {
-  return { optimo:'🟢 TIMING ÓPTIMO', adecuado:'🟡 TIMING ADECUADO', esperar:'🔴 ESPERAR' }[t] || '🟡 EVALUAR';
-}
-
-/* Claude extrae estructura predictiva */
-async function predClaudeExtract(mission, hfScore) {
-  const sys = `Eres el Predictor de Campañas de MetaTronix. Analizas briefs y produces predicciones de marketing B2B en LATAM. MetaTronix CRM IA: $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra.`;
-
-  const userMsg = `Brief: "${mission.slice(0,280)}"
-Score semántico inicial: ${hfScore}%
-
-Responde EXACTAMENTE este JSON:
-{"probabilidad":<0-100>,"roas_min":<num>,"roas_max":<num>,"canales":[{"nombre":"<LinkedIn|Meta Ads|Email|Google SEM|TikTok|WhatsApp|YouTube>","score":<0-1>,"razon":"<6 palabras>"}],"oportunidades":["<5 palabras>"],"riesgos":["<5 palabras>"],"recomendacion":"<2 oraciones específicas>","confianza":<0-1>,"timing":"<optimo|adecuado|esperar>"}`;
-
-  const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:500, agentName:'Predictor', page:'marketing' });
-  const m = raw.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error('parse');
-  return JSON.parse(m[0]);
-}
-
-/* Render del panel predictivo */
-function renderPredPanel(structured, hfScore) {
-  const {
-    probabilidad = hfScore, roas_min = 1.8, roas_max = 3.2,
-    canales = [], oportunidades = [], riesgos = [],
-    recomendacion = '', confianza = 0.65, timing = 'adecuado'
-  } = structured;
-
-  const pct = n => Math.round(n * 100);
-  const color = predScoreColor(probabilidad);
-  const execColor = probabilidad >= 75 ? '#4ADE80' : probabilidad >= 50 ? '#FCD34D' : '#F87171';
-
-  const channelBars = [...canales]
-    .sort((a,b) => b.score - a.score)
-    .slice(0, 5)
-    .map(c => {
-      const w = Math.round(c.score * 100);
-      const col = c.score > 0.7 ? '#4ADE80' : c.score > 0.45 ? '#FCD34D' : '#94A3B8';
-      return `<div class="pred-channel-row">
-        <div class="pred-channel-name">${c.nombre}</div>
-        <div class="pred-channel-track">
-          <div class="pred-channel-fill" style="--w:${w}%;width:${w}%;background:${col}"></div>
-        </div>
-        <div class="pred-channel-val" style="color:${col}">${c.score.toFixed(2)}</div>
-        <div class="pred-channel-reason">${c.razon || ''}</div>
-      </div>`;
-    }).join('');
-
-  const oppTags = (oportunidades || []).slice(0,4).map(o =>
-    `<span class="pred-tag pred-tag-ok">✓ ${o}</span>`).join('');
-
-  const riskTags = (riesgos || []).slice(0,3).map(r =>
-    `<span class="pred-tag pred-tag-warn">⚠ ${r}</span>`).join('');
-
-  const confLow  = Math.max(0, pct(confianza) - 12);
-  const confHigh = Math.min(100, pct(confianza) + 12);
-
-  return `
-  <div class="pred-panel">
-    <div class="pred-scanline"></div>
-
-    <div class="pred-header">
-      <div class="pred-header-left">
-        <div class="pred-dot"></div>
-        <div>
-          <div class="pred-title">🔮 PREDICTOR · ANÁLISIS PRE-CAMPAÑA</div>
-          <div class="pred-subtitle">Probabilidad de éxito calculada antes de invertir un peso</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:7px">
-        <span class="pred-badge" style="color:${execColor};border-color:${execColor}40;background:${execColor}0d">${predTimingLabel(timing)}</span>
-        <span class="pred-badge" style="color:#818CF8;border-color:rgba(129,140,248,.3)">CONFIANZA ${pct(confianza)}% [${confLow}–${confHigh}]</span>
-      </div>
-    </div>
-
-    <div class="pred-body">
-
-      <!-- Zona 1: Gauge + métricas -->
-      <div class="pred-top-row">
-        <div class="pred-score-box">
-          <div class="pred-score-num" style="color:${color}">${probabilidad}</div>
-          <div class="pred-score-denom">/ 100</div>
-          <div class="pred-score-label">PROB. ÉXITO</div>
-        </div>
-
-        <div class="pred-right">
-          <div class="pred-metric-row">
-            <div class="pred-metric-label">
-              <span class="pred-metric-name">Probabilidad de éxito</span>
-              <span class="pred-metric-val">${probabilidad}%</span>
-            </div>
-            <div class="pred-metric-track">
-              <div class="pred-metric-fill" style="--w:${probabilidad}%;width:${probabilidad}%;background:linear-gradient(90deg,${color},${color}cc)"></div>
-            </div>
-          </div>
-          <div class="pred-metric-row">
-            <div class="pred-metric-label">
-              <span class="pred-metric-name">ROAS esperado</span>
-              <span class="pred-metric-val">${roas_min.toFixed(1)}x – ${roas_max.toFixed(1)}x</span>
-            </div>
-            <div class="pred-metric-track">
-              <div class="pred-metric-fill" style="--w:${Math.min(100, roas_max/5*100)}%;width:${Math.min(100, roas_max/5*100)}%;background:linear-gradient(90deg,#818CF8,#6366F1)"></div>
-            </div>
-            <div class="pred-metric-range">[ punto de equilibrio: 1.0x — óptimo: 3.0x+ ]</div>
-          </div>
-          <div class="pred-metric-row">
-            <div class="pred-metric-label">
-              <span class="pred-metric-name">Confianza del modelo</span>
-              <span class="pred-metric-val">${pct(confianza)}%</span>
-            </div>
-            <div class="pred-metric-track">
-              <div class="pred-metric-fill" style="--w:${pct(confianza)}%;width:${pct(confianza)}%;background:linear-gradient(90deg,#A78BFA,#7C3AED)"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Zona 2: Canales óptimos -->
-      ${channelBars ? `
-      <div>
-        <div class="pred-channels-title">Canal óptimo — potencial de conversión por plataforma</div>
-        ${channelBars}
-      </div>` : ''}
-
-      <!-- Zona 3: Oportunidades y riesgos -->
-      ${(oppTags || riskTags) ? `
-      <div class="pred-tags">
-        <div class="pred-tags-title">Señales detectadas</div>
-        ${oppTags}
-        ${riskTags}
-      </div>` : ''}
-
-      <!-- Zona 4: Recomendación -->
-      ${recomendacion ? `
-      <div class="pred-rec">
-        <div class="pred-rec-label">⚡ Recomendación de lanzamiento</div>
-        <div class="pred-rec-text">${recomendacion}</div>
-      </div>` : ''}
-
-    </div>
-  </div>`;
-}
-
-/* Función principal: runPREDICTOR */
-async function runPREDICTOR(mission) {
-  const container = document.getElementById('predictor-container');
-  if (!container || !mission) return null;
-
-  // Mostrar skeleton
-  container.style.display = 'block';
-  container.innerHTML = `
-    <div class="pred-panel">
-      <div class="pred-header">
-        <div class="pred-header-left">
-          <div class="pred-dot"></div>
-          <div>
-            <div class="pred-title">🔮 PREDICTOR · ANÁLISIS PRE-CAMPAÑA</div>
-            <div class="pred-subtitle">Calculando probabilidad de éxito antes del lanzamiento…</div>
-          </div>
-        </div>
-      </div>
-      <div class="pred-loading">
-        <div class="pred-spinner"></div>
-        Analizando brief · clasificando señales · proyectando ROAS esperado…
-      </div>
-    </div>`;
-  container.scrollIntoView({ behavior:'smooth', block:'start' });
-
-  /* Paso 1: HF zero-shot para score inicial rápido */
-  let hfScore = 55; // fallback
-  try {
-    if (window.CRM_AI) {
-      const clf = await window.CRM_AI.zeroShot();
-      const result = await clf(mission.slice(0, 400), [
-        'campaña de alto impacto con gran probabilidad de éxito',
-        'campaña de impacto medio con resultados moderados',
-        'campaña con baja probabilidad de éxito'
-      ]);
-      const labels = result.labels;
-      const scores = result.scores;
-      const altoIdx = labels.indexOf('campaña de alto impacto con gran probabilidad de éxito');
-      const medIdx  = labels.indexOf('campaña de impacto medio con resultados moderados');
-      const s_alto = altoIdx >= 0 ? scores[altoIdx] : 0;
-      const s_med  = medIdx  >= 0 ? scores[medIdx]  : 0;
-      hfScore = Math.round(s_alto * 85 + s_med * 55 + (1 - s_alto - s_med) * 25);
-      hfScore = Math.max(15, Math.min(92, hfScore));
-    }
-  } catch(_) { /* HF no disponible */ }
-
-  /* Paso 2: Claude extrae estructura completa */
-  let structured = {
-    probabilidad: hfScore,
-    roas_min: parseFloat((1.2 + hfScore/100 * 2).toFixed(1)),
-    roas_max: parseFloat((1.8 + hfScore/100 * 3.5).toFixed(1)),
-    canales: [
-      { nombre:'LinkedIn',  score: 0.72, razon:'audiencia B2B alineada' },
-      { nombre:'Meta Ads',  score: 0.58, razon:'remarketing efectivo' },
-      { nombre:'Email',     score: 0.51, razon:'base tibia, nurturing' },
-      { nombre:'Google SEM',score: 0.44, razon:'keywords competidas' },
-    ],
-    oportunidades: ['mercado receptivo', 'mensaje diferenciado', 'timing Q2'],
-    riesgos: ['presupuesto ajustado', 'competencia activa'],
-    recomendacion: `Basado en el análisis semántico del brief, el canal con mayor afinidad es LinkedIn para el ICP B2B. Activa el LLM para obtener una recomendación específica con presupuesto y timing exactos.`,
-    confianza: 0.60, timing: hfScore >= 70 ? 'optimo' : hfScore >= 50 ? 'adecuado' : 'esperar',
-  };
-
-  if (window.CRM_LLM?.engine) {
-    try {
-      structured = await predClaudeExtract(mission, hfScore);
-    } catch(_) { /* usa fallback */ }
-  }
-
-  container.innerHTML = renderPredPanel(structured, hfScore);
-  return structured;
-}
-
-/* ── Barra de progreso con gatitos ──────────────────── */
-function updateAgencyProgress(done, total) {
-  const bar  = document.getElementById('agency-progress');
-  const fill = document.getElementById('ap-fill');
-  const cats = document.getElementById('ap-cats');
-  const pct  = document.getElementById('ap-pct');
-  const cnt  = document.getElementById('ap-count');
-  if (!bar) return;
-  const p = total ? Math.round((done / total) * 100) : 0;
-  bar.style.display = 'block';
-  if (fill) fill.style.width = p + '%';
-  if (cats) cats.style.left = Math.max(4, Math.min(96, p)) + '%';
-  if (pct)  pct.textContent = p + '%';
-  if (cnt)  cnt.textContent = `${done}/${total}`;
-  if (p >= 100) setTimeout(() => { if (bar) bar.style.display = 'none'; }, 2000);
-}
-
-/* ── LAUNCH ALL AGENTS ───────────────────────────────── */
-async function launchAllAgents() {
-  const mission = document.getElementById('mission-input')?.value.trim();
-  if (!mission) {
-    if (typeof Notiflix !== 'undefined') Notiflix.Notify.warning('Escribe la misión primero ↑');
-    else alert('Escribe la misión primero');
-    return;
-  }
-  const launchBtn  = document.getElementById('launch-btn');
-  const launchText = document.getElementById('launch-text');
-  const launchIcon = document.getElementById('launch-icon');
-  if (launchBtn)  { launchBtn.disabled = true; launchBtn.style.background = 'linear-gradient(135deg,#075985,#0369A1)'; }
-  if (launchIcon) launchIcon.textContent = '⏳';
-  if (launchText) launchText.textContent = 'AGENCIA EN OPERACIÓN — PROCESANDO CON IA…';
-
-  const targets = AGENTS.filter(a => !a.isVideoAgent && !a.isMediaAgent);
-  targets.forEach(a => {
-    const input = document.getElementById(`input-${a.id}`);
-    if (input) input.value = mission;
-    const ws   = document.getElementById(`ws-${a.id}`);
-    const card = document.getElementById(`card-${a.id}`);
-    if (ws)   ws.style.display = 'block';
-    if (card) card.classList.add('active');
-  });
-
-  document.getElementById('agents-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  // PREDICTOR arranca en paralelo con los agentes — aparece en cuanto termina (~3-5s)
-  const predPromise = runPREDICTOR(mission);
-
-  let _done = 0;
-  updateAgencyProgress(0, targets.length);
-  await Promise.allSettled(
-    targets.map(a => runAgent(a.id).finally(() => updateAgencyProgress(++_done, targets.length)))
-  );
-
-  if (launchBtn)  { launchBtn.disabled = false; launchBtn.style.background = 'linear-gradient(135deg,#0369A1,#0284C7)'; }
-  if (launchIcon) launchIcon.textContent = '✅';
-  if (launchText) launchText.textContent = 'AGENCIA COMPLETÓ LA MISIÓN — INVOCANDO GENIO…';
-
-  // Esperar predictor si aún no terminó
-  const predResult = await predPromise.catch(() => null);
-
-  // Recoger todos los outputs
-  const agentResults = targets.map(a => ({
-    name: a.name,
-    text: (document.getElementById(`output-${a.id}`)?.innerText || '').trim(),
-  })).filter(r => r.text.length > 20);
-
-  await showGenie(mission, agentResults, predResult);
-
-  setTimeout(() => {
-    if (launchIcon) launchIcon.textContent = '🚀';
-    if (launchText) launchText.textContent = 'LANZAR TODA LA AGENCIA — 15 AGENTES EN PARALELO';
-  }, 5000);
-}
-
 /* ── INIT ────────────────────────────────────────────── */
 async function init() {
   currentUser = await requireAuth();
@@ -2411,25 +1299,39 @@ async function init() {
     Notiflix.Notify.init({ position:'right-bottom', timeout:3000, fontSize:'13px' });
   }
 
+  // Load HuggingFace token from Supabase portal_settings
+  await loadHFToken();
+
+  // Load leads from Supabase for Larry
+  const { data } = await getDB().from('leads').select('*').order('updated_at',{ascending:false}).limit(20);
+  allLeads = data || [];
+
+  // Update KB status
   const kb = getKB();
   updateKBStatus(!!kb.empresa);
+
+  // Render agents
   renderAgents();
 
-  // Auto-init LLM
+  // Load Larry leads
+  loadLarryLeads();
+}
+
+async function loadHFToken() {
   try {
-    if (window.CRM_LLM) {
-      await window.CRM_LLM.init();
-      llmReady = true;
-      const bar = document.getElementById('llm-bar');
-      if (bar) bar.className = 'llm-init-bar hidden';
-      AGENTS.forEach(a => {
-        const s = document.getElementById(`status-${a.id}`);
-        if (s) { s.textContent = '✓ IA Lista'; s.className = 'agent-status ready'; }
+    const { data } = await getDB()
+      .from('portal_settings')
+      .select('value')
+      .eq('key', 'hf_api_token')
+      .single();
+    if (data?.value) {
+      _hfTokenShared = data.value;
+      // Pre-fill any visible token fields
+      document.querySelectorAll('[id="media-hf-token"]').forEach(el => {
+        el.value = data.value;
       });
     }
-  } catch(e) { llmReady = false; }
-
-  loadUsage();
+  } catch (_) { /* token not in DB yet */ }
 }
 
 function escHtml(s) {
@@ -2444,34 +1346,7 @@ function escHtml(s) {
    ═══════════════════════════════════════════════════════════ */
 
 let _mediaRunning = null; // 'video' | 'image' | null
-/* ═══════════════════════════════════════════════════════════
-   MEDIA PROXY — llama al Worker /hf con JWT del usuario
-   El token HF está en el servidor — el usuario no lo ve
-   ═══════════════════════════════════════════════════════════ */
-async function callHFProxy(model, inputs, parameters) {
-  const proxyBase = (window.MTX_CONFIG?.CLAUDE_PROXY_URL || '').replace(/\/+$/, '');
-  if (!proxyBase) throw new Error('CLAUDE_PROXY_URL no configurado en config.js');
-  const session = await getSession(); // app.js
-  const jwt = session?.access_token || '';
-  if (!jwt) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
-  const resp = await fetch(proxyBase + '/hf', {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': 'Bearer ' + jwt,
-    },
-    body: JSON.stringify({ model, inputs, parameters }),
-    signal: AbortSignal.timeout(300000),
-  });
-  if (!resp.ok) {
-    let errMsg = 'Error ' + resp.status;
-    try { const j = await resp.json(); errMsg = j.error || errMsg; } catch { /* noop */ }
-    throw new Error(errMsg);
-  }
-  return resp;
-}
-
-
+let _hfTokenShared = ''; // shared between video and image
 
 function renderMediaAgentForm(a) {
   const isVideo = a.mediaType === 'video';
@@ -2520,8 +1395,9 @@ function renderMediaAgentForm(a) {
         ⚠️ Uso individual — desactiva el otro generador media si está corriendo
       </div>
       <div style="font-size:10px;color:${color};font-weight:600">
-        ${isVideo ? 'Wan2.1-T2V-1.3B · GPU RTX 3060+' : 'FLUX.1-dev · GPU RTX 4070+ (NVFP4)'}
-        &nbsp;·&nbsp; <span style="color:#00ff88">🔑 Powered by MetaTronix API</span>
+        ${isVideo ? 'GPU RTX 3060+ / HF Token' : 'GPU RTX 4070+ (NVFP4) / HF Token'}
+        &nbsp;·&nbsp;
+        <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:${color}">Obtener token gratis →</a>
       </div>
     </div>
     <div class="agent-input-row">
@@ -2535,7 +1411,17 @@ function renderMediaAgentForm(a) {
         placeholder="blurry, low quality, watermark" value="blurry, low quality, distorted, watermark">
     </div>
     ${steps}
-    <!-- Token HF gestionado en servidor — sin configuración por parte del usuario -->
+    <div class="agent-input-row">
+      <label style="font-size:10px;font-weight:700;color:#7E8FA8;letter-spacing:.05em">
+        HUGGINGFACE TOKEN
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#4A5568"> — o usa HF Space si no tienes</span>
+      </label>
+      <input type="password" id="media-hf-token" class="crm-input"
+        style="font-size:11px;height:30px;font-family:monospace"
+        placeholder="hf_xxxxxxxxxxxxxxxxxx"
+        oninput="_hfTokenShared=this.value;document.querySelectorAll('[id=media-hf-token]').forEach(el=>el.value=this.value)"
+        value="${_hfTokenShared}">
+    </div>
     <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
       <a href="${isVideo ? 'https://huggingface.co/spaces/Wan-AI/Wan2.1' : 'https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev'}"
         target="_blank"
@@ -2557,17 +1443,22 @@ async function runAgentVideo(id, output) {
     return;
   }
   const prompt   = getInput('video');
+  const token    = document.getElementById('media-hf-token')?.value.trim() || _hfTokenShared;
   const negPrompt= document.getElementById('media-video-neg')?.value.trim() || 'blurry, low quality';
   const frames   = parseInt(document.getElementById('media-video-frames')?.value || '48');
   const res      = (document.getElementById('media-video-res')?.value || '720x1280').split('x');
   const [w, h]   = res.map(Number);
 
   if (!prompt) { output.innerHTML = '<div style="color:var(--danger);font-size:12px">Escribe un prompt para el video</div>'; return; }
+  if (!token)  { output.innerHTML = `<div style="font-size:12px;color:#F59E0B;padding:10px;background:rgba(245,158,11,.08);border-radius:6px">
+    Necesitas un <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#00C2E0">token de HuggingFace</a> para generar video.<br>
+    O usa el botón "🚀 Usar HF Space (gratis)" arriba.
+  </div>`; return; }
 
   _mediaRunning = 'video';
   output.innerHTML = `<div style="font-size:12px;color:#00C2E0;font-family:'Inter',sans-serif;padding:8px 0">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <div class="agent-spinner"></div> Generando video con IA (via MetaTronix API)…
+      <div class="agent-spinner"></div> Enviando a HuggingFace Wan2.1-T2V…
     </div>
     <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
       <div id="vid-fill" style="height:100%;background:linear-gradient(90deg,#00C2E0,#14B8A6);border-radius:2px;width:15%;transition:width .5s"></div>
@@ -2581,13 +1472,21 @@ async function runAgentVideo(id, output) {
   };
 
   try {
-    setP(20, '📡 Conectando con MetaTronix AI Proxy → Wan2.1-T2V…');
-    const resp = await callHFProxy(
-      'Wan-AI/Wan2.1-T2V-1.3B',
-      prompt,
-      { negative_prompt: negPrompt, num_frames: frames, height: h, width: w, guidance_scale: 6 }
+    setP(20, '📡 Conectando con api-inference.huggingface.co…');
+    const resp = await fetch(
+      'https://api-inference.huggingface.co/models/Wan-AI/Wan2.1-T2V-1.3B',
+      { method:'POST',
+        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json','X-Wait-For-Model':'true'},
+        body: JSON.stringify({ inputs: prompt, parameters: { negative_prompt: negPrompt, num_frames: frames, height: h, width: w, guidance_scale: 6 } }),
+        signal: AbortSignal.timeout(300000) }
     );
     setP(60, '🎬 Modelo procesando video (1-3 min)…');
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({}));
+      if (resp.status===503) throw new Error('Modelo cargando en HuggingFace. Espera 60s e intenta de nuevo.');
+      if (resp.status===401) throw new Error('Token inválido. Verifica en huggingface.co/settings/tokens');
+      throw new Error(e.error || `Error ${resp.status}`);
+    }
     setP(90, '⬇ Descargando video…');
     const blob = await resp.blob();
     const url  = URL.createObjectURL(blob);
@@ -2611,8 +1510,9 @@ async function runAgentVideo(id, output) {
       <div style="padding:12px;font-size:12px;font-family:'Inter',sans-serif">
         <div style="color:#EF4444;font-weight:700;margin-bottom:6px">❌ ${escHtml(e.message)}</div>
         <div style="color:#4A5568;font-size:11px">
-          • El modelo puede estar cargando en HuggingFace — espera 60s e intenta de nuevo<br>
-          • Usa el botón "🚀 HF Space" para acceso directo sin proxy
+          • Sin token → usa <a href="https://huggingface.co/spaces/Wan-AI/Wan2.1" target="_blank" style="color:#00C2E0">HF Space</a><br>
+          • El modelo puede estar cargando — espera 1 min<br>
+          • Para uso local instala wan_server.py con Flask + Diffusers
         </div>
       </div>`;
   } finally {
@@ -2630,17 +1530,21 @@ async function runAgentImage(id, output) {
     return;
   }
   const prompt   = getInput('image');
+  const token    = document.getElementById('media-hf-token')?.value.trim() || _hfTokenShared;
   const negPrompt= document.getElementById('media-image-neg')?.value.trim() || 'blurry, low quality';
   const res      = (document.getElementById('media-image-res')?.value || '1024x1024').split('x');
   const count    = parseInt(document.getElementById('media-image-count')?.value || '1');
   const [w, h]   = res.map(Number);
 
   if (!prompt) { output.innerHTML = '<div style="color:var(--danger);font-size:12px">Escribe un prompt para la imagen</div>'; return; }
+  if (!token)  { output.innerHTML = `<div style="font-size:12px;color:#F59E0B;padding:10px;background:rgba(245,158,11,.08);border-radius:6px">
+    Necesitas un <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:#A78BFA">token de HuggingFace</a> para generar imágenes.
+  </div>`; return; }
 
   _mediaRunning = 'image';
   output.innerHTML = `<div style="font-size:12px;color:#A78BFA;font-family:'Inter',sans-serif;padding:8px 0">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <div class="agent-spinner" style="border-top-color:#A78BFA"></div> Generando imagen con IA (via MetaTronix API)…
+      <div class="agent-spinner" style="border-top-color:#A78BFA"></div> Enviando a HuggingFace FLUX.2…
     </div>
     <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden">
       <div id="img-fill" style="height:100%;background:linear-gradient(90deg,#7C3AED,#A78BFA);border-radius:2px;width:15%;transition:width .5s"></div>
@@ -2655,20 +1559,32 @@ async function runAgentImage(id, output) {
   };
 
   try {
-    setP(20, '📡 Conectando con MetaTronix AI Proxy → FLUX.1-dev…');
-    const resp = await callHFProxy(
-      'black-forest-labs/FLUX.1-dev',
-      prompt,
-      { negative_prompt: negPrompt, height: h, width: w, guidance_scale: 3.5, num_inference_steps: 28, num_images_per_prompt: count }
+    setP(20, '📡 Conectando con FLUX.2-dev-NVFP4…');
+    const body = {
+      inputs: prompt,
+      parameters: { negative_prompt: negPrompt, height: h, width: w, guidance_scale: 3.5, num_inference_steps: 28, num_images_per_prompt: count }
+    };
+    const resp = await fetch(
+      'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev',
+      { method:'POST',
+        headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json','X-Wait-For-Model':'true'},
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(180000) }
     );
     setP(65, '🖼 Modelo generando imagen…');
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({}));
+      if (resp.status===503) throw new Error('Modelo cargando. Espera 30-60 segundos.');
+      if (resp.status===401) throw new Error('Token inválido. Verifica en huggingface.co/settings/tokens');
+      throw new Error(e.error || `Error ${resp.status}`);
+    }
     setP(90, '⬇ Procesando imagen…');
     const blob = await resp.blob();
     const url  = URL.createObjectURL(blob);
     setP(100, '✅ Imagen lista');
     output.innerHTML = `
       <div style="margin-top:6px">
-        <img src="${url}" alt="Imagen generada por IA" style="width:100%;border-radius:8px;display:block;max-height:400px;object-fit:contain;border:1px solid rgba(167,139,250,.2)">
+        <img src="${url}" style="width:100%;border-radius:8px;display:block;max-height:400px;object-fit:contain;border:1px solid rgba(167,139,250,.2)">
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           <a href="${url}" download="flux2-metatronix-${Date.now()}.png"
             style="padding:6px 14px;background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.25);border-radius:6px;text-decoration:none;font-size:11px;font-weight:700;font-family:'Inter',sans-serif">
@@ -2683,8 +1599,8 @@ async function runAgentImage(id, output) {
       <div style="padding:12px;font-size:12px;font-family:'Inter',sans-serif">
         <div style="color:#EF4444;font-weight:700;margin-bottom:6px">❌ ${escHtml(e.message)}</div>
         <div style="color:#4A5568;font-size:11px">
-          • El modelo puede estar cargando en HuggingFace — espera 30-60s e intenta de nuevo<br>
-          • Usa el botón "🚀 HF Space" para acceso directo
+          • Sin token → usa <a href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev" target="_blank" style="color:#A78BFA">HF Space</a><br>
+          • El modelo puede estar cargando — espera 1 min
         </div>
       </div>`;
   } finally {
@@ -3402,28 +2318,6 @@ const PERSONAS_SIM = [
   { name:'Periodista Digital',    age:31, genero:'M', pais:'MX', nivel:'media', perfil:'Cubre tecnología y startups, muy crítico y analítico', red:'Twitter/LinkedIn', sesgo:'verifica afirmaciones, busca datos concretos y fuentes', emoji:'📰' },
   { name:'Mamá Emprendedora',     age:36, genero:'F', pais:'MX', nivel:'micro', perfil:'Negocio desde casa, maneja redes sola, busca simplicidad', red:'Instagram/Facebook/WhatsApp', sesgo:'busca herramientas fáciles, precio bajo, tutorial en video', emoji:'👩‍💼' },
   { name:'Gerente de Distribución',age:40, genero:'M', pais:'MX', nivel:'medio', perfil:'Maneja fuerza de ventas campo, necesita CRM móvil offline', red:'LinkedIn/WhatsApp', sesgo:'exige app móvil funcional, cero tolerancia a bugs', emoji:'🚛' },
-  // ── PhD EXPERTOS — MARKETING Y PSICOLOGÍA (5) ───────────────────
-  { name:'Dr. Ramírez · PhD Comportamiento Consumidor', age:48, genero:'M', pais:'MX', nivel:'phd_consumidor', perfil:'Investigador en psicología del consumidor y decisiones de compra masiva. Evalúa si el mensaje activa los patrones de comportamiento correctos según Fogg Behavior Model.', red:'LinkedIn', sesgo:'busca evidencia de activación motivacional, ability y trigger correctos en el copy', emoji:'🧪' },
-  { name:'Dra. Peña · PhD Marketing Estratégico',       age:44, genero:'F', pais:'CO', nivel:'phd_marketing',  perfil:'Experta en posicionamiento y brand equity. Analiza si el mensaje refuerza o erosiona la percepción de marca en la mente del consumidor objetivo.', red:'LinkedIn', sesgo:'evalúa la coherencia entre propuesta de valor, tonalidad y expectativas del segmento', emoji:'📐' },
-  { name:'Dr. Flores · PhD Psicología de Marca',        age:46, genero:'M', pais:'MX', nivel:'phd_marca',      perfil:'Especialista en identidad de marca y arquetipos. Detecta si el contenido comunica el arquetipo correcto y genera la conexión emocional esperada con la audiencia.', red:'LinkedIn/Instagram', sesgo:'analiza congruencia emocional, autenticidad percibida y resonancia del mensaje con valores de marca', emoji:'🎭' },
-  { name:'Dra. Soto · PhD Economía del Comportamiento', age:41, genero:'F', pais:'CL', nivel:'phd_behavioral', perfil:'Behavioral economics aplicada a marketing digital. Evalúa sesgos cognitivos activados: disponibilidad, representatividad, anclaje de precio y efecto de arrastre social.', red:'LinkedIn/Twitter', sesgo:'busca evidencia de nudges bien diseñados y framing correcto de opciones para el consumidor', emoji:'🧬' },
-  { name:'Dr. Mora · PhD Neurociencia del Consumidor',   age:43, genero:'M', pais:'MX', nivel:'phd_neuro',      perfil:'Neuromarketing y respuesta cerebral a contenido publicitario. Analiza si el contenido genera activación del núcleo accumbens (recompensa) o la amígdala (amenaza).', red:'LinkedIn', sesgo:'evalúa carga cognitiva, atención visual, emoción vs razón y activación del sistema límbico', emoji:'🫀' },
-  // ── DECISORES DE MARKETING B2B (5) ────────────────────────────
-  { name:'CMO Corporativo',         age:46, genero:'M', pais:'MX', nivel:'cmo_corp',    perfil:'Chief Marketing Officer empresa grande. Aprueba presupuestos y estrategia. Busca impacto medible en revenue, no solo vanity metrics.', red:'LinkedIn', sesgo:'escéptico a campañas sin modelo de atribución claro o sin benchmark de industria', emoji:'🎯' },
-  { name:'VP de Producto',          age:37, genero:'F', pais:'MX', nivel:'vp_producto', perfil:'Decide el go-to-market. Necesita mensajes que resuenen con los pain points reales del buyer persona, no con features.', red:'LinkedIn/Twitter', sesgo:'rechaza copy que habla de features en lugar de outcomes y transformación del usuario', emoji:'📦' },
-  { name:'Director de E-commerce',  age:38, genero:'M', pais:'MX', nivel:'ecommerce',   perfil:'Mide todo en conversiones, CAC y ROAS. Evalúa cada contenido por su impacto en el funnel de compra.', red:'LinkedIn', sesgo:'descalifica contenido que no tenga CTA medible o que no conecte con etapa específica del funnel', emoji:'🛍️' },
-  { name:'Director de Comunicaciones', age:44, genero:'F', pais:'CO', nivel:'comms',    perfil:'Gestiona reputación y narrativa de marca. Evalúa si el contenido es coherente con el mensaje institucional.', red:'LinkedIn', sesgo:'preocupada por riesgo reputacional. Bloquea contenido que pueda generar crisis de comunicación', emoji:'📡' },
-  { name:'Head of Growth',          age:29, genero:'M', pais:'MX', nivel:'growth',      perfil:'Growth hacker obsesionado con loops virales y coeficiente K. Evalúa el potencial viral y compartible de cada pieza.', red:'Twitter/LinkedIn/TikTok', sesgo:'positivo solo si el contenido tiene hook fuerte en los primeros 3 segundos y loop de compartir', emoji:'📊' },
-  // ── CREADORES Y COMUNIDAD B2B (3) ─────────────────────────────
-  { name:'Micro-influencer B2B',    age:31, genero:'F', pais:'MX', nivel:'microinfluencer', perfil:'15K seguidores en LinkedIn, audiencia de directivos LATAM. Su opinión sobre herramientas de negocio tiene peso en su comunidad.', red:'LinkedIn/Instagram', sesgo:'positiva si el contenido es educativo y no excesivamente promocional. Rechaza discursos de venta disfrazados', emoji:'💎' },
-  { name:'Product Marketer Senior', age:34, genero:'M', pais:'AR', nivel:'product_mkt',  perfil:'Experto en messaging y posicionamiento. Evalúa si el copy conecta correctamente con el trabajo que el usuario contrata el producto para hacer (JTBD).', red:'LinkedIn/Twitter', sesgo:'muy crítico con promesas vagas. Busca especificidad y evidencia concreta de outcomes', emoji:'🔎' },
-  { name:'Community Manager B2B',   age:26, genero:'F', pais:'MX', nivel:'community',    perfil:'Gestiona comunidades de negocio. Evalúa si el contenido generará conversación auténtica o será ignorado en el feed.', red:'LinkedIn/Instagram', sesgo:'positiva si hay pregunta o punto de vista controversial. Negativa si es contenido genérico de "tips"', emoji:'💬' },
-  // ── PERFILES LATAM ADICIONALES (5) ────────────────────────────
-  { name:'CMO de Startup Colombia', age:32, genero:'M', pais:'CO', nivel:'latam_cmo_co', perfil:'Marketing de growth en Bogotá. Evalúa si el contenido es relevante para el mercado colombiano o es una traducción genérica.', red:'LinkedIn/Instagram', sesgo:'rechaza contenido que se sienta "importado" sin localización real para LATAM', emoji:'🇨🇴' },
-  { name:'Director Mktg Digital Chile', age:39, genero:'F', pais:'CL', nivel:'latam_mkt_cl', perfil:'Empresa mediana Santiago. Muy orientada a datos y performance. Evalúa cada pieza por su potencial de conversión medible.', red:'LinkedIn', sesgo:'positiva si hay datos de benchmarks de industria. Negativa si el contenido es solo inspiracional', emoji:'🇨🇱' },
-  { name:'Gerente Mktg Argentina',  age:35, genero:'M', pais:'AR', nivel:'latam_mkt_ar', perfil:'Buenos Aires. Muy sofisticado en marketing de contenidos. Valora originalidad y storytelling con datos.', red:'LinkedIn/Instagram', sesgo:'muy influenciado por tendencias globales. Rechaza contenido que ya "está quemado" en otros mercados', emoji:'🇦🇷' },
-  { name:'Head de Mktg Perú',       age:37, genero:'F', pais:'PE', nivel:'latam_mkt_pe', perfil:'Lima. Empresa industrial/manufactura. Necesita marketing que funcione para compradores B2B conservadores.', red:'LinkedIn/Facebook', sesgo:'positiva si hay casos de éxito de industria similar en Perú o LATAM documentados', emoji:'🇵🇪' },
-  { name:'Director Mktg México B2B', age:43, genero:'M', pais:'MX', nivel:'latam_mkt_mx', perfil:'CDMX. Empresa de 500+ empleados. Balance entre branding y performance. Comité de aprobación de 3 personas para cada campaña.', red:'LinkedIn', sesgo:'proceso de aprobación largo. Rechaza lo que genere riesgo de imagen para la empresa', emoji:'🇲🇽' },
 ];
 
 async function runAgentSocialSim(id, output) {
@@ -3437,14 +2331,14 @@ async function runAgentSocialSim(id, output) {
     initOpinionOffice();
   }
 
-  // Selección inteligente: 25 personas representativas del total de 50
-  const selected = selectRepresentativePersonas(25);
+  // Selección inteligente: 16 personas representativas del total de 32
+  const selected = selectRepresentativePersonas(16);
 
   output.className = 'agent-output show';
   output.innerHTML = `<div style="font-size:12px;color:#818CF8;font-family:Inter,sans-serif;padding:8px 0">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
       <div class="agent-spinner" style="border-top-color:#818CF8"></div>
-      <span>Simulando reacciones — <strong style="color:#A78BFA">${selected.length} personas IA</strong> de ${PERSONAS_SIM.length} disponibles · 5 PhDs incluidos…</span>
+      <span>Simulando reacciones — <strong style="color:#A78BFA">${selected.length} personas IA</strong> de ${PERSONAS_SIM.length} disponibles…</span>
     </div>
     <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
       <div id="sim-fill" style="height:100%;background:linear-gradient(90deg,#818CF8,#A78BFA);width:3%;border-radius:2px;transition:width .3s"></div>
@@ -3538,7 +2432,7 @@ async function runAgentSocialSim(id, output) {
             <span style="color:#F59E0B">🤔 ${neutral.length} neutros</span>
             <span style="color:#EF4444">❌ ${negative.length} negativos</span>
           </div>
-          <div style="font-size:10px;color:#4A5568;margin-top:3px">${selected.length} de ${PERSONAS_SIM.length} perfiles simulados · 5 PhDs de marketing incluidos</div>
+          <div style="font-size:10px;color:#4A5568;margin-top:3px">${selected.length} de ${PERSONAS_SIM.length} personas simuladas</div>
         </div>
       </div>
 
@@ -3611,18 +2505,12 @@ async function runAgentSocialSim(id, output) {
   updateOpinionOffice(reactions);
 }
 
-/* Helper: selecciona N personas representativas del pool de 50 */
+/* Helper: selecciona N personas representativas del pool de 32 */
 function selectRepresentativePersonas(n) {
   const pool = [...PERSONAS_SIM];
   const selected = [];
-  // Incluir siempre los 5 PhDs de marketing (análisis profundo garantizado)
-  const phdNiveles = ['phd_consumidor','phd_marketing','phd_marca','phd_behavioral','phd_neuro'];
-  phdNiveles.forEach(niv => {
-    const match = pool.find(p=>p.nivel===niv);
-    if (match) { selected.push(match); pool.splice(pool.indexOf(match),1); }
-  });
-  // Distribución por categorías generales
-  const categories = ['enterprise','pyme','startup','freelance','creador','micro','estudiante','profesional','medio','entry','investor','agro','media','gobierno','cmo_corp','vp_producto','ecommerce','comms','growth','microinfluencer','product_mkt','community','latam_cmo_co','latam_mkt_cl','latam_mkt_ar','latam_mkt_pe','latam_mkt_mx'];
+  // Ensure distribution across categories
+  const categories = ['enterprise','pyme','startup','freelance','creador','micro','estudiante','profesional','medio','entry','investor','agro','media','gobierno'];
   categories.forEach(cat => {
     const match = pool.find(p=>p.nivel===cat);
     if (match && selected.length < n) {
@@ -3630,7 +2518,7 @@ function selectRepresentativePersonas(n) {
       pool.splice(pool.indexOf(match),1);
     }
   });
-  // Completar slots restantes aleatoriamente
+  // Fill remaining slots randomly
   while (selected.length < n && pool.length > 0) {
     const idx = Math.floor(Math.random()*pool.length);
     selected.push(pool.splice(idx,1)[0]);
@@ -3639,21 +2527,89 @@ function selectRepresentativePersonas(n) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   ORQUESTADOR — Hook de captura de outputs entre mecanismos
+   AGENTE 13 — ORQUESTADOR
+   Campaign Brief unificado con outputs de todos los agentes
    ═══════════════════════════════════════════════════════════ */
 
-const _mecanismoOutputs = {};
+const _orchestratorOutputs = {};
 
-// Capture outputs from all mechanisms to feed the Orquestador
+// Hook into all agent runs to capture outputs
 const _origRunAgent = runAgent;
 window.runAgent = async function(id) {
   await _origRunAgent(id);
-  if (id !== 'orquestador') {
+  if (!['orchestrator','publisher'].includes(id)) {
     const out = document.getElementById(`output-${id}`);
     if (out?.innerText?.trim()) {
-      _mecanismoOutputs[id] = { content: out.innerText.trim(), ts: new Date().toISOString() };
+      _orchestratorOutputs[id] = { content: out.innerText.trim(), ts: new Date().toISOString() };
     }
   }
+};
+
+function renderOrchestratorForm(a) {
+  const captured = Object.keys(_orchestratorOutputs).length;
+  return `
+    <div style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);border-radius:6px;padding:10px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#F97316;margin-bottom:4px">📊 Agentes con output capturado: ${captured}/12</div>
+      <div style="font-size:10px;color:#7E8FA8">${captured===0?'Ejecuta otros agentes primero para que el orquestador combine sus resultados.':'Outputs disponibles: '+Object.keys(_orchestratorOutputs).join(', ')}</div>
+    </div>
+    <div class="agent-input-row">
+      <label style="font-size:10px;font-weight:700;color:#F97316;letter-spacing:.05em;text-transform:uppercase">Objetivo de la campaña</label>
+      <textarea id="input-orchestrator" class="crm-textarea" style="min-height:60px;font-size:12px" placeholder="${a.inputPlaceholder}"></textarea>
+    </div>`;
+}
+
+async function runAgentOrchestrator(id, output) {
+  const objetivo = getInput('orchestrator') || document.getElementById('input-orchestrator')?.value || '';
+  const numOutputs = Object.keys(_orchestratorOutputs).length;
+
+  output.innerHTML = `<div style="font-size:12px;color:#F97316;font-family:Inter,sans-serif;padding:6px 0">
+    <div class="agent-spinner" style="border-top-color:#F97316;display:inline-block;margin-right:8px"></div>
+    Compilando ${numOutputs} outputs de agentes…</div>`;
+
+  const allContent = Object.entries(_orchestratorOutputs)
+    .map(([k,v]) => `[${k.toUpperCase()}]: ${v.content.slice(0,300)}`)
+    .join('\n---\n');
+
+  let brief = '';
+  if (window.CRM_LLM?.engine && allContent) {
+    try {
+      brief = await window.CRM_LLM.chat(
+        'Eres un director creativo que compila Campaign Briefs ejecutivos. Sé conciso y accionable.',
+        `Genera un Campaign Brief de máximo 250 palabras combinando estos outputs de agentes IA:\n${allContent}\n\nObjetivo: ${objetivo}`
+      );
+    } catch(e) {}
+  }
+
+  const agentNames = { investigacion:'🔍 Investigación', contenido:'✍️ Contenido', publicidad:'📢 Publicidad',
+    youtube:'📺 YouTube SEO', larry:'🤖 Larry SDR', streams:'📡 Comunidad', clio:'🎯 Clio',
+    video:'🎬 Video IA', image:'🖼 Imagen IA', editor:'🎞 Editor', geo:'🗺 Geo', social_sim:'🧬 Simulación' };
+
+  output.innerHTML = `
+    <div style="font-family:Inter,sans-serif">
+      <div style="padding:12px;background:linear-gradient(135deg,rgba(249,115,22,.1),rgba(239,68,68,.05));border:1px solid rgba(249,115,22,.25);border-radius:8px;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:#F97316;margin-bottom:6px">📋 CAMPAIGN BRIEF</div>
+        <div style="font-size:12px;color:#E8EDF8;line-height:1.7;white-space:pre-wrap">${escHtml(brief || 'Activa el LLM (⚡) y ejecuta otros agentes primero para generar el brief automáticamente.')}</div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#F97316;margin-bottom:8px">PIEZAS CAPTURADAS (${numOutputs})</div>
+      ${Object.entries(_orchestratorOutputs).map(([k,v])=>`
+        <div style="padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:6px;margin-bottom:5px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <span style="font-size:11px;font-weight:700;color:#E8EDF8">${agentNames[k]||k}</span>
+            <span style="font-size:9px;color:#4A5568;font-family:monospace">${new Date(v.ts).toLocaleTimeString('es-MX')}</span>
+          </div>
+          <div style="font-size:10px;color:#7E8FA8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(v.content.slice(0,100))}…</div>
+        </div>`).join('')}
+      ${numOutputs>0?`<button onclick="sendToCampaignQueue()"
+        style="width:100%;padding:9px;margin-top:8px;background:linear-gradient(135deg,#F97316,#EF4444);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;font-family:Inter,sans-serif">
+        📲 Enviar al Publisher → Aprobar y Publicar
+      </button>`:''}
+    </div>`;
+}
+
+window.sendToCampaignQueue = function() {
+  if(typeof Notiflix!=='undefined') Notiflix.Notify.success('📲 Campaña enviada al Publisher para aprobación');
+  const card = document.getElementById('card-publisher');
+  if (card) { card.scrollIntoView({behavior:'smooth',block:'center'}); card.style.boxShadow='0 0 0 2px #EC4899'; setTimeout(()=>card.style.boxShadow='',2000); }
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -3732,7 +2688,6 @@ function setSimView(view, btn) {
   if (view==='office') initOpinionOffice();
 }
 
-/* Publisher/Monitor agents removed — replaced by 7 Mecanismos architecture */
 function renderPublisherForm(a) {
   const creds = getSocialCreds();
   return `
@@ -4107,30 +3062,45 @@ function scheduleMonitorAlert() {
   try { localStorage.setItem('mtx_monitor_scheduled', JSON.stringify({ enabled: true, interval: '6h', since: new Date().toISOString() })); } catch {}
 }
 
-/* Monitor agent removed — Observador de Mercado handles intelligence now */
+// Auto-start monitor metrics when agent opens
+const _origToggleAgent = window.toggleAgent;
+document.addEventListener('DOMContentLoaded', () => {
+  const origToggle = window.toggleAgent;
+  if (origToggle) {
+    window.toggleAgent = function(id) {
+      origToggle(id);
+      if (id === 'monitor') setTimeout(startMonitorMetrics, 200);
+    };
+  }
+});
 
 /* ═══════════════════════════════════════════════════════════
    PIXEL OFFICE DASHBOARD
    Inspirado en pixel-agents (github.com/pablodelucca/pixel-agents)
-   10 agentes pixel art · Canvas 2D · Sin dependencias
+   15 personajes pixel art · Canvas 2D · Sin dependencias
    ═══════════════════════════════════════════════════════════ */
 
 const PX = 3; // pixel size multiplier — scales up all sprites
 const OFFICE_COLS = 7;
-const OFFICE_ROWS = 2;
+const OFFICE_ROWS = 3;
 
-// ── Agent desk layout — 7 mecanismos + 3 infraestructura ──
+// ── Agent desk layout (col, row) ──────────────────────────
 const AGENT_DESKS = [
-  { id:'observador',   col:0, row:0, color:'3B82F6', label:'Observador', icon:'🔭' },
-  { id:'narrador',     col:1, row:0, color:'10B981', label:'Narrador',   icon:'✍️' },
-  { id:'director',     col:2, row:0, color:'F59E0B', label:'Director',   icon:'🎬' },
-  { id:'motor',        col:3, row:0, color:'06B6D4', label:'Motor',      icon:'📡' },
-  { id:'conversor',    col:4, row:0, color:'EAB308', label:'Conversor',  icon:'⚡' },
-  { id:'aprendizaje',  col:5, row:0, color:'8B5CF6', label:'Aprendizaje',icon:'🧠' },
-  { id:'orquestador',  col:6, row:0, color:'F97316', label:'Orquest.',   icon:'🎯' },
-  { id:'video',        col:1, row:1, color:'00C2E0', label:'Video IA',   icon:'🎬' },
-  { id:'image',        col:3, row:1, color:'A78BFA', label:'Imagen IA',  icon:'🖼'  },
-  { id:'social_sim',   col:5, row:1, color:'818CF8', label:'Sim Social', icon:'🧬'  },
+  { id:'investigacion', col:0, row:0, color:'3B82F6', label:'Invest.',  icon:'🔍' },
+  { id:'contenido',     col:1, row:0, color:'10B981', label:'Contenido',icon:'✍️' },
+  { id:'publicidad',    col:2, row:0, color:'F59E0B', label:'Publicidad',icon:'📢' },
+  { id:'youtube',       col:3, row:0, color:'EF4444', label:'YouTube',   icon:'📺' },
+  { id:'larry',         col:4, row:0, color:'8B5CF6', label:'Larry SDR', icon:'🤖' },
+  { id:'streams',       col:5, row:0, color:'06B6D4', label:'Comunidad', icon:'📡' },
+  { id:'clio',          col:6, row:0, color:'EC4899', label:'Clio',      icon:'🎯' },
+  { id:'video',         col:0, row:1, color:'00C2E0', label:'Video IA',  icon:'🎬' },
+  { id:'image',         col:1, row:1, color:'A78BFA', label:'Imagen IA', icon:'🖼'  },
+  { id:'editor',        col:2, row:1, color:'F97316', label:'Editor',    icon:'🎞'  },
+  { id:'geo',           col:3, row:1, color:'10B981', label:'Geo Intel', icon:'🗺'  },
+  { id:'social_sim',    col:4, row:1, color:'818CF8', label:'Sim Social',icon:'🧬'  },
+  { id:'orchestrator',  col:5, row:1, color:'F97316', label:'Orquest.',  icon:'🎯'  },
+  { id:'publisher',     col:6, row:1, color:'EC4899', label:'Publisher', icon:'📲'  },
+  { id:'monitor',       col:0, row:2, color:'10B981', label:'Monitor',   icon:'📡'  },
 ];
 
 // ── Pixel character sprite definitions (8×14 grid, 1=body, 2=skin, 3=hair) ──
@@ -4740,191 +3710,4 @@ function startOpinionSimulation() {
 }
 
 init();
-
-/* ══════════════════════════════════════════════════════════
-   MetaMKTX — Director de Marketing IA (hash: #director)
-   ══════════════════════════════════════════════════════════ */
-(function(){
-  'use strict';
-  let _mktxStreaming = false;
-
-  function checkMktxAnchor() {
-    const sec = document.getElementById('director-mktx');
-    if (!sec) return;
-    sec.style.display = (window.location.hash === '#director') ? 'block' : 'none';
-  }
-
-  window.addEventListener('hashchange', checkMktxAnchor);
-  document.addEventListener('DOMContentLoaded', checkMktxAnchor);
-  setTimeout(checkMktxAnchor, 400);
-
-  window.mktx_ask = function(p) {
-    const inp = document.getElementById('mktx-inp');
-    if (inp) { inp.value = p; inp.focus(); }
-    window.mktx_send();
-  };
-
-  window.mktx_send = async function() {
-    if (_mktxStreaming) return;
-    const inp = document.getElementById('mktx-inp');
-    const out = document.getElementById('mktx-out');
-    const btn = document.getElementById('mktx-btn');
-    const tok = document.getElementById('mktx-tok');
-    if (!inp || !out) return;
-    const q = inp.value.trim(); if (!q) return;
-
-    _mktxStreaming = true;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spin-cyan"></span>';
-    out.innerHTML = '<div style="color:var(--text-faint);display:flex;align-items:center;gap:8px;padding:24px"><span class="spin-cyan"></span> MetaMKTX procesando...</div>';
-    inp.value = '';
-
-    try {
-      const session = await getSession();
-      const jwt = session?.access_token || '';
-      const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL || '').replace(/\/+$/, '');
-      if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado');
-
-      const resp = await fetch(proxyUrl + '/groq', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          max_tokens: 2048,
-          system: `Eres MetaMKTX, Director de Marketing IA de IBANOR SA de CV / MetaTronix.
-Especialidad: estrategia de marketing digital B2B, posicionamiento de marca, generación de demanda, content marketing, SEO, campañas pagadas, y análisis de mercado en México y LATAM.
-Respondes en español con estrategias accionables, KPIs medibles y recomendaciones basadas en datos.
-Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.
-
-PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
-1. SOLO afirma lo EXPLÍCITAMENTE presente en los datos de esta conversación
-2. NUNCA inventes métricas de campaña, tasas de conversión, CPL ni ROI — dato ausente = "Sin dato disponible"
-3. HECHO vs ANÁLISIS: "Los datos muestran X" para hechos; "Esto podría indicar Y" para análisis
-4. INCERTIDUMBRE: si no es certeza, usa "aparentemente", "podría ser", "requiere validación con el equipo"
-5. BENCHMARKS: al usar benchmarks del sector, indica la fuente y que son orientativos — "Según industria B2B (referencia orientativa)"
-6. CAUSALIDAD: nunca la atribuyas sin evidencia directa — "correlación posible, no causalidad confirmada"
-7. FORECAST: toda proyección de leads o conversiones debe indicar su supuesto base
-8. AMBIGÜEDAD: si la consulta es incompleta, solicita el dato faltante — no rellenes con promedios del sector
-9. RECOMENDACIONES: termina cada estrategia con "⚠ Validar con datos de campañas reales antes de escalar presupuesto"
-10. KPIs DE MARKETING: añade "† Basado en información proporcionada — medir contra resultados reales de campañas"`,
-          messages: [{ role: 'user', content: q }],
-          stream: true,
-        }),
-        signal: AbortSignal.timeout(90000),
-      });
-
-      if (!resp.ok) { const e = await resp.json().catch(() => ({ error: resp.statusText })); throw new Error(e.error || 'Error ' + resp.status); }
-
-      const reader = resp.body.getReader();
-      const dec = new TextDecoder();
-      let buf = ''; let html = ''; let iT = 0; let oT = 0;
-      out.innerHTML = '';
-
-      while (true) {
-        const { done, value } = await reader.read(); if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n'); buf = lines.pop();
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue;
-          const d = line.slice(5).trim(); if (d === '[DONE]') break;
-          try {
-            const j = JSON.parse(d);
-            if (j.type === 'content_block_delta' && j.delta?.type === 'text_delta') html += j.delta.text;
-            if (j.type === 'message_start') iT = j.message?.usage?.input_tokens || 0;
-            if (j.type === 'message_delta') oT = j.usage?.output_tokens || 0;
-          } catch {}
-        }
-        out.innerHTML = html; out.scrollTop = out.scrollHeight;
-      }
-      out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta.</em>';
-      if (tok) tok.textContent = `${iT}↑ ${oT}↓ tokens`;
-    } catch (e) {
-      out.innerHTML = `<span style="color:#ff4646">Error: ${escHtml(e.message)}</span>`;
-    } finally {
-      _mktxStreaming = false;
-      btn.disabled = false;
-      btn.innerHTML = '▶ Enviar';
-    }
-  };
-})();
 </script>
-
-<!-- ══════════════════════════════════════════════════════════
-     MetaMKTX — Director de Marketing IA — Panel HTML
-     Mostrado solo cuando hash = #director
-     ══════════════════════════════════════════════════════════ -->
-<style>
-  .mktx-root { display:flex; flex-direction:column; gap:20px; padding:28px; max-width:960px; margin:0 auto; }
-  .mktx-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; }
-  .mktx-header h1 { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; margin:0; color:#00e5ff; }
-  .mktx-header p { color:var(--text-muted); font-size:13px; margin:4px 0 0; }
-  .mktx-badge { font-size:10px; background:rgba(0,229,255,.1); color:#00e5ff; padding:3px 12px; border-radius:20px; border:1px solid rgba(0,229,255,.25); font-weight:700; }
-  .mktx-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
-  .mktx-chips { display:flex; flex-wrap:wrap; gap:6px; padding:14px 20px; border-bottom:1px solid var(--border); }
-  .mktx-chip { padding:5px 13px; border-radius:20px; font-size:11px; font-weight:600; background:rgba(255,255,255,.04); border:1px solid var(--border); color:var(--text-muted); cursor:pointer; transition:.15s; }
-  .mktx-chip:hover { border-color:#00e5ff; color:#00e5ff; }
-  .mktx-row { display:flex; gap:8px; padding:12px 20px; border-bottom:1px solid var(--border); }
-  .mktx-inp { flex:1; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:8px; padding:9px 14px; color:var(--text); font-size:13px; font-family:inherit; resize:none; min-height:44px; }
-  .mktx-inp:focus { outline:none; border-color:#00e5ff; }
-  .mktx-btn { padding:9px 18px; border-radius:8px; font-size:12px; font-weight:700; background:#00e5ff; color:#000; border:none; cursor:pointer; transition:opacity .15s; align-self:flex-end; }
-  .mktx-btn:hover:not(:disabled) { opacity:.85; } .mktx-btn:disabled { opacity:.4; cursor:not-allowed; }
-  .mktx-out { min-height:200px; max-height:460px; overflow-y:auto; padding:16px 20px; font-size:13px; line-height:1.8; color:var(--text); }
-  .mktx-out h2,.mktx-out h3 { font-family:'Bebas Neue',sans-serif; color:#00e5ff; margin:8px 0 4px; }
-  .mktx-out p { margin:4px 0; } .mktx-out ul { margin:4px 0 4px 16px; }
-  .mktx-out strong { color:#fff; }
-  .mktx-out table { width:100%; border-collapse:collapse; margin:8px 0; font-size:12px; }
-  .mktx-out th { padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); color:#00e5ff; font-weight:700; }
-  .mktx-out td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.05); }
-  .mktx-foot { display:flex; justify-content:space-between; align-items:center; padding:8px 20px; border-top:1px solid var(--border); }
-  .spin-cyan { display:inline-block; width:13px; height:13px; border:2px solid rgba(0,229,255,.2); border-top-color:#00e5ff; border-radius:50%; animation:gspin .7s linear infinite; }
-</style>
-
-<section id="director-mktx" style="display:none">
-  <div class="mktx-root">
-    <div class="mktx-header">
-      <div>
-        <h1>🎯 MetaMKTX — Director de Marketing IA</h1>
-        <p>Estrategia de marketing digital · Generación de demanda · Brand · Campañas · IBANOR SA de CV</p>
-      </div>
-      <span class="mktx-badge">Groq — llama-3.3-70b</span>
-    </div>
-
-    <div class="mktx-panel">
-      <div class="mktx-chips">
-        <button class="mktx-chip" onclick="mktx_ask('Diagnóstico de marketing: estado actual y principales oportunidades')">→ Diagnóstico de marketing</button>
-        <button class="mktx-chip" onclick="mktx_ask('Estrategia de generación de demanda B2B para MetaTronix en México')">→ Generación de demanda</button>
-        <button class="mktx-chip" onclick="mktx_ask('Plan de contenidos y SEO para el próximo trimestre')">→ Plan de contenidos & SEO</button>
-        <button class="mktx-chip" onclick="mktx_ask('KPIs de marketing digital que debemos medir esta semana')">→ KPIs de marketing</button>
-        <button class="mktx-chip" onclick="mktx_ask('Estrategia de posicionamiento de marca MetaTronix vs competidores CRM')">→ Posicionamiento de marca</button>
-        <button class="mktx-chip" onclick="mktx_ask('Campañas de paid media: estructura y presupuesto recomendado para B2B SaaS')">→ Campañas paid media</button>
-        <button class="mktx-chip" onclick="mktx_ask('Roadmap de marketing para los próximos 6 meses')">→ Roadmap de marketing</button>
-      </div>
-      <div class="mktx-row">
-        <textarea class="mktx-inp" id="mktx-inp" placeholder="Consulta al Director de Marketing IA…" rows="2"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();mktx_send()}"></textarea>
-        <button class="mktx-btn" id="mktx-btn" onclick="mktx_send()">▶ Enviar</button>
-      </div>
-      <div class="mktx-out" id="mktx-out">
-        <div style="color:var(--text-faint);font-style:italic;text-align:center;padding:40px">MetaMKTX listo · Director de Marketing IA</div>
-      </div>
-      <div class="mktx-foot">
-        <button style="font-size:11px;color:var(--text-faint);background:none;border:none;cursor:pointer"
-          onclick="document.getElementById('mktx-out').innerHTML='<div style=\'color:var(--text-faint);font-style:italic;text-align:center;padding:40px\'>MetaMKTX listo</div>';document.getElementById('mktx-tok').textContent=''">✕ Limpiar</button>
-        <span id="mktx-tok" style="font-size:10px;color:var(--text-faint);font-family:monospace"></span>
-      </div>
-    </div>
-
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <span style="font-size:22px">💡</span>
-      <div style="flex:1;min-width:200px">
-        <div style="font-weight:600;font-size:13px;margin-bottom:2px">Conectar con otros directores</div>
-        <div style="font-size:12px;color:var(--text-muted)">MetaMKTX trabaja en coordinación con Ventas, Operaciones y Administración</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a href="/ventas.html#director" style="background:rgba(0,255,136,.1);color:#00ff88;border:1px solid rgba(0,255,136,.25);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;text-decoration:none">📈 Dir. Comercial</a>
-        <a href="/director-ops.html" style="background:rgba(255,180,0,.1);color:#ffb400;border:1px solid rgba(255,180,0,.25);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;text-decoration:none">⚙️ Dir. Operaciones</a>
-        <a href="/finanzas.html#director" style="background:rgba(185,102,255,.1);color:#b966ff;border:1px solid rgba(185,102,255,.25);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;text-decoration:none">💼 Dir. Administrativo</a>
-      </div>
-    </div>
-  </div>
-</section>

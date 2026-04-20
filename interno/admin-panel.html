@@ -2,10 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Administración</title>
-  <link rel="stylesheet" href="/assets/style.css?v=20260420">
+  <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
   <style>
     .lead-status-nuevo            { color: var(--info);    background: var(--info-dim); padding:2px 7px; border-radius:3px; font-size:11px; font-weight:600; }
@@ -120,8 +119,6 @@
     <button class="tab-btn" onclick="switchTab('users')">Usuarios</button>
     <button class="tab-btn" onclick="switchTab('activity')">Actividad</button>
     <button class="tab-btn" id="tab-claude-btn" style="display:none;background:rgba(124,58,237,.15);color:#a78bfa" onclick="switchTab('claude')">🤖 IA APIs</button>
-    <button class="tab-btn" id="tab-llmlogs-btn" style="display:none;background:rgba(0,212,240,.08);color:var(--cyan)" onclick="switchTab('llmlogs')">📊 Consultas IA</button>
-    <button class="tab-btn" id="tab-gestion-btn" style="display:none;background:rgba(0,255,136,.08);color:var(--accent)" onclick="switchTab('gestion')">⚙ Gestión de Usuarios</button>
   </div>
 
   <!-- TAB: POR COLABORADOR -->
@@ -164,31 +161,6 @@
     <div style="margin-top:16px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text-muted)">
       ℹ️ Al aprobar el uso extendido se resetea el contador mensual del usuario y se habilita Claude nuevamente.
       El límite se renueva automáticamente el 1° de cada mes.
-    </div>
-
-    <!-- ── Sección HF Token ───────────────────────────────────── -->
-    <div class="section-header" style="margin-top:40px;padding-top:24px;border-top:2px solid var(--border)">
-      <span class="section-title">🤗 Token HuggingFace (Imágenes y Video IA)</span>
-    </div>
-    <div style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);max-width:560px">
-      <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px">
-        Configura el token una vez aquí y todos los usuarios podrán generar imágenes y videos sin pedirlo manualmente.
-        El token se guarda en <code style="font-size:11px;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px">portal_settings</code> y en localStorage de cada navegador.
-      </p>
-      <div id="hf-token-admin-status" style="margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px">
-        <input type="password" id="admin-hf-token-input" class="crm-input"
-          style="font-family:monospace;font-size:12px;flex:1"
-          placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxx">
-        <button onclick="adminSaveHFToken()" class="btn btn-accent" style="white-space:nowrap;font-size:12px">
-          💾 Guardar para todos
-        </button>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:10px;align-items:center">
-        <a href="https://huggingface.co/settings/tokens" target="_blank"
-          style="font-size:11px;color:var(--text-muted)">Obtener token gratis →</a>
-        <button onclick="adminClearHFToken()" style="font-size:11px;background:none;border:none;color:#EF4444;cursor:pointer;padding:0">🗑 Eliminar token guardado</button>
-      </div>
     </div>
 
     <!-- ── Sección 2: IA de Ventas (Perplexity) ──────────────── -->
@@ -366,94 +338,6 @@
     </div>
   </div>
 
-  <!-- TAB: CONSULTAS IA (superAdmin only) -->
-  <div id="tab-llmlogs" class="tab-panel">
-    <style>
-      .llm-stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
-      .llm-stat-card { background:var(--s2); border:1px solid var(--b1); border-radius:var(--r-lg); padding:14px 16px; }
-      .llm-stat-val  { font-size:1.6rem; font-weight:700; font-family:var(--font-mono); color:var(--cyan); }
-      .llm-stat-lbl  { font-size:11px; color:var(--t2); margin-top:2px; text-transform:uppercase; letter-spacing:.07em; }
-      .llm-filter-bar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
-      .llm-row       { display:grid; grid-template-columns:140px 120px 100px 1fr 80px 60px 80px; gap:8px;
-                       align-items:center; padding:8px 12px; border-bottom:1px solid var(--b0); font-size:12px; }
-      .llm-row:hover { background:var(--s2); }
-      .llm-thead     { grid-template-columns:140px 120px 100px 1fr 80px 60px 80px;
-                       font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
-                       color:var(--t2); padding:6px 12px; border-bottom:1px solid var(--b2); }
-      .llm-prompt    { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--t2); font-family:var(--font-mono); font-size:11px; }
-      .llm-ok        { color:var(--green); font-weight:700; }
-      .llm-err       { color:var(--red);   font-weight:700; }
-      .llm-chip      { background:var(--s3); border-radius:3px; padding:1px 6px; font-size:10px; font-family:var(--font-mono); }
-    </style>
-
-    <!-- KPI strip -->
-    <div class="llm-stat-grid" id="llm-kpi-grid">
-      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-total">—</div><div class="llm-stat-lbl">Consultas hoy</div></div>
-      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-week">—</div><div class="llm-stat-lbl">Esta semana</div></div>
-      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-month">—</div><div class="llm-stat-lbl">Este mes</div></div>
-      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-tokens">—</div><div class="llm-stat-lbl">Tokens aprox.</div></div>
-      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-errors">—</div><div class="llm-stat-lbl">Errores hoy</div></div>
-      <div class="llm-stat-card"><div class="llm-stat-val" id="llm-k-avgms">—</div><div class="llm-stat-lbl">ms prom.</div></div>
-    </div>
-
-    <!-- Filters -->
-    <div class="llm-filter-bar">
-      <select id="llm-f-user" class="form-select" style="width:180px" onchange="loadLLMLogs()">
-        <option value="">Todos los usuarios</option>
-      </select>
-      <select id="llm-f-page" class="form-select" style="width:150px" onchange="loadLLMLogs()">
-        <option value="">Todas las páginas</option>
-        <option value="generate">Generador IA</option>
-        <option value="marketing">MetaMKTX</option>
-        <option value="ventas">MetaVentax</option>
-        <option value="oportunidades">Inteligencia</option>
-        <option value="leads">Pipeline</option>
-      </select>
-      <select id="llm-f-status" class="form-select" style="width:130px" onchange="loadLLMLogs()">
-        <option value="">Todo</option>
-        <option value="ok">Solo exitosas</option>
-        <option value="err">Solo errores</option>
-      </select>
-      <select id="llm-f-period" class="form-select" style="width:130px" onchange="loadLLMLogs()">
-        <option value="today">Hoy</option>
-        <option value="week">Esta semana</option>
-        <option value="month">Este mes</option>
-        <option value="all">Historial completo</option>
-      </select>
-      <button class="btn btn-ghost btn-sm" onclick="exportLLMLogs()">⬇ CSV</button>
-      <button class="btn btn-ghost btn-sm" onclick="loadLLMLogs()">↻</button>
-      <span id="llm-count-label" style="font-size:12px;color:var(--t2);margin-left:auto"></span>
-    </div>
-
-    <!-- Table header -->
-    <div class="llm-row llm-thead">
-      <span>Fecha</span>
-      <span>Usuario</span>
-      <span>Página / Agente</span>
-      <span>Preview prompt</span>
-      <span>Tokens</span>
-      <span>ms</span>
-      <span>Estado</span>
-    </div>
-
-    <!-- Table body -->
-    <div id="llm-logs-list" style="max-height:520px;overflow-y:auto;border:1px solid var(--b1);border-radius:var(--r)">
-      <div style="color:var(--t2);text-align:center;padding:40px">Cargando consultas IA...</div>
-    </div>
-
-    <!-- Top users / pages breakdown -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
-      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:10px">Top usuarios</div>
-        <div id="llm-top-users" style="font-size:12px"></div>
-      </div>
-      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:10px">Top páginas / agentes</div>
-        <div id="llm-top-pages" style="font-size:12px"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- TAB: ACTIVITY -->
   <div id="tab-activity" class="tab-panel">
     <div class="section-header">
@@ -467,96 +351,6 @@
     </div>
   </div>
 
-  <!-- TAB: GESTIÓN DE USUARIOS (ncanales + acanales only) -->
-  <div id="tab-gestion" class="tab-panel">
-    <div class="section-header">
-      <span class="section-title">⚙ Gestión de Usuarios</span>
-      <div style="display:flex;gap:8px">
-        <input id="gu-search" class="form-input" placeholder="Buscar por nombre o email…" style="width:220px;height:34px" oninput="renderGestionUsers()">
-        <button class="btn btn-secondary btn-sm" onclick="openGestionModal()">+ Nuevo Usuario</button>
-        <button class="btn btn-ghost btn-sm" onclick="loadGestionUsers()">↻</button>
-      </div>
-    </div>
-
-    <div class="table-wrap">
-      <table id="gu-table">
-        <thead>
-          <tr>
-            <th>Usuario</th>
-            <th>Email</th>
-            <th>Rol</th>
-            <th>Aprobación docs</th>
-            <th>Estado</th>
-            <th style="text-align:center">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="gu-tbody">
-          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Cargando...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
-
-<!-- Modal Gestión de Usuarios -->
-<div id="gu-modal" class="modal-overlay" style="display:none">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-header">
-      <span class="modal-title" id="gu-modal-title">Nuevo Usuario</span>
-      <button class="modal-close" onclick="closeGestionModal()">✕</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:14px;padding:4px 0">
-      <div class="form-group">
-        <label class="form-label">Nombre completo</label>
-        <input type="text" id="gu-name" class="form-input" placeholder="Nombre Apellido">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Correo electrónico</label>
-        <input type="email" id="gu-email" class="form-input" placeholder="correo@ejemplo.com">
-      </div>
-      <div class="form-group" id="gu-pass-group">
-        <label class="form-label">Contraseña temporal</label>
-        <input type="password" id="gu-password" class="form-input" placeholder="Mínimo 6 caracteres">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Rol</label>
-        <select id="gu-role" class="form-select">
-          <option value="readonly">Solo Lectura — Personal Base</option>
-          <option value="viewer">Operativo / Soporte</option>
-          <option value="user">Colaborador — Vendedor / Agente</option>
-          <option value="admin_restringido">Gerente / Coordinador</option>
-          <option value="admin">Director de Área</option>
-          <option value="super_admin">CEO / Super Admin</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="gu-doc-approval" style="width:16px;height:16px;accent-color:var(--accent)">
-          <span class="form-label" style="margin:0">Requiere revisión por ncanales + acanales para aprobar docs de Ventas/Marketing</span>
-        </label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeGestionModal()">Cancelar</button>
-      <button class="btn btn-primary" id="gu-save-btn" onclick="saveGestionUser()">Crear Usuario</button>
-    </div>
-  </div>
-</div>
-
-<!-- Confirm baja modal -->
-<div id="gu-baja-modal" class="modal-overlay" style="display:none">
-  <div class="modal" style="max-width:380px">
-    <div class="modal-header">
-      <span class="modal-title">⚠ Dar de Baja</span>
-      <button class="modal-close" onclick="document.getElementById('gu-baja-modal').style.display='none'">✕</button>
-    </div>
-    <p style="color:var(--text-muted);padding:4px 0">¿Confirmas dar de baja a <strong id="gu-baja-name" style="color:#fff"></strong>? El usuario perderá acceso inmediatamente.</p>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="document.getElementById('gu-baja-modal').style.display='none'">Cancelar</button>
-      <button class="btn btn-danger" id="gu-baja-confirm-btn" onclick="confirmBaja()">Dar de Baja</button>
-    </div>
-  </div>
 </div>
 
 <!-- Document viewer modal -->
@@ -625,11 +419,9 @@
       <div class="form-group">
         <label class="form-label">Rol</label>
         <select id="invite-role" class="form-select">
-          <option value="readonly">Solo Lectura — Personal Base</option>
-          <option value="viewer">Operativo / Soporte</option>
-          <option value="user">Colaborador — Vendedor / Agente</option>
-          <option value="admin_restringido">Gerente / Coordinador</option>
-          <option value="admin">Director de Área</option>
+          <option value="user">Colaborador</option>
+          <option value="admin_restringido">Admin Restringido (Visor)</option>
+          <option value="admin">Administrador</option>
         </select>
       </div>
     </div>
@@ -643,11 +435,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js?v=20260423"></script>
-<script src="/assets/agent.js?v=20260422"></script>
+<script src="/assets/agent.js?v=4"></script>
 <!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js?v=20260420"></script>
+<script src="/assets/salescoach.js?v=4"></script>
 <!-- TEAM CHAT -->
-<script src="/assets/teamchat.js?v=20260420"></script>
+<script src="/assets/teamchat.js?v=4"></script>
 <script>
 let currentUser = null;
 let allDocsData = [];
@@ -656,16 +448,6 @@ let currentDocModal = null;
 let currentAlertId = null;
 let isRestrictedAdmin = false;
 
-// Usuarios que requieren routing de aprobación (doc_approval_required = true en profiles)
-// Este array es fallback; la fuente de verdad es el campo doc_approval_required en Supabase
-const DOC_REVIEW_REQUIRED_EMAILS = ['nibarra@ibanormexico.com','acanalesf@ibanormexico.com'];
-// Acceso a Gestión de Usuarios: cualquier admin o super_admin por rol (no email hardcodeado)
-
-// Estado gestión de usuarios
-let allGestionUsers = [];
-let guEditingId = null;  // null = creating, id = editing
-let guBajaId    = null;
-
 async function init() {
   currentUser = await requireAuth(true); // admin or admin_restringido
   if (!currentUser) return;
@@ -673,16 +455,9 @@ async function init() {
   const isSuperAdmin = currentUser.profile?.role === 'super_admin';
   document.getElementById('header-placeholder').innerHTML = renderHeader(currentUser, 'admin');
 
-  // Mostrar tabs de superAdmin
+  // Mostrar tab Claude API solo al superAdmin
   if (isSuperAdmin) {
-    document.getElementById('tab-claude-btn').style.display  = 'inline-flex';
-    document.getElementById('tab-llmlogs-btn').style.display = 'inline-flex';
-  }
-
-  // Mostrar tab Gestión de Usuarios para admin y super_admin (basado en rol, no email)
-  const userRole = currentUser.profile?.role || '';
-  if (['admin','super_admin'].includes(userRole)) {
-    document.getElementById('tab-gestion-btn').style.display = 'inline-flex';
+    document.getElementById('tab-claude-btn').style.display = 'inline-flex';
   }
 
   // Para admin restringido: forzar filtro "aprobado" en documentos y ocultar acciones admin
@@ -959,18 +734,7 @@ async function openDocModal(docId, alertId) {
   const btnReject  = document.getElementById('btn-reject-doc');
   const btnApprove = document.getElementById('btn-approve-doc');
   if (btnReject)  btnReject.style.display  = isRestrictedAdmin ? 'none' : 'inline-flex';
-  if (btnApprove) {
-    btnApprove.style.display = isRestrictedAdmin ? 'none' : 'inline-flex';
-    // Si es usuario con routing, cambiar label del botón
-    const cuE = (currentUser?.email || '').toLowerCase().trim();
-    if (DOC_REVIEW_REQUIRED_EMAILS.includes(cuE)) {
-      btnApprove.textContent = '📤 Enviar a Revisión';
-      btnApprove.title = 'Este documento será enviado a ncanales y acanales para aprobación final';
-    } else {
-      btnApprove.textContent = '✓ Aprobar';
-      btnApprove.title = '';
-    }
-  }
+  if (btnApprove) btnApprove.style.display = isRestrictedAdmin ? 'none' : 'inline-flex';
   document.getElementById('doc-modal').style.display = 'flex';
 
   // Mark alert as read
@@ -998,13 +762,6 @@ function closeDocModal() {
 async function resolveDoc(newStatus) {
   if (!currentDocModal) return;
   if (isRestrictedAdmin) { showToast('Sin permiso para autorizar documentos', 'warning'); return; }
-
-  // Si el usuario requiere routing y está intentando APROBAR → enviar a revisión
-  const cuEmail = (currentUser?.email || '').toLowerCase().trim();
-  if (newStatus === 'approved' && DOC_REVIEW_REQUIRED_EMAILS.includes(cuEmail)) {
-    await sendDocToReview();
-    return;
-  }
 
   const db   = getDB();
   const note = document.getElementById('admin-note').value.trim();
@@ -1234,9 +991,7 @@ function switchTab(name) {
   if (name === 'leads')         loadLeadsAdmin();
   if (name === 'plans')         loadPlansAdmin();
   if (name === 'colaboradores') loadColaboradores();
-  if (name === 'claude')        { loadClaudeAdmin(); loadPerplexityAdmin(); loadHFTokenAdmin(); }
-  if (name === 'llmlogs')       loadLLMLogs();
-  if (name === 'gestion')       loadGestionUsers();
+  if (name === 'claude')        { loadClaudeAdmin(); loadPerplexityAdmin(); }
 }
 
 // ── Por Colaborador ──────────────────────────────────────────
@@ -1264,7 +1019,7 @@ async function loadColaboradores() {
     propuesta_enviada:'var(--accent)', cerrado_ganado:'var(--accent)', cerrado_perdido:'var(--danger)'
   };
   const DOC_STATUS_COLOR = { draft:'var(--text-muted)', pending_review:'var(--warning)', approved:'var(--accent)', rejected:'var(--danger)' };
-  const ROLE_LABELS = { super_admin:'CEO · Super Admin', admin:'Director', admin_restringido:'Gerente', user:'Colaborador', viewer:'Operativo', readonly:'Solo Lectura' };
+  const ROLE_LABELS = { admin:'Admin', admin_restringido:'Visor', user:'Colaborador' };
 
   container.innerHTML = colaboradores.map(u => {
     const uLeads = (leads||[]).filter(l => l.user_id === u.id);
@@ -1340,53 +1095,6 @@ async function loadColaboradores() {
 }
 
 // ── Claude API Admin (superAdmin only) ──────────────────────
-// ── HuggingFace Token (admin) ─────────────────────────────────
-async function loadHFTokenAdmin() {
-  const statusEl = document.getElementById('hf-token-admin-status');
-  if (!statusEl) return;
-  try {
-    const { data } = await getDB().from('portal_settings').select('value').eq('key','hf_api_token').single();
-    if (data?.value) {
-      statusEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:6px;font-size:11px">
-        <span style="color:#00ff88;font-weight:700">🔑 Token configurado</span>
-        <span style="color:rgba(255,255,255,.35);font-family:monospace">${data.value.substring(0,6)}••••••••••••••••</span>
-      </div>`;
-      document.getElementById('admin-hf-token-input').value = '';
-    } else {
-      statusEl.innerHTML = `<div style="font-size:11px;color:#F59E0B">⚠️ Sin token configurado — los usuarios deben ingresarlo manualmente.</div>`;
-    }
-  } catch(_) {
-    statusEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted)">No se pudo verificar el estado del token.</div>`;
-  }
-}
-
-async function adminSaveHFToken() {
-  const token = document.getElementById('admin-hf-token-input')?.value.trim();
-  if (!token || !token.startsWith('hf_')) {
-    if (typeof Notiflix !== 'undefined') Notiflix.Notify.warning('El token debe empezar con hf_');
-    return;
-  }
-  try {
-    await getDB().from('portal_settings').upsert({ key: 'hf_api_token', value: token }, { onConflict: 'key' });
-    localStorage.setItem('mtx_hf_token', token);
-    if (typeof Notiflix !== 'undefined') Notiflix.Notify.success('Token HF guardado para todos los usuarios ✓');
-    loadHFTokenAdmin();
-  } catch(e) {
-    if (typeof Notiflix !== 'undefined') Notiflix.Notify.failure('Error al guardar: ' + e.message);
-  }
-}
-
-async function adminClearHFToken() {
-  try {
-    await getDB().from('portal_settings').delete().eq('key','hf_api_token');
-    localStorage.removeItem('mtx_hf_token');
-    if (typeof Notiflix !== 'undefined') Notiflix.Notify.info('Token HF eliminado');
-    loadHFTokenAdmin();
-  } catch(e) {
-    if (typeof Notiflix !== 'undefined') Notiflix.Notify.failure('Error: ' + e.message);
-  }
-}
-
 async function loadClaudeAdmin() {
   const db = getDB();
   const thisMonth = new Date().toISOString().slice(0,7);
@@ -1402,7 +1110,7 @@ async function loadClaudeAdmin() {
     return;
   }
 
-  const ROLE_LABELS = { super_admin:'CEO · Super Admin', admin:'Director', admin_restringido:'Gerente', user:'Colaborador', viewer:'Operativo', readonly:'Solo Lectura' };
+  const ROLE_LABELS = { super_admin:'SuperAdmin', admin:'Admin', admin_restringido:'Visor', user:'Colaborador' };
 
   tbody.innerHTML = users.map(u => {
     const pct = u.claude_monthly_limit > 0 ? Math.min(Math.round((u.claude_usage_month/u.claude_monthly_limit)*100), 100) : 0;
@@ -1650,8 +1358,7 @@ async function loadPerplexityAdmin() {
   }
 
   const roleLabel = r => ({
-    readonly:'Solo Lectura', viewer:'Operativo', user:'Colaborador',
-    admin_restringido:'Gerente', admin:'Director', super_admin:'CEO · Super Admin'
+    user:'Colaborador', admin:'Admin', admin_restringido:'Admin Visor', super_admin:'SuperAdmin'
   }[r] || r);
 
   tbody.innerHTML = profiles.map(p => {
@@ -1721,432 +1428,6 @@ async function authorizePerplexityUser(userId, name) {
 
 async function revokePerplexityUser(userId, name) {
   await togglePerplexityEnabled(userId, false);
-}
-
-/* ════════════════════════════════════════════════════════════
-   TAB: CONSULTAS IA — visor de log LLM desde activity_logs
-   ════════════════════════════════════════════════════════════ */
-let _llmLogsCache = [];
-
-let _llmUsersLoaded = false;
-async function loadLLMLogs() {
-  const db = getDB();
-
-  // Populate user filter once
-  if (!_llmUsersLoaded) {
-    _llmUsersLoaded = true;
-    const { data: users } = await db.from('profiles').select('id,full_name,email').order('full_name');
-    const sel = document.getElementById('llm-f-user');
-    if (sel && users) {
-      users.forEach(u => {
-        const opt = document.createElement('option');
-        opt.value = u.id;
-        opt.textContent = u.full_name || u.email;
-        sel.appendChild(opt);
-      });
-    }
-  }
-
-  const userFilter   = document.getElementById('llm-f-user')?.value   || '';
-  const pageFilter   = document.getElementById('llm-f-page')?.value   || '';
-  const statusFilter = document.getElementById('llm-f-status')?.value || '';
-  const period       = document.getElementById('llm-f-period')?.value || 'today';
-
-  // Date range
-  const now = new Date();
-  let fromDate = null;
-  if (period === 'today') {
-    fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  } else if (period === 'week') {
-    const d = new Date(now); d.setDate(d.getDate() - 7);
-    fromDate = d.toISOString();
-  } else if (period === 'month') {
-    fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  }
-
-  let query = db.from('activity_logs')
-    .select('id, created_at, user_id, metadata, profiles!user_id(full_name, email)')
-    .eq('action', 'llm_query')
-    .order('created_at', { ascending: false })
-    .limit(200);
-
-  if (fromDate)   query = query.gte('created_at', fromDate);
-  if (userFilter) query = query.eq('user_id', userFilter);
-
-  const { data, error } = await query;
-  if (error) { showToast('Error cargando logs IA', 'error'); return; }
-
-  let rows = data || [];
-
-  // Client-side filters
-  if (pageFilter)   rows = rows.filter(r => (r.metadata?.page || '') === pageFilter);
-  if (statusFilter === 'ok')  rows = rows.filter(r => r.metadata?.success !== false);
-  if (statusFilter === 'err') rows = rows.filter(r => r.metadata?.success === false);
-
-  _llmLogsCache = rows;
-
-  // Render KPIs
-  await renderLLMKPIs(db, period);
-
-  // Render table
-  const list = document.getElementById('llm-logs-list');
-  document.getElementById('llm-count-label').textContent = `${rows.length} registros`;
-
-  if (!rows.length) {
-    list.innerHTML = '<div style="color:var(--t2);text-align:center;padding:40px">Sin consultas en el período seleccionado</div>';
-  } else {
-    list.innerHTML = rows.map(r => {
-      const m    = r.metadata || {};
-      const name = r.profiles?.full_name || r.profiles?.email || 'Desconocido';
-      const date = formatDate(r.created_at);
-      const page = escHtml(m.page || '—');
-      const agent= escHtml(m.agent_name || '—');
-      const prompt = escHtml((m.prompt_preview || '').slice(0, 80));
-      const tokens = m.tokens_approx ? `~${Number(m.tokens_approx).toLocaleString('es-MX')}` : '—';
-      const ms   = m.duration_ms ? `${m.duration_ms}` : '—';
-      const ok   = m.success !== false;
-      const statusHtml = ok
-        ? '<span class="llm-ok">✓ OK</span>'
-        : `<span class="llm-err" title="${escHtml(m.error_msg||'')}" style="cursor:help">✕ ERR</span>`;
-      return `<div class="llm-row">
-        <span class="llm-chip" style="font-size:10px">${date}</span>
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(name)}">${escHtml(name)}</span>
-        <span><span class="llm-chip">${page}</span><br><span style="font-size:10px;color:var(--t2)">${agent}</span></span>
-        <span class="llm-prompt" title="${escHtml(m.prompt_preview||'')}">${prompt || '<em style="color:var(--t3)">sin preview</em>'}</span>
-        <span class="llm-chip">${tokens}</span>
-        <span class="llm-chip">${ms}</span>
-        <span>${statusHtml}</span>
-      </div>`;
-    }).join('');
-  }
-
-  // Top users breakdown
-  const userCount = {};
-  rows.forEach(r => {
-    const k = r.profiles?.full_name || r.profiles?.email || 'Desconocido';
-    userCount[k] = (userCount[k] || 0) + 1;
-  });
-  const topUsers = Object.entries(userCount).sort((a,b) => b[1]-a[1]).slice(0, 6);
-  const maxU = topUsers[0]?.[1] || 1;
-  document.getElementById('llm-top-users').innerHTML = topUsers.map(([u, n]) =>
-    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${escHtml(u)}</span>
-      <div style="width:80px;height:5px;background:var(--s3);border-radius:3px">
-        <div style="width:${Math.round(n/maxU*100)}%;height:100%;background:var(--cyan);border-radius:3px"></div>
-      </div>
-      <span style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);min-width:24px;text-align:right">${n}</span>
-    </div>`
-  ).join('') || '<span style="color:var(--t3)">Sin datos</span>';
-
-  // Top pages breakdown
-  const pageCount = {};
-  rows.forEach(r => {
-    const k = `${r.metadata?.page || 'unknown'} / ${r.metadata?.agent_name || '—'}`;
-    pageCount[k] = (pageCount[k] || 0) + 1;
-  });
-  const topPages = Object.entries(pageCount).sort((a,b) => b[1]-a[1]).slice(0, 6);
-  const maxP = topPages[0]?.[1] || 1;
-  document.getElementById('llm-top-pages').innerHTML = topPages.map(([p, n]) =>
-    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${escHtml(p)}</span>
-      <div style="width:80px;height:5px;background:var(--s3);border-radius:3px">
-        <div style="width:${Math.round(n/maxP*100)}%;height:100%;background:var(--teal);border-radius:3px"></div>
-      </div>
-      <span style="font-family:var(--font-mono);font-size:11px;color:var(--teal);min-width:24px;text-align:right">${n}</span>
-    </div>`
-  ).join('') || '<span style="color:var(--t3)">Sin datos</span>';
-}
-
-async function renderLLMKPIs(db, activePeriod) {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const weekStart  = new Date(now.getTime() - 7 * 86400000).toISOString();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-  const [today, week, month] = await Promise.all([
-    db.from('activity_logs').select('id,metadata', {count:'exact'}).eq('action','llm_query').gte('created_at',todayStart),
-    db.from('activity_logs').select('id,metadata', {count:'exact'}).eq('action','llm_query').gte('created_at',weekStart),
-    db.from('activity_logs').select('id,metadata', {count:'exact'}).eq('action','llm_query').gte('created_at',monthStart),
-  ]);
-
-  const rows = month.data || [];
-  const totalTokens = rows.reduce((s, r) => s + (r.metadata?.tokens_approx || 0), 0);
-  const todayRows   = (today.data  || []);
-  const errorsToday = todayRows.filter(r => r.metadata?.success === false).length;
-  const durations   = todayRows.filter(r => r.metadata?.duration_ms).map(r => r.metadata.duration_ms);
-  const avgMs       = durations.length ? Math.round(durations.reduce((a,b)=>a+b,0)/durations.length) : 0;
-
-  document.getElementById('llm-k-total').textContent  = today.count  ?? '—';
-  document.getElementById('llm-k-week').textContent   = week.count   ?? '—';
-  document.getElementById('llm-k-month').textContent  = month.count  ?? '—';
-  document.getElementById('llm-k-tokens').textContent = totalTokens > 0 ? `~${(totalTokens/1000).toFixed(1)}K` : '0';
-  document.getElementById('llm-k-errors').textContent = errorsToday;
-  document.getElementById('llm-k-avgms').textContent  = avgMs > 0 ? avgMs : '—';
-}
-
-function exportLLMLogs() {
-  if (!_llmLogsCache.length) { showToast('No hay datos para exportar', 'info'); return; }
-  const header = ['Fecha','Usuario','Email','Página','Agente','Prompt Preview','Tokens','ms','Éxito','Error'];
-  const rows = _llmLogsCache.map(r => {
-    const m = r.metadata || {};
-    return [
-      r.created_at,
-      r.profiles?.full_name || '',
-      r.profiles?.email || m.user_email || '',
-      m.page || '',
-      m.agent_name || '',
-      (m.prompt_preview || '').replace(/,/g,'‚').replace(/\n/g,' '),
-      m.tokens_approx || 0,
-      m.duration_ms || 0,
-      m.success !== false ? 'SI' : 'NO',
-      m.error_msg || '',
-    ].join(',');
-  });
-  const csv = [header.join(','), ...rows].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `consultas-ia-${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  FLUJO DE APROBACIÓN CON ROUTING (nibarra / acanalesf)
-// ══════════════════════════════════════════════════════════════
-async function sendDocToReview() {
-  if (!currentDocModal) return;
-  const db   = getDB();
-  const note = document.getElementById('admin-note').value.trim();
-  const btn  = document.getElementById('btn-approve-doc');
-  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
-
-  // Mantener doc en pending_review (ya lo está) y registrar nota de routing
-  const { error } = await db.from('documents').update({
-    updated_at: new Date().toISOString(),
-    admin_note: (note ? note + '\n' : '') +
-      `[ROUTING] Enviado a revisión de ncanales@ibanormexico.com y acanales@ibanormexico.com por ${currentUser.email}`
-  }).eq('id', currentDocModal.id);
-
-  if (error) { showToast('Error al enrutar documento: ' + error.message, 'error'); }
-  else {
-    // Crear alertas para ncanales y acanales
-    const REVIEWERS = ['ncanales@ibanormexico.com', 'acanales@ibanormexico.com'];
-    const { data: reviewerProfiles } = await db.from('profiles')
-      .select('id').in('email', REVIEWERS);
-
-    if (reviewerProfiles?.length) {
-      const alertsPayload = reviewerProfiles.map(rp => ({
-        type:       'doc_review_required',
-        for_user_id: rp.id,
-        is_read:    false,
-        document_id: currentDocModal.id,
-        metadata: {
-          title:     currentDocModal.title,
-          routed_by: currentUser.email,
-          message:   `Documento "${currentDocModal.title}" requiere tu aprobación.`
-        }
-      }));
-      await db.from('alerts').insert(alertsPayload);
-    }
-
-    await logActivity('doc_sent_to_review', 'document', currentDocModal.id, { title: currentDocModal.title });
-    showToast('Documento enviado a revisión de ncanales y acanales ✓', 'info');
-    closeDocModal();
-    await refreshAll();
-  }
-
-  if (btn) { btn.disabled = false; btn.textContent = '✓ Aprobar'; }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  GESTIÓN DE USUARIOS (solo ncanales + acanales)
-// ══════════════════════════════════════════════════════════════
-const GU_ROLE_LABELS = {
-  readonly:         'Solo Lectura',
-  viewer:           'Operativo',
-  user:             'Colaborador',
-  admin_restringido:'Gerente',
-  admin:            'Director',
-  super_admin:      'CEO · Super Admin'
-};
-
-async function loadGestionUsers() {
-  const db = getDB();
-  // doc_approval_required es opcional — no rompe si la columna no existe todavía
-  let { data, error } = await db.from('profiles')
-    .select('id,email,full_name,role,is_active,doc_approval_required,last_seen')
-    .order('full_name');
-  if (error?.message?.includes('doc_approval_required')) {
-    // Columna aún no existe en DB — cargar sin ella
-    const r2 = await db.from('profiles').select('id,email,full_name,role,is_active,last_seen').order('full_name');
-    data = r2.data;
-  }
-  allGestionUsers = data || [];
-  renderGestionUsers();
-}
-
-function renderGestionUsers() {
-  const q   = (document.getElementById('gu-search')?.value || '').toLowerCase();
-  const rows = allGestionUsers.filter(u =>
-    !q || (u.full_name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q)
-  );
-
-  const tbody = document.getElementById('gu-tbody');
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Sin resultados</td></tr>';
-    return;
-  }
-
-  const cuEmail = (currentUser?.email || '').toLowerCase();
-
-  tbody.innerHTML = rows.map(u => {
-    const roleBadge = {
-      super_admin:      'badge-danger',
-      admin:            'badge-accent',
-      admin_restringido:'badge-warning',
-      user:             'badge-neutral',
-      viewer:           'badge-neutral',
-      readonly:         'badge-neutral'
-    }[u.role] || 'badge-neutral';
-
-    const isSelf = u.email?.toLowerCase() === cuEmail;
-    const active = u.is_active !== false;
-
-    return `<tr>
-      <td>
-        <div style="font-weight:600;color:#fff">${escHtml(u.full_name || u.email?.split('@')[0] || '—')}</div>
-        ${u.last_seen ? `<div style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono)">Último acceso: ${formatDate(u.last_seen)}</div>` : ''}
-      </td>
-      <td><span class="td-mono" style="font-size:11px">${escHtml(u.email||'')}</span></td>
-      <td><span class="badge ${roleBadge}">${GU_ROLE_LABELS[u.role]||u.role}</span></td>
-      <td style="text-align:center">
-        ${u.doc_approval_required
-          ? '<span class="badge badge-warning" title="Docs de ventas/marketing van a revisión">⚠ Routing</span>'
-          : '<span class="badge badge-neutral" style="color:var(--accent)">Directo</span>'}
-      </td>
-      <td><span class="${active ? 'dot-online' : 'dot-offline'}"></span>${active ? 'Activo' : 'Baja'}</td>
-      <td>
-        <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" onclick="openGestionModal('${u.id}')">✏ Editar</button>
-          ${!isSelf && active
-            ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="openBajaModal('${u.id}','${escHtml(u.full_name||u.email||'')}')">✕ Baja</button>`
-            : ''}
-          ${!isSelf && !active
-            ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="reactivarUser('${u.id}')">↺ Activar</button>`
-            : ''}
-        </div>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-function openGestionModal(userId) {
-  guEditingId = userId || null;
-  const u = userId ? allGestionUsers.find(x => x.id === userId) : null;
-
-  document.getElementById('gu-modal-title').textContent = u ? `Editar: ${u.full_name || u.email}` : 'Nuevo Usuario';
-  document.getElementById('gu-name').value     = u?.full_name || '';
-  document.getElementById('gu-email').value    = u?.email || '';
-  document.getElementById('gu-role').value     = u?.role || 'user';
-  document.getElementById('gu-doc-approval').checked = !!u?.doc_approval_required;
-  document.getElementById('gu-save-btn').textContent  = u ? 'Guardar Cambios' : 'Crear Usuario';
-
-  // Ocultar campo contraseña al editar
-  document.getElementById('gu-pass-group').style.display = u ? 'none' : 'block';
-  if (!u) document.getElementById('gu-password').value = '';
-
-  document.getElementById('gu-modal').style.display = 'flex';
-}
-
-function closeGestionModal() {
-  document.getElementById('gu-modal').style.display = 'none';
-  guEditingId = null;
-}
-
-async function saveGestionUser() {
-  const btn     = document.getElementById('gu-save-btn');
-  const name    = document.getElementById('gu-name').value.trim();
-  const email   = document.getElementById('gu-email').value.trim();
-  const role    = document.getElementById('gu-role').value;
-  const docAppr = document.getElementById('gu-doc-approval').checked;
-  const pass    = document.getElementById('gu-password').value;
-
-  if (!name || !email) { showToast('Completa nombre y email', 'warning'); return; }
-
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  const db = getDB();
-
-  try {
-    if (guEditingId) {
-      // ── Editar perfil existente ──
-      // Intentar actualizar con doc_approval_required; si la columna no existe, sin ella
-      let { error } = await db.from('profiles').update({
-        full_name: name, role, doc_approval_required: docAppr
-      }).eq('id', guEditingId);
-      if (error?.message?.includes('doc_approval_required')) {
-        const { error: e2 } = await db.from('profiles').update({ full_name: name, role }).eq('id', guEditingId);
-        if (e2) throw e2;
-      } else if (error) throw error;
-      showToast(`${name} actualizado ✓`, 'success');
-
-    } else {
-      // ── Crear nuevo usuario ──
-      if (!pass || pass.length < 6) { showToast('Contraseña mínimo 6 caracteres', 'warning'); return; }
-
-      const { data, error } = await db.auth.signUp({
-        email, password: pass,
-        options: { data: { full_name: name, role } }
-      });
-      if (error) throw error;
-
-      if (data.user) {
-        // Intentar con doc_approval_required; si falla (columna no existe), sin ella
-        let { error: pe } = await db.from('profiles').upsert({
-          id: data.user.id, email, full_name: name, role,
-          doc_approval_required: docAppr, is_active: true
-        });
-        if (pe?.message?.includes('doc_approval_required')) {
-          await db.from('profiles').upsert({
-            id: data.user.id, email, full_name: name, role, is_active: true
-          });
-        }
-      }
-      showToast(`Usuario ${name} creado ✓ — revisa correo para confirmar`, 'success');
-    }
-
-    closeGestionModal();
-    await loadGestionUsers();
-  } catch(e) {
-    showToast('Error: ' + e.message, 'error');
-  }
-  btn.disabled = false; btn.textContent = guEditingId ? 'Guardar Cambios' : 'Crear Usuario';
-}
-
-function openBajaModal(userId, userName) {
-  guBajaId = userId;
-  document.getElementById('gu-baja-name').textContent = userName;
-  document.getElementById('gu-baja-modal').style.display = 'flex';
-}
-
-async function confirmBaja() {
-  if (!guBajaId) return;
-  const btn = document.getElementById('gu-baja-confirm-btn');
-  btn.disabled = true; btn.textContent = 'Procesando…';
-  const { error } = await getDB().from('profiles').update({ is_active: false }).eq('id', guBajaId);
-  if (error) { showToast('Error al dar de baja: ' + error.message, 'error'); }
-  else { showToast('Usuario dado de baja ✓', 'info'); }
-  document.getElementById('gu-baja-modal').style.display = 'none';
-  guBajaId = null;
-  btn.disabled = false; btn.textContent = 'Dar de Baja';
-  await loadGestionUsers();
-}
-
-async function reactivarUser(userId) {
-  const { error } = await getDB().from('profiles').update({ is_active: true }).eq('id', userId);
-  if (error) { showToast('Error: ' + error.message, 'error'); return; }
-  showToast('Usuario reactivado ✓', 'success');
-  await loadGestionUsers();
 }
 </script>
 </body>

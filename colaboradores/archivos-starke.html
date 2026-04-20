@@ -2,10 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Archivos Starke</title>
-  <link rel="stylesheet" href="/assets/style.css?v=20260420">
+  <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
   <style>
 
@@ -653,7 +652,6 @@
   <div class="fm-tree-panel">
     <div class="fm-tree-head">
       <div class="fm-tree-head-title">📁 Carpetas</div>
-      <div id="company-badge" style="font-size:10px;background:rgba(0,255,136,.12);color:var(--accent);border:1px solid var(--accent-dim);border-radius:20px;padding:2px 8px;font-weight:700;margin-top:4px;text-align:center;font-family:var(--font-mono)">—</div>
     </div>
     <div class="fm-tree-scroll" id="treeScroll">
       <!-- JS lo rellena -->
@@ -759,11 +757,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js?v=20260423"></script>
-<script src="/assets/agent.js?v=20260422"></script>
+<script src="/assets/agent.js?v=4"></script>
 <!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js?v=20260420"></script>
+<script src="/assets/salescoach.js?v=4"></script>
 <!-- TEAM CHAT -->
-<script src="/assets/teamchat.js?v=20260420"></script>
+<script src="/assets/teamchat.js?v=4"></script>
 <script>
 /* ── Estado global ─────────────────────────────────────── */
 let CU = null;          // currentUser
@@ -838,38 +836,20 @@ const TREE = [
   }
 ];
 
-/* ── Empresa activa ────────────────────────────────────── */
-function getActiveCompanyId() {
-  return window.MTX_ACTIVE_COMPANY?.id || null;
-}
-
-function getActiveCompanyName() {
-  return window.MTX_ACTIVE_COMPANY?.name || 'Empresa';
-}
-
 /* ── Init ─────────────────────────────────────────────── */
 async function init() {
   CU = await requireAuth();
   document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'archivos');
 
+  const email = (CU?.email || '').toLowerCase().trim();
+  if (!IBANOR_EMAILS.includes(email)) {
+    document.getElementById('adScreen').classList.add('show');
+    return;
+  }
+
   document.getElementById('fmLayout').style.display = 'flex';
   fillPeriod();
   await buildTree();
-
-  // Recargar árbol y archivos cuando cambia de empresa
-  window.addEventListener('mtx:companySwitch', () => {
-    CF = null;
-    document.getElementById('fileArea').innerHTML = '';
-    buildTree();
-    updateCompanyBadge();
-  });
-
-  updateCompanyBadge();
-}
-
-function updateCompanyBadge() {
-  const badge = document.getElementById('company-badge');
-  if (badge) badge.textContent = getActiveCompanyName();
 }
 
 /* ── Período ──────────────────────────────────────────── */
@@ -908,14 +888,11 @@ function onPeriod() {
 /* ── Árbol ────────────────────────────────────────────── */
 async function buildTree() {
   const db = getDB();
-  const companyId = getActiveCompanyId();
-  let treeQ = db
+  const { data: carpetas } = await db
     .from('metatronix_docs')
     .select('file_path, title')
     .eq('category','carpeta_admin')
     .like('file_path','admin/%');
-  if (companyId) treeQ = treeQ.eq('company_id', companyId);
-  const { data: carpetas } = await treeQ;
 
   const ents = { clientes:[], proveedores:[] };
   (carpetas||[]).forEach(f => {
@@ -1053,15 +1030,12 @@ async function loadFiles() {
   if (CF.nm) { syncPeriod(); fp += period + '/'; }
 
   const db = getDB();
-  const companyId = getActiveCompanyId();
-  let filesQ = db
+  const { data: files, error } = await db
     .from('metatronix_docs')
     .select('id,title,file_name,file_type,file_size,created_at')
     .eq('category','archivo_admin')
     .like('file_path', fp + '%')
     .order('created_at',{ascending:false});
-  if (companyId) filesQ = filesQ.eq('company_id', companyId);
-  const { data: files, error } = await filesQ;
 
   if (error) {
     toast('Error: ' + error.message,'err');
@@ -1172,7 +1146,6 @@ async function doUpload() {
         file_type: file.type || 'application/octet-stream',
         file_size: file.size,
         file_data: b64,
-        company_id: getActiveCompanyId(),
         uploaded_by: CU?.id || null,
         uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
       });
@@ -1186,19 +1159,9 @@ async function doUpload() {
 }
 
 function toB64(file) {
-  return new Promise((res, rej) => {
+  return new Promise((res,rej) => {
     const r = new FileReader();
-    r.onload = e => {
-      try {
-        const bytes = new Uint8Array(e.target.result);
-        let binary = '';
-        const CHUNK = 8192;
-        for (let i = 0; i < bytes.length; i += CHUNK) {
-          binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-        }
-        res(btoa(binary));
-      } catch(err) { rej(err); }
-    };
+    r.onload = e => res(btoa(String.fromCharCode(...new Uint8Array(e.target.result))));
     r.onerror = rej;
     r.readAsArrayBuffer(file);
   });
@@ -1274,7 +1237,6 @@ async function createEnt() {
     file_path: fp,
     file_type: 'folder',
     file_size: 0,
-    company_id: getActiveCompanyId(),
     uploaded_by: CU?.id || null,
     uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
   });

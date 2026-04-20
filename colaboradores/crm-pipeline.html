@@ -2,11 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Pipeline CRM</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="stylesheet" href="/assets/style.css?v=20260420">
+  <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
   <!-- GOOGLE FONTS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,76 +50,10 @@
     };
   </script>
   <style>
-/* ── Pipeline CRM — Full-height layout fix ── */
-.page {
-  height: 100vh; padding: 0; max-width: none; background: var(--bg);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.o-cp    { flex-shrink: 0; position: relative; z-index: 50; }
-.o-stat-bar { flex-shrink: 0; }
-.o-view { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
+/* ── Pipeline CRM — Dark theme overrides ── */
+.page { padding: 0; max-width: none; background: var(--bg); }
+.o-view { display: none; flex: 1; flex-direction: column; overflow: hidden; }
 .o-view.active { display: flex; }
-
-/* ── Pipeline layout with left sidebar ── */
-.pipeline-wrap {
-  display: flex; flex: 1; min-height: 0; overflow: hidden;
-}
-.pl-sidebar {
-  width: 200px; flex-shrink: 0;
-  background: var(--bg-2); border-right: 1px solid var(--b1);
-  display: flex; flex-direction: column; overflow-y: auto;
-  scrollbar-width: thin;
-}
-.pl-sidebar-section {
-  padding: 12px 12px 6px;
-  border-bottom: 1px solid var(--b0);
-}
-.pl-sidebar-label {
-  font-size: 9px; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--t3);
-  font-family: var(--font-mono); margin-bottom: 8px;
-}
-.pl-view-btn {
-  display: flex; align-items: center; gap: 7px;
-  width: 100%; padding: 7px 9px; border-radius: 6px;
-  border: none; background: transparent; cursor: pointer;
-  font-size: 12px; font-weight: 600; color: var(--t2);
-  transition: all .12s; text-align: left; font-family: var(--font-body);
-  margin-bottom: 3px;
-}
-.pl-view-btn:hover { background: var(--s2); color: var(--t1); }
-.pl-view-btn.active { background: var(--cyan-d); color: var(--cyan); }
-.pl-view-btn svg { flex-shrink:0; }
-.pl-stage-btn {
-  display: flex; align-items: center; gap: 7px;
-  width: 100%; padding: 6px 9px; border-radius: 5px;
-  border: none; background: transparent; cursor: pointer;
-  font-size: 11px; font-weight: 500; color: var(--t2);
-  transition: all .12s; text-align: left; font-family: var(--font-body);
-  margin-bottom: 2px; position: relative;
-}
-.pl-stage-btn:hover { background: var(--s2); color: var(--t1); }
-.pl-stage-btn.active { background: var(--s3); color: var(--t1); font-weight: 700; }
-.pl-stage-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink:0; }
-.pl-stage-count {
-  margin-left: auto; font-family: var(--font-mono); font-size: 10px;
-  color: var(--t3); font-weight: 700;
-}
-.pl-stat-row {
-  display: flex; justify-content: space-between; align-items: baseline;
-  padding: 5px 0; border-bottom: 1px solid var(--b0);
-}
-.pl-stat-row:last-child { border-bottom: none; }
-.pl-stat-label { font-size: 10px; color: var(--t3); }
-.pl-stat-val   { font-size: 11px; font-weight: 700; color: var(--cyan); font-family: var(--font-mono); }
-.pl-content { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-#pl-kanban-content { overflow: hidden; }
-#pl-kanban-content .o-kanban-wrap { flex: 1; overflow-x: auto; overflow-y: auto; }
-#pl-list-content   { overflow: hidden; }
-@media (max-width: 768px) {
-  .pl-sidebar { display: none; }
-  .pipeline-wrap { display: block; }
-}
 
 /* Empty col drop zone */
 .o-drop-hint { border: 1px dashed var(--b2); border-radius: var(--r); padding: 14px; text-align: center; color: var(--t3); font-size: 11px; margin: 4px 0; }
@@ -351,136 +284,42 @@
 
   <!-- ── VIEWS ──────────────────────────────────────────── -->
 
-  <!-- KANBAN + LIST share a pipeline layout with left sidebar -->
+  <!-- KANBAN -->
   <div class="o-view active" id="view-kanban">
-    <div class="pipeline-wrap">
-
-      <!-- ── Left sidebar ── -->
-      <aside class="pl-sidebar" id="pl-sidebar">
-
-        <!-- View toggle -->
-        <div class="pl-sidebar-section">
-          <div class="pl-sidebar-label">Vista</div>
-          <button class="pl-view-btn active" id="pl-btn-kanban" onclick="plSetView('kanban')">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-            Kanban
-          </button>
-          <button class="pl-view-btn" id="pl-btn-list" onclick="plSetView('list')">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-            Lista
-          </button>
-        </div>
-
-        <!-- Stage quick-filters -->
-        <div class="pl-sidebar-section" style="padding-bottom:10px">
-          <div class="pl-sidebar-label">Etapas</div>
-          <button class="pl-stage-btn active" id="pl-stage-all" onclick="plFilterStage('',this)">
-            <span class="pl-stage-dot" style="background:var(--cyan)"></span>
-            Todas
-            <span class="pl-stage-count" id="pl-cnt-all">—</span>
-          </button>
-          <button class="pl-stage-btn" onclick="plFilterStage('generacion',this)">
-            <span class="pl-stage-dot" style="background:#64748B"></span>
-            🌱 Generación
-            <span class="pl-stage-count" id="pl-cnt-generacion">—</span>
-          </button>
-          <button class="pl-stage-btn" onclick="plFilterStage('primer_contacto',this)">
-            <span class="pl-stage-dot" style="background:#3B82F6"></span>
-            📞 Primer Contacto
-            <span class="pl-stage-count" id="pl-cnt-primer_contacto">—</span>
-          </button>
-          <button class="pl-stage-btn" onclick="plFilterStage('calificacion',this)">
-            <span class="pl-stage-dot" style="background:#8B5CF6"></span>
-            🎯 Calificación
-            <span class="pl-stage-count" id="pl-cnt-calificacion">—</span>
-          </button>
-          <button class="pl-stage-btn" onclick="plFilterStage('propuesta',this)">
-            <span class="pl-stage-dot" style="background:#F59E0B"></span>
-            📋 Propuesta
-            <span class="pl-stage-count" id="pl-cnt-propuesta">—</span>
-          </button>
-          <button class="pl-stage-btn" onclick="plFilterStage('negociacion',this)">
-            <span class="pl-stage-dot" style="background:#EF4444"></span>
-            🤝 Negociación
-            <span class="pl-stage-count" id="pl-cnt-negociacion">—</span>
-          </button>
-          <button class="pl-stage-btn" onclick="plFilterStage('cierre',this)">
-            <span class="pl-stage-dot" style="background:#10B981"></span>
-            🏆 Cierre
-            <span class="pl-stage-count" id="pl-cnt-cierre">—</span>
-          </button>
-        </div>
-
-        <!-- Fuente quick-filters -->
-        <div class="pl-sidebar-section" style="padding-bottom:10px">
-          <div class="pl-sidebar-label">Fuente</div>
-          <div id="pl-fuente-list" style="display:flex;flex-direction:column;gap:2px"></div>
-        </div>
-
-        <!-- Pipeline summary -->
-        <div class="pl-sidebar-section" style="padding-bottom:12px;margin-top:auto">
-          <div class="pl-sidebar-label">Resumen</div>
-          <div class="pl-stat-row">
-            <span class="pl-stat-label">Total leads</span>
-            <span class="pl-stat-val" id="pl-sum-total">—</span>
-          </div>
-          <div class="pl-stat-row">
-            <span class="pl-stat-label">Activos</span>
-            <span class="pl-stat-val" id="pl-sum-activos">—</span>
-          </div>
-          <div class="pl-stat-row">
-            <span class="pl-stat-label">Pipeline $</span>
-            <span class="pl-stat-val" id="pl-sum-valor">—</span>
-          </div>
-          <div class="pl-stat-row">
-            <span class="pl-stat-label">Tasa cierre</span>
-            <span class="pl-stat-val" id="pl-sum-conv">—</span>
-          </div>
-        </div>
-
-      </aside>
-
-      <!-- ── Main content: kanban ── -->
-      <div class="pl-content" id="pl-kanban-content">
-        <div class="o-kanban-wrap">
-          <div class="o-kanban" id="kanban-board"></div>
-        </div>
-      </div>
-
-      <!-- ── Main content: list (hidden by default) ── -->
-      <div class="pl-content" id="pl-list-content" style="display:none">
-        <div class="o-list-controls">
-          <span class="o-list-count" id="list-count">— registros</span>
-          <div style="margin-left:auto;display:flex;gap:6px">
-            <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
-          </div>
-        </div>
-        <div class="o-list-wrap">
-          <table class="crm-table">
-            <thead>
-              <tr>
-                <th style="width:36px"><input type="checkbox" id="select-all" onclick="selectAll(this)"></th>
-                <th onclick="sortTable('empresa')" style="cursor:pointer">Empresa ↕</th>
-                <th>Contacto</th>
-                <th onclick="sortTable('stage')" style="cursor:pointer">Etapa ↕</th>
-                <th>Confianza</th>
-                <th onclick="sortTable('fuente')" style="cursor:pointer">Fuente ↕</th>
-                <th onclick="sortTable('valor_estimado')" style="cursor:pointer">Valor ↕</th>
-                <th onclick="sortTable('seguimiento')" style="cursor:pointer">Seguimiento ↕</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="leads-tbody">
-              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted)">Cargando…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
+    <div class="o-kanban-wrap">
+      <div class="o-kanban" id="kanban-board"></div>
     </div>
   </div>
 
-  <!-- LIST view removed — now embedded in view-kanban's pipeline-wrap -->
+  <!-- LIST -->
+  <div class="o-view" id="view-list">
+    <div class="o-list-controls">
+      <span class="o-list-count" id="list-count">— registros</span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="o-list-wrap">
+      <table class="crm-table">
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" id="select-all" onclick="selectAll(this)"></th>
+            <th onclick="sortTable('empresa')" style="cursor:pointer">Empresa ↕</th>
+            <th>Contacto</th>
+            <th onclick="sortTable('stage')" style="cursor:pointer">Etapa ↕</th>
+            <th>Confianza</th>
+            <th onclick="sortTable('fuente')" style="cursor:pointer">Fuente ↕</th>
+            <th onclick="sortTable('valor_estimado')" style="cursor:pointer">Valor ↕</th>
+            <th onclick="sortTable('seguimiento')" style="cursor:pointer">Seguimiento ↕</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody">
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted)">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <!-- DASHBOARD -->
   <div class="o-view" id="view-dashboard">
@@ -887,11 +726,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js?v=20260423"></script>
-<script src="/assets/agent.js?v=20260422"></script>
+<script src="/assets/agent.js?v=4"></script>
 <!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js?v=20260420"></script>
+<script src="/assets/salescoach.js?v=4"></script>
 <!-- TEAM CHAT -->
-<script src="/assets/teamchat.js?v=20260420"></script>
+<script src="/assets/teamchat.js?v=4"></script>
 <script>
 
 /* ════════════════════════════════════════════════════════
@@ -1371,7 +1210,6 @@ async function loadLeads() {
   allLeads = data || [];
   renderCurrentView();
   updateKPIStrip();
-  updatePipelineSidebar();
 }
 
 async function saveLead() {
@@ -1472,19 +1310,17 @@ function getLeadConf(lead) {
 /* ── VIEW MANAGEMENT ────────────────────────────────────── */
 function setMainView(v) {
   currentMainView = v;
-  // 'list' is now inside the pipeline layout — redirect to kanban view + switch to list
-  if (v === 'list') { plSetView('list'); v = 'kanban'; }
   const names = {kanban:'Pipeline',list:'Lista',dashboard:'Dashboard',mapa:'Mapa',campanas:'Campañas'};
   const bc = document.getElementById('cp-breadcrumb');
-  if (bc) bc.textContent = names[currentMainView] || currentMainView;
+  if (bc) bc.textContent = names[v] || v;
   document.querySelectorAll('.o-view').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.o-view-btn').forEach(el => el.classList.toggle('active', el.dataset.view===currentMainView));
+  document.querySelectorAll('.o-view-btn').forEach(el => el.classList.toggle('active', el.dataset.view===v));
   const el = document.getElementById('view-'+v);
   if (el) el.classList.add('active');
   if (v==='dashboard') renderDashboard();
   else if (v==='mapa') renderMap();
   else if (v==='campanas') renderCampanas();
-  else { renderCurrentView(); updatePipelineSidebar(); }
+  else if (v==='pipeline') renderCurrentView();
 }
 
 function renderCurrentView() {
@@ -1492,85 +1328,14 @@ function renderCurrentView() {
   else renderTable(getFilteredLeads());
 }
 
-/* ── Pipeline sidebar view toggle ─────────────────────── */
-function plSetView(v) {
+function setPipelineView(v) {
   currentPipelineView = v;
-  const kanbanContent = document.getElementById('pl-kanban-content');
-  const listContent   = document.getElementById('pl-list-content');
-  const btnK = document.getElementById('pl-btn-kanban');
-  const btnL = document.getElementById('pl-btn-list');
-  if (kanbanContent) kanbanContent.style.display = v === 'kanban' ? 'flex' : 'none';
-  if (listContent)   listContent.style.display   = v === 'list'   ? 'flex' : 'none';
-  if (btnK) btnK.classList.toggle('active', v === 'kanban');
-  if (btnL) btnL.classList.toggle('active', v === 'list');
-  // Sync top view switcher
-  document.querySelectorAll('.o-view-btn').forEach(el => {
-    el.classList.toggle('active', el.dataset.view === (v === 'kanban' ? 'kanban' : 'list'));
-  });
+  document.getElementById('pv-kanban').style.display = v==='kanban' ? 'block' : 'none';
+  document.getElementById('pv-table').style.display  = v==='table'  ? 'block' : 'none';
+  document.getElementById('btn-kanban').classList.toggle('active', v==='kanban');
+  document.getElementById('btn-table').classList.toggle('active',  v==='table');
   renderCurrentView();
 }
-
-/* ── Sidebar stage filter ─────────────────────────────── */
-let _plStageFilter = '';
-let _plFuenteFilter = '';
-
-function plFilterStage(stage, btn) {
-  _plStageFilter = stage;
-  document.querySelectorAll('.pl-stage-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  document.getElementById('filter-stage').value = stage;
-  applyFilters();
-}
-
-function plFilterFuente(fuente, btn) {
-  _plFuenteFilter = fuente;
-  document.querySelectorAll('.pl-fuente-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  document.getElementById('filter-fuente').value = fuente;
-  applyFilters();
-}
-
-/* ── Update sidebar stats & counts ───────────────────── */
-function updatePipelineSidebar() {
-  const leads = filterLeadsByRole(allLeads);
-  const stageKeys = ['generacion','primer_contacto','calificacion','propuesta','negociacion','cierre'];
-  const total   = leads.length;
-  const activos = leads.filter(l => !['cerrado_perdido','fidelizacion'].includes(getLeadStage(l))).length;
-  const valor   = leads.reduce((s,l)=>s+(parseFloat(l.valor_estimado)||0),0);
-  const ganados = leads.filter(l=>getLeadStage(l)==='cierre').length;
-  const conv    = total > 0 ? Math.round(ganados/total*100) : 0;
-
-  const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-  set('pl-sum-total',  total);
-  set('pl-sum-activos',activos);
-  set('pl-sum-valor',  fmtMXN(valor));
-  set('pl-sum-conv',   conv + '%');
-  set('pl-cnt-all',    total);
-  stageKeys.forEach(k => {
-    const cnt = leads.filter(l=>getLeadStage(l)===k).length;
-    set('pl-cnt-'+k, cnt);
-  });
-
-  // Fuente quick buttons — build dynamically
-  const fuenteEl = document.getElementById('pl-fuente-list');
-  if (!fuenteEl) return;
-  const fuenteMap = {};
-  leads.forEach(l => { if(l.fuente) fuenteMap[l.fuente] = (fuenteMap[l.fuente]||0)+1; });
-  const fuenteIcons = { referido:'👥', linkedin:'💼', google_ads:'🔍', web:'🌐', evento:'🎤', cold_call:'📞', whatsapp:'💬', llamada:'📱', otro:'📌' };
-  const sorted = Object.entries(fuenteMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  fuenteEl.innerHTML = [
-    `<button class="pl-stage-btn pl-fuente-btn ${!_plFuenteFilter?'active':''}" onclick="plFilterFuente('',this)">
-      <span class="pl-stage-dot" style="background:var(--cyan)"></span>Todas<span class="pl-stage-count">${total}</span></button>`,
-    ...sorted.map(([f, cnt]) => `
-      <button class="pl-stage-btn pl-fuente-btn ${_plFuenteFilter===f?'active':''}" onclick="plFilterFuente('${f}',this)">
-        <span style="font-size:11px">${fuenteIcons[f]||'•'}</span>
-        ${f.replace(/_/g,' ')}
-        <span class="pl-stage-count">${cnt}</span>
-      </button>`)
-  ].join('');
-}
-
-function setPipelineView(v) { plSetView(v); } // backward compat
 
 function getFilteredLeads() {
   const stage = document.getElementById('filter-stage')?.value || '';
@@ -3232,8 +2997,8 @@ function notify(msg, type='info') {
   } else { showToast(msg, type); }
 }
 
-// Helper (uses app.js version if available, else own impl — no self-call)
-function escHtml(s) { const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML; }
+// Preserve compatibility with app.js helpers
+function escHtml(s) { if(typeof window.escHtml==='function')return window.escHtml(s); const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
 function formatDate(s) { if(!s) return '—'; try { return new Date(s).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch{return s;} }
 
 /* ══════════════════════════════════════════════════════════
@@ -4222,6 +3987,44 @@ init();
 setTimeout(init_taskUI, 1500);
 
 
+function openDrawer(leadId) {
+  currentLeadId = leadId;
+  const lead = allLeads.find(l=>l.id===leadId);
+  if (!lead) return;
+  const stage = getLeadStage(lead);
+  document.getElementById('drawer-company').textContent = lead.empresa;
+  // Stage bar
+  const stageBar = document.getElementById('drawer-stage-bar');
+  if (stageBar) {
+    const stageKeys = ['generacion','primer_contacto','calificacion','propuesta','negociacion','cierre','postventa','retencion','fidelizacion'];
+    stageBar.innerHTML = stageKeys.map(k => {
+      const st = STAGES[k]||{};
+      const isActive = k === stage;
+      const isClosed = k === 'cerrado_perdido';
+      return `<button class="o-stage-btn ${isActive?'active':''}" onclick="moveLeadStage('${leadId}','${k}');renderDrawerStageBar('${leadId}')" title="${st.label}">${st.icon} ${st.label}</button>`;
+    }).join('');
+  }
+  // Smart buttons
+  const smartEl = document.getElementById('drawer-smartbtns');
+  if (smartEl) {
+    const commsCount = LS.comms(leadId).length;
+    const chatCount  = LS.chat(leadId).length;
+    const docsCount  = Object.keys(LS.docs(leadId)).filter(k=>!k.includes('_file')).length;
+    const planCount  = LS.plans().filter(p=>p.lead_id===leadId).length;
+    smartEl.innerHTML = [
+      [commsCount, 'Actividades', '💬', "switchTab('historial')"],
+      [chatCount,  'Mensajes',    '👥', "switchTab('chat')"],
+      [docsCount,  'Documentos',  '📁', "switchTab('docs')"],
+      [planCount,  'Planes',      '📅', "switchTab('plan')"],
+    ].map(([n,l,ico,fn])=>`<button class="o-smartbtn" onclick="${fn}">
+      <span class="o-smartbtn-num">${n}</span>
+      <span class="o-smartbtn-lbl">${ico} ${l}</span>
+    </button>`).join('');
+  }
+  document.getElementById('lead-drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('visible');
+  switchTab(currentDrawerTab);
+}
 
 function renderDrawerStageBar(leadId) {
   const lead = allLeads.find(l=>l.id===leadId);

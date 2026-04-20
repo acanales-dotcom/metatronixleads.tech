@@ -2,10 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Generador de Oportunidades</title>
-  <link rel="stylesheet" href="/assets/style.css?v=202604174">
+  <link rel="stylesheet" href="/assets/style.css">
   <style>
     /* ── Layout ───────────────────────────────────────────────── */
     .opgen-layout {
@@ -874,10 +873,12 @@ REGLAS:
 /* API CALL                                                       */
 /* ══════════════════════════════════════════════════════════════ */
 async function callIntelligence(query, systemPrompt, onChunk) {
-  const proxyUrl = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev';
-  const res = await fetch(proxyUrl + '/perplexity', {
+  const res = await fetch('https://api.perplexity.ai/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
       model: 'sonar-pro',
       messages: [
@@ -1148,9 +1149,8 @@ window.addEventListener('DOMContentLoaded', init);
 </script>
 
 <!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js?v=202604174"></script>
+<script src="/assets/salescoach.js?v=4"></script>
 <!-- TEAM CHAT -->
-<script src="/assets/teamchat.js?v=202604174"></script>
-<script src="/assets/agent.js?v=202604174"></script>
+<script src="/assets/teamchat.js?v=4"></script>
 </body>
 </html>
