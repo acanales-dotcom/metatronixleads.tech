@@ -630,6 +630,10 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">📋</span>
         <span class="nav-label">Adm. de Venta</span>
       </a>
+      <a href="/dashboard-mkt.html" class="sidebar-nav-link ${activePage==='dashboard-mkt'?'active':''}">
+        <span class="nav-icon">📣</span>
+        <span class="nav-label">Adm. de Mkt</span>
+      </a>
       <a href="/mtx-docs.html" class="sidebar-nav-link ${activePage==='mtx-docs'?'active':''}">
         <span class="nav-icon">🤝</span>
         <span class="nav-label">Docs Compartidos Org</span>
