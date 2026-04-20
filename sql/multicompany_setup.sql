@@ -1,10 +1,25 @@
 -- ============================================================
 -- MULTICOMPANY SETUP — MetaTronix
--- Crea: companies, user_companies, agrega company_id a docs
--- Asigna usuarios: Starke=todos, IBANOR=todos menos ncanales
+-- Migración idempotente del schema de companies a UUID-based
+-- Crea: user_companies, agrega slug/rfc/status a companies
 -- ============================================================
 
--- 1. Tabla companies (sin policies aún — user_companies no existe todavía)
+-- 1. Migrar tabla companies al nuevo schema UUID-based
+--    La tabla ya existe con id TEXT. La recreamos limpia.
+
+-- a) Eliminar tabla antigua (y sus políticas) si existe con el schema viejo (id TEXT)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'companies' AND column_name = 'id'
+    AND data_type = 'text'
+  ) THEN
+    DROP TABLE IF EXISTS companies CASCADE;
+  END IF;
+END $$;
+
+-- b) Crear tabla companies con schema correcto (UUID)
 CREATE TABLE IF NOT EXISTS companies (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug       TEXT UNIQUE NOT NULL,
@@ -16,10 +31,11 @@ CREATE TABLE IF NOT EXISTS companies (
 
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 
--- 2. Insertar IBANOR y Starke
+-- 2. Insertar IBANOR, Starke y MetaTronix con UUIDs fijos
 INSERT INTO companies (id, slug, name, rfc, status) VALUES
-  ('a0000000-0000-0000-0000-000000000001', 'ibanor', 'IBANOR SA de CV', 'IBA000000AA1', 'activo'),
-  ('b0000000-0000-0000-0000-000000000001', 'starke', 'Starke',           NULL,            'activo')
+  ('a0000000-0000-0000-0000-000000000001', 'ibanor',     'IBANOR SA de CV',    'IBA000000AA1', 'activo'),
+  ('b0000000-0000-0000-0000-000000000001', 'starke',     'Starke',              NULL,           'activo'),
+  ('c0000000-0000-0000-0000-000000000001', 'metatronix', 'MetaTronix',          NULL,           'activo')
 ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, status=EXCLUDED.status;
 
 -- 3. Tabla user_companies (M:N usuarios ↔ empresas)
@@ -33,26 +49,24 @@ CREATE TABLE IF NOT EXISTS user_companies (
 
 ALTER TABLE user_companies ENABLE ROW LEVEL SECURITY;
 
--- 4. Ahora sí creamos policies en companies (user_companies ya existe)
-DROP POLICY IF EXISTS "companies_select_member"  ON companies;
-DROP POLICY IF EXISTS "companies_admin_all"       ON companies;
+-- 4. Policies en companies (user_companies ya existe)
+DROP POLICY IF EXISTS "companies_select_member" ON companies;
+DROP POLICY IF EXISTS "companies_admin_all"      ON companies;
 
--- Usuarios solo ven empresas a las que pertenecen
 CREATE POLICY "companies_select_member" ON companies
   FOR SELECT USING (
     id IN (SELECT company_id FROM user_companies WHERE user_id = auth.uid())
     OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin','super_admin'))
   );
 
--- Admins gestionan todas
 CREATE POLICY "companies_admin_all" ON companies
   FOR ALL USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin','super_admin'))
   );
 
 -- 5. Policies en user_companies
-DROP POLICY IF EXISTS "uc_select_own"   ON user_companies;
-DROP POLICY IF EXISTS "uc_admin_all"    ON user_companies;
+DROP POLICY IF EXISTS "uc_select_own" ON user_companies;
+DROP POLICY IF EXISTS "uc_admin_all"  ON user_companies;
 
 CREATE POLICY "uc_select_own" ON user_companies
   FOR SELECT USING (auth.uid() = user_id);
@@ -71,10 +85,10 @@ UPDATE metatronix_docs
   SET company_id = 'a0000000-0000-0000-0000-000000000001'
   WHERE company_id IS NULL;
 
--- 7. RLS metatronix_docs: solo ver docs de empresas propias
+-- 7. RLS metatronix_docs
 DROP POLICY IF EXISTS "docs_company_select" ON metatronix_docs;
-DROP POLICY IF EXISTS "docs_company_insert" ON metatronix_docs;
-DROP POLICY IF EXISTS "docs_company_delete" ON metatronix_docs;
+DROP POLICY IF EXISTS "docs_company_insert"  ON metatronix_docs;
+DROP POLICY IF EXISTS "docs_company_delete"  ON metatronix_docs;
 
 CREATE POLICY "docs_company_select" ON metatronix_docs
   FOR SELECT USING (
@@ -108,7 +122,7 @@ FROM profiles
 WHERE email NOT ILIKE 'ncanales@ibanormexico.com'
 ON CONFLICT DO NOTHING;
 
--- Verificación
+-- Verificación final
 SELECT
   p.email,
   STRING_AGG(c.name, ', ' ORDER BY c.name) AS empresas
