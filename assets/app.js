@@ -47,6 +47,12 @@ async function requireAuth(adminOnly = false) {
   // Actualizar last_seen
   getDB()?.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {});
 
+  // ── Cache user_companies para isVentasMember() ──────────────
+  const { data: ucs } = await getDB().from('user_companies')
+    .select('company_id, role').eq('user_id', user.id);
+  user._userCompanies = ucs || [];
+  window._mtxCurrentUser = user;
+
   // ── Contraseña temporal: forzar cambio antes de continuar ──
   const { data: { user: authUser } } = await getDB().auth.getUser();
   if (authUser?.user_metadata?.temp_password === true) {
@@ -843,6 +849,29 @@ function getActiveCompanyId() {
 function applyCompanyFilter(query) {
   const id = getActiveCompanyId();
   return id ? query.eq('company_id', id) : query;
+}
+
+/**
+ * Retorna true si el usuario actual es SOLO member (ventas) en todas sus empresas.
+ * Estos usuarios no pueden ver a otros members ni sus datos.
+ */
+function isVentasMember() {
+  const uc = window._mtxCurrentUser?._userCompanies;
+  if (!uc || !uc.length) return false;
+  return uc.every(m => m.role === 'member');
+}
+
+/**
+ * Aplica filtro de usuario (assigned_to o created_by) cuando el usuario
+ * es solo ventas/member — aísla sus datos de los de otros members.
+ * @param {object} query - Supabase query builder
+ * @param {string} [userField='assigned_to'] - columna del usuario asignado
+ */
+function applyUserIsolationFilter(query, userField = 'assigned_to') {
+  if (!isVentasMember()) return query;
+  const uid = window._mtxCurrentUser?.id;
+  if (!uid) return query;
+  return query.eq(userField, uid);
 }
 
 /**

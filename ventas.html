@@ -1272,7 +1272,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260420e"></script>
+<script src="/assets/app.js?v=20260420g"></script>
 <script src="/assets/agent.js?v=20260422"></script>
 <script src="/assets/salescoach.js?v=20260420"></script>
 <script src="/assets/teamchat.js?v=20260420"></script>
@@ -3442,9 +3442,9 @@ async function runINTELStandalone() {
     const thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString();
     const cid = getActiveCompanyId();
     const [leadsRes, logsRes, profilesRes] = await Promise.all([
-      db ? applyCompanyFilter(db.from('leads').select('id,stage,status,value,amount,deal_value,notes,description,created_at,updated_at,name,company').order('created_at',{ascending:false}).limit(500)) : {data:[]},
+      db ? applyUserIsolationFilter(applyCompanyFilter(db.from('leads').select('id,stage,status,value,amount,deal_value,notes,description,created_at,updated_at,name,company').order('created_at',{ascending:false}).limit(500)), 'assigned_to') : {data:[]},
       db ? db.from('activity_logs').select('id,user_id,action,created_at').gte('created_at',thirtyDaysAgo).order('created_at',{ascending:false}).limit(1000) : {data:[]},
-      db ? db.from('profiles').select('id,full_name,role,last_seen').neq('role',null).limit(50) : {data:[]},
+      db ? db.from('profiles').select('id,full_name,role,last_seen').neq('role',null).limit(50) : {data:[]},  // RLS uc_select_own/admin controla visibilidad
     ]);
     leads       = leadsRes.data       || [];
     activityLogs = logsRes.data       || [];
