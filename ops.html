@@ -468,10 +468,18 @@ async function init() {
     let displayName = opsUser.email?.split('@')[0] || 'Usuario';
 
     try {
-      const { data: p } = await db.from('profiles').select('full_name,role').eq('id', opsUser.id).single();
+      const { data: p } = await db.from('profiles').select('full_name,role,company_id').eq('id', opsUser.id).single();
       if (p?.full_name) displayName = p.full_name.split(' ')[0];
       opsRole = p?.role || 'readonly';
-    } catch (_) { opsRole = 'readonly'; }
+      // Setear _mtxCurrentUser para que teamchat.js pueda inicializarse
+      window._mtxCurrentUser = {
+        ...opsUser,
+        profile: { full_name: p?.full_name || opsUser.email, role: opsRole, company_id: p?.company_id || null }
+      };
+    } catch (_) {
+      opsRole = 'readonly';
+      window._mtxCurrentUser = { ...opsUser, profile: { full_name: opsUser.email, role: 'readonly', company_id: null } };
+    }
 
     // If higher-role user opens this page, redirect to home
     if (['super_admin','admin','admin_restringido'].includes(opsRole)) {
@@ -522,6 +530,6 @@ window.addEventListener('DOMContentLoaded', init);
 </script>
 
 <script src="/assets/agent.js?v=20260420"></script>
-<script src="/assets/teamchat.js?v=20260419"></script>
+<script src="/assets/teamchat.js?v=20260420"></script>
 </body>
 </html>

@@ -622,11 +622,46 @@
 
   /* ── Init ────────────────────────────────────────────────── */
   async function init() {
-    const waitForUser = () => new Promise(resolve => {
-      const check = () => { if (window._mtxCurrentUser) resolve(window._mtxCurrentUser); else setTimeout(check, 500); };
+    const waitForUser = () => new Promise(async (resolve) => {
+      // 1. Already available synchronously
+      if (window._mtxCurrentUser) return resolve(window._mtxCurrentUser);
+
+      // 2. Try getCurrentUser() directly (set by app.js before teamchat loads)
+      if (typeof window.getCurrentUser === 'function') {
+        try {
+          const u = await window.getCurrentUser();
+          if (u) { window._mtxCurrentUser = window._mtxCurrentUser || u; return resolve(u); }
+        } catch(_) {}
+      }
+
+      // 3. Poll with hard timeout — max 20 attempts × 500ms = 10 seconds
+      let attempts = 0;
+      const check = async () => {
+        attempts++;
+        if (window._mtxCurrentUser) return resolve(window._mtxCurrentUser);
+
+        if (attempts >= 20) {
+          // 4. Last resort: read session directly from Supabase
+          if (window.getDB) {
+            try {
+              const { data: { session } } = await window.getDB().auth.getSession();
+              if (session?.user) {
+                const { data: prof } = await window.getDB()
+                  .from('profiles').select('*').eq('id', session.user.id).single();
+                const u = { ...session.user, profile: prof || {} };
+                window._mtxCurrentUser = u;
+                return resolve(u);
+              }
+            } catch(_) {}
+          }
+          return resolve(null); // give up — never hang forever
+        }
+        setTimeout(check, 500);
+      };
       check();
     });
     currentUser = await waitForUser();
+    if (!currentUser) return; // no auth — exit gracefully, don't hang
 
     // Seed welcome message if empty
     const general = loadMessages('general');
