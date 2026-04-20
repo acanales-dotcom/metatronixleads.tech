@@ -16,20 +16,36 @@ ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;
 
 -- ============================================================
 -- LEADS / PIPELINE
+-- Nota: user_id usa acanales@ibanormexico.com (admin existente)
+-- pipeline_stage usa valores válidos del constraint
 -- ============================================================
-INSERT INTO leads (id, company_id, name, company, email, phone, stage, status, value, pipeline_value, deal_value, notes, created_at, updated_at)
-VALUES
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Carlos Mendoza',      'Grupo Industrial MX',     'cmendoza@gipmx.com',    '55-1234-5678', 'Propuesta',      'activo',  850000, 850000,  0,       'Interesado en módulo completo. Demo agendada.', NOW()-INTERVAL'5d',  NOW()-INTERVAL'1d'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Ana López',           'Constructora del Norte',  'alopez@cdnorte.mx',     '81-9876-5432', 'Negociación',    'activo',  1200000,1200000, 0,       'Decisión final esta semana. RFP enviada.',     NOW()-INTERVAL'12d', NOW()-INTERVAL'6h'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Roberto Sánchez',     'Farmacéutica Salud+',     'rsanchez@saludmas.mx',  '55-5555-1234', 'Cerrado',        'ganado',  2300000,0,       2300000, 'Contrato firmado. Onboarding en proceso.',     NOW()-INTERVAL'20d', NOW()-INTERVAL'2d'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Diana Torres',        'Retail Express SA',       'dtorres@retailex.mx',   '33-4444-8888', 'Calificación',   'activo',  450000, 450000,  0,       'PyME con 3 sucursales. Interés en finanzas.',  NOW()-INTERVAL'3d',  NOW()-INTERVAL'3d'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Miguel Herrera',      'Transporte Veloz MX',     'mherrera@tvmx.com',     '55-7777-2222', 'Descubrimiento', 'activo',  680000, 680000,  0,       'Referido por Carlos M. Demo en 3 días.',       NOW()-INTERVAL'1d',  NOW()-INTERVAL'1d'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Sofía Ramírez',       'Tech Innovación MX',      'sramirez@techinno.mx',  '55-3333-9999', 'Propuesta',      'activo',  920000, 920000,  0,       'Necesitan CRM + Finanzas + IA. Presupuesto OK.',NOW()-INTERVAL'7d', NOW()-INTERVAL'2d'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Jorge Castro',        'Manufactura Precisa SA',  'jcastro@mprecisa.mx',   '81-2222-4444', 'Cerrado',        'perdido', 1500000,0,       0,       'Eligieron competencia por precio. Follow-up Q3.',NOW()-INTERVAL'30d',NOW()-INTERVAL'10d'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Patricia Vega',       'Alimentos del Pacífico',  'pvega@alpacmx.mx',      '33-8888-3333', 'Negociación',    'activo',  780000, 780000,  0,       'Requieren módulo de compras. Aprobación CFO.',  NOW()-INTERVAL'9d',  NOW()-INTERVAL'4h'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Luis Moreno',         'Energía Limpia SA',       'lmoreno@elimpsa.mx',    '55-6666-1111', 'Calificación',   'activo',  1900000,1900000, 0,       'Enterprise. 50+ usuarios. Reunión C-Level.',   NOW()-INTERVAL'2d',  NOW()-INTERVAL'2d'),
-  (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'Elena Ruiz',          'Servicios Digitales MX',  'eruiz@sdmx.com.mx',     '55-1111-7777', 'Cerrado',        'ganado',  560000, 0,       560000,  'Plan Business. Activo desde esta semana.',     NOW()-INTERVAL'14d', NOW()-INTERVAL'5d')
-ON CONFLICT DO NOTHING;
+DO $$
+DECLARE
+  v_user_id UUID;
+BEGIN
+  SELECT id INTO v_user_id FROM profiles WHERE email = 'acanales@ibanormexico.com' LIMIT 1;
+
+  IF v_user_id IS NULL THEN
+    RAISE NOTICE 'No se encontró perfil para acanales@ibanormexico.com — saltando leads';
+    RETURN;
+  END IF;
+
+  INSERT INTO leads (id, company_id, user_id, empresa, contacto_nombre, contacto_email, contacto_telefono, pipeline_stage, status, valor_estimado, notas, created_at, updated_at)
+  VALUES
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Grupo Industrial MX',    'Carlos Mendoza',  'cmendoza@gipmx.com',    '55-1234-5678', 'propuesta',      'en_negociacion',  850000,  'Interesado en módulo completo. Demo agendada.', NOW()-INTERVAL'5d',  NOW()-INTERVAL'1d'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Constructora del Norte', 'Ana López',       'alopez@cdnorte.mx',     '81-9876-5432', 'negociacion',    'en_negociacion',  1200000, 'Decisión final esta semana. RFP enviada.',     NOW()-INTERVAL'12d', NOW()-INTERVAL'6h'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Farmacéutica Salud+',    'Roberto Sánchez', 'rsanchez@saludmas.mx',  '55-5555-1234', 'cierre',         'cerrado_ganado',  2300000, 'Contrato firmado. Onboarding en proceso.',     NOW()-INTERVAL'20d', NOW()-INTERVAL'2d'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Retail Express SA',      'Diana Torres',    'dtorres@retailex.mx',   '33-4444-8888', 'calificacion',   'contactado',      450000,  'PyME con 3 sucursales. Interés en finanzas.',  NOW()-INTERVAL'3d',  NOW()-INTERVAL'3d'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Transporte Veloz MX',    'Miguel Herrera',  'mherrera@tvmx.com',     '55-7777-2222', 'primer_contacto','contactado',      680000,  'Referido por Carlos M. Demo en 3 días.',       NOW()-INTERVAL'1d',  NOW()-INTERVAL'1d'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Tech Innovación MX',     'Sofía Ramírez',   'sramirez@techinno.mx',  '55-3333-9999', 'propuesta',      'en_negociacion',  920000,  'Necesitan CRM + Finanzas + IA. Presupuesto OK.',NOW()-INTERVAL'7d', NOW()-INTERVAL'2d'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Manufactura Precisa SA', 'Jorge Castro',    'jcastro@mprecisa.mx',   '81-2222-4444', 'cierre',         'cerrado_perdido', 1500000, 'Eligieron competencia por precio. Follow-up Q3.',NOW()-INTERVAL'30d',NOW()-INTERVAL'10d'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Alimentos del Pacífico', 'Patricia Vega',   'pvega@alpacmx.mx',      '33-8888-3333', 'negociacion',    'en_negociacion',  780000,  'Requieren módulo de compras. Aprobación CFO.',  NOW()-INTERVAL'9d',  NOW()-INTERVAL'4h'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Energía Limpia SA',      'Luis Moreno',     'lmoreno@elimpsa.mx',    '55-6666-1111', 'calificacion',   'contactado',      1900000, 'Enterprise. 50+ usuarios. Reunión C-Level.',   NOW()-INTERVAL'2d',  NOW()-INTERVAL'2d'),
+    (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', v_user_id, 'Servicios Digitales MX', 'Elena Ruiz',      'eruiz@sdmx.com.mx',     '55-1111-7777', 'cierre',         'cerrado_ganado',  560000,  'Plan Business. Activo desde esta semana.',     NOW()-INTERVAL'14d', NOW()-INTERVAL'5d')
+  ON CONFLICT DO NOTHING;
+
+  RAISE NOTICE 'Leads insertados: 10 registros para company_id d0000000-0000-0000-0000-000000000001';
+END $$;
 
 -- ============================================================
 -- PROVEEDORES
@@ -71,8 +87,6 @@ ON CONFLICT DO NOTHING;
 -- ============================================================
 -- REQUISICIONES
 -- ============================================================
--- Requisitions: requested_by usa un admin existente de IBANOR (acanales@ibanormexico.com)
--- Si no existe ningún perfil, se omite el campo (NULL permitido)
 INSERT INTO requisitions (id, company_id, folio, title, category, requested_date, needed_date, amount_estimated, status)
 VALUES
   (gen_random_uuid(), 'd0000000-0000-0000-0000-000000000001', 'REQ-2026-001', 'Licencias Microsoft 365 E3 — 50 usuarios', 'Software',      CURRENT_DATE-8,  CURRENT_DATE+7,  185000.00, 'aprobada'),
