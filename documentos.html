@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js?v=20260420"></script>
   <script src="/assets/app.js?v=20260420h"></script>
-  <script src="/assets/attachments.js?v=20260420c"></script>
+  <script src="/assets/attachments.js?v=20260420d"></script>
   <style>
     .docs-root { display:flex; flex-direction:column; gap:20px; padding:24px; max-width:1300px; margin:0 auto; }
 
@@ -381,44 +381,70 @@ async function uploadGeneral(files) {
   if (!files || !files.length) return;
   const statusEl = document.getElementById('general-upload-status');
 
-  // Obtener company UUID válido
-  let cid = getActiveCompanyId();
+  // Obtener company UUID válido — cascada de 3 fuentes
+  const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let cid = null;
+
+  // 1. Company switcher activo
+  const fromSwitcher = window.MTX_ACTIVE_COMPANY?.id;
+  if (fromSwitcher && _UUID_RE.test(fromSwitcher)) cid = fromSwitcher;
+
+  // 2. Profile del usuario
   if (!cid) {
-    // Último recurso: consultar user_companies para obtener UUID real
+    const fromProfile = _user?.profile?.company_id;
+    if (fromProfile && _UUID_RE.test(fromProfile)) cid = fromProfile;
+  }
+
+  // 3. user_companies en DB
+  if (!cid) {
     try {
       const { data: uc } = await _db.from('user_companies')
         .select('company_id').eq('user_id', _user?.id).limit(1).single();
-      cid = uc?.company_id || null;
-    } catch {}
+      if (uc?.company_id && _UUID_RE.test(uc.company_id)) cid = uc.company_id;
+    } catch(e) { console.warn('[MTX Upload] user_companies fallback error:', e); }
   }
+
   if (!cid) {
-    statusEl.textContent = '⚠ Selecciona una empresa en el switcher (parte superior) antes de subir.';
+    statusEl.textContent = '⚠ No se detectó empresa activa. Selecciona una en el switcher.';
+    console.error('[MTX Upload] No valid company UUID found. user:', _user?.id, 'profile.company_id:', _user?.profile?.company_id);
     return;
   }
 
+  console.log('[MTX Upload] company_id usado:', cid, '| usuario:', _user?.email);
   statusEl.textContent = `Subiendo ${files.length} archivo(s)…`;
   let ok = 0;
   const errors = [];
 
   for (const file of files) {
+    // Validar tamaño (200 MB)
+    if (file.size > 209715200) {
+      errors.push(`${file.name}: supera el límite de 200 MB`);
+      continue;
+    }
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const path = `${cid}/general/general/${Date.now()}_${safeName}`;
 
+    console.log('[MTX Upload] Subiendo a storage:', path);
     const { error: upErr } = await _db.storage.from('docs').upload(path, file, { upsert: false });
-    if (upErr) { errors.push(`${file.name}: ${upErr.message}`); continue; }
+    if (upErr) {
+      console.error('[MTX Upload] Storage error:', upErr);
+      errors.push(`${file.name}: ${upErr.message}`);
+      continue;
+    }
 
     const { error: dbErr } = await _db.from('record_attachments').insert({
-      company_id: cid,
-      record_type: 'general',
-      record_id: null,
+      company_id:   cid,
+      record_type:  'general',
+      record_id:    null,
       record_label: 'Archivo general',
-      file_name: file.name,
-      file_size: file.size,
-      mime_type: file.type || null,
+      file_name:    file.name,
+      file_size:    file.size,
+      mime_type:    file.type || null,
       storage_path: path,
+      uploaded_by:  _user?.id || null,
     });
     if (dbErr) {
-      // Revertir el archivo subido si el registro falla
+      console.error('[MTX Upload] DB error:', dbErr);
       await _db.storage.from('docs').remove([path]);
       errors.push(`${file.name}: ${dbErr.message}`);
       continue;
