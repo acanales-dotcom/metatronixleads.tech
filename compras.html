@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js?v=20260418"></script>
   <script src="/assets/app.js?v=20260418"></script>
+  <script src="/assets/attachments.js?v=20260419"></script>
   <style>
     .comp-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1400px; margin:0 auto; }
 
@@ -366,9 +367,9 @@ function buildShell() {
             <div style="overflow-x:auto">
               <table class="data-table">
                 <thead>
-                  <tr><th>Folio</th><th>Título</th><th>Categoría</th><th>Solicitada</th><th>Requerida</th><th class="amount-col">Estimado</th><th>Estado</th><th>Acciones</th></tr>
+                  <tr><th>Folio</th><th>Título</th><th>Categoría</th><th>Solicitada</th><th>Requerida</th><th class="amount-col">Estimado</th><th>Estado</th><th>Acciones</th><th></th></tr>
                 </thead>
-                <tbody id="req-tbody"><tr><td colspan="8" class="empty-state">Cargando...</td></tr></tbody>
+                <tbody id="req-tbody"><tr><td colspan="9" class="empty-state">Cargando...</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -383,9 +384,9 @@ function buildShell() {
             <div style="overflow-x:auto">
               <table class="data-table">
                 <thead>
-                  <tr><th>Folio</th><th>Título</th><th>Proveedor</th><th>Creada</th><th>Entrega</th><th class="amount-col">Total</th><th>Estado</th><th>Acciones</th></tr>
+                  <tr><th>Folio</th><th>Título</th><th>Proveedor</th><th>Creada</th><th>Entrega</th><th class="amount-col">Total</th><th>Estado</th><th>Acciones</th><th></th></tr>
                 </thead>
-                <tbody id="po-tbody"><tr><td colspan="8" class="empty-state">Cargando...</td></tr></tbody>
+                <tbody id="po-tbody"><tr><td colspan="9" class="empty-state">Cargando...</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -625,7 +626,7 @@ function renderReqs() {
   if (!tbody) return;
   const rows = _reqFilter ? _reqs.filter(r => r.status === _reqFilter) : _reqs;
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><big>📝</big>Sin requisiciones${_reqFilter?' en este estado':''}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><big>📝</big>Sin requisiciones${_reqFilter?' en este estado':''}</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -644,15 +645,24 @@ function renderReqs() {
           ${r.status==='pendiente' ? `<button class="btn-tiny primary" onclick="approveReq('${r.id}')">Aprobar</button><button class="btn-tiny" style="color:#ff4646" onclick="rejectReq('${r.id}')">Rechazar</button>` : ''}
         </div>
       </td>
+      <td>
+        <button class="btn-secondary-sm" style="padding:4px 8px;font-size:11px;background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2)"
+          data-attach-id="${r.id}"
+          onclick="MTX_ATTACH.open('requisition','${r.id}','${esc(r.folio||r.title)}',getActiveCompanyId())">📎<span class="attach-badge"></span></button>
+      </td>
     </tr>`;
   }).join('');
+  const cid = getActiveCompanyId();
+  if (cid && window.MTX_ATTACH) {
+    MTX_ATTACH.preloadBadges('requisition', rows.map(r=>r.id), cid);
+  }
 }
 
 function renderPOs() {
   const tbody = document.getElementById('po-tbody');
   if (!tbody) return;
   if (!_pos.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><big>📦</big>Sin órdenes de compra</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><big>📦</big>Sin órdenes de compra</td></tr>`;
     return;
   }
   tbody.innerHTML = _pos.map(p => {
@@ -671,8 +681,17 @@ function renderPOs() {
           ${p.status==='enviada'||p.status==='confirmada' ? `<button class="btn-tiny primary" onclick="receivePO('${p.id}')">Recibir</button>` : ''}
         </div>
       </td>
+      <td>
+        <button class="btn-secondary-sm" style="padding:4px 8px;font-size:11px;background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2)"
+          data-attach-id="${p.id}"
+          onclick="MTX_ATTACH.open('purchase_order','${p.id}','${esc(p.folio||p.title)}',getActiveCompanyId())">📎<span class="attach-badge"></span></button>
+      </td>
     </tr>`;
   }).join('');
+  const cid = getActiveCompanyId();
+  if (cid && window.MTX_ATTACH) {
+    MTX_ATTACH.preloadBadges('purchase_order', _pos.map(p=>p.id), cid);
+  }
 }
 
 function renderSuppliers() {

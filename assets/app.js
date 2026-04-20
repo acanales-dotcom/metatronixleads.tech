@@ -622,6 +622,10 @@ function renderHeader(user, activePage) {
 
       <!-- DOCUMENTOS -->
       <div class="sidebar-section-label">Documentos</div>
+      <a href="/documentos.html" class="sidebar-nav-link ${activePage==='documentos'?'active':''}">
+        <span class="nav-icon">📁</span>
+        <span class="nav-label">Biblioteca Docs</span>
+      </a>
       <a href="/dashboard.html" class="sidebar-nav-link ${activePage==='dashboard'?'active':''}">
         <span class="nav-icon">📋</span>
         <span class="nav-label">Adm. de Venta</span>

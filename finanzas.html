@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/config.js?v=20260418"></script>
   <script src="/assets/app.js?v=20260418"></script>
+  <script src="/assets/attachments.js?v=20260419"></script>
   <style>
     /* ── Layout ── */
     .fin-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1400px; margin:0 auto; }
@@ -323,9 +324,9 @@ function buildShell() {
             <div class="fin-card-body">
               <table class="aging-table" id="ap-table">
                 <thead>
-                  <tr><th>Proveedor</th><th>Folio</th><th>Vence</th><th class="amount-col">Total</th><th>Estado</th></tr>
+                  <tr><th>Proveedor</th><th>Folio</th><th>Vence</th><th class="amount-col">Total</th><th>Estado</th><th></th></tr>
                 </thead>
-                <tbody id="ap-tbody"><tr><td colspan="5" class="empty-state">Cargando...</td></tr></tbody>
+                <tbody id="ap-tbody"><tr><td colspan="6" class="empty-state">Cargando...</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -504,9 +505,19 @@ function renderAR() {
       <td>${badge}</td>
       <td class="amount-col">${fmt(r.total)}</td>
       <td>${st}</td>
-      <td><button class="btn-secondary-sm" style="padding:4px 10px;font-size:11px" onclick="markPaid('${r.id}')">✓ Pagar</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn-secondary-sm" style="padding:4px 10px;font-size:11px" onclick="markPaid('${r.id}')">✓ Pagar</button>
+        <button class="btn-secondary-sm" style="padding:4px 8px;font-size:11px;margin-left:4px;background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2)"
+          data-attach-id="${r.id}"
+          onclick="MTX_ATTACH.open('invoice_out','${r.id}','${escHtml(r.folio||r.customer_name)}',getActiveCompanyId())">📎<span class="attach-badge"></span></button>
+      </td>
     </tr>`;
   }).join('');
+  // Pre-cargar conteos de adjuntos para esta lista
+  const cid = getActiveCompanyId();
+  if (cid && window.MTX_ATTACH) {
+    MTX_ATTACH.preloadBadges('invoice_out', _arRows.map(r=>r.id), cid);
+  }
 }
 
 function renderAgingBars() {
@@ -559,7 +570,7 @@ async function loadAP() {
   } catch(e) {
     console.warn('loadAP:', e);
     const tbody = document.getElementById('ap-tbody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Error: ${e.message}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Error: ${e.message}</td></tr>`;
   }
 }
 
@@ -568,7 +579,7 @@ function renderAP() {
   const label = document.getElementById('ap-total-label');
   if (!tbody) return;
   if (!_apRows.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><big>✅</big>Sin vencimientos próximos</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><big>✅</big>Sin vencimientos próximos</td></tr>`;
     if (label) label.textContent = 'Sin vencimientos';
     return;
   }
@@ -588,8 +599,17 @@ function renderAP() {
       <td>${fmtD(r.due_date)}</td>
       <td class="amount-col">${fmt(r.total)}</td>
       <td>${badge}</td>
+      <td>
+        <button class="btn-secondary-sm" style="padding:4px 8px;font-size:11px;background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2)"
+          data-attach-id="${r.id}"
+          onclick="MTX_ATTACH.open('invoice_in','${r.id}','${escHtml(r.folio_proveedor||r.supplier_name)}',getActiveCompanyId())">📎<span class="attach-badge"></span></button>
+      </td>
     </tr>`;
   }).join('');
+  const cid = getActiveCompanyId();
+  if (cid && window.MTX_ATTACH) {
+    MTX_ATTACH.preloadBadges('invoice_in', _apRows.map(r=>r.id), cid);
+  }
 }
 
 async function markPaid(invoiceId) {

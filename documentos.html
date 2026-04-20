@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Documentos — MetaTronix</title>
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=20260418">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/config.js?v=20260418"></script>
+  <script src="/assets/app.js?v=20260418"></script>
+  <script src="/assets/attachments.js?v=20260419"></script>
+  <style>
+    .docs-root { display:flex; flex-direction:column; gap:20px; padding:24px; max-width:1300px; margin:0 auto; }
+
+    /* ── Filters bar ── */
+    .filter-bar {
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px;
+    }
+    .filter-bar input[type="search"] {
+      flex:1; min-width:200px; background:var(--surface-2); border:1px solid var(--border);
+      color:var(--text); padding:7px 12px; border-radius:7px; font-size:13px;
+    }
+    .filter-bar input[type="search"]:focus { outline:none; border-color:var(--accent); }
+    .filter-bar select {
+      background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+      padding:7px 10px; border-radius:7px; font-size:12px;
+    }
+    .filter-bar select:focus { outline:none; border-color:var(--accent); }
+    .filter-label { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+
+    /* ── Stats strip ── */
+    .stats-strip { display:flex; gap:12px; flex-wrap:wrap; }
+    .stat-pill {
+      background:var(--surface); border:1px solid var(--border); border-radius:8px;
+      padding:10px 18px; display:flex; flex-direction:column; gap:2px;
+    }
+    .stat-pill .sp-val { font-size:22px; font-weight:700; color:var(--accent); font-family:'JetBrains Mono',monospace; }
+    .stat-pill .sp-lbl { font-size:11px; color:var(--text-muted); }
+
+    /* ── Group section ── */
+    .group-section { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+    .group-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 16px; background:var(--surface-2); border-bottom:1px solid var(--border);
+      cursor:pointer; user-select:none;
+    }
+    .group-header:hover { background:rgba(0,255,136,.05); }
+    .group-title { font-weight:600; font-size:13px; display:flex; align-items:center; gap:8px; }
+    .group-count { font-size:11px; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); padding:2px 8px; border-radius:12px; }
+    .group-chevron { font-size:12px; color:var(--text-muted); transition:transform .2s; }
+    .group-chevron.open { transform:rotate(180deg); }
+    .group-body { display:none; }
+    .group-body.open { display:block; }
+
+    /* ── Document table ── */
+    .doc-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .doc-table th {
+      text-align:left; padding:8px 14px; font-size:10px; text-transform:uppercase;
+      letter-spacing:.08em; color:var(--text-muted); border-bottom:1px solid var(--border);
+      background:var(--surface-2); white-space:nowrap;
+    }
+    .doc-table td { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
+    .doc-table tr:last-child td { border-bottom:none; }
+    .doc-table tr:hover td { background:rgba(0,255,136,.03); }
+
+    .file-icon { font-size:18px; line-height:1; }
+    .file-name { font-weight:500; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .file-name a { color:var(--text); text-decoration:none; }
+    .file-name a:hover { color:var(--accent); }
+    .file-size { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); }
+    .file-date { font-size:12px; color:var(--text-muted); white-space:nowrap; }
+    .file-record { font-size:11px; color:var(--text-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .uploader { font-size:11px; color:var(--text-muted); }
+
+    .btn-dl {
+      background:none; border:1px solid var(--border); color:var(--text-muted);
+      border-radius:6px; padding:4px 10px; font-size:11px; cursor:pointer; transition:.15s;
+      display:inline-flex; align-items:center; gap:4px;
+    }
+    .btn-dl:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-del {
+      background:none; border:none; color:rgba(255,70,70,.5); cursor:pointer; font-size:14px;
+      padding:4px 6px; border-radius:4px; transition:.15s;
+    }
+    .btn-del:hover { background:rgba(255,70,70,.1); color:#ff4646; }
+
+    .type-badge {
+      display:inline-block; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:600;
+      text-transform:uppercase; letter-spacing:.06em;
+    }
+    .type-invoice_out  { background:rgba(0,200,100,.12); color:#00c864; }
+    .type-invoice_in   { background:rgba(255,180,0,.12); color:#ffb400; }
+    .type-requisition  { background:rgba(100,150,255,.12); color:#6496ff; }
+    .type-purchase_order { background:rgba(200,100,255,.12); color:#c864ff; }
+    .type-lead         { background:rgba(0,255,136,.12); color:#00ff88; }
+    .type-general      { background:rgba(255,255,255,.08); color:var(--text-muted); }
+
+    .empty-docs { text-align:center; padding:32px; color:var(--text-muted); font-size:13px; }
+
+    /* ── Upload general ── */
+    .upload-general-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      padding:16px 20px; display:flex; align-items:center; gap:14px;
+    }
+    .upload-general-card label {
+      background:rgba(0,255,136,.1); border:1px solid rgba(0,255,136,.3); color:var(--accent);
+      border-radius:7px; padding:8px 16px; font-size:13px; cursor:pointer; font-weight:600;
+      transition:.15s;
+    }
+    .upload-general-card label:hover { background:rgba(0,255,136,.18); }
+    #general-upload-input { display:none; }
+    #general-upload-status { font-size:12px; color:var(--text-muted); }
+
+    /* ── Skeleton ── */
+    .skel { background:var(--surface-2); border-radius:4px; animation:skel-pulse 1.4s ease-in-out infinite; }
+    @keyframes skel-pulse { 0%,100%{opacity:.4} 50%{opacity:.8} }
+  </style>
+</head>
+<body>
+<div id="app-shell"></div>
+<main class="app-main">
+  <div class="docs-root">
+
+    <!-- Page header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.06em;margin:0;color:var(--accent)">📁 Documentos</h1>
+        <p style="margin:4px 0 0;color:var(--text-muted);font-size:13px">Biblioteca centralizada de archivos adjuntos</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-outline" onclick="loadDocs()" style="font-size:12px;padding:8px 14px">⟳ Actualizar</button>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip" id="stats-strip">
+      <div class="stat-pill"><div class="sp-val skel" style="width:40px;height:22px"></div><div class="sp-lbl">Total archivos</div></div>
+      <div class="stat-pill"><div class="sp-val skel" style="width:50px;height:22px"></div><div class="sp-lbl">Espacio total</div></div>
+      <div class="stat-pill"><div class="sp-val skel" style="width:40px;height:22px"></div><div class="sp-lbl">Esta semana</div></div>
+    </div>
+
+    <!-- Upload general -->
+    <div class="upload-general-card">
+      <span style="font-size:28px">📎</span>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px;margin-bottom:3px">Subir archivo general</div>
+        <div style="font-size:12px;color:var(--text-muted)">Sin asociar a un registro específico — aparecerá en la categoría General</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <label for="general-upload-input">+ Subir archivo</label>
+        <input type="file" id="general-upload-input" multiple onchange="uploadGeneral(this.files)">
+        <span id="general-upload-status"></span>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <span class="filter-label">Filtrar:</span>
+      <input type="search" id="search-input" placeholder="Buscar por nombre de archivo…" oninput="applyFilters()">
+      <select id="filter-type" onchange="applyFilters()">
+        <option value="">Todos los tipos</option>
+        <option value="invoice_out">Facturas emitidas</option>
+        <option value="invoice_in">Facturas de proveedor</option>
+        <option value="requisition">Requisiciones</option>
+        <option value="purchase_order">Órdenes de compra</option>
+        <option value="lead">Leads</option>
+        <option value="general">General</option>
+      </select>
+      <select id="filter-sort" onchange="applyFilters()">
+        <option value="newest">Más reciente primero</option>
+        <option value="oldest">Más antiguo primero</option>
+        <option value="name">Nombre A-Z</option>
+        <option value="size">Tamaño (mayor)</option>
+      </select>
+    </div>
+
+    <!-- Document list -->
+    <div id="docs-container">
+      <div class="empty-docs">Cargando documentos…</div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+/* ── State ── */
+let _user = null, _db = null, _docs = [], _filtered = [];
+
+const TYPE_LABELS = {
+  invoice_out:    { label:'Facturas emitidas',     icon:'🧾', cls:'invoice_out'    },
+  invoice_in:     { label:'Facturas de proveedor', icon:'📄', cls:'invoice_in'     },
+  requisition:    { label:'Requisiciones',          icon:'📝', cls:'requisition'    },
+  purchase_order: { label:'Órdenes de compra',      icon:'📦', cls:'purchase_order' },
+  lead:           { label:'Leads / Prospectos',     icon:'🎯', cls:'lead'           },
+  general:        { label:'General',                icon:'📁', cls:'general'        },
+};
+
+/* ── Init ── */
+window.addEventListener('DOMContentLoaded', async () => {
+  _user = await waitForUser();
+  if (!_user) { window.location = '/index.html'; return; }
+  _db = getDB();
+  await loadDocs();
+  setupShell('documentos');
+});
+
+async function waitForUser() {
+  for (let i = 0; i < 30; i++) {
+    if (window._currentUser) return window._currentUser;
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return null;
+}
+
+/* ── Data loading ── */
+async function loadDocs() {
+  const cid = getActiveCompanyId() || _user?.profile?.company_id;
+  if (!cid) { showError('No se detectó empresa activa.'); return; }
+
+  document.getElementById('docs-container').innerHTML = '<div class="empty-docs">Cargando…</div>';
+
+  const { data, error } = await _db
+    .from('record_attachments')
+    .select('*')
+    .eq('company_id', cid)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error) { showError('Error cargando documentos: ' + error.message); return; }
+
+  _docs = data || [];
+  updateStats();
+  applyFilters();
+}
+
+function updateStats() {
+  const totalSize = _docs.reduce((s, d) => s + (d.file_size || 0), 0);
+  const oneWeekAgo = Date.now() - 7 * 864e5;
+  const thisWeek = _docs.filter(d => new Date(d.created_at).getTime() > oneWeekAgo).length;
+  document.getElementById('stats-strip').innerHTML = `
+    <div class="stat-pill">
+      <div class="sp-val">${_docs.length}</div>
+      <div class="sp-lbl">Total archivos</div>
+    </div>
+    <div class="stat-pill">
+      <div class="sp-val">${fmtSize(_docs.reduce((s,d)=>s+(d.file_size||0),0))}</div>
+      <div class="sp-lbl">Espacio total</div>
+    </div>
+    <div class="stat-pill">
+      <div class="sp-val">${thisWeek}</div>
+      <div class="sp-lbl">Esta semana</div>
+    </div>`;
+}
+
+/* ── Filters ── */
+function applyFilters() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const typeF = document.getElementById('filter-type')?.value || '';
+  const sort = document.getElementById('filter-sort')?.value || 'newest';
+
+  _filtered = _docs.filter(d => {
+    if (typeF && d.record_type !== typeF) return false;
+    if (q && !(d.file_name || '').toLowerCase().includes(q) &&
+              !(d.record_label || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  if (sort === 'newest') _filtered.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  else if (sort === 'oldest') _filtered.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+  else if (sort === 'name') _filtered.sort((a,b) => (a.file_name||'').localeCompare(b.file_name||''));
+  else if (sort === 'size') _filtered.sort((a,b) => (b.file_size||0) - (a.file_size||0));
+
+  renderDocs();
+}
+
+/* ── Render ── */
+function renderDocs() {
+  const container = document.getElementById('docs-container');
+  if (!_filtered.length) {
+    container.innerHTML = '<div class="empty-docs"><big>📭</big><br>No hay documentos que coincidan</div>';
+    return;
+  }
+
+  // Group by record_type
+  const groups = {};
+  for (const d of _filtered) {
+    const t = d.record_type || 'general';
+    if (!groups[t]) groups[t] = [];
+    groups[t].push(d);
+  }
+
+  const order = ['invoice_out','invoice_in','requisition','purchase_order','lead','general'];
+  const sorted = [...new Set([...order, ...Object.keys(groups)])].filter(k => groups[k]);
+
+  container.innerHTML = sorted.map(type => {
+    const items = groups[type];
+    const meta = TYPE_LABELS[type] || { label: type, icon: '📄', cls: type };
+    const rows = items.map(d => {
+      const ext = (d.file_name || '').split('.').pop()?.toLowerCase() || '';
+      const fileIcon = extIcon(ext);
+      return `<tr>
+        <td style="width:32px;padding-left:14px"><span class="file-icon">${fileIcon}</span></td>
+        <td>
+          <div class="file-name">
+            <a href="#" onclick="dlDoc('${escHtml(d.storage_path)}','${escHtml(d.file_name)}');return false;">${escHtml(d.file_name)}</a>
+          </div>
+          ${d.record_label ? `<div class="file-record" title="${escHtml(d.record_label)}">↳ ${escHtml(d.record_label)}</div>` : ''}
+        </td>
+        <td><span class="type-badge type-${meta.cls}">${meta.label}</span></td>
+        <td class="file-size">${d.file_size ? fmtSize(d.file_size) : '—'}</td>
+        <td class="file-date">${fmtDT(d.created_at)}</td>
+        <td class="uploader">${escHtml(d.uploaded_by ? '—' : '—')}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-dl" onclick="dlDoc('${escHtml(d.storage_path)}','${escHtml(d.file_name)}')">⬇ Descargar</button>
+          <button class="btn-del" title="Eliminar" onclick="delDoc('${d.id}','${escHtml(d.storage_path)}','${escHtml(d.file_name)}')">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="group-section">
+      <div class="group-header" onclick="toggleGroup(this)">
+        <div class="group-title">
+          <span>${meta.icon}</span>
+          <span>${meta.label}</span>
+          <span class="group-count">${items.length}</span>
+        </div>
+        <span class="group-chevron open">▼</span>
+      </div>
+      <div class="group-body open">
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Tamaño</th>
+              <th>Subido</th>
+              <th>Usuario</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleGroup(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.group-chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+/* ── Download ── */
+async function dlDoc(path, name) {
+  if (window.MTX_ATTACH) {
+    await MTX_ATTACH.download(path, name);
+  } else {
+    alert('Error: módulo de adjuntos no disponible');
+  }
+}
+
+/* ── Delete ── */
+async function delDoc(id, path, name) {
+  if (!confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) return;
+  if (window.MTX_ATTACH) {
+    await MTX_ATTACH.del(id, path, name);
+    await loadDocs();
+  }
+}
+
+/* ── General upload ── */
+async function uploadGeneral(files) {
+  if (!files || !files.length) return;
+  const statusEl = document.getElementById('general-upload-status');
+  const cid = getActiveCompanyId() || _user?.profile?.company_id;
+  if (!cid) { statusEl.textContent = 'Error: sin empresa activa'; return; }
+
+  statusEl.textContent = `Subiendo ${files.length} archivo(s)…`;
+  let ok = 0, fail = 0;
+
+  for (const file of files) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${cid}/general/general/${Date.now()}_${safeName}`;
+
+    const { error: upErr } = await _db.storage.from('docs').upload(path, file, { upsert: false });
+    if (upErr) { fail++; continue; }
+
+    await _db.from('record_attachments').insert({
+      company_id: cid,
+      record_type: 'general',
+      record_id: null,
+      record_label: 'Archivo general',
+      file_name: file.name,
+      file_size: file.size,
+      mime_type: file.type || null,
+      storage_path: path,
+    });
+    ok++;
+  }
+
+  statusEl.textContent = ok > 0
+    ? `✅ ${ok} archivo(s) subido(s)${fail ? ` · ⚠ ${fail} falló` : ''}`
+    : `❌ ${fail} archivo(s) fallaron`;
+
+  document.getElementById('general-upload-input').value = '';
+  if (ok > 0) await loadDocs();
+}
+
+/* ── Helpers ── */
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtSize(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+
+function fmtDT(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })
+       + ' ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+}
+
+function extIcon(ext) {
+  const map = {
+    pdf:'🔴', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗',
+    ppt:'📙', pptx:'📙', jpg:'🖼', jpeg:'🖼', png:'🖼', gif:'🖼',
+    zip:'📦', rar:'📦', xml:'📋', csv:'📊', txt:'📄',
+  };
+  return map[ext] || '📄';
+}
+
+function showError(msg) {
+  document.getElementById('docs-container').innerHTML = `<div class="empty-docs" style="color:#ff6464">⚠ ${escHtml(msg)}</div>`;
+}
+
+function setupShell(page) {
+  if (typeof initAppShell === 'function') initAppShell(page);
+}
+</script>
+
+<script src="/assets/agent.js?v=20260419"></script>
+<script src="/assets/teamchat.js?v=20260419"></script>
+</body>
+</html>
