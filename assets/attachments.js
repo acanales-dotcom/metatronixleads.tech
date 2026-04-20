@@ -287,7 +287,7 @@ if (typeof window.getActiveCompanyId !== 'function') {
 
     let uploaded = 0;
     for (const file of files) {
-      if (file.size > 52428800) { showToast(`❌ ${file.name} supera 50MB`, false); continue; }
+      if (file.size > 209715200) { showToast(`❌ ${file.name} supera 200MB`, false); continue; }
 
       const ts       = Date.now();
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
