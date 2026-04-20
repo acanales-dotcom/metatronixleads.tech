@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>MTTX AI — Ejecutar Migraciones Supabase</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 32px; min-height: 100vh; }
+  h1 { font-size: 24px; color: #00ff88; margin-bottom: 8px; letter-spacing: .05em; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 32px; }
+  .card { background: #111; border: 1px solid #222; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  input { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; color: #e0e0e0; font-family: monospace; font-size: 13px; outline: none; }
+  input:focus { border-color: #00ff88; }
+  .steps { display: flex; flex-direction: column; gap: 16px; }
+  .step { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 20px; }
+  .step-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: #00ff88; color: #000; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-title { font-weight: 600; font-size: 15px; }
+  .step-desc { font-size: 12px; color: #666; margin-bottom: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; background: #00ff88; color: #000; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .2s; }
+  .btn:hover { opacity: .85; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .log { margin-top: 12px; background: #050505; border: 1px solid #1a1a1a; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; min-height: 48px; white-space: pre-wrap; color: #888; }
+  .ok { color: #00ff88; }
+  .err { color: #ff4444; }
+  .warn { color: #ffaa00; }
+</style>
+</head>
+<body>
+<h1>// MTTX AI — Migraciones Supabase</h1>
+<p class="sub">Ejecuta los 3 scripts SQL de multicompany en orden. Solo necesitas tu service_role key.</p>
+
+<div class="card">
+  <label>Supabase Service Role Key</label>
+  <input id="skey" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+  <p style="font-size:11px;color:#555;margin-top:8px">Encuéntrala en Supabase → Project Settings → API → service_role (secret)</p>
+</div>
+
+<div class="steps">
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-title">Multicompany Setup</div>
+    </div>
+    <div class="step-desc">Crea tablas companies + user_companies, inserta IBANOR y Starke, asigna usuarios.</div>
+    <button class="btn" onclick="run(1)">▶ Ejecutar Setup</button>
+    <div class="log" id="log1">Esperando...</div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-title">RLS Multicompany</div>
+    </div>
+    <div class="step-desc">Crea función user_has_company_access() y aplica políticas RLS en leads, facturas, proveedores, etc.</div>
+    <button class="btn" onclick="run(2)">▶ Ejecutar RLS</button>
+    <div class="log" id="log2">Esperando...</div>
+  </div>
+
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Demo Data — Grupo Nexus</div>
+    </div>
+    <div class="step-desc">Inserta empresa demo con 10 leads, 5 proveedores, 7 facturas y 4 requisiciones.</div>
+    <button class="btn" onclick="run(3)">▶ Ejecutar Demo Data</button>
+    <div class="log" id="log3">Esperando...</div>
+  </div>
+
+</div>
+
+<script>
+const PROJECT_REF = 'hodrfonbpmqulkyzrzpq';
+
+const SQLS = {
+};
+
+async function run(n) {
+  const key = document.getElementById('skey').value.trim();
+  if (!key) { alert('Ingresa la service_role key primero.'); return; }
+  const log = document.getElementById('log' + n);
+  log.textContent = '⏳ Ejecutando...';
+  log.className = 'log warn';
+
+  const sql = SQLS[n];
+  try {
+    const res = await fetch(`https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + key,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query: sql })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      log.textContent = '❌ Error HTTP ' + res.status + '\n' + JSON.stringify(data, null, 2);
+      log.className = 'log err';
+    } else {
+      const rows = Array.isArray(data) ? data : [data];
+      const preview = rows.map(r => JSON.stringify(r)).join('\n').substring(0, 600);
+      log.textContent = '✅ Completado — ' + rows.length + ' resultado(s)\n' + preview;
+      log.className = 'log ok';
+    }
+  } catch(e) {
+    log.textContent = '❌ ' + e.message;
+    log.className = 'log err';
+  }
+}
+</script>
+</body>
+</html>

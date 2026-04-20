@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONSEJO EJECUTIVO IA — MetaTronix</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #050C12;
+    --surface1: #080F17;
+    --surface2: #0B1520;
+    --surface3: #0F1D2B;
+    --border:   rgba(255,255,255,.07);
+    --accent:   #00ff88;
+    --cyan:     #00C2E0;
+    --gold:     #F59E0B;
+    --danger:   #EF4444;
+    --text:     #E2E8F0;
+    --muted:    #7E8FA8;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+    --bebas:    'Bebas Neue', sans-serif;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; }
+  body { min-height: 100vh; }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: linear-gradient(90deg, var(--surface1), var(--surface2));
+    border-bottom: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .topbar-logo { font-family: var(--bebas); font-size: 22px; color: var(--accent); letter-spacing: .12em; }
+  .topbar-divider { width: 1px; height: 20px; background: var(--border); }
+  .topbar-title { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* ── DIRECTOR SELECTOR ── */
+  .director-tabs {
+    display: flex; gap: 0; border-bottom: 2px solid var(--border);
+    background: var(--surface1); padding: 0 24px;
+    overflow-x: auto;
+  }
+  .dtab {
+    padding: 12px 20px; font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+    border: none; background: none; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    display: flex; align-items: center; gap: 7px; white-space: nowrap;
+    transition: all .2s;
+  }
+  .dtab:hover { color: var(--text); }
+  .dtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .dtab .di { font-size: 14px; }
+
+  /* ── MAIN LAYOUT ── */
+  .main { display: grid; grid-template-columns: 1fr 360px; gap: 0; height: calc(100vh - 97px); }
+
+  /* ── LEFT: COUNCIL GRID ── */
+  .council-panel {
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  .council-header {
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface1), transparent);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .council-title { font-family: var(--bebas); font-size: 26px; color: var(--text); letter-spacing: .1em; }
+  .council-subtitle { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .1em; margin-top: 1px; }
+  .council-badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 3px 10px;
+    background: rgba(0,255,136,.1); color: var(--accent); border: 1px solid rgba(0,255,136,.25);
+    border-radius: 20px; letter-spacing: .06em;
+  }
+
+  /* PALANTIR STATS BAR */
+  .palantir-bar {
+    padding: 10px 20px; border-bottom: 1px solid var(--border);
+    background: rgba(0,194,224,.03);
+    display: flex; gap: 20px; align-items: center;
+  }
+  .pstat { flex: 1; }
+  .pstat-label { font-family: var(--mono); font-size: 8px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .pstat-label span { color: var(--text); font-weight: 700; }
+  .ptrack { height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
+  .pfill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .pfill.green { background: linear-gradient(90deg, var(--accent), #00C896); }
+  .pfill.cyan  { background: linear-gradient(90deg, var(--cyan), #0099B8); }
+  .pfill.gold  { background: linear-gradient(90deg, var(--gold), #D97706); }
+  .pfill.red   { background: linear-gradient(90deg, var(--danger), #B91C1C); }
+
+  /* GRID 6x5 */
+  .council-grid {
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+
+  .advisor-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 6px 7px;
+    text-align: center; cursor: pointer;
+    transition: all .2s; position: relative;
+    overflow: hidden;
+  }
+  .advisor-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 60%, rgba(0,255,136,.04));
+    opacity: 0; transition: opacity .2s;
+  }
+  .advisor-card:hover { border-color: rgba(0,255,136,.3); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+  .advisor-card:hover::before { opacity: 1; }
+  .advisor-card.speaking { border-color: rgba(0,255,136,.6); background: rgba(0,255,136,.05); animation: speaking-glow 1.5s ease-in-out infinite; }
+  @keyframes speaking-glow { 0%,100%{box-shadow:0 0 8px rgba(0,255,136,.2)} 50%{box-shadow:0 0 20px rgba(0,255,136,.4)} }
+  .advisor-card.selected { border-color: var(--cyan); background: rgba(0,194,224,.07); }
+
+  .advisor-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    margin: 0 auto 5px; font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; border: 2px solid var(--border);
+    background: var(--surface3);
+    transition: border-color .2s;
+  }
+  .advisor-card:hover .advisor-avatar { border-color: rgba(0,255,136,.4); }
+  .advisor-card.speaking .advisor-avatar { border-color: var(--accent); }
+
+  .speaking-ring {
+    position: absolute; inset: -4px; border-radius: 50%;
+    border: 2px solid transparent; display: none;
+  }
+  .advisor-card.speaking .speaking-ring { display: block; border-color: var(--accent); animation: spin 1.5s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .advisor-name { font-family: var(--mono); font-size: 7.5px; font-weight: 700; color: var(--text); letter-spacing: .02em; line-height: 1.2; }
+  .advisor-role { font-size: 7px; color: var(--muted); margin-top: 2px; line-height: 1.2; }
+  .advisor-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); margin: 4px auto 0; transition: background .2s; }
+  .advisor-card.speaking .advisor-dot { background: var(--accent); }
+  .advisor-card:hover .advisor-dot { background: rgba(0,255,136,.6); }
+
+  /* ── RIGHT: CHAT PANEL ── */
+  .chat-panel {
+    display: flex; flex-direction: column;
+    background: var(--surface1); overflow: hidden;
+  }
+
+  .chat-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface2), var(--surface1));
+  }
+  .chat-header-title { font-family: var(--bebas); font-size: 18px; color: var(--text); letter-spacing: .1em; }
+  .chat-header-sub { font-family: var(--mono); font-size: 8px; color: var(--muted); margin-top: 2px; letter-spacing: .08em; }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 16px 16px 8px;
+    display: flex; flex-direction: column; gap: 12px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+
+  /* System message */
+  .msg-system {
+    text-align: center; font-family: var(--mono); font-size: 9px; color: var(--muted);
+    letter-spacing: .06em; padding: 6px 12px;
+    border: 1px solid var(--border); border-radius: 20px;
+    background: var(--surface2); align-self: center;
+  }
+
+  /* User message */
+  .msg-user {
+    align-self: flex-end;
+    background: rgba(0,255,136,.1); border: 1px solid rgba(0,255,136,.2);
+    border-radius: 12px 12px 2px 12px; padding: 10px 14px;
+    max-width: 85%;
+  }
+  .msg-user p { font-size: 12px; line-height: 1.5; color: var(--text); }
+
+  /* Advisor response */
+  .msg-advisor {
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .msg-advisor-avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: var(--surface3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .msg-advisor-bubble {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 2px 12px 12px 12px; padding: 10px 12px;
+    flex: 1;
+  }
+  .msg-advisor-name { font-family: var(--mono); font-size: 8px; font-weight: 700; color: var(--cyan); letter-spacing: .06em; margin-bottom: 5px; }
+  .msg-advisor-bubble p { font-size: 11.5px; line-height: 1.55; color: var(--text); }
+  .msg-advisor-score {
+    display: flex; gap: 8px; margin-top: 7px; flex-wrap: wrap;
+  }
+  .mscore { font-family: var(--mono); font-size: 8px; padding: 2px 7px; border-radius: 10px; }
+  .mscore.conf { background: rgba(0,255,136,.1); color: var(--accent); border: 1px solid rgba(0,255,136,.2); }
+  .mscore.risk { background: rgba(239,68,68,.1); color: var(--danger); border: 1px solid rgba(239,68,68,.2); }
+  .mscore.time { background: rgba(245,158,11,.1); color: var(--gold); border: 1px solid rgba(245,158,11,.2); }
+
+  /* Synthesis */
+  .msg-synthesis {
+    background: linear-gradient(135deg, rgba(0,255,136,.06), rgba(0,194,224,.04));
+    border: 1px solid rgba(0,255,136,.2); border-radius: 10px; padding: 12px 14px;
+  }
+  .msg-synthesis-title { font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--accent); letter-spacing: .08em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .msg-synthesis p { font-size: 11.5px; line-height: 1.6; color: var(--text); }
+  .consensus-bar { margin-top: 10px; }
+  .cbar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .cbar-label { font-family: var(--mono); font-size: 8px; color: var(--muted); width: 110px; flex-shrink: 0; }
+  .cbar-track { flex: 1; height: 4px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
+  .cbar-fill { height: 100%; border-radius: 2px; }
+  .cbar-val { font-family: var(--mono); font-size: 8px; color: var(--text); width: 30px; text-align: right; }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .typing-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .typing-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 2px 12px 12px 12px; padding: 10px 14px; }
+  .typing-dots { display: flex; gap: 4px; align-items: center; }
+  .typing-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; }
+  .typing-dots span:nth-child(2) { animation-delay: .2s; }
+  .typing-dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)} }
+  .typing-who { font-family: var(--mono); font-size: 8px; color: var(--muted); margin-left: 6px; }
+
+  /* Chat input */
+  .chat-input-area {
+    padding: 12px 16px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .chat-input-label {
+    font-family: var(--mono); font-size: 8px; color: var(--muted); letter-spacing: .08em;
+    text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .chat-input-label::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-textarea {
+    flex: 1; background: var(--surface3); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--sans); font-size: 12px; padding: 10px 12px;
+    resize: none; outline: none; height: 60px; line-height: 1.5;
+    transition: border-color .2s;
+  }
+  .chat-textarea:focus { border-color: rgba(0,255,136,.35); }
+  .chat-textarea::placeholder { color: var(--muted); }
+  .chat-send {
+    background: var(--accent); color: #000; font-family: var(--mono); font-size: 10px; font-weight: 700;
+    border: none; border-radius: 8px; padding: 0 14px; cursor: pointer; letter-spacing: .05em;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    transition: background .2s; min-width: 70px;
+  }
+  .chat-send:hover { background: #00cc6e; }
+  .chat-send.loading { background: rgba(0,255,136,.3); pointer-events: none; }
+  .chat-send .send-icon { font-size: 16px; }
+
+  /* Mode selector */
+  .mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .mode-btn {
+    font-family: var(--mono); font-size: 8px; font-weight: 700; padding: 4px 10px;
+    border-radius: 20px; border: 1px solid var(--border); cursor: pointer;
+    background: var(--surface3); color: var(--muted); transition: all .2s; letter-spacing: .04em;
+  }
+  .mode-btn.active { background: rgba(0,255,136,.1); color: var(--accent); border-color: rgba(0,255,136,.3); }
+
+  /* Debate view */
+  .debate-pair {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .debate-side {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+  }
+  .debate-side.left { border-color: rgba(0,255,136,.2); }
+  .debate-side.right { border-color: rgba(239,68,68,.2); }
+  .debate-who { font-family: var(--mono); font-size: 8px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+  .debate-who.pro { color: var(--accent); }
+  .debate-who.contra { color: var(--danger); }
+  .debate-side p { font-size: 11px; line-height: 1.5; color: var(--text); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Animations */
+  .fade-in { animation: fadeIn .4s ease forwards; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Legend */
+  .legend { padding: 7px 20px; border-top: 1px solid var(--border); display: flex; gap: 16px; align-items: center; background: var(--surface1); }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 8px; color: var(--muted); }
+  .legend-dot { width: 6px; height: 6px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">METATRONIX</div>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">CONSEJO EJECUTIVO IA — v1.0</div>
+  <div class="topbar-right">
+    <div class="status-dot"></div>
+    <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">120 CONSEJEROS ACTIVOS</span>
+  </div>
+</div>
+
+<!-- DIRECTOR TABS -->
+<div class="director-tabs">
+  <button class="dtab active" onclick="switchDirector(this,'ceo')">
+    <span class="di">👑</span> CEO / Director General
+  </button>
+  <button class="dtab" onclick="switchDirector(this,'ventas')">
+    <span class="di">📈</span> Director de Ventas
+  </button>
+  <button class="dtab" onclick="switchDirector(this,'marketing')">
+    <span class="di">🎯</span> Director de Marketing
+  </button>
+  <button class="dtab" onclick="switchDirector(this,'admin')">
+    <span class="di">⚙️</span> Director de Administración
+  </button>
+  <button class="dtab" onclick="switchDirector(this,'consejo')" style="margin-left:auto;color:var(--gold);border-left:1px solid var(--border)">
+    <span class="di">⚡</span> CONSEJO COMPLETO
+  </button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: COUNCIL GRID -->
+  <div class="council-panel">
+    <div class="council-header">
+      <div>
+        <div class="council-title" id="council-title">MESA DEL CEO &amp; DIRECTOR GENERAL</div>
+        <div class="council-subtitle" id="council-subtitle">30 FUNDADORES Y EMPRESARIOS FORBES · SIMULACIÓN SOCIAL IA</div>
+      </div>
+      <div class="council-badge" id="council-badge">30 CONSEJEROS</div>
+    </div>
+
+    <!-- PALANTIR STATS -->
+    <div class="palantir-bar">
+      <div class="pstat">
+        <div class="pstat-label">CONSENSO DEL CONSEJO <span id="stat-consensus">78%</span></div>
+        <div class="ptrack"><div class="pfill green" id="fill-consensus" style="width:78%"></div></div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-label">PROB. DE ÉXITO <span id="stat-success">65%</span></div>
+        <div class="ptrack"><div class="pfill cyan" id="fill-success" style="width:65%"></div></div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-label">RIESGO DETECTADO <span id="stat-risk">31%</span></div>
+        <div class="ptrack"><div class="pfill red" id="fill-risk" style="width:31%"></div></div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-label">TIEMPO A IMPACTO <span id="stat-time">6 MES</span></div>
+        <div class="ptrack"><div class="pfill gold" id="fill-time" style="width:50%"></div></div>
+      </div>
+    </div>
+
+    <!-- 30-PROFILE GRID -->
+    <div class="council-grid" id="council-grid"></div>
+
+    <!-- LEGEND -->
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> Respondiendo</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--cyan)"></div> Seleccionado</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--muted)"></div> En espera</div>
+      <div style="margin-left:auto;font-family:var(--mono);font-size:8px;color:var(--muted)">HAZ CLIC PARA VER PERFIL · TODOS RESPONDEN AL RETO</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: CHAT PANEL -->
+  <div class="chat-panel">
+    <div class="chat-header">
+      <div class="chat-header-title">¿QUÉ RETO VAMOS A TRABAJAR?</div>
+      <div class="chat-header-sub">COORDINACIÓN MULTIAGENTE · INSIGHTS EN TIEMPO REAL</div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <!-- Initial system message -->
+      <div class="msg-system fade-in">CONSEJO INICIALIZADO · 30 CONSEJEROS LISTOS</div>
+
+      <!-- Example pre-loaded conversation -->
+      <div class="msg-user fade-in">
+        <p>Necesito doblar las ventas en Q3 con el mismo equipo. Tenemos 6 vendedores, pipeline actual de $2M. ¿Cómo lo hacemos?</p>
+      </div>
+
+      <div class="msg-system fade-in">CONSULTANDO 30 CONSEJEROS · MODO: ANÁLISIS ESTRATÉGICO</div>
+
+      <div class="msg-advisor fade-in">
+        <div class="msg-advisor-avatar">💡</div>
+        <div class="msg-advisor-bubble">
+          <div class="msg-advisor-name">STEVE JOBS · APPLE</div>
+          <p>El problema no es el equipo — es el enfoque. ¿Qué estás vendiendo realmente? Si tu propuesta de valor no es tan obvia que se venda sola, multiplica por cero. Antes de hablar de volumen, simplifica el producto a su esencia más poderosa.</p>
+          <div class="msg-advisor-score">
+            <span class="mscore conf">⬆ Confianza 91%</span>
+            <span class="mscore risk">⚠ Riesgo 18%</span>
+            <span class="mscore time">⏱ 3-6 meses</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="msg-advisor fade-in">
+        <div class="msg-advisor-avatar">🚀</div>
+        <div class="msg-advisor-bubble">
+          <div class="msg-advisor-name">ELON MUSK · TESLA / SPACEX</div>
+          <p>¿Por qué 2x? Piensa en 10x. Con 6 vendedores y $2M de pipeline, el cuello de botella no es el equipo — es el proceso. Automatiza todo lo que se pueda automatizar. Libera a los vendedores para que hagan solo lo que la IA no puede: construir confianza.</p>
+          <div class="msg-advisor-score">
+            <span class="mscore conf">⬆ Confianza 84%</span>
+            <span class="mscore risk">⚠ Riesgo 42%</span>
+            <span class="mscore time">⏱ 6-12 meses</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="msg-advisor fade-in">
+        <div class="msg-advisor-avatar">📦</div>
+        <div class="msg-advisor-bubble">
+          <div class="msg-advisor-name">JEFF BEZOS · AMAZON</div>
+          <p>Define primero el "Working Backwards": ¿cómo es el press release del día que logres $4M? Ahora trabaja hacia atrás. El pipeline de $2M dice que tu tasa de conversión es el problema real. Doblar conversión es más fácil que doblar leads.</p>
+          <div class="msg-advisor-score">
+            <span class="mscore conf">⬆ Confianza 88%</span>
+            <span class="mscore risk">⚠ Riesgo 22%</span>
+            <span class="mscore time">⏱ 2-4 meses</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Debate pair -->
+      <div class="debate-pair fade-in">
+        <div class="debate-side left">
+          <div class="debate-who pro">⚡ WARREN BUFFETT — A FAVOR</div>
+          <p>Enfócate en los 2-3 clientes más grandes. 80% del resultado viene del 20% del pipeline. No disperses el equipo — concentra el firepower.</p>
+        </div>
+        <div class="debate-side right">
+          <div class="debate-who contra">⚡ GRANT CARDONE — EN CONTRA</div>
+          <p>Diversificación excesiva es el error. Necesitas 10x la actividad diaria. Más calls, más demos, más seguimientos. La intensidad gana.</p>
+        </div>
+      </div>
+
+      <!-- Synthesis -->
+      <div class="msg-synthesis fade-in">
+        <div class="msg-synthesis-title">
+          <span>⚡</span> SÍNTESIS DEL CONSEJO · 24/30 RESPONDIERON
+        </div>
+        <p>El consejo converge en 3 puntos: (1) El problema no es tamaño del equipo sino calidad de proceso. (2) Enfocarse en aumentar conversión de pipeline existente antes de generar nuevo volumen. (3) Automatizar pre-calificación para liberar tiempo de vendedores hacia cierres.</p>
+        <div class="consensus-bar">
+          <div class="cbar-row">
+            <span class="cbar-label">Optimizar conversión</span>
+            <div class="cbar-track"><div class="cbar-fill" style="width:87%;background:var(--accent)"></div></div>
+            <span class="cbar-val">87%</span>
+          </div>
+          <div class="cbar-row">
+            <span class="cbar-label">Automatizar proceso</span>
+            <div class="cbar-track"><div class="cbar-fill" style="width:73%;background:var(--cyan)"></div></div>
+            <span class="cbar-val">73%</span>
+          </div>
+          <div class="cbar-row">
+            <span class="cbar-label">Aumentar actividad</span>
+            <div class="cbar-track"><div class="cbar-fill" style="width:58%;background:var(--gold)"></div></div>
+            <span class="cbar-val">58%</span>
+          </div>
+          <div class="cbar-row">
+            <span class="cbar-label">Cambiar propuesta</span>
+            <div class="cbar-track"><div class="cbar-fill" style="width:31%;background:var(--danger)"></div></div>
+            <span class="cbar-val">31%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT AREA -->
+    <div class="chat-input-area">
+      <div class="mode-row">
+        <button class="mode-btn active" onclick="setMode(this,'estrategico')">🧠 Estratégico</button>
+        <button class="mode-btn" onclick="setMode(this,'debate')">⚡ Debate</button>
+        <button class="mode-btn" onclick="setMode(this,'crisis')">🔴 Crisis</button>
+        <button class="mode-btn" onclick="setMode(this,'forecast')">📊 Forecast</button>
+      </div>
+      <div class="chat-input-label">PLANTEA TU RETO — EL CONSEJO RESPONDE EN TIEMPO REAL</div>
+      <div class="chat-input-row">
+        <textarea class="chat-textarea" id="reto-input" placeholder="Ej: Necesito abrir un nuevo mercado en 90 días con $50K de presupuesto. ¿Qué haría cada uno de ustedes?"></textarea>
+        <button class="chat-send" id="send-btn" onclick="sendReto()">
+          <span class="send-icon">⚡</span>
+          <span>CONVOCAR</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────
+const DIRECTORS = {
+  ceo: {
+    title: 'MESA DEL CEO & DIRECTOR GENERAL',
+    subtitle: '30 FUNDADORES Y EMPRESARIOS FORBES · SIMULACIÓN SOCIAL IA',
+    badge: '30 CONSEJEROS',
+    advisors: [
+      {e:'💡',n:'Steve Jobs',r:'Apple'},
+      {e:'🚀',n:'Elon Musk',r:'Tesla · SpaceX'},
+      {e:'📦',n:'Jeff Bezos',r:'Amazon'},
+      {e:'💰',n:'Warren Buffett',r:'Berkshire'},
+      {e:'🖥',n:'Bill Gates',r:'Microsoft'},
+      {e:'⚡',n:'Jensen Huang',r:'NVIDIA'},
+      {e:'🌊',n:'Ray Dalio',r:'Bridgewater'},
+      {e:'🎬',n:'Reed Hastings',r:'Netflix'},
+      {e:'☁️',n:'Marc Benioff',r:'Salesforce'},
+      {e:'🔄',n:'Satya Nadella',r:'Microsoft'},
+      {e:'🔍',n:'Larry Page',r:'Google'},
+      {e:'📱',n:'Mark Zuckerberg',r:'Meta'},
+      {e:'🐉',n:'Jack Ma',r:'Alibaba'},
+      {e:'✈️',n:'Richard Branson',r:'Virgin'},
+      {e:'🗡',n:'Peter Thiel',r:'PayPal · Palantir'},
+      {e:'🏪',n:'Sam Walton',r:'Walmart'},
+      {e:'📟',n:'Andy Grove',r:'Intel'},
+      {e:'☕',n:'Howard Schultz',r:'Starbucks'},
+      {e:'🔗',n:'Reid Hoffman',r:'LinkedIn'},
+      {e:'👟',n:'Tony Hsieh',r:'Zappos'},
+      {e:'🎭',n:'Bob Iger',r:'Disney'},
+      {e:'🌿',n:'Indra Nooyi',r:'PepsiCo'},
+      {e:'⚙️',n:'Sheryl Sandberg',r:'Meta Ops'},
+      {e:'🔁',n:'Lou Gerstner',r:'IBM'},
+      {e:'🎽',n:'Phil Knight',r:'Nike'},
+      {e:'🗄',n:'Larry Ellison',r:'Oracle'},
+      {e:'💻',n:'Michael Dell',r:'Dell'},
+      {e:'📰',n:'Arianna Huffington',r:'HuffPost'},
+      {e:'🚗',n:'Mary Barra',r:'General Motors'},
+      {e:'🤖',n:'Sam Altman',r:'OpenAI'}
+    ]
+  },
+  ventas: {
+    title: 'MESA DEL DIRECTOR DE VENTAS',
+    subtitle: '30 LÍDERES COMERCIALES · METODOLOGÍAS PROBADAS',
+    badge: '30 CONSEJEROS',
+    advisors: [
+      {e:'🎯',n:'Grant Cardone',r:'10X Sales'},
+      {e:'🤝',n:'Zig Ziglar',r:'Motivación'},
+      {e:'📊',n:'Neil Rackham',r:'SPIN Selling'},
+      {e:'⚡',n:'Aaron Ross',r:'Outbound'},
+      {e:'🔬',n:'Mark Roberge',r:'Sales Eng.'},
+      {e:'🧩',n:'Jill Konrath',r:'Complejo'},
+      {e:'💪',n:'Jordan Belfort',r:'Psicología'},
+      {e:'🧠',n:'Dan Pink',r:'Motivación'},
+      {e:'🏆',n:'Bryan Tracy',r:'Clásico'},
+      {e:'📈',n:'Jason Lemkin',r:'SaaS'},
+      {e:'📞',n:'Trish Bertuzzi',r:'Inbound'},
+      {e:'🎪',n:'Todd Caponi',r:'Transparencia'},
+      {e:'💼',n:'Jeb Blount',r:'Pipeline'},
+      {e:'🔑',n:'Marcus Sheridan',r:'Contenido'},
+      {e:'🧬',n:'Bob Moesta',r:'JTBD'},
+      {e:'🥊',n:'Matt Dixon',r:'Challenger'},
+      {e:'📋',n:'Brent Adamson',r:'Insight'},
+      {e:'🌐',n:'Max Altschuler',r:'Sales Hacker'},
+      {e:'🔄',n:'Mike Weinberg',r:'New Sales'},
+      {e:'💡',n:'Tom Hopkins',r:'Closing'},
+      {e:'🗝',n:'Brian Burns',r:'Complex'},
+      {e:'🎓',n:'Victor Antonio',r:'Objeciones'},
+      {e:'🌟',n:'Jeffrey Gitomer',r:'Relaciones'},
+      {e:'🏹',n:'Colleen Francis',r:'Revenue'},
+      {e:'💎',n:'Chet Holmes',r:'Dream 100'},
+      {e:'🚦',n:'Dave Kurlan',r:'Assessment'},
+      {e:'🧭',n:'Andy Paul',r:'Velocidad'},
+      {e:'🌊',n:'Josh Braun',r:'Prospección'},
+      {e:'📡',n:'Dave Brock',r:'Ejecución'},
+      {e:'🎯',n:'Tamara Schenk',r:'Enablement'}
+    ]
+  },
+  marketing: {
+    title: 'MESA DEL DIRECTOR DE MARKETING',
+    subtitle: '30 GENIOS DEL MARKETING · DESDE OGILVY HASTA LA ERA DIGITAL',
+    badge: '30 CONSEJEROS',
+    advisors: [
+      {e:'🐒',n:'Seth Godin',r:'Purple Cow'},
+      {e:'📹',n:'Gary Vaynerchuk',r:'Social'},
+      {e:'🎩',n:'David Ogilvy',r:'Clásico'},
+      {e:'📘',n:'Philip Kotler',r:'Académico'},
+      {e:'🎯',n:'Al Ries',r:'Posicionamiento'},
+      {e:'⚔️',n:'Jack Trout',r:'Marketing Wars'},
+      {e:'💰',n:'Dan Kennedy',r:'Directo'},
+      {e:'🏔',n:'Jay Abraham',r:'Apalancamiento'},
+      {e:'📊',n:'Neil Patel',r:'Digital'},
+      {e:'🔗',n:'Brian Halligan',r:'Inbound'},
+      {e:'🧲',n:'Dharmesh Shah',r:'HubSpot'},
+      {e:'🎭',n:'Ryan Holiday',r:'Growth'},
+      {e:'⏱',n:'Tim Ferriss',r:'Hacking'},
+      {e:'🔥',n:'Russell Brunson',r:'Funnels'},
+      {e:'✍️',n:'Joe Sugarman',r:'Copywriting'},
+      {e:'📝',n:'Claude Hopkins',r:'Publicidad'},
+      {e:'🧠',n:'Eugene Schwartz',r:'Psicología'},
+      {e:'📖',n:'John Caples',r:'Titulares'},
+      {e:'🔬',n:'Bryan Eisenberg',r:'Conversión'},
+      {e:'✒️',n:'Joanna Wiebe',r:'Copy Hacker'},
+      {e:'📣',n:'Joe Pulizzi',r:'Contenido'},
+      {e:'🌊',n:'Ann Handley',r:'Escritura'},
+      {e:'🔍',n:'Rand Fishkin',r:'SEO'},
+      {e:'⚡',n:'Ryan Deiss',r:'Digital'},
+      {e:'🧬',n:'Nir Eyal',r:'Habits'},
+      {e:'🎪',n:'Robert Cialdini',r:'Influencia'},
+      {e:'🎯',n:'Derek Halpern',r:'Psicología'},
+      {e:'🔄',n:'Chris Goward',r:'A/B Testing'},
+      {e:'🎬',n:'Frank Kern',r:'Video Sales'},
+      {e:'📱',n:'Gary Vee Jr.',r:'Gen-Z'}
+    ]
+  },
+  admin: {
+    title: 'MESA DEL DIRECTOR DE ADMINISTRACIÓN',
+    subtitle: '30 LÍDERES DE OPERACIONES, FINANZAS Y GESTIÓN',
+    badge: '30 CONSEJEROS',
+    advisors: [
+      {e:'🏦',n:'Jamie Dimon',r:'JPMorgan'},
+      {e:'🔧',n:'Tim Cook',r:'Apple Ops'},
+      {e:'📊',n:'Ruth Porat',r:'Google CFO'},
+      {e:'⚙️',n:'Andy Jassy',r:'AWS'},
+      {e:'🌐',n:'Werner Vogels',r:'CTO Amazon'},
+      {e:'💼',n:'Jack Welch',r:'GE'},
+      {e:'🧩',n:'Patrick Lencioni',r:'Equipos'},
+      {e:'🔑',n:'W.E. Deming',r:'Calidad'},
+      {e:'🏭',n:'Taiichi Ohno',r:'Toyota'},
+      {e:'📈',n:'Peter Drucker',r:'Management'},
+      {e:'🎯',n:'Michael Porter',r:'Estrategia'},
+      {e:'🌊',n:'Nassim Taleb',r:'Anti-frágil'},
+      {e:'📋',n:'Atul Gawande',r:'Checklists'},
+      {e:'💰',n:'Charlie Munger',r:'Inversión'},
+      {e:'🏹',n:'Ray Dalio',r:'Principios'},
+      {e:'🔄',n:'Larry Bossidy',r:'Ejecución'},
+      {e:'📚',n:'Ram Charan',r:'Estrategia'},
+      {e:'🧠',n:'Clayton Christensen',r:'Disrupción'},
+      {e:'📊',n:'Robert Kaplan',r:'BSC'},
+      {e:'🌟',n:'Tom Peters',r:'Excelencia'},
+      {e:'🔬',n:'Geoffrey Moore',r:'Adopción'},
+      {e:'⚡',n:'Ben Horowitz',r:'Hard Things'},
+      {e:'🗺',n:'Michael Hammer',r:'Reingeniería'},
+      {e:'🎓',n:'Dave Ramsey',r:'Finanzas'},
+      {e:'🔗',n:'Cathie Wood',r:'Innovación'},
+      {e:'💎',n:'David Swensen',r:'Portafolio'},
+      {e:'🏆',n:'Ken Blanchard',r:'Liderazgo'},
+      {e:'🌊',n:'George Soros',r:'Riesgo'},
+      {e:'📡',n:'Mary Meeker',r:'Tendencias'},
+      {e:'🚀',n:'Sundar Pichai',r:'Google'}
+    ]
+  },
+  consejo: {
+    title: 'CONSEJO EJECUTIVO COMPLETO',
+    subtitle: '120 CONSEJEROS · TODOS LOS DIRECTORES · MÁXIMO PODER ANALÍTICO',
+    badge: '120 CONSEJEROS',
+    advisors: [] // Will be populated dynamically
+  }
+};
+
+// ── RENDER ────────────────────────────────────────────────────────────
+let currentMode = 'estrategico';
+let speakingInterval = null;
+
+function renderGrid(dir) {
+  const data = DIRECTORS[dir];
+  const grid = document.getElementById('council-grid');
+  let advisors = data.advisors;
+
+  if (dir === 'consejo') {
+    // Mix all advisors
+    advisors = [
+      ...DIRECTORS.ceo.advisors.slice(0,8),
+      ...DIRECTORS.ventas.advisors.slice(0,8),
+      ...DIRECTORS.marketing.advisors.slice(0,8),
+      ...DIRECTORS.admin.advisors.slice(0,6),
+    ];
+  }
+
+  grid.innerHTML = advisors.map((a, i) => `
+    <div class="advisor-card" id="card-${i}" onclick="selectAdvisor(${i},'${a.n}')" title="${a.n} — ${a.r}">
+      <div class="advisor-avatar">
+        <div class="speaking-ring"></div>
+        ${a.e}
+      </div>
+      <div class="advisor-name">${a.n.split(' ').slice(0,2).join(' ')}</div>
+      <div class="advisor-role">${a.r}</div>
+      <div class="advisor-dot"></div>
+    </div>
+  `).join('');
+}
+
+function switchDirector(btn, dir) {
+  document.querySelectorAll('.dtab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const data = DIRECTORS[dir];
+  document.getElementById('council-title').textContent = data.title;
+  document.getElementById('council-subtitle').textContent = data.subtitle;
+  document.getElementById('council-badge').textContent = data.badge;
+  renderGrid(dir);
+
+  // Update palantir stats
+  animateStat('fill-consensus','stat-consensus', Math.floor(Math.random()*30+60), '%');
+  animateStat('fill-success','stat-success', Math.floor(Math.random()*30+55), '%');
+  animateStat('fill-risk','stat-risk', Math.floor(Math.random()*30+15), '%');
+}
+
+function animateStat(fillId, labelId, val, suffix) {
+  const fill = document.getElementById(fillId);
+  const label = document.getElementById(labelId);
+  if (fill) { fill.style.width = val + '%'; }
+  if (label) { label.textContent = val + suffix; }
+}
+
+function selectAdvisor(i, name) {
+  document.querySelectorAll('.advisor-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card-' + i)?.classList.add('selected');
+}
+
+function setMode(btn, mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── CHAT ──────────────────────────────────────────────────────────────
+const RESPONSES = {
+  estrategico: [
+    { e:'💡', n:'Steve Jobs', r:'Apple', text:'La pregunta real es: ¿cuál es el problema que nadie más está dispuesto a resolver? Ahí está tu ventaja.', conf:91, risk:18, time:'3-6 meses' },
+    { e:'🚀', n:'Elon Musk', r:'Tesla', text:'¿Por qué ese objetivo y no 10x ese objetivo? El proceso es el mismo. El resultado es radicalmente diferente.', conf:82, risk:45, time:'6-18 meses' },
+    { e:'📦', n:'Jeff Bezos', r:'Amazon', text:'Trabaja hacia atrás desde el cliente ideal. ¿Qué haría diferente su vida? Empieza por ahí, no por el producto.', conf:88, risk:22, time:'2-4 meses' },
+  ],
+  debate: [
+    { e:'💰', n:'Warren Buffett', r:'Berkshire', text:'Concentración es la clave. 20% de tus acciones generan 80% del resultado. Elimina el resto.', conf:94, risk:15, time:'12+ meses' },
+    { e:'⚡', n:'Jensen Huang', r:'NVIDIA', text:'La paciencia estratégica es una arma. Invierte hoy donde nadie más invierte. Espera 10 años.', conf:79, risk:38, time:'3-10 años' },
+  ],
+  crisis: [
+    { e:'🔄', n:'Lou Gerstner', r:'IBM', text:'En crisis, la cultura se come a la estrategia. Actúa en las primeras 72 horas o pierde el control.', conf:96, risk:8, time:'Inmediato' },
+    { e:'🌊', n:'Ray Dalio', r:'Bridgewater', text:'Identifica los errores sistémicos, no los síntomas. El dolor es información.', conf:91, risk:12, time:'1-3 meses' },
+  ],
+  forecast: [
+    { e:'📊', n:'Mary Meeker', r:'Trends', text:'Los datos de los próximos 3 años ya están en las tendencias de hoy. ¿Cuáles estás ignorando?', conf:87, risk:25, time:'1-3 años' },
+    { e:'🗡', n:'Peter Thiel', r:'Palantir', text:'El futuro no es distribuido — está concentrado. ¿En qué área vas a ser el único?', conf:83, risk:35, time:'2-5 años' },
+  ]
+};
+
+function sendReto() {
+  const input = document.getElementById('reto-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const msgs = document.getElementById('chat-messages');
+  const btn = document.getElementById('send-btn');
+  btn.classList.add('loading');
+  btn.innerHTML = '<span style="font-size:12px;animation:spin 1s linear infinite;display:inline-block">⟳</span>';
+
+  // Add user message
+  const userMsg = document.createElement('div');
+  userMsg.className = 'msg-user fade-in';
+  userMsg.innerHTML = `<p>${escHtml(text)}</p>`;
+  msgs.appendChild(userMsg);
+  input.value = '';
+
+  // System message
+  const sysMsg = document.createElement('div');
+  sysMsg.className = 'msg-system fade-in';
+  sysMsg.textContent = `CONSULTANDO 30 CONSEJEROS · MODO: ${currentMode.toUpperCase()}`;
+  msgs.appendChild(sysMsg);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Activate speaking cards
+  const cards = document.querySelectorAll('.advisor-card');
+  const speakingCards = [...cards].sort(() => Math.random() - .5).slice(0, 8);
+  speakingCards.forEach(c => c.classList.add('speaking'));
+
+  // Update palantir
+  setTimeout(() => {
+    animateStat('fill-consensus','stat-consensus', Math.floor(Math.random()*25+65), '%');
+    animateStat('fill-success','stat-success', Math.floor(Math.random()*30+55), '%');
+    animateStat('fill-risk','stat-risk', Math.floor(Math.random()*20+20), '%');
+  }, 800);
+
+  // Show typing indicator
+  const typing = document.createElement('div');
+  typing.className = 'typing-indicator fade-in';
+  typing.id = 'typing';
+  typing.innerHTML = `
+    <div class="typing-avatar">💡</div>
+    <div class="typing-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>
+    <span class="typing-who">Consultando consejo…</span>`;
+  msgs.appendChild(typing);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Show responses
+  const responses = RESPONSES[currentMode] || RESPONSES.estrategico;
+  let delay = 1500;
+  responses.forEach((r, i) => {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'msg-advisor fade-in';
+      el.innerHTML = `
+        <div class="msg-advisor-avatar">${r.e}</div>
+        <div class="msg-advisor-bubble">
+          <div class="msg-advisor-name">${r.n} · ${r.r}</div>
+          <p>${r.text}</p>
+          <div class="msg-advisor-score">
+            <span class="mscore conf">⬆ Confianza ${r.conf}%</span>
+            <span class="mscore risk">⚠ Riesgo ${r.risk}%</span>
+            <span class="mscore time">⏱ ${r.time}</span>
+          </div>
+        </div>`;
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+    }, delay + i * 800);
+  });
+
+  // Final synthesis
+  setTimeout(() => {
+    const typingEl = document.getElementById('typing');
+    if (typingEl) typingEl.remove();
+
+    const synth = document.createElement('div');
+    synth.className = 'msg-synthesis fade-in';
+    const scores = [
+      ['Visión estratégica', Math.floor(Math.random()*20+75), 'var(--accent)'],
+      ['Acción inmediata', Math.floor(Math.random()*25+60), 'var(--cyan)'],
+      ['Gestión de riesgo', Math.floor(Math.random()*20+55), 'var(--gold)'],
+      ['Disrupción', Math.floor(Math.random()*30+40), 'var(--danger)'],
+    ];
+    synth.innerHTML = `
+      <div class="msg-synthesis-title"><span>⚡</span> SÍNTESIS DEL CONSEJO · ${responses.length + Math.floor(Math.random()*10+15)}/30 RESPONDIERON</div>
+      <p>El consejo identifica un patrón clave en tu reto. La mayoría converge en priorizar la eficiencia sobre el volumen, y en construir sistemas antes que escalar personas.</p>
+      <div class="consensus-bar">
+        ${scores.map(([label, val, color]) => `
+        <div class="cbar-row">
+          <span class="cbar-label">${label}</span>
+          <div class="cbar-track"><div class="cbar-fill" style="width:${val}%;background:${color}"></div></div>
+          <span class="cbar-val">${val}%</span>
+        </div>`).join('')}
+      </div>`;
+    msgs.appendChild(synth);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    // Reset
+    speakingCards.forEach(c => c.classList.remove('speaking'));
+    btn.classList.remove('loading');
+    btn.innerHTML = '<span class="send-icon">⚡</span><span>CONVOCAR</span>';
+  }, delay + responses.length * 800 + 600);
+}
+
+function escHtml(s) {
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+// Enter to send
+document.getElementById('reto-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReto(); }
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────
+renderGrid('ceo');
+</script>
+</body>
+</html>
