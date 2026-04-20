@@ -526,6 +526,9 @@ async function init() {
 
   // Handle hash navigation when already on page (sidebar clicks without reload)
   window.addEventListener('hashchange', handleHashNav);
+
+  // Recargar al cambiar de empresa
+  window.addEventListener('mtx:companySwitch', () => loadLeads());
 }
 
 function handleHashNav() {
@@ -542,7 +545,10 @@ function handleHashNav() {
 
 /* ── DATA ────────────────────────────────────────────── */
 async function loadLeads() {
-  const { data, error } = await getDB().from('leads').select('*').order('updated_at',{ascending:false});
+  const companyId = getActiveCompanyId();
+  let q = getDB().from('leads').select('*').order('updated_at',{ascending:false});
+  if (companyId) q = q.eq('company_id', companyId);
+  const { data, error } = await q;
   if (error) return;
   allLeads = data || [];
   renderKPIs();

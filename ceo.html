@@ -250,6 +250,13 @@ async function init() {
   // Carga paralela
   await Promise.all([loadPulse(), loadDecisions()]);
   _refreshTimer = setInterval(() => { loadPulse(); loadDecisions(); }, 90_000);
+
+  // Recargar al cambiar de empresa
+  window.addEventListener('mtx:companySwitch', () => {
+    clearInterval(_refreshTimer);
+    Promise.all([loadPulse(), loadDecisions()]);
+    _refreshTimer = setInterval(() => { loadPulse(); loadDecisions(); }, 90_000);
+  });
 }
 
 /* ── SHELL ──────────────────────────────────────────────────────────────── */
@@ -376,7 +383,7 @@ async function loadPulse() {
 }
 
 async function computePulseFromDB() {
-  const companyId = _user?.profile?.company_id;
+  const companyId = getActiveCompanyId() || _user?.profile?.company_id;
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
   const days7  = new Date(Date.now() - 7*864e5).toISOString();
   const days30 = new Date(Date.now() - 30*864e5).toISOString();

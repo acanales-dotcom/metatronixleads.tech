@@ -274,6 +274,9 @@ async function init() {
   document.getElementById('inv-due').value   = due30;
 
   await loadAll();
+
+  // Recargar al cambiar de empresa
+  window.addEventListener('mtx:companySwitch', () => loadAll());
 }
 
 function buildShell() {
@@ -455,7 +458,7 @@ function renderKPIs() {
 }
 
 async function loadAR() {
-  const companyId = _user?.profile?.company_id;
+  const companyId = getActiveCompanyId() || _user?.profile?.company_id;
   if (!companyId) return;
   try {
     const { data, error } = await _db
@@ -539,7 +542,7 @@ function renderAgingBars() {
 }
 
 async function loadAP() {
-  const companyId = _user?.profile?.company_id;
+  const companyId = getActiveCompanyId() || _user?.profile?.company_id;
   if (!companyId) return;
   try {
     const { data, error } = await _db

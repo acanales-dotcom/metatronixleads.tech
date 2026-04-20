@@ -1,0 +1,30 @@
+# rls-multicompany.yml — Actualiza RLS de tablas operativas para multiempresa
+name: RLS Multicompany → Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribir "rls" para confirmar'
+        required: true
+        default: ''
+
+jobs:
+  apply-rls:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'rls' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aplicar RLS multicompany
+        run: |
+          SQL=$(cat sql/rls_multicompany.sql | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://api.supabase.com/v1/projects/hodrfonbpmqulkyzrzpq/database/query" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ACCESS_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\": $SQL}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          echo "HTTP: $HTTP_CODE — $BODY"
+          [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ] || exit 1
+          echo "✅ RLS multicompany aplicado."

@@ -169,6 +169,7 @@ async function init() {
   }
   if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
   await loadInvoices();
+  window.addEventListener('mtx:companySwitch', () => loadInvoices());
 }
 
 function buildShell() {
@@ -326,7 +327,7 @@ function showSchemaSetup(tableName) {
 async function loadInvoices() {
   const btn = document.getElementById('btn-refresh');
   if (btn) { btn.disabled=true; btn.textContent='⏳'; }
-  const companyId = _user?.profile?.company_id;
+  const companyId = getActiveCompanyId() || _user?.profile?.company_id;
   try {
     const { data, error } = await _db
       .from('invoices_out')

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>MTTX AI — La Plataforma de Gestión Empresarial con IA</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <style>
+    :root {
+      --bg:       #0a0a0a;
+      --surface:  #111111;
+      --border:   rgba(255,255,255,.08);
+      --text:     #f0f0f0;
+      --muted:    #888;
+      --faint:    #444;
+      --accent:   #00ff88;
+      --accent2:  #00cc6e;
+      --accent-dim:rgba(0,255,136,.25);
+      --font:     'DM Sans', sans-serif;
+      --mono:     'JetBrains Mono', monospace;
+      --display:  'Bebas Neue', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; overflow-x: hidden; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 64px;
+      background: rgba(10,10,10,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { font-family: var(--display); font-size: 26px; letter-spacing: .06em; color: var(--accent); }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500; transition: color .2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta { display: flex; gap: 12px; }
+    .btn { padding: 9px 22px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: .2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-ghost:hover { border-color: var(--accent-dim); }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,255,136,.3); }
+    .btn-lg { padding: 14px 36px; font-size: 15px; border-radius: 8px; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 40px 80px; text-align: center;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,255,136,.08) 0%, transparent 70%);
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,255,136,.07); border: 1px solid var(--accent-dim);
+      color: var(--accent); font-size: 11px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      padding: 5px 16px; border-radius: 20px; margin-bottom: 28px;
+    }
+    .hero-eyebrow::before { content: ''; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+    .hero h1 {
+      font-family: var(--display); font-size: clamp(52px, 8vw, 96px);
+      line-height: .95; letter-spacing: .02em; margin-bottom: 24px;
+      background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,.6) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero h1 span { color: var(--accent); -webkit-text-fill-color: var(--accent); }
+    .hero-sub { font-size: clamp(16px, 2vw, 20px); color: var(--muted); max-width: 600px; margin: 0 auto 40px; font-weight: 400; }
+    .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+    .hero-social-proof { display: flex; align-items: center; gap: 16px; color: var(--faint); font-size: 12px; }
+    .hero-social-proof::before, .hero-social-proof::after { content: ''; flex: 1; height: 1px; background: var(--border); max-width: 80px; }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 0; border: 1px solid var(--border); border-radius: 12px;
+      background: var(--surface); margin: 0 40px 80px; overflow: hidden;
+    }
+    .stat-item { padding: 28px 24px; text-align: center; border-right: 1px solid var(--border); }
+    .stat-item:last-child { border-right: none; }
+    .stat-num { font-family: var(--display); font-size: 42px; color: var(--accent); letter-spacing: .02em; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ── SECTION ── */
+    section { padding: 80px 40px; max-width: 1200px; margin: 0 auto; }
+    .section-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 12px; }
+    .section-title { font-family: var(--display); font-size: clamp(36px, 5vw, 60px); letter-spacing: .02em; margin-bottom: 16px; }
+    .section-sub { font-size: 16px; color: var(--muted); max-width: 560px; }
+
+    /* ── MODULES GRID ── */
+    .modules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 48px; }
+    .module-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 28px; transition: .2s; cursor: default;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .module-card:hover { border-color: var(--accent-dim); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,255,136,.06); }
+    .module-icon { font-size: 28px; }
+    .module-title { font-family: var(--display); font-size: 22px; letter-spacing: .04em; }
+    .module-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .module-features { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .feature-chip {
+      font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+      background: rgba(0,255,136,.07); color: var(--accent); border: 1px solid rgba(0,255,136,.15);
+    }
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+      background: rgba(130,80,255,.1); color: #a066ff; border: 1px solid rgba(130,80,255,.2);
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; margin-top: 48px; }
+    .step { display: flex; flex-direction: column; gap: 12px; }
+    .step-num { font-family: var(--display); font-size: 64px; color: rgba(0,255,136,.15); line-height: 1; }
+    .step-title { font-weight: 700; font-size: 16px; }
+    .step-desc { font-size: 13px; color: var(--muted); }
+
+    /* ── PRICING ── */
+    .pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-top: 48px; align-items: start; }
+    .pricing-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 32px; display: flex; flex-direction: column; gap: 20px;
+    }
+    .pricing-card.featured {
+      border-color: var(--accent); background: linear-gradient(135deg, rgba(0,255,136,.04) 0%, var(--surface) 100%);
+      position: relative;
+    }
+    .pricing-badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #000; font-size: 10px; font-weight: 700;
+      padding: 4px 14px; border-radius: 20px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+    }
+    .plan-name { font-family: var(--display); font-size: 28px; letter-spacing: .04em; }
+    .plan-price { display: flex; align-items: baseline; gap: 4px; }
+    .plan-amount { font-family: var(--mono); font-size: 40px; font-weight: 600; color: var(--text); }
+    .plan-period { font-size: 13px; color: var(--muted); }
+    .plan-users { font-size: 12px; color: var(--muted); padding: 6px 12px; background: rgba(255,255,255,.04); border-radius: 6px; }
+    .plan-features { display: flex; flex-direction: column; gap: 10px; }
+    .plan-feat { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .plan-feat::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+    .plan-feat.disabled { color: var(--faint); }
+    .plan-feat.disabled::before { content: '—'; color: var(--faint); }
+
+    /* ── TESTIMONIAL ── */
+    .testimonials { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-top: 48px; }
+    .tcard {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 24px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .tquote { font-size: 14px; color: var(--muted); font-style: italic; line-height: 1.7; }
+    .tquote::before { content: '"'; color: var(--accent); font-size: 24px; font-style: normal; line-height: 0; vertical-align: -8px; margin-right: 4px; }
+    .tauthor { display: flex; flex-direction: column; gap: 2px; }
+    .tname { font-weight: 700; font-size: 13px; }
+    .trole { font-size: 11px; color: var(--faint); }
+    .tstars { color: var(--accent); font-size: 12px; }
+
+    /* ── CTA FINAL ── */
+    .cta-section {
+      text-align: center; padding: 100px 40px;
+      background: radial-gradient(ellipse 60% 60% at 50% 100%, rgba(0,255,136,.06) 0%, transparent 70%);
+    }
+    .cta-section h2 { font-family: var(--display); font-size: clamp(40px, 6vw, 72px); letter-spacing: .02em; margin-bottom: 16px; }
+    .cta-section p { color: var(--muted); font-size: 16px; margin-bottom: 40px; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      color: var(--faint); font-size: 12px;
+    }
+    .footer-logo { font-family: var(--display); font-size: 20px; color: var(--accent); }
+
+    /* ── DEMO SCREEN MOCKUP ── */
+    .screen-wrap { margin-top: 48px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 32px 80px rgba(0,0,0,.6); }
+    .screen-bar { background: #1a1a1a; padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+    .screen-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .screen-url { background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 4px; padding: 3px 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 8px; }
+    .screen-body { background: #111; padding: 0; display: grid; grid-template-columns: 200px 1fr; min-height: 340px; }
+    .screen-sidebar { background: #0d0d0d; border-right: 1px solid var(--border); padding: 16px 0; display: flex; flex-direction: column; gap: 2px; }
+    .screen-nav-item { padding: 9px 16px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .screen-nav-item.active { color: var(--accent); background: rgba(0,255,136,.06); border-right: 2px solid var(--accent); }
+    .screen-content { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .screen-kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+    .screen-kpi { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .screen-kpi-val { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--accent); }
+    .screen-kpi-lbl { font-size: 10px; color: var(--faint); margin-top: 2px; }
+    .screen-table { background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .screen-table-row { display: grid; grid-template-columns: 2fr 1fr 1fr 80px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.03); font-size: 11px; align-items: center; }
+    .screen-table-row:last-child { border-bottom: none; }
+    .screen-table-head { background: rgba(255,255,255,.04); color: var(--faint); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+    .screen-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+    .b-green { background: rgba(0,255,136,.1); color: var(--accent); }
+    .b-yellow { background: rgba(255,180,0,.1); color: #ffb400; }
+    .b-red { background: rgba(255,70,70,.1); color: #ff4646; }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      section { padding: 60px 20px; }
+      .stats-bar { grid-template-columns: repeat(2,1fr); margin: 0 20px 60px; }
+      .steps, .pricing-grid, .testimonials { grid-template-columns: 1fr; }
+      .screen-kpi-row { grid-template-columns: repeat(2,1fr); }
+      .screen-body { grid-template-columns: 1fr; }
+      .screen-sidebar { display: none; }
+      footer { flex-direction: column; gap: 16px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">MTTX AI</div>
+  <div class="nav-links">
+    <a href="#modulos">Módulos</a>
+    <a href="#como-funciona">Cómo funciona</a>
+    <a href="#precios">Precios</a>
+    <a href="#demo">Demo</a>
+  </div>
+  <div class="nav-cta">
+    <a href="/index.html" class="btn btn-ghost">Iniciar sesión</a>
+    <a href="#precios" class="btn btn-primary">Comenzar gratis</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="demo">
+  <div class="hero-eyebrow">Powered by Claude AI · Plataforma en producción</div>
+  <h1>Gestión empresarial<br><span>con IA real</span></h1>
+  <p class="hero-sub">CRM, Finanzas, Compras, Cobranza y más — todo integrado con inteligencia artificial que trabaja para ti en tiempo real.</p>
+  <div class="hero-ctas">
+    <a href="/registro-empresa.html" class="btn btn-primary btn-lg">🚀 Prueba gratis 14 días</a>
+    <a href="/index.html" class="btn btn-ghost btn-lg">Ver demo en vivo →</a>
+  </div>
+  <div class="hero-social-proof">Empresas B2B, PyMEs y corporativos confían en MTTX AI</div>
+
+  <!-- Screen Mockup -->
+  <div class="screen-wrap" style="max-width:900px;width:100%;margin-top:60px">
+    <div class="screen-bar">
+      <div class="screen-dot" style="background:#ff5f57"></div>
+      <div class="screen-dot" style="background:#febc2e"></div>
+      <div class="screen-dot" style="background:#28c840"></div>
+      <div class="screen-url">mttxai.com/ceo</div>
+    </div>
+    <div class="screen-body">
+      <div class="screen-sidebar">
+        <div class="screen-nav-item">🏠 Dashboard</div>
+        <div class="screen-nav-item active">📊 CEO Hub</div>
+        <div class="screen-nav-item">💼 Ventas</div>
+        <div class="screen-nav-item">💰 Finanzas</div>
+        <div class="screen-nav-item">📋 Cobranza</div>
+        <div class="screen-nav-item">🛒 Compras</div>
+        <div class="screen-nav-item">📁 Archivos</div>
+        <div class="screen-nav-item">🤖 CEO Consejo</div>
+      </div>
+      <div class="screen-content">
+        <div style="font-size:11px;color:#666;font-family:monospace">CEO COMMAND CENTER · Grupo Nexus SA de CV</div>
+        <div class="screen-kpi-row">
+          <div class="screen-kpi"><div class="screen-kpi-val" style="color:#00ff88">$4.21M</div><div class="screen-kpi-lbl">Pipeline activo</div></div>
+          <div class="screen-kpi"><div class="screen-kpi-val" style="color:#fff">$2.86M</div><div class="screen-kpi-lbl">CXC pendiente</div></div>
+          <div class="screen-kpi"><div class="screen-kpi-val" style="color:#ffb400">$645K</div><div class="screen-kpi-lbl">CXP próximos 30d</div></div>
+          <div class="screen-kpi"><div class="screen-kpi-val" style="color:#00ff88">94%</div><div class="screen-kpi-lbl">Pulso operativo</div></div>
+        </div>
+        <div class="screen-table">
+          <div class="screen-table-row screen-table-head"><span>Cliente</span><span>Monto</span><span>Vencimiento</span><span>Estado</span></div>
+          <div class="screen-table-row"><span style="color:#f0f0f0">Farmacéutica Salud+</span><span style="font-family:monospace">$1.15M</span><span style="color:#888">Hoy</span><span><span class="screen-badge b-yellow">Enviada</span></span></div>
+          <div class="screen-table-row"><span style="color:#f0f0f0">Grupo Industrial MX</span><span style="font-family:monospace">$485K</span><span style="color:#ff4646">−20d</span><span><span class="screen-badge b-red">Vencida</span></span></div>
+          <div class="screen-table-row"><span style="color:#f0f0f0">Energía Limpia SA</span><span style="font-family:monospace">$760K</span><span style="color:#888">+25d</span><span><span class="screen-badge b-green">Emitida</span></span></div>
+        </div>
+        <div style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:12px 14px;font-size:11px;color:#888">
+          <span style="color:#00ff88;font-weight:700">🤖 Copiloto CEO:</span> "Alerta: $1.4M en facturas vencidas más de 20 días. Recomiendo activar protocolo de cobranza urgente para Grupo Industrial MX y Tech Innovación MX. Probabilidad de recuperación en 15 días: 78%."
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">Módulos integrados</div></div>
+  <div class="stat-item"><div class="stat-num">100%</div><div class="stat-label">IA en cada módulo</div></div>
+  <div class="stat-item"><div class="stat-num">2min</div><div class="stat-label">Tiempo de onboarding</div></div>
+  <div class="stat-item"><div class="stat-num">99.9%</div><div class="stat-label">Uptime garantizado</div></div>
+</div>
+
+<!-- MÓDULOS -->
+<section id="modulos">
+  <div class="section-eyebrow">// Plataforma completa</div>
+  <div class="section-title">Todo lo que tu empresa necesita</div>
+  <p class="section-sub">Cada módulo tiene IA integrada que analiza, sugiere y actúa — no solo muestra datos.</p>
+
+  <div class="modules-grid">
+    <div class="module-card">
+      <div class="module-icon">💼</div>
+      <div class="module-title">CRM & VENTAS</div>
+      <div class="module-desc">Pipeline con 6 etapas, 9 agentes de IA especializados (prospector, calificador, negociador, cerrador), simulador de ventas y análisis INTEL en tiempo real.</div>
+      <div class="module-features">
+        <span class="feature-chip">Pipeline Kanban</span>
+        <span class="feature-chip">Agentes IA</span>
+        <span class="feature-chip">INTEL Análisis</span>
+        <span class="ai-badge">⚡ Claude</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">💰</div>
+      <div class="module-title">FINANZAS</div>
+      <div class="module-desc">Dashboard financiero con CXC, CXP, aging report, flujo de caja proyectado y Copiloto IA que genera briefings ejecutivos y alertas de riesgo automáticas.</div>
+      <div class="module-features">
+        <span class="feature-chip">CXC / CXP</span>
+        <span class="feature-chip">Flujo de caja</span>
+        <span class="feature-chip">Aging report</span>
+        <span class="ai-badge">⚡ Copiloto IA</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">📋</div>
+      <div class="module-title">COBRANZA</div>
+      <div class="module-desc">Cola inteligente de cobranza priorizada por riesgo. Genera mensajes personalizados por tipo, tono e idioma usando IA — recordatorio, urgente, propuesta de pago.</div>
+      <div class="module-features">
+        <span class="feature-chip">Priorización IA</span>
+        <span class="feature-chip">Mensajes auto</span>
+        <span class="feature-chip">Multi-canal</span>
+        <span class="ai-badge">⚡ Claude</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">🛒</div>
+      <div class="module-title">COMPRAS</div>
+      <div class="module-desc">Procure-to-Pay completo: requisiciones, órdenes de compra, gestión de proveedores con rating, y comparador de cotizaciones con análisis IA en segundos.</div>
+      <div class="module-features">
+        <span class="feature-chip">P2P completo</span>
+        <span class="feature-chip">Comparador IA</span>
+        <span class="feature-chip">Proveedores</span>
+        <span class="ai-badge">⚡ Claude</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">📊</div>
+      <div class="module-title">CEO COMMAND CENTER</div>
+      <div class="module-desc">Pulso organizacional en tiempo real, 4 agentes directivos (CFO, COO, CMO, CPO), Consejo Ejecutivo IA y tablero de decisiones estratégicas.</div>
+      <div class="module-features">
+        <span class="feature-chip">Pulso 360°</span>
+        <span class="feature-chip">4 Agentes C-Level</span>
+        <span class="feature-chip">Decisiones IA</span>
+        <span class="ai-badge">⚡ Multi-agente</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">📁</div>
+      <div class="module-title">GESTIÓN DOCUMENTAL</div>
+      <div class="module-desc">Repositorio empresarial con árbol de carpetas por cliente y proveedor, control por empresa y período, aislamiento total entre organizaciones.</div>
+      <div class="module-features">
+        <span class="feature-chip">Multi-empresa</span>
+        <span class="feature-chip">Por período</span>
+        <span class="feature-chip">Control de acceso</span>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-icon">📣</div>
+      <div class="module-title">MARKETING</div>
+      <div class="module-desc">Generador de campañas, propuestas creativas, detección de canales digitales y análisis de mercado con IA. Convierte leads en oportunidades.</div>
+      <div class="module-features">
+        <span class="feature-chip">Campañas IA</span>
+        <span class="feature-chip">Propuestas auto</span>
+        <span class="feature-chip">Social detection</span>
+        <span class="ai-badge">⚡ Claude</span>
+      </div>
+    </div>
+    <div class="module-card" style="border-color:var(--accent-dim);background:linear-gradient(135deg,rgba(0,255,136,.03) 0%,var(--surface) 100%)">
+      <div class="module-icon">🏢</div>
+      <div class="module-title">MULTI-EMPRESA</div>
+      <div class="module-desc">Un solo portal, múltiples empresas completamente aisladas. Cambia de contexto en un clic — datos, documentos y módulos separados por organización.</div>
+      <div class="module-features">
+        <span class="feature-chip">Company switcher</span>
+        <span class="feature-chip">RLS Supabase</span>
+        <span class="feature-chip">Onboarding 2min</span>
+        <span class="ai-badge">🔒 Aislamiento total</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CÓMO FUNCIONA -->
+<section id="como-funciona" style="background:rgba(255,255,255,.01);border-top:1px solid var(--border);border-bottom:1px solid var(--border);max-width:100%;padding:80px 40px">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="section-eyebrow">// Proceso</div>
+    <div class="section-title">De cero a operando en 2 minutos</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Registra tu empresa</div>
+        <div class="step-desc">Llena el formulario con nombre, RFC y datos básicos. MTTX AI crea tu espacio aislado automáticamente.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Invita a tu equipo</div>
+        <div class="step-desc">Agrega usuarios con roles específicos — admin, ventas, finanzas, viewer. Cada uno ve solo lo que necesita.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">La IA trabaja contigo</div>
+        <div class="step-desc">Desde el primer día, los agentes analizan tu pipeline, alertan de facturas vencidas y sugieren acciones concretas.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="precios">
+  <div class="section-eyebrow">// Planes</div>
+  <div class="section-title">Precio justo para cada etapa</div>
+  <p class="section-sub">Sin costos ocultos. Sin contratos forzosos. Cancela cuando quieras.</p>
+
+  <div class="pricing-grid">
+    <!-- Starter -->
+    <div class="pricing-card">
+      <div>
+        <div class="plan-name">STARTER</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Para PyMEs en crecimiento</div>
+      </div>
+      <div class="plan-price">
+        <div class="plan-amount">$2,500</div>
+        <div class="plan-period">MXN / mes</div>
+      </div>
+      <div class="plan-users">Hasta 5 usuarios</div>
+      <div class="plan-features">
+        <div class="plan-feat">CRM & Ventas (3 agentes IA)</div>
+        <div class="plan-feat">Gestión Documental</div>
+        <div class="plan-feat">Dashboard Home</div>
+        <div class="plan-feat">100 consultas IA / mes</div>
+        <div class="plan-feat">1 empresa</div>
+        <div class="plan-feat">Soporte por email</div>
+        <div class="plan-feat disabled">Finanzas & Cobranza</div>
+        <div class="plan-feat disabled">CEO Command Center</div>
+        <div class="plan-feat disabled">Multi-empresa</div>
+      </div>
+      <a href="/registro-empresa.html" class="btn btn-ghost" style="text-align:center;justify-content:center">Comenzar gratis 14d</a>
+    </div>
+
+    <!-- Business (featured) -->
+    <div class="pricing-card featured">
+      <div class="pricing-badge">MÁS POPULAR</div>
+      <div>
+        <div class="plan-name">BUSINESS</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Para empresas consolidadas</div>
+      </div>
+      <div class="plan-price">
+        <div class="plan-amount">$6,500</div>
+        <div class="plan-period">MXN / mes</div>
+      </div>
+      <div class="plan-users">Hasta 20 usuarios</div>
+      <div class="plan-features">
+        <div class="plan-feat">Todo en Starter</div>
+        <div class="plan-feat">Finanzas (CXC, CXP, Flujo)</div>
+        <div class="plan-feat">Cobranza con IA</div>
+        <div class="plan-feat">Compras P2P completo</div>
+        <div class="plan-feat">Marketing IA</div>
+        <div class="plan-feat">500 consultas IA / mes</div>
+        <div class="plan-feat">Hasta 2 empresas</div>
+        <div class="plan-feat">Soporte prioritario</div>
+        <div class="plan-feat disabled">CEO Command Center</div>
+        <div class="plan-feat disabled">Multi-empresa ilimitada</div>
+      </div>
+      <a href="/registro-empresa.html" class="btn btn-primary" style="text-align:center;justify-content:center">Comenzar gratis 14d</a>
+    </div>
+
+    <!-- Enterprise -->
+    <div class="pricing-card">
+      <div>
+        <div class="plan-name">ENTERPRISE</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Para corporativos y grupos</div>
+      </div>
+      <div class="plan-price">
+        <div class="plan-amount">$18K+</div>
+        <div class="plan-period">MXN / mes</div>
+      </div>
+      <div class="plan-users">Usuarios ilimitados</div>
+      <div class="plan-features">
+        <div class="plan-feat">Todo en Business</div>
+        <div class="plan-feat">CEO Command Center</div>
+        <div class="plan-feat">Consejo Ejecutivo IA</div>
+        <div class="plan-feat">Empresas ilimitadas</div>
+        <div class="plan-feat">IA sin límite de consultas</div>
+        <div class="plan-feat">SLA 99.9% garantizado</div>
+        <div class="plan-feat">Onboarding asistido</div>
+        <div class="plan-feat">Account Manager dedicado</div>
+        <div class="plan-feat">Contrato anual (−15%)</div>
+      </div>
+      <a href="mailto:acanales@ibanormexico.com?subject=MTTX AI Enterprise" class="btn btn-ghost" style="text-align:center;justify-content:center">Contactar ventas →</a>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALES -->
+<section style="background:rgba(255,255,255,.01);border-top:1px solid var(--border);border-bottom:1px solid var(--border);max-width:100%;padding:80px 40px">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="section-eyebrow">// Clientes</div>
+    <div class="section-title">Resultados reales</div>
+    <div class="testimonials">
+      <div class="tcard">
+        <div class="tstars">★★★★★</div>
+        <div class="tquote">En 2 semanas teníamos todo el equipo de ventas operando con los agentes de IA. El comparador de cotizaciones solo ya nos ahorró $340K en el primer mes.</div>
+        <div class="tauthor"><div class="tname">Carlos M.</div><div class="trole">Director Comercial · Grupo Industrial MX</div></div>
+      </div>
+      <div class="tcard">
+        <div class="tstars">★★★★★</div>
+        <div class="tquote">Manejamos 3 empresas del grupo en el mismo portal. El company switcher es transparente — datos completamente aislados, nunca se mezclan. Exactamente lo que necesitábamos.</div>
+        <div class="tauthor"><div class="tname">Ana L.</div><div class="trole">CFO · Constructora del Norte</div></div>
+      </div>
+      <div class="tcard">
+        <div class="tstars">★★★★★</div>
+        <div class="tquote">El CEO Command Center con los 4 agentes directivos cambió completamente cómo tomamos decisiones. Antes tardábamos horas en reunir la información que ahora tenemos en segundos.</div>
+        <div class="tauthor"><div class="tname">Roberto S.</div><div class="trole">CEO · Farmacéutica Salud+</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<div class="cta-section">
+  <h2>¿Listo para<br><span style="color:var(--accent)">transformar</span> tu empresa?</h2>
+  <p>14 días gratis. Sin tarjeta de crédito. Tu empresa lista en 2 minutos.</p>
+  <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+    <a href="/registro-empresa.html" class="btn btn-primary btn-lg">🚀 Comenzar ahora — es gratis</a>
+    <a href="mailto:acanales@ibanormexico.com?subject=Demo MTTX AI" class="btn btn-ghost btn-lg">Agendar demo personalizada</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">MTTX AI</div>
+  <div>© 2026 MTTX AI — MetaTronix / IBANOR SA de CV. Todos los derechos reservados.</div>
+  <div style="display:flex;gap:20px">
+    <a href="/privacy.html" style="color:var(--faint);text-decoration:none;font-size:12px">Privacidad</a>
+    <a href="/terms.html" style="color:var(--faint);text-decoration:none;font-size:12px">Términos</a>
+    <a href="mailto:acanales@ibanormexico.com" style="color:var(--faint);text-decoration:none;font-size:12px">Contacto</a>
+  </div>
+</footer>
+
+</body>
+</html>

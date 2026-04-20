@@ -716,8 +716,36 @@ function closeBellDropdown() {
   if (dd) dd.classList.remove('open');
 }
 
-// ── Company Switcher (super_admin) ────────────────────────────────────────
+// ── Company Switcher ──────────────────────────────────────────────────────
 window.MTX_ACTIVE_COMPANY = JSON.parse(sessionStorage.getItem('mtx_active_company') || 'null');
+
+/**
+ * Retorna el company_id activo: primero el switcher, luego el perfil del usuario.
+ * Úsalo en cualquier módulo para obtener el filtro correcto.
+ */
+function getActiveCompanyId() {
+  return window.MTX_ACTIVE_COMPANY?.id
+    || window._mtxCurrentUser?.profile?.company_id
+    || null;
+}
+
+/**
+ * Aplica .eq('company_id', id) a un query Supabase si hay empresa activa.
+ * Ejemplo: const { data } = await applyCompanyFilter(db.from('leads').select('*'));
+ */
+function applyCompanyFilter(query) {
+  const id = getActiveCompanyId();
+  return id ? query.eq('company_id', id) : query;
+}
+
+/**
+ * Retorna el nombre de la empresa activa para mostrar en UI.
+ */
+function getActiveCompanyName() {
+  return window.MTX_ACTIVE_COMPANY?.name
+    || window._mtxCurrentUser?.profile?.company_name
+    || 'Mi Empresa';
+}
 
 function toggleCompanySwitcher(e) {
   e.stopPropagation();
