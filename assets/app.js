@@ -885,7 +885,7 @@ async function loadCompanySwitcher() {
   if (nameEl) nameEl.textContent = active?.name || 'Selecciona empresa';
 
   try {
-    const db = getSupabase();
+    const db = getDB();
     const user = window._mtxCurrentUser;
     const isAdminRole = ['admin','super_admin'].includes(user?.profile?.role);
 
