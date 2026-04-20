@@ -1,7 +1,8 @@
 -- ============================================================
 -- RLS MULTICOMPANY — MetaTronix / MTTX AI
--- Actualiza políticas de tablas operativas para usar user_companies
--- Usa DO blocks para saltarse tablas que no existen
+-- 1. Agrega company_id a cada tabla operativa (si no existe)
+-- 2. Crea function helper user_has_company_access
+-- 3. Aplica RLS policies por tabla (solo si la tabla existe)
 -- ============================================================
 
 -- Helper: usuario pertenece a la empresa del registro
@@ -20,6 +21,11 @@ $$;
 -- ── LEADS ─────────────────────────────────────────────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='leads') THEN
+    -- Agregar company_id si no existe
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='leads' AND column_name='company_id') THEN
+      ALTER TABLE leads ADD COLUMN company_id UUID REFERENCES companies(id);
+      UPDATE leads SET company_id = 'a0000000-0000-0000-0000-000000000001' WHERE company_id IS NULL;
+    END IF;
     ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "leads_select" ON leads;
     DROP POLICY IF EXISTS "leads_insert" ON leads;
@@ -39,6 +45,10 @@ END $$;
 -- ── INVOICES_OUT ──────────────────────────────────────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='invoices_out') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoices_out' AND column_name='company_id') THEN
+      ALTER TABLE invoices_out ADD COLUMN company_id UUID REFERENCES companies(id);
+      UPDATE invoices_out SET company_id = 'a0000000-0000-0000-0000-000000000001' WHERE company_id IS NULL;
+    END IF;
     ALTER TABLE invoices_out ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "inv_out_select" ON invoices_out;
     DROP POLICY IF EXISTS "inv_out_insert" ON invoices_out;
@@ -58,6 +68,10 @@ END $$;
 -- ── INVOICES_IN ───────────────────────────────────────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='invoices_in') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='invoices_in' AND column_name='company_id') THEN
+      ALTER TABLE invoices_in ADD COLUMN company_id UUID REFERENCES companies(id);
+      UPDATE invoices_in SET company_id = 'a0000000-0000-0000-0000-000000000001' WHERE company_id IS NULL;
+    END IF;
     ALTER TABLE invoices_in ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "inv_in_select" ON invoices_in;
     DROP POLICY IF EXISTS "inv_in_insert" ON invoices_in;
@@ -77,6 +91,10 @@ END $$;
 -- ── SUPPLIERS ─────────────────────────────────────────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='suppliers') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='suppliers' AND column_name='company_id') THEN
+      ALTER TABLE suppliers ADD COLUMN company_id UUID REFERENCES companies(id);
+      UPDATE suppliers SET company_id = 'a0000000-0000-0000-0000-000000000001' WHERE company_id IS NULL;
+    END IF;
     ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "suppliers_select" ON suppliers;
     DROP POLICY IF EXISTS "suppliers_insert" ON suppliers;
@@ -96,6 +114,10 @@ END $$;
 -- ── REQUISITIONS ──────────────────────────────────────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='requisitions') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='requisitions' AND column_name='company_id') THEN
+      ALTER TABLE requisitions ADD COLUMN company_id UUID REFERENCES companies(id);
+      UPDATE requisitions SET company_id = 'a0000000-0000-0000-0000-000000000001' WHERE company_id IS NULL;
+    END IF;
     ALTER TABLE requisitions ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "req_select" ON requisitions;
     DROP POLICY IF EXISTS "req_insert" ON requisitions;
@@ -115,6 +137,10 @@ END $$;
 -- ── PURCHASE_ORDERS ───────────────────────────────────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='purchase_orders') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='purchase_orders' AND column_name='company_id') THEN
+      ALTER TABLE purchase_orders ADD COLUMN company_id UUID REFERENCES companies(id);
+      UPDATE purchase_orders SET company_id = 'a0000000-0000-0000-0000-000000000001' WHERE company_id IS NULL;
+    END IF;
     ALTER TABLE purchase_orders ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "po_select" ON purchase_orders;
     DROP POLICY IF EXISTS "po_insert" ON purchase_orders;
@@ -134,6 +160,10 @@ END $$;
 -- ── ORG_PULSE ─────────────────────────────────────────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='org_pulse') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='org_pulse' AND column_name='company_id') THEN
+      ALTER TABLE org_pulse ADD COLUMN company_id UUID REFERENCES companies(id);
+      UPDATE org_pulse SET company_id = 'a0000000-0000-0000-0000-000000000001' WHERE company_id IS NULL;
+    END IF;
     ALTER TABLE org_pulse ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "pulse_select" ON org_pulse;
     DROP POLICY IF EXISTS "pulse_insert" ON org_pulse;
@@ -147,6 +177,10 @@ END $$;
 -- ── EXECUTIVE_DECISIONS ───────────────────────────────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='executive_decisions') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='executive_decisions' AND column_name='company_id') THEN
+      ALTER TABLE executive_decisions ADD COLUMN company_id UUID REFERENCES companies(id);
+      UPDATE executive_decisions SET company_id = 'a0000000-0000-0000-0000-000000000001' WHERE company_id IS NULL;
+    END IF;
     ALTER TABLE executive_decisions ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "edec_select" ON executive_decisions;
     DROP POLICY IF EXISTS "edec_insert" ON executive_decisions;
