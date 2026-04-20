@@ -17,11 +17,10 @@ jobs:
       - name: Run demo_data.sql via Supabase Management API
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
           SQL=$(cat sql/demo_data.sql)
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            "https://api.supabase.com/v1/projects/hodrfonbpmqulkyzrzpq/database/query" \
             -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "{\"query\": $(echo "$SQL" | jq -Rs .)}")
