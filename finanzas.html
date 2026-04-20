@@ -328,46 +328,49 @@ function buildShell() {
           </div>
         </div>
 
-        <!-- AR List -->
-        <div class="fin-card">
-          <div class="fin-card-head">
-            <div class="fin-card-title">📋 Cuentas por Cobrar Activas</div>
-            <span style="font-size:11px;color:var(--text-faint)" id="ar-count-label">—</span>
-          </div>
-          <div class="fin-card-body">
-            <table class="aging-table">
-              <thead>
-                <tr><th>Cliente</th><th>Folio</th><th>Emisión</th><th>Vencimiento</th><th>Vencida</th><th class="amount-col">Total</th><th>Estado</th><th></th></tr>
-              </thead>
-              <tbody id="ar-tbody"><tr><td colspan="8" class="empty-state">Cargando...</td></tr></tbody>
-            </table>
-          </div>
-        </div>
+        <!-- AR List + Copiloto sidebar -->
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
 
-        <!-- Copiloto Financiero -->
-        <div class="copiloto-panel">
-          <div class="copiloto-head">
-            <div class="copiloto-title">🤖 Copiloto Financiero IA <span class="copiloto-badge">Claude</span></div>
-            <div style="display:flex;gap:8px">
-              <button class="btn-secondary-sm" onclick="clearCopiloto()" title="Limpiar">✕ Limpiar</button>
+          <!-- AR List -->
+          <div class="fin-card">
+            <div class="fin-card-head">
+              <div class="fin-card-title">📋 Cuentas por Cobrar Activas</div>
+              <span style="font-size:11px;color:var(--text-faint)" id="ar-count-label">—</span>
+            </div>
+            <div class="fin-card-body">
+              <table class="aging-table">
+                <thead>
+                  <tr><th>Cliente</th><th>Folio</th><th>Emisión</th><th>Vencimiento</th><th>Vencida</th><th class="amount-col">Total</th><th>Estado</th><th></th></tr>
+                </thead>
+                <tbody id="ar-tbody"><tr><td colspan="8" class="empty-state">Cargando...</td></tr></tbody>
+              </table>
             </div>
           </div>
-          <div class="copiloto-body">
-            <div class="copiloto-output" id="copiloto-out">
-              <div class="copiloto-placeholder">El copiloto financiero analiza tu CXC, CXP y flujo de caja.<br>Genera un briefing ejecutivo con recomendaciones de acción.</div>
+
+          <!-- Copiloto Financiero — sidebar -->
+          <div class="copiloto-panel" style="position:sticky;top:16px">
+            <div class="copiloto-head">
+              <div class="copiloto-title">🤖 Copiloto IA <span class="copiloto-badge">Claude</span></div>
+              <button class="btn-secondary-sm" onclick="clearCopiloto()" title="Limpiar">✕</button>
             </div>
-            <div class="copiloto-actions">
-              <button class="btn-copiloto" id="btn-briefing" onclick="generateBriefing()">
-                ⚡ Briefing Ejecutivo
-              </button>
-              <button class="btn-copiloto" style="background:rgba(0,255,136,.1);color:var(--accent);border:1px solid var(--accent-dim)" id="btn-riesgo" onclick="generateRiskAlert()">
-                🚨 Alertas de Riesgo
-              </button>
-              <button class="btn-copiloto" style="background:rgba(0,180,255,.1);color:#00b4ff;border:1px solid rgba(0,180,255,.3)" id="btn-flujo" onclick="generateCashflowForecast()">
-                📈 Proyección 30 días
-              </button>
+            <div class="copiloto-body">
+              <div class="copiloto-output" id="copiloto-out" style="min-height:160px;max-height:320px">
+                <div class="copiloto-placeholder">Analiza CXC, CXP y flujo de caja.<br>Genera briefings ejecutivos.</div>
+              </div>
+              <div class="copiloto-actions" style="flex-direction:column;gap:7px">
+                <button class="btn-copiloto" id="btn-briefing" onclick="generateBriefing()" style="width:100%;justify-content:center">
+                  ⚡ Briefing Ejecutivo
+                </button>
+                <button class="btn-copiloto" style="width:100%;justify-content:center;background:rgba(0,255,136,.1);color:var(--accent);border:1px solid var(--accent-dim)" id="btn-riesgo" onclick="generateRiskAlert()">
+                  🚨 Alertas de Riesgo
+                </button>
+                <button class="btn-copiloto" style="width:100%;justify-content:center;background:rgba(0,180,255,.1);color:#00b4ff;border:1px solid rgba(0,180,255,.3)" id="btn-flujo" onclick="generateCashflowForecast()">
+                  📈 Proyección 30 días
+                </button>
+              </div>
             </div>
           </div>
+
         </div>
 
       </div>

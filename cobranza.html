@@ -205,6 +205,9 @@ function buildShell() {
           </button>
         </div>
 
+        <!-- Queue + AI sidebar -->
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+
         <!-- Queue -->
         <div class="queue-card">
           <div class="queue-head">
@@ -237,8 +240,8 @@ function buildShell() {
           </div>
         </div>
 
-        <!-- Mensaje AI panel -->
-        <div class="msg-panel">
+        <!-- Mensaje AI panel — sidebar -->
+        <div class="msg-panel" style="position:sticky;top:16px">
           <div class="msg-head">
             <div class="msg-title">✉️ Generador de Mensajes <span class="badge-claude">Claude</span></div>
             <div id="sel-info" class="selected-info">Selecciona facturas para generar mensajes personalizados</div>
@@ -290,6 +293,8 @@ function buildShell() {
             </div>
           </div>
         </div>
+
+        </div><!-- /queue+ai grid -->
 
       </div>
     </main>

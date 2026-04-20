@@ -408,28 +408,43 @@ function buildShell() {
 
         <!-- Tab: Comparar Cotizaciones -->
         <div class="tab-pane" id="tab-comparar">
-          <div class="compare-panel">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-              <div style="font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px">
+          <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+
+            <!-- Left: selector + output -->
+            <div class="compare-panel">
+              <div style="font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;margin-bottom:10px">
                 ⚡ Comparador de Cotizaciones <span class="badge-ai">Claude IA</span>
               </div>
-              <div style="display:flex;gap:10px;align-items:center">
-                <select class="btn-outline" style="padding:7px 12px;font-size:12px" id="cmp-req-select">
-                  <option value="">— Seleccionar Requisición —</option>
-                </select>
-                <button class="btn-primary" id="btn-compare" onclick="compareQuotes()">Comparar con IA</button>
+              <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px">
+                Selecciona una requisición para que Claude compare las cotizaciones recibidas y recomiende la mejor opción considerando precio, calidad y plazos.
+              </p>
+              <div class="compare-output" id="compare-out">
+                <div class="compare-placeholder">El análisis de Claude aparecerá aquí.<br>Selecciona una requisición con cotizaciones registradas.</div>
               </div>
             </div>
-            <p style="font-size:12px;color:var(--text-muted);margin:10px 0 0">
-              Selecciona una requisición para que Claude compare las cotizaciones recibidas y recomiende la mejor opción considerando precio, calidad y plazos.
-            </p>
-            <div class="compare-output" id="compare-out">
-              <div class="compare-placeholder">El análisis de Claude aparecerá aquí.<br>Selecciona una requisición con cotizaciones registradas.</div>
+
+            <!-- Right: controls sidebar -->
+            <div class="compare-panel" style="position:sticky;top:16px">
+              <div style="font-weight:600;font-size:13px;margin-bottom:12px;color:var(--text-muted)">CONFIGURAR ANÁLISIS</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div>
+                  <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Requisición</label>
+                  <select class="btn-outline" style="width:100%;padding:7px 12px;font-size:12px" id="cmp-req-select">
+                    <option value="">— Seleccionar Requisición —</option>
+                  </select>
+                </div>
+                <button class="btn-primary" id="btn-compare" onclick="compareQuotes()" style="width:100%;justify-content:center">
+                  ⚡ Comparar con IA
+                </button>
+                <button class="btn-primary" id="btn-compare2" onclick="compareQuotes()" style="width:100%;justify-content:center;display:none">
+                  ⚡ Analizar Cotizaciones
+                </button>
+                <button class="btn-outline" onclick="clearCompare()" style="width:100%;justify-content:center">
+                  ✕ Limpiar
+                </button>
+              </div>
             </div>
-            <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
-              <button class="btn-primary" id="btn-compare2" onclick="compareQuotes()">⚡ Analizar Cotizaciones</button>
-              <button class="btn-outline" onclick="clearCompare()">✕ Limpiar</button>
-            </div>
+
           </div>
         </div>
 
