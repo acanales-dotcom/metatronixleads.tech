@@ -238,21 +238,18 @@ let _companies = [];
 let _selectedCompany = null;
 let _userMap = {};   // uuid → {email, full_name}
 
-/* ─── Wait helper ───────────────────────────────────── */
-async function waitForUser() {
-  for (let i = 0; i < 30; i++) {
-    const u = window._mtxCurrentUser || window._currentUser;
-    if (u) return u;
-    await new Promise(r => setTimeout(r, 200));
-  }
-  return null;
-}
-
 /* ─── Init ─────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
-  await waitForUser();
-  const user = window._mtxCurrentUser || window._currentUser;
-  if (!user) { location.href = '/index.html'; return; }
+  const user = await requireAuth();
+  if (!user) return; // requireAuth handles redirect
+
+  // Inject sidebar
+  const shell = document.getElementById('app-shell') || document.getElementById('header-placeholder');
+  if (shell && typeof renderHeader === 'function') {
+    shell.innerHTML = renderHeader(user, 'empresas');
+  }
+  if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+
   const role = user.profile?.role;
   if (!['admin','super_admin'].includes(role)) {
     document.querySelector('.emp-root').innerHTML =
@@ -260,10 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  _sb = (typeof getDB === 'function') ? getDB() : supabase.createClient(
-    window.MTX_CONFIG.SUPABASE_URL,
-    window.MTX_CONFIG.SUPABASE_ANON_KEY
-  );
+  _sb = getDB();
 
   // Current company name
   const currentId = window.getActiveCompanyId?.() || user.profile?.company_id;

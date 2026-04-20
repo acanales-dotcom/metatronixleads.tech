@@ -202,21 +202,20 @@ const TYPE_LABELS = {
 
 /* ── Init ── */
 window.addEventListener('DOMContentLoaded', async () => {
-  _user = await waitForUser();
-  if (!_user) { window.location = '/index.html'; return; }
+  _user = await requireAuth();
+  if (!_user) return; // requireAuth handles redirect
   _db = getDB();
-  await loadDocs();
-  setupShell('documentos');
-});
 
-async function waitForUser() {
-  for (let i = 0; i < 30; i++) {
-    const u = window._mtxCurrentUser || window._currentUser;
-    if (u) return u;
-    await new Promise(r => setTimeout(r, 200));
+  // Inject sidebar
+  const shell = document.getElementById('app-shell');
+  if (shell && typeof renderHeader === 'function') {
+    shell.innerHTML = renderHeader(_user, 'documentos');
   }
-  return null;
-}
+  if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+
+  await loadDocs();
+  window.addEventListener('mtx:companySwitch', () => loadDocs());
+});
 
 /* ── Data loading ── */
 async function loadDocs() {
