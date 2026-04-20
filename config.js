@@ -23,7 +23,7 @@ window.MTX_CONFIG = {
 /* ── Registro del Service Worker ─────────────────────────── */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/assets/sw.js')
+    navigator.serviceWorker.register('/sw.js')
       .catch(() => {}); // Silencioso si falla (HTTP, permisos, etc.)
   });
 }
