@@ -2,7 +2,7 @@
    MetaTronix Portal — Service Worker
    Stale-while-revalidate para assets estáticos
    ============================================================ */
-const CACHE = 'mtx-v20260420b';
+const CACHE = 'mtx-v20260420c';
 const STATIC = [
   '/assets/style.css',
   '/assets/app.js',
@@ -34,22 +34,32 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-/* Fetch: stale-while-revalidate para mismo origen */
+/* Fetch: network-first para JS, stale-while-revalidate para el resto */
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // Solo cachear recursos del mismo origen
   if (url.origin !== location.origin) return;
-  // No cachear llamadas a Supabase ni al Worker
   if (url.pathname.startsWith('/supabase') || url.hostname.includes('workers.dev')) return;
 
+  // JS siempre fresco desde la red (nunca stale)
+  if (url.pathname.endsWith('.js')) {
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        if (resp.ok) caches.open(CACHE).then(c => c.put(e.request, resp.clone()));
+        return resp;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // CSS/HTML/imágenes: stale-while-revalidate
   e.respondWith(
     caches.open(CACHE).then(cache =>
       cache.match(e.request).then(cached => {
         const fetched = fetch(e.request).then(resp => {
           if (resp.ok) cache.put(e.request, resp.clone());
           return resp;
-        }).catch(() => cached); // Si falla la red, usar caché
+        }).catch(() => cached);
         return cached || fetched;
       })
     )
