@@ -1933,15 +1933,16 @@ Red social objetivo: ${network}
 Canales débiles: ${weakChannels}
 Contexto agentes: ${agentCtx}
 
-Responde EXACTAMENTE este JSON. Cada post incluye visual_type (imagen_ia|video_ia|foto_real según formato y red) y visual_prompt (prompt en inglés listo para copiar en Midjourney/DALL-E/Sora/Kling, máx 100 chars, incluye dimensiones y estilo).
+Responde EXACTAMENTE este JSON. El campo "copy" debe ser el texto COMPLETO y publicable del post (no un resumen), incluyendo emojis apropiados para ${network}, hashtags relevantes y CTA. Mínimo 80 palabras por post. Cada post incluye visual_type (imagen_ia|video_ia|foto_real) y visual_prompt (prompt inglés para Midjourney/DALL-E, máx 100 chars).
 
-{"campaign_name":"<4-6 palabras>","campaign_score":<95-100>,"score_delta":<diferencia vs ${origScore}>,"strategy":"<2 oraciones>","avg_score":<promedio real ≥95>,"posts":[{"platform":"${network}","format":"<Carrusel|Video|Reel|Story|Post texto|Artículo|Imagen>","hook":"<máx 60 chars>","copy":"<máx 120 chars>","score":<90-100>,"razon":"<6-8 palabras>","visual_type":"<imagen_ia|video_ia|foto_real>","visual_prompt":"<prompt inglés máx 100 chars>"},{"platform":"${network}","format":"","hook":"","copy":"","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":97,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"","score":98,"razon":"","visual_type":"","visual_prompt":""}]}`;
+{"campaign_name":"<4-6 palabras>","campaign_score":<95-100>,"score_delta":<diferencia vs ${origScore}>,"strategy":"<2 oraciones>","avg_score":<promedio real ≥95>,"posts":[{"platform":"${network}","format":"<Carrusel|Video|Reel|Story|Post texto|Artículo|Imagen>","hook":"<línea de apertura potente máx 70 chars>","copy":"<texto COMPLETO publicable con emojis, hashtags y CTA — mínimo 80 palabras>","score":<90-100>,"razon":"<6-8 palabras>","visual_type":"<imagen_ia|video_ia|foto_real>","visual_prompt":"<prompt inglés máx 100 chars>"},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":97,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":98,"razon":"","visual_type":"","visual_prompt":""}]}`;
 
   let structured = null;
   try {
-    const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:1200, agentName:'CampañaGenio', page:'marketing' });
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (m) structured = JSON.parse(m[0]);
+    const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:2400, agentName:'CampañaGenio', page:'marketing' });
+    const cleaned = raw.replace(/```(?:json)?/gi,'').replace(/^[^{]*/,'');
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) { const p = JSON.parse(m[0]); if (Array.isArray(p.posts)) structured = p; }
   } catch(_) { /* fallback abajo */ }
 
   if (!structured || !Array.isArray(structured.posts) || structured.posts.length < 7) {
@@ -2027,6 +2028,7 @@ Responde EXACTAMENTE este JSON. Cada post incluye visual_type (imagen_ia|video_i
     };
   }
 
+  window._lastCampaignStructured = structured; // accesible por simularCampanaCompleta
   container.innerHTML = renderCampaignPanel(structured, origScore, network);
 }
 
@@ -2079,9 +2081,10 @@ function renderCampaignPanel(s, origScore, network) {
     const scColor = sc >= 95 ? '#4ADE80' : sc >= 90 ? '#FCD34D' : '#F87171';
     const vtype = p.visual_type || 'imagen_ia';
     const vprompt = p.visual_prompt || '';
-    const vpromptId = `vp-${i}-${Date.now()}`;
+    const cardId = `camp-card-${i}-${Date.now()}`;
+    const postDataAttr = escHtml(JSON.stringify({ hook: p.hook||'', copy: p.copy||'', razon: p.razon||'', platform: p.platform||network, format: p.format||'Post', score: sc }));
     return `
-    <div class="camp-post-card" style="animation:camp-in .4s ease both;animation-delay:${i*.07}s">
+    <div class="camp-post-card" id="${cardId}" style="animation:camp-in .4s ease both;animation-delay:${i*.07}s">
       <div class="camp-post-top">
         ${platformBadge(p.platform || network)}
         <span class="camp-post-format">${escHtml(p.format||'Post')}</span>
@@ -2103,6 +2106,19 @@ function renderCampaignPanel(s, origScore, network) {
         </div>
         <div class="camp-visual-prompt">${escHtml(vprompt)}</div>
       </div>` : ''}
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" style="color:#22D3EE;border-color:rgba(6,182,212,.3);font-size:11px"
+          data-post="${postDataAttr}"
+          onclick="expandFullPost(this,'${cardId}')">
+          📤 Ver post completo
+        </button>
+        <button class="btn btn-ghost btn-sm" style="color:#818CF8;border-color:rgba(129,140,248,.3);font-size:11px"
+          data-post="${postDataAttr}"
+          onclick="sendToSocialSim(this)">
+          🧬 Simular reacción
+        </button>
+      </div>
+      <div class="camp-full-post" id="full-${cardId}" style="display:none;margin-top:10px;background:rgba(0,0,0,.3);border:1px solid rgba(34,211,238,.15);border-radius:8px;padding:12px"></div>
     </div>`;
   }).join('');
 
@@ -2143,10 +2159,137 @@ function renderCampaignPanel(s, origScore, network) {
       <div class="camp-post-grid">${postCards}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
         <button class="btn btn-ghost btn-sm" onclick="copyCampana()" style="color:#22D3EE;border-color:rgba(6,182,212,.3)">📋 Copiar propuesta</button>
+        <button class="btn btn-ghost btn-sm" id="btn-sim-campana" onclick="simularCampanaCompleta()" style="color:#818CF8;border-color:rgba(129,140,248,.3);font-weight:600">🧬 Simular campaña completa en Social Sim</button>
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('campaign-container').style.display='none'" style="color:#7E8FA8;border-color:rgba(126,143,168,.2)">✕ Cerrar</button>
       </div>
     </div>
   </div>`;
+}
+
+/* ── Post completo: expande la card con el texto listo para publicar ── */
+async function expandFullPost(btn, cardId) {
+  const postData = JSON.parse(btn.getAttribute('data-post') || '{}');
+  const fullDiv  = document.getElementById('full-' + cardId);
+  if (!fullDiv) return;
+
+  // Toggle: si ya tiene contenido, mostrar/ocultar
+  if (fullDiv.dataset.loaded === '1') {
+    fullDiv.style.display = fullDiv.style.display === 'none' ? 'block' : 'none';
+    btn.textContent = fullDiv.style.display === 'none' ? '📤 Ver post completo' : '🔼 Ocultar post';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando…';
+  fullDiv.style.display = 'block';
+  fullDiv.innerHTML = '<div style="color:#818CF8;font-size:12px">Generando post completo listo para publicar…</div>';
+
+  const { hook='', copy='', razon='', platform='', format='Post' } = postData;
+  const kb = getKB();
+  const empresa  = kb.empresa  || 'MetaTronix';
+  const producto = (kb.productos||'MetaTronix CRM IA').split(',')[0].trim();
+  const audiencia= (kb.audiencia||'directores de ventas en LATAM').split(',')[0].trim();
+  const tono     = kb.tono || 'profesional y directo';
+  const isLinkedIn = /linkedin/i.test(platform);
+  const isInstagram= /instagram|reel|story/i.test(platform) || /reel|story/i.test(format);
+  const isTikTok   = /tiktok/i.test(platform);
+  const isEmail    = /email/i.test(platform);
+
+  let fullText = '';
+
+  if (window.CRM_LLM?.engine) {
+    try {
+      const sys = `Eres un copywriter experto en ${platform}. Generas posts completos, listos para copiar y pegar, optimizados para engagement. Responde SOLO con el texto del post, sin explicaciones, sin títulos, sin "Aquí está el post", sin instrucciones. Solo el post.`;
+      const userMsg = `Genera el post completo para ${platform} (${format}).
+
+Hook de apertura: "${hook}"
+Copy base: "${copy}"
+Razón de impacto: "${razon}"
+Empresa: ${empresa} | Producto: ${producto}
+Audiencia: ${audiencia} | Tono: ${tono}
+
+Reglas:
+${isLinkedIn ? '- LinkedIn: 150-250 palabras. Párrafos cortos (1-2 líneas). Línea de gancho potente. Cierra con CTA suave y pregunta para comentarios. 3-5 hashtags al final.' : ''}
+${isInstagram ? '- Instagram/Reel: 80-120 palabras. Emojis en cada párrafo. Hook visual en 1ra línea. CTA directo ("guarda esto", "etiqueta a alguien"). 8-12 hashtags al final.' : ''}
+${isTikTok ? '- TikTok: Caption corta 40-80 palabras. Hook que deja pensando. 3-5 hashtags trending. CTA de dueto o comentario.' : ''}
+${isEmail ? '- Email: Asunto poderoso (1 línea). Cuerpo 100-150 palabras. CTA de 1 link. P.D. con urgencia.' : ''}
+${!isLinkedIn && !isInstagram && !isTikTok && !isEmail ? '- 120-200 palabras. Emojis apropiados. CTA al final. Hashtags relevantes (5-8).' : ''}
+
+Genera el post completo y publicable:`;
+
+      fullText = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 500, agentName: 'PostGenerator', page: 'marketing' });
+    } catch(e) {
+      fullText = null;
+    }
+  }
+
+  // Fallback estructurado si LLM falla
+  if (!fullText) {
+    const hashtagBase = [empresa.replace(/\s/g,''), producto.replace(/\s/g,''), 'CRM', 'IA', 'LATAM', 'Ventas', 'Marketing'];
+    const hashtags = hashtagBase.slice(0,6).map(h=>'#'+h).join(' ');
+    const emoji1 = isLinkedIn ? '📊' : isInstagram ? '✨' : '🚀';
+    const emoji2 = isLinkedIn ? '💡' : isInstagram ? '🎯' : '⚡';
+    if (isEmail) {
+      fullText = `Asunto: ${hook}\n\nHola [Nombre],\n\n${copy}\n\n${emoji2} ${razon}\n\n→ [CTA principal]\n\nSaludos,\n[Tu nombre] | ${empresa}\n\nP.D. Esta oferta es válida solo hasta el viernes.`;
+    } else {
+      fullText = `${emoji1} ${hook}\n\n${copy}\n\n${emoji2} ${razon}\n\n¿Te identificas con esto? Cuéntame en los comentarios 👇\n\n${hashtags}`;
+    }
+  }
+
+  // Render
+  fullDiv.dataset.loaded = '1';
+  fullDiv.innerHTML = `
+    <div style="font-size:11px;color:#22D3EE;letter-spacing:.05em;margin-bottom:8px;font-family:'JetBrains Mono',monospace">
+      POST COMPLETO — ${escHtml(platform.toUpperCase())} · ${escHtml(format.toUpperCase())}
+    </div>
+    <div style="white-space:pre-wrap;font-size:13px;line-height:1.8;color:rgba(255,255,255,.9)">${escHtml(fullText)}</div>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" style="color:#22D3EE;border-color:rgba(6,182,212,.3);font-size:11px"
+        onclick="navigator.clipboard?.writeText(${JSON.stringify(fullText)}).then(()=>{ if(typeof Notiflix!=='undefined') Notiflix.Notify.success('Post copiado ✓'); })">
+        📋 Copiar post
+      </button>
+      <button class="btn btn-ghost btn-sm" style="color:#818CF8;border-color:rgba(129,140,248,.3);font-size:11px"
+        onclick="(function(t){ const inp=document.getElementById('input-social_sim'); if(inp){inp.value=t;} toggleAgent('social_sim'); setTimeout(()=>runAgent('social_sim'),300); })(${JSON.stringify(fullText.slice(0,400))})">
+        🧬 Simular este post
+      </button>
+    </div>`;
+
+  btn.disabled = false;
+  btn.textContent = '🔼 Ocultar post';
+}
+
+/* ── Envía un post individual a la simulación social ── */
+function sendToSocialSim(btn) {
+  const postData = JSON.parse(btn.getAttribute('data-post') || '{}');
+  const { hook='', copy='', platform='' } = postData;
+  const content = `[${platform}] ${hook}\n\n${copy}`.slice(0, 500);
+  const inp = document.getElementById('input-social_sim');
+  if (inp) inp.value = content;
+  toggleAgent('social_sim');
+  setTimeout(() => runAgent('social_sim'), 350);
+  if (typeof Notiflix !== 'undefined') Notiflix.Notify.info('Simulando este post en Social Sim…');
+}
+
+/* ── Simula la campaña completa: toma los 3 mejores posts y los envía a Social Sim ── */
+function simularCampanaCompleta() {
+  const s = window._lastCampaignStructured;
+  if (!s || !s.posts?.length) {
+    if (typeof Notiflix !== 'undefined') Notiflix.Notify.warning('Genera primero una propuesta de campaña ↑');
+    return;
+  }
+  const sorted = [...s.posts].sort((a,b) => (b.score||95)-(a.score||95));
+  const top3   = sorted.slice(0,3);
+  const network = window._lastMission ? '' : '';
+  const content = `CAMPAÑA: ${escHtml(s.campaign_name||'')}\n\n` +
+    top3.map((p,i) => `POST ${i+1} [${p.platform||''}·${p.format||'Post'}] Score:${p.score||95}%\nHook: ${p.hook||''}\n${p.copy||''}`).join('\n\n---\n\n');
+
+  const inp = document.getElementById('input-social_sim');
+  if (inp) inp.value = content.slice(0, 600);
+  toggleAgent('social_sim');
+  document.querySelector('.social-sim-section, [data-agent="social_sim"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => runAgent('social_sim'), 400);
+  const btn = document.getElementById('btn-sim-campana');
+  if (btn) { btn.textContent = '⏳ Simulando…'; btn.disabled = true; setTimeout(() => { btn.textContent = '🧬 Simular campaña completa en Social Sim'; btn.disabled = false; }, 30000); }
 }
 
 function copyCampana() {
