@@ -561,7 +561,7 @@ function buildMesaPane(mesa, idx) {
         <div class="mesa-icon">${mesa.icon}</div>
         <div class="mesa-meta">
           <div class="mesa-name" style="color:${mesa.color}">${mesa.name}</div>
-          <div class="mesa-desc">${mesa.desc}</div>
+          <div class="mesa-desc">${(()=>{const kb=getConsejoKB();const emp=kb.empresa||'';return emp?mesa.desc.replace(/IBANOR SA de CV \/ MetaTronix|IBANOR SA de CV|MetaTronix/g,emp):mesa.desc;})()} </div>
           <div class="mesa-badge" style="color:${mesa.color};border-color:${mesa.color};opacity:.7">${mesa.badge}</div>
         </div>
         <div class="mesa-access">Acceso: ${mesa.access.join(' · ')}</div>
@@ -737,7 +737,19 @@ async function runSession(mesaId) {
     }
     out.innerHTML = html || '<em style="color:var(--text-faint)">Sin respuesta del modelo.</em>';
   } catch(e) {
-    out.innerHTML = `<span style="color:#ff4646">Error: ${e.message}</span>`;
+    out.innerHTML = `<div style="background:rgba(255,70,70,.08);border:1px solid rgba(255,70,70,.2);border-radius:8px;padding:16px;margin-bottom:12px;font-size:13px;color:rgba(255,200,200,.8)">
+      <strong>⚠ Conexión con IA temporalmente no disponible</strong><br>
+      <span style="color:rgba(255,180,180,.6);font-size:11px">${e.message}</span>
+    </div>
+    <h2>${mesa.icon} ${mesa.name}</h2>
+    <p>La sesión no pudo completarse. Para continuar:</p>
+    <ol>
+      <li>Verifica tu conexión a internet</li>
+      <li>Recarga la página e intenta nuevamente</li>
+      <li>Si el error persiste, contacta al administrador del sistema</li>
+    </ol>
+    <p>El tema <strong>"${agenda}"</strong> quedó guardado en el campo de agenda — no necesitas reescribirlo.</p>
+    <p>→ <strong>Acción:</strong> Reintenta en 30 segundos.</p>`;
   } finally {
     _streaming = false;
     btn.disabled = false;

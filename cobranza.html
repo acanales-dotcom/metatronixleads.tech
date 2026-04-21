@@ -536,6 +536,17 @@ async function prioritizeWithAI() {
   }
 }
 
+/* ── Empresa dinámica — lee KB de finanzas o CEO, fallback IBANOR ── */
+function getCobranzaCompany() {
+  try {
+    const fin = JSON.parse(localStorage.getItem('fin_kb_v1') || '{}');
+    if (fin.empresa) return fin.empresa;
+    const ceo = JSON.parse(localStorage.getItem('ceo_kb_v1') || '{}');
+    if (ceo.empresa) return ceo.empresa;
+  } catch {}
+  return 'IBANOR SA de CV';
+}
+
 /* ── Plantillas de mensajes (cero tokens) ── */
 const MSG_TEMPLATES = {
   recordatorio: (d) =>
@@ -552,13 +563,13 @@ Le agradecemos gestionar el pago a la brevedad. Para realizarlo:
 
   Banco:       BANAMEX
   CLABE:       002180700123456789
-  Beneficiario: IBANOR SA de CV
+  Beneficiario: ${getCobranzaCompany()}
   Referencia:  ${d.folio}
 
 Para cualquier aclaración comuníquese al 55 1234 5678 o a cobranza@ibanor.com.mx.
 
 Atentamente,
-Departamento de Cobranza — IBANOR SA de CV / MetaTronix`,
+Departamento de Cobranza — ${getCobranzaCompany()}`,
 
   urgente: (d) =>
 `AVISO URGENTE DE PAGO
@@ -577,7 +588,7 @@ Solicitamos liquidar este adeudo en un plazo no mayor a 48 horas para evitar car
 Datos de pago: BANAMEX | CLABE 002180700123456789 | Ref: ${d.folio}
 Si ya pagó, envíe comprobante a cobranza@ibanor.com.mx.
 
-Cobranza IBANOR SA de CV — Tel: 55 1234 5678`,
+Cobranza ${getCobranzaCompany()} — Tel: 55 1234 5678`,
 
   ultimatum: (d) =>
 `ÚLTIMO AVISO — ACCIÓN LEGAL INMINENTE
@@ -601,28 +612,28 @@ Para evitar estas consecuencias realice su pago:
 
 O llame urgentemente al 55 1234 5678.
 
-Dirección Jurídica — IBANOR SA de CV`,
+Dirección Jurídica — ${getCobranzaCompany()}`,
 
   whatsapp: (d) =>
 `Hola ${d.cliente} 👋
 
-Te escribimos de IBANOR SA de CV. Tenemos pendiente la factura *${d.folio}* por *${d.monto}* con *${d.dias} días* de atraso.
+Te escribimos de ${getCobranzaCompany()}. Tenemos pendiente la factura *${d.folio}* por *${d.monto}* con *${d.dias} días* de atraso.
 
 ¿Cuándo podemos esperar el pago? 🙏
 
 Datos para transferir:
 🏦 BANAMEX
 📋 CLABE: 002180700123456789
-💼 IBANOR SA de CV — Ref: ${d.folio}
+💼 ${getCobranzaCompany()} — Ref: ${d.folio}
 
 Si ya pagaste, mándanos el comprobante aquí. ¡Gracias! 😊`,
 
   email_formal: (d) =>
-`Asunto: Aviso de Pago Pendiente – Folio ${d.folio} – IBANOR SA de CV
+`Asunto: Aviso de Pago Pendiente – Folio ${d.folio} – ${getCobranzaCompany()}
 
 ${d.cliente}:
 
-El Departamento de Finanzas y Cobranza de IBANOR SA de CV se dirige a usted para informarle sobre el saldo pendiente siguiente:
+El Departamento de Finanzas y Cobranza de ${getCobranzaCompany()} se dirige a usted para informarle sobre el saldo pendiente siguiente:
 
   Número de Factura:  ${d.folio}
   Importe Total:      ${d.monto}
@@ -633,7 +644,7 @@ Solicitamos respetuosamente que realice la liquidación del adeudo a la brevedad
 
 Datos bancarios para su pago:
   Institución:  Banco Nacional de México (BANAMEX)
-  Beneficiario: IBANOR SA de CV
+  Beneficiario: ${getCobranzaCompany()}
   CLABE:        002180700123456789
   Referencia:   ${d.folio}
 
@@ -645,7 +656,7 @@ Sin otro particular, reiteramos las seguridades de nuestra más atenta considera
 
 Lic. María García López
 Directora de Cobranza y Crédito
-IBANOR SA de CV / MetaTronix
+${getCobranzaCompany()}
 cobranza@ibanor.com.mx | metatronixleads.tech`,
 
   negociacion: (d) =>
@@ -669,7 +680,7 @@ Para aceptar cualquier opción comuníquese antes del fin de semana:
 
 Datos bancarios: BANAMEX | CLABE 002180700123456789 | Ref: ${d.folio}
 
-Gerencia de Cobranza — IBANOR SA de CV / MetaTronix`,
+Gerencia de Cobranza — ${getCobranzaCompany()}`,
 };
 
 function generateMessage() {

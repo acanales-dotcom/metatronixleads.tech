@@ -815,7 +815,7 @@ async function streamCopiloto(title, prompt) {
       headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+jwt },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 2048,
+        max_tokens: 2500,
         system: `Eres el Director Financiero IA de ${getFinKB().empresa || 'IBANOR SA de CV / MetaTronix'}.
 Generas análisis financieros ejecutivos en español de México, concisos y accionables.
 Usas formato HTML semántico (h2, h3, p, ul, table, strong).
@@ -927,6 +927,10 @@ function initFinKB() {
   if (document.getElementById('fin-kb-credito')) document.getElementById('fin-kb-credito').value = kb.credito || '';
   if (document.getElementById('fin-kb-modelo')) document.getElementById('fin-kb-modelo').value = kb.modelo || '';
   if (document.getElementById('fin-kb-prioridades')) document.getElementById('fin-kb-prioridades').value = kb.prioridades || '';
+  if (kb.empresa) {
+    const label = document.getElementById('dma-company-label');
+    if (label) label.textContent = `Flujo de Caja · Cobranza · Fiscal SAT · Tesorería · Contratos · ${kb.empresa}`;
+  }
 }
 
 init();
@@ -969,7 +973,7 @@ init();
     <div class="dma-ico">💼</div>
     <div>
       <div class="dma-tit">MetaAdmin — Director Administrativo & Financiero IA</div>
-      <div class="dma-rol">Flujo de Caja · Cobranza · Fiscal SAT · Tesorería · Contratos · IBANOR SA de CV</div>
+      <div class="dma-rol" id="dma-company-label">Flujo de Caja · Cobranza · Fiscal SAT · Tesorería · Contratos · IBANOR SA de CV</div>
     </div>
   </div>
   <div class="dma-card">
@@ -1158,10 +1162,11 @@ init();
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
         body:JSON.stringify({
           model:'llama-3.3-70b-versatile',
-          max_tokens:2048,
-          system:`Eres MetaAdmin, el Director Administrativo y Financiero IA de IBANOR SA de CV / MetaTronix.
+          max_tokens:2500,
+          system:`Eres MetaAdmin, el Director Administrativo y Financiero IA de ${getFinKB().empresa || 'IBANOR SA de CV / MetaTronix'}.
 Tu especialidad: flujo de caja, administración empresarial, cobranza, compras, cumplimiento fiscal México (SAT, CFDI, IVA), contratos y tesorería.
-Respondes en español con análisis financiero ejecutivo, alertas de riesgo y recomendaciones de tesorería.
+Respondes en español con análisis financiero ejecutivo, alertas de riesgo y recomendaciones de tesorería concretas.
+Finaliza cada análisis con: → Acción prioritaria: [qué hacer esta semana].
 Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.
 
 PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES (CRÍTICO PARA DATOS FINANCIEROS):

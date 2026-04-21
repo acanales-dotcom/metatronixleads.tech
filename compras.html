@@ -836,6 +836,17 @@ async function saveSupplier() {
   renderKPIs();
 }
 
+/* ── Empresa dinámica (lee KB de finanzas o CEO) ── */
+function getComprasCompany() {
+  try {
+    const fin = JSON.parse(localStorage.getItem('fin_kb_v1') || '{}');
+    if (fin.empresa) return fin.empresa;
+    const ceo = JSON.parse(localStorage.getItem('ceo_kb_v1') || '{}');
+    if (ceo.empresa) return ceo.empresa;
+  } catch {}
+  return 'MetaTronix';
+}
+
 /* ── Comparar Cotizaciones con Claude ── */
 async function compareQuotes() {
   if (_aiStreaming) return;
@@ -861,7 +872,7 @@ async function compareQuotes() {
       }).join('\n')
     : 'No hay cotizaciones registradas para esta requisición en el sistema.';
 
-  const prompt = `Eres el copiloto de compras de IBANOR SA de CV / MetaTronix.
+  const prompt = `Eres el copiloto de compras de ${getComprasCompany()}.
 Analiza la siguiente requisición y sus cotizaciones de proveedores:
 
 REQUISICIÓN:
@@ -899,9 +910,11 @@ Sé concreto y accionable.`;
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
       body:JSON.stringify({
         model:'llama-3.3-70b-versatile',
-        max_tokens:2048,
-        system:`Eres el Director de Compras IA de IBANOR SA de CV / MetaTronix.
+        max_tokens:2500,
+        system:`Eres el Director de Compras IA de ${getComprasCompany()}.
 Analizas cotizaciones y das recomendaciones de compra ejecutivas, precisas y accionables.
+Prioridades: mejor relación precio-calidad, riesgo de proveedor, tiempo de entrega y condiciones de pago.
+Finaliza siempre con: → Recomendación: [proveedor] + justificación en 1 línea.
 Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.`,
         messages:[{role:'user',content:prompt}],
         stream:true,
