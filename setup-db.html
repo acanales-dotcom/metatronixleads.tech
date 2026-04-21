@@ -307,7 +307,7 @@ GRANT EXECUTE ON FUNCTION get_financial_summary(UUID) TO authenticated;
 // Obtener Supabase JWT del usuario logueado (para autenticar con el Worker)
 async function getSupaJWT() {
   try {
-    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+    const { createClient } = await import('/assets/libs/supabase.min.js');
     const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
     const sb = createClient(SUPA_URL, SUPA_ANON);
     const { data } = await sb.auth.getSession();

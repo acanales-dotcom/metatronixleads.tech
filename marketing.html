@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTronix — Marketing IA</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -10,13 +10,10 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="/assets/style.css?v=20260420">
   <link rel="stylesheet" href="/assets/agent.css?v=20260421">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/fonts.css">
 
   <!-- HF Transformers -->
   <script type="module">
-    import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.1";
     env.allowLocalModels = false;
     window.HFPipeline = pipeline;
     if (!window.CRM_AI) {
@@ -935,7 +932,7 @@
 
 </div><!-- /.page -->
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/libs/supabase.min.js"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js?v=20260420i"></script>
 <script src="/assets/agent.js?v=20260422"></script>
