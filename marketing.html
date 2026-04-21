@@ -1899,7 +1899,7 @@ async function runCampaignProposal(mission, predResult, agentResults, network) {
   container.style.display = 'block';
   container.scrollIntoView({ behavior:'smooth', block:'start' });
 
-  const origScore = predResult?.probabilidad || 70;
+  const origScore = predResult?.probabilidad || _scoreMission(mission) || 55;
   const weakChannels = predResult?.canales
     ? [...predResult.canales].sort((a,b)=>a.score-b.score).slice(0,2).map(c=>c.nombre).join(', ')
     : 'canales orgánicos';
@@ -2249,19 +2249,79 @@ function predTimingLabel(t) {
 }
 
 /* Claude extrae estructura predictiva */
+/* Scorer de misión — puro JS, sin dependencias externas.
+   Devuelve un puntaje 25-92 basado en la calidad y especificidad del brief.
+   Este score es el baseline cuando HuggingFace / Claude no están disponibles. */
+function _scoreMission(mission) {
+  if (!mission || mission.trim().length < 3) return 25;
+  let score = 38; // base
+  const m    = mission.toLowerCase();
+  const words = mission.trim().split(/\s+/).length;
+
+  // ── Especificidad del brief (longitud y detalle) ──────────
+  if (words >= 40) score += 16;
+  else if (words >= 25) score += 10;
+  else if (words >= 12) score += 5;
+  else if (words < 5)   score -= 12;
+
+  // ── Objetivo medible (números, KPIs concretos) ───────────
+  if (/\d+\s*%|\d+[\s-]*(leads?|demos?|clientes?|ventas|conversiones?|registros?)/i.test(mission)) score += 14;
+  else if (/leads?|demos?|clientes?|conversiones?|ventas|revenue|ingresos/i.test(mission)) score += 7;
+
+  // ── Audiencia definida ────────────────────────────────────
+  if (/director[ae]?s?|ceo|gerente|b2b|pymes?|startups?|fintech|retail|industrial|empresa[s]?/i.test(mission)) score += 9;
+
+  // ── Presupuesto / inversión mencionada ───────────────────
+  if (/\$\s*[\d,]+|\d+\s*k\s*(mxn|pesos?|usd)?|\bpresupuesto\b|\bbudget\b|\binversi[oó]n\b/i.test(mission)) score += 9;
+
+  // ── Canal / plataforma específica ────────────────────────
+  if (/linkedin|meta\s?ads|facebook|instagram|google\s*(sem|ads|search)|tiktok|email|whatsapp|youtube/i.test(mission)) score += 6;
+
+  // ── Urgencia / timing definido ───────────────────────────
+  if (/q[1-4]\s*202\d|\d+\s*d[íi]as?|esta\s+semana|este\s+mes|lanzamiento|launch|deadline/i.test(mission)) score += 6;
+
+  // ── Diferenciación / propuesta de valor ──────────────────
+  if (/ventaja|diferencia[dor]?|propuesta\s+de\s+valor|beneficio|resultado|impacto|unique/i.test(mission)) score += 5;
+
+  // ── Producto / servicio mencionado ───────────────────────
+  if (/producto|servicio|crm|plataforma|soluci[oó]n|herramienta|software|app/i.test(mission)) score += 4;
+
+  // ── Penalizaciones por vaguedad ──────────────────────────
+  if (/^(prueba|test|hola|demo|ejemplo)\s*$/i.test(mission.trim())) score -= 20;
+  if (words < 4 && !/\d/.test(mission)) score -= 8;
+
+  return Math.max(25, Math.min(92, Math.round(score)));
+}
+
 async function predClaudeExtract(mission, hfScore) {
-  const sys = `Eres el Predictor de Campañas de MetaTronix. Analizas briefs y produces predicciones de marketing B2B en LATAM. MetaTronix CRM IA: $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra.`;
+  const sys = `Eres el Predictor de Campañas de MetaTronix. Analizas briefs y produces predicciones de marketing B2B en LATAM. MetaTronix CRM IA: $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra, sin markdown, sin backticks.`;
 
   const userMsg = `Brief: "${mission.slice(0,280)}"
-Score semántico inicial: ${hfScore}%
+Score base de especificidad: ${hfScore}%
 
-Responde EXACTAMENTE este JSON:
-{"probabilidad":<0-100>,"roas_min":<num>,"roas_max":<num>,"canales":[{"nombre":"<LinkedIn|Meta Ads|Email|Google SEM|TikTok|WhatsApp|YouTube>","score":<0-1>,"razon":"<6 palabras>"}],"oportunidades":["<5 palabras>"],"riesgos":["<5 palabras>"],"recomendacion":"<2 oraciones específicas>","confianza":<0-1>,"timing":"<optimo|adecuado|esperar>"}`;
+El score base refleja la calidad del brief. Si el brief tiene objetivos claros, audiencia definida y presupuesto, el score real debe ser mayor al base. Si es vago, menor.
 
-  const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:500, agentName:'Predictor', page:'marketing' });
-  const m = raw.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error('parse');
-  return JSON.parse(m[0]);
+Responde EXACTAMENTE este JSON (sin backticks, sin texto adicional):
+{"probabilidad":<0-100>,"roas_min":<num>,"roas_max":<num>,"canales":[{"nombre":"<LinkedIn|Meta Ads|Email|Google SEM|TikTok|WhatsApp|YouTube>","score":<0-1>,"razon":"<6 palabras>"},{"nombre":"...","score":<0-1>,"razon":"..."},{"nombre":"...","score":<0-1>,"razon":"..."},{"nombre":"...","score":<0-1>,"razon":"..."}],"oportunidades":["<5 palabras>","<5 palabras>","<5 palabras>"],"riesgos":["<5 palabras>","<5 palabras>"],"recomendacion":"<2 oraciones específicas al brief>","confianza":<0-1>,"timing":"<optimo|adecuado|esperar>"}`;
+
+  const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:600, agentName:'Predictor', page:'marketing' });
+
+  // Estrategia de parsing robusta: strip markdown, find first valid JSON
+  const cleaned = raw
+    .replace(/```(?:json)?/gi, '')   // quita bloques markdown
+    .replace(/^[^{]*/, '')           // descarta texto antes del primer {
+    .replace(/[^}]*$/, match => {    // descarta texto después del último }
+      const lastBrace = match.lastIndexOf('}');
+      return lastBrace >= 0 ? match.slice(0, lastBrace + 1) : match;
+    });
+
+  const m = cleaned.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('no JSON en respuesta Predictor');
+  const parsed = JSON.parse(m[0]);
+
+  // Validación mínima del objeto
+  if (typeof parsed.probabilidad !== 'number') throw new Error('schema inválido');
+  return parsed;
 }
 
 /* Render del panel predictivo */
@@ -2412,8 +2472,8 @@ async function runPREDICTOR(mission) {
     </div>`;
   container.scrollIntoView({ behavior:'smooth', block:'start' });
 
-  /* Paso 1: HF zero-shot para score inicial rápido */
-  let hfScore = 55; // fallback
+  /* Paso 1: Score inicial — JS puro como base, HF como refinamiento opcional */
+  let hfScore = _scoreMission(mission); // score significativo desde el inicio
   try {
     if (window.CRM_AI) {
       const clf = await window.CRM_AI.zeroShot();
@@ -2428,7 +2488,9 @@ async function runPREDICTOR(mission) {
       const medIdx  = labels.indexOf('campaña de impacto medio con resultados moderados');
       const s_alto = altoIdx >= 0 ? scores[altoIdx] : 0;
       const s_med  = medIdx  >= 0 ? scores[medIdx]  : 0;
-      hfScore = Math.round(s_alto * 85 + s_med * 55 + (1 - s_alto - s_med) * 25);
+      // Blendear HF (semántico) con _scoreMission (estructural) — 60% HF, 40% base
+      const hfRaw = Math.round(s_alto * 85 + s_med * 55 + (1 - s_alto - s_med) * 25);
+      hfScore = Math.round(hfRaw * 0.6 + hfScore * 0.4);
       hfScore = Math.max(15, Math.min(92, hfScore));
     }
   } catch(_) { /* HF no disponible */ }
