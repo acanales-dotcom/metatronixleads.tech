@@ -3931,7 +3931,8 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
 6. CAUSALIDAD: nunca la atribuyas sin evidencia directa — "correlación posible, no causalidad confirmada"
 7. AMBIGÜEDAD: si la consulta es incompleta, solicita el dato faltante — no rellenes con benchmarks del sector
 8. RECOMENDACIONES COMERCIALES: termina con "⚠ Verificar con datos del CRM antes de implementar estrategia"
-9. KPIs DE VENTAS: añade "† Basado en información proporcionada — validar contra CRM antes de decisiones"`,
+9. KPIs DE VENTAS: añade "† Basado en información proporcionada — validar contra CRM antes de decisiones"
+Finaliza siempre con: → Acción prioritaria esta semana: [qué ejecutar en ventas concretamente].`,
           messages:[{role:'user',content:q}],stream:true}),signal:AbortSignal.timeout(90000)});
       if(!resp.ok){const e=await resp.json().catch(()=>({error:resp.statusText}));throw new Error(e.error||'Error '+resp.status);}
       const reader=resp.body.getReader();const dec=new TextDecoder();let buf='';let html='';let iT=0;let oT=0;out.innerHTML='';
