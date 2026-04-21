@@ -849,7 +849,8 @@ async function loadCompanySwitcher() {
 
     list.innerHTML = items.map(c => `
       <div class="company-switcher-item ${(active?.id || null) === c.id ? 'active' : ''}"
-           onclick="selectCompany(${c.id ? JSON.stringify(c) : 'null'})">
+           data-company='${c.id ? JSON.stringify(c).replace(/'/g, '&#39;') : 'null'}'
+           onclick="selectCompany(this.dataset.company && this.dataset.company !== 'null' ? JSON.parse(this.dataset.company) : null)">
         <span style="font-size:11px">${c.id ? '🏢' : '🌐'}</span>
         <div style="flex:1;min-width:0">
           <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.name)}</div>
