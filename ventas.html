@@ -1337,11 +1337,15 @@ PRECIOS: ${kb.precio || 'Starter $299/mes · Growth $799/mes · Enterprise $2,49
 OBJECIONES COMUNES: ${kb.objeciones || 'Precio, integración, tiempo de implementación, ROI'}
 MISIÓN DEL AGENTE: ${mision}
 
+FORMATO DE RESPUESTA: Texto en markdown con secciones numeradas (1. Título, bullet points —). Sin JSON. Sin HTML. Máx 500 palabras salvo propuestas comerciales completas.
+
 REGLAS DEL SISTEMA:
 1. Responde siempre en español. Sé específico, accionable y listo para usar.
 2. Cada respuesta termina con una ACCIÓN INMEDIATA concreta.
 3. Métrica única de éxito: tasa de cierre y velocidad del pipeline.
-4. Todo lo que no mueve el deal hacia el cierre se elimina del proceso.`;
+4. Todo lo que no mueve el deal hacia el cierre se elimina del proceso.
+5. SOLO usa datos EXPLÍCITAMENTE presentes en la consulta — dato ausente = "Sin dato disponible".
+6. Distingue HECHO ("los datos muestran X") de ANÁLISIS ("esto podría indicar Y").`;
 }
 
 /* ── AGENTS DEFINITION ──────────────────────────────── */
@@ -1609,7 +1613,7 @@ async function runAgentProspector(id, output) {
 
   if (window.CRM_LLM?.engine) {
     const result = await window.CRM_LLM.chat(sys,
-      `Actúa como Prospector de élite. Para este segmento/prospecto genera:\n\n1. 🎯 PERFIL ICP REFINADO (características exactas del prospecto ideal para este segmento)\n2. 🔍 SEÑALES DE COMPRA (5 triggers que indican que está listo para comprar ahora)\n3. 📍 DÓNDE ENCONTRARLOS (canales, grupos, eventos, plataformas donde están activos)\n4. 📧 EMAIL DE PRIMER CONTACTO (asunto + cuerpo de 4 líneas — personalizado, no genérico)\n5. 💬 MENSAJE DE WHATSAPP/LINKEDIN (opener de 2 líneas que genera respuesta)\n6. ⚡ ACCIÓN INMEDIATA (qué hacer en los próximos 60 minutos para contactar 10 prospectos de este perfil)\n\nSegmento/Prospecto objetivo: ${query}`);
+      `Actúa como Prospector de élite. Para este segmento/prospecto genera:\n\n1. 🎯 PERFIL ICP REFINADO (características exactas del prospecto ideal para este segmento)\n2. 🔍 SEÑALES DE COMPRA (5 triggers que indican que está listo para comprar ahora)\n3. 📍 DÓNDE ENCONTRARLOS (canales, grupos, eventos, plataformas donde están activos)\n4. 📧 EMAIL DE PRIMER CONTACTO (asunto + cuerpo de 4 líneas — personalizado, no genérico)\n5. 💬 MENSAJE DE WHATSAPP/LINKEDIN (opener de 2 líneas que genera respuesta)\n6. ⚡ ACCIÓN INMEDIATA (qué hacer en los próximos 60 minutos para contactar 10 prospectos de este perfil)\n\nSegmento/Prospecto objetivo: ${query}`, { maxTokens:2000, agentName:"Prospector", page:"ventas" });
     output.innerHTML = `<div class="output-section"><div class="output-title">🔍 Prospector — Plan de Prospección</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('calificador',this.closest('.agent-output').innerText.slice(0,400))">⚖️ Calificar leads</button></div>`;
     return;
   }
@@ -1734,7 +1738,7 @@ async function runAgentNegociador(id, output) {
 
   if (window.CRM_LLM?.engine) {
     const result = await window.CRM_LLM.chat(sys,
-      `Genera la estrategia completa para manejar esta situación de negociación:\n\n1. 🔍 DIAGNÓSTICO (¿es una objeción real o una señal de compra disfrazada?)\n2. 💬 RESPUESTA INMEDIATA (frase exacta para responder — máx 3 líneas, sin ponerse defensivo)\n3. 🎯 REENCUADRE DE VALOR (cómo convertir "costo" en "inversión con ROI demostrable")\n4. 📊 CÁLCULO DE ROI EN VIVO (cómo hacer que el cliente calcule su propio ROI en la llamada)\n5. 🚀 MANEJO DE ALTERNATIVAS (si menciona a un competidor — cómo responder sin hablar mal de ellos)\n6. ⚡ PREGUNTA DE CIERRE POST-OBJECIÓN (cómo retomar el control y avanzar)\n\nObjeción / situación: ${objecion}`);
+      `Genera la estrategia completa para manejar esta situación de negociación:\n\n1. 🔍 DIAGNÓSTICO (¿es una objeción real o una señal de compra disfrazada?)\n2. 💬 RESPUESTA INMEDIATA (frase exacta para responder — máx 3 líneas, sin ponerse defensivo)\n3. 🎯 REENCUADRE DE VALOR (cómo convertir "costo" en "inversión con ROI demostrable")\n4. 📊 CÁLCULO DE ROI EN VIVO (cómo hacer que el cliente calcule su propio ROI en la llamada)\n5. 🚀 MANEJO DE ALTERNATIVAS (si menciona a un competidor — cómo responder sin hablar mal de ellos)\n6. ⚡ PREGUNTA DE CIERRE POST-OBJECIÓN (cómo retomar el control y avanzar)\n\nObjeción / situación: ${objecion}`, { maxTokens:2000, agentName:"Negociador", page:"ventas" });
     output.innerHTML = `<div class="output-section"><div class="output-title">🤝 Negociador — Estrategia Anti-Objeción</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('cerrador',this.closest('.agent-output').innerText.slice(0,400))">🏆 Técnicas de Cierre</button></div>`;
     return;
   }
@@ -1802,7 +1806,7 @@ async function runAgentOrquestador(id, output) {
 
   if (window.CRM_LLM?.engine) {
     const result = await window.CRM_LLM.chat(sys,
-      `Como Orquestador, genera el plan de ataque comercial completo:\n\n1. 🗺️ DIAGNÓSTICO DE PIPELINE (¿dónde están los cuellos de botella? ¿qué etapa tiene más deals atascados?)\n2. 🎯 PRIORIZACIÓN (top 3 deals con mayor probabilidad de cerrar este período — y por qué)\n3. ⚠️ DEALS EN RIESGO (los que pueden perderse si no actúas hoy)\n4. 📅 PLAN SEMANAL (día a día — qué deal atender, qué acción ejecutar)\n5. 📊 FORECAST REALISTA (qué porcentaje del pipeline esperar cerrar y en qué plazo)\n6. ⚡ PRIMERA ACCIÓN (lo más importante en las próximas 2 horas)\n\nEstado del pipeline: ${instruccion}`);
+      `Como Orquestador, genera el plan de ataque comercial completo:\n\n1. 🗺️ DIAGNÓSTICO DE PIPELINE (¿dónde están los cuellos de botella? ¿qué etapa tiene más deals atascados?)\n2. 🎯 PRIORIZACIÓN (top 3 deals con mayor probabilidad de cerrar este período — y por qué)\n3. ⚠️ DEALS EN RIESGO (los que pueden perderse si no actúas hoy)\n4. 📅 PLAN SEMANAL (día a día — qué deal atender, qué acción ejecutar)\n5. 📊 FORECAST REALISTA (qué porcentaje del pipeline esperar cerrar y en qué plazo)\n6. ⚡ PRIMERA ACCIÓN (lo más importante en las próximas 2 horas)\n\nEstado del pipeline: ${instruccion}`, { maxTokens:2500, agentName:"Orquestador", page:"ventas" });
     output.innerHTML = `
       <div class="output-section">
         <div class="output-title">🎯 Orquestador — Plan de Ataque Comercial</div>
@@ -1847,7 +1851,7 @@ async function runAgentPropuesta(id, output) {
 
   if (window.CRM_LLM?.engine) {
     const result = await window.CRM_LLM.chat(sys,
-      `Genera una propuesta comercial completa y lista para enviar:\n\n1. 📋 RESUMEN EJECUTIVO (3 párrafos: situación actual → dolor → solución propuesta)\n2. 💡 SOLUCIÓN PROPUESTA (qué incluye exactamente, configuración, usuarios, módulos)\n3. 📊 ROI PROYECTADO (cálculo concreto basado en los datos del cliente — con números)\n4. 🗓️ PLAN DE IMPLEMENTACIÓN (semana a semana, qué pasa cuándo)\n5. 💰 INVERSIÓN (tabla de precios clara — setup + mensualidad + condiciones)\n6. ✅ PRÓXIMOS PASOS (3 pasos claros para que el cliente firme esta semana)\n7. ⏰ VALIDEZ DE LA PROPUESTA (fecha de vencimiento + razón de urgencia real)\n\nDatos del deal: ${datos}`);
+      `Genera una propuesta comercial completa y lista para enviar:\n\n1. 📋 RESUMEN EJECUTIVO (3 párrafos: situación actual → dolor → solución propuesta)\n2. 💡 SOLUCIÓN PROPUESTA (qué incluye exactamente, configuración, usuarios, módulos)\n3. 📊 ROI PROYECTADO (cálculo concreto basado en los datos del cliente — con números)\n4. 🗓️ PLAN DE IMPLEMENTACIÓN (semana a semana, qué pasa cuándo)\n5. 💰 INVERSIÓN (tabla de precios clara — setup + mensualidad + condiciones)\n6. ✅ PRÓXIMOS PASOS (3 pasos claros para que el cliente firme esta semana)\n7. ⏰ VALIDEZ DE LA PROPUESTA (fecha de vencimiento + razón de urgencia real)\n\nDatos del deal: ${datos}`, { maxTokens:2000, agentName:"Propuesta", page:"ventas" });
     output.innerHTML = `<div class="output-section"><div class="output-title">📋 Propuesta IA — Documento Comercial</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar propuesta</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('seguimiento',this.closest('.agent-output').innerText.slice(0,300))">📬 Crear secuencia de seguimiento</button></div>`;
     return;
   }

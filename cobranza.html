@@ -547,6 +547,20 @@ function getCobranzaCompany() {
   return 'IBANOR SA de CV';
 }
 
+function getCobranzaConfig() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('cobranza_config_v1') || '{}');
+    const fin = JSON.parse(localStorage.getItem('fin_kb_v1') || '{}');
+    return {
+      banco:    cfg.banco    || fin.banco    || 'BANAMEX',
+      clabe:    cfg.clabe    || fin.clabe    || '002180700123456789',
+      telefono: cfg.telefono || fin.telefono || '55 1234 5678',
+      email:    cfg.email    || fin.email    || 'cobranza@' + (getCobranzaCompany().toLowerCase().replace(/\s+sa de cv|\s+s\.a\..*$/i,'').replace(/\s+/g,'') + '.com.mx'),
+      firmante: cfg.firmante || fin.firmante || 'Departamento de Cobranza y Crédito',
+    };
+  } catch { return { banco:'BANAMEX', clabe:'002180700123456789', telefono:'55 1234 5678', email:'cobranza@empresa.com.mx', firmante:'Departamento de Cobranza y Crédito' }; }
+}
+
 /* ── Plantillas de mensajes (cero tokens) ── */
 const MSG_TEMPLATES = {
   recordatorio: (d) =>
@@ -561,12 +575,12 @@ Por medio del presente, le recordamos cordialmente que contamos con la siguiente
 
 Le agradecemos gestionar el pago a la brevedad. Para realizarlo:
 
-  Banco:       BANAMEX
-  CLABE:       002180700123456789
+  Banco:       ${getCobranzaConfig().banco}
+  CLABE:       ${getCobranzaConfig().clabe}
   Beneficiario: ${getCobranzaCompany()}
   Referencia:  ${d.folio}
 
-Para cualquier aclaración comuníquese al 55 1234 5678 o a cobranza@ibanor.com.mx.
+Para cualquier aclaración comuníquese al ${getCobranzaConfig().telefono} o a ${getCobranzaConfig().email}.
 
 Atentamente,
 Departamento de Cobranza — ${getCobranzaCompany()}`,
@@ -585,10 +599,10 @@ Le notificamos que la siguiente factura se encuentra VENCIDA y requiere pago inm
 
 Solicitamos liquidar este adeudo en un plazo no mayor a 48 horas para evitar cargos adicionales.
 
-Datos de pago: BANAMEX | CLABE 002180700123456789 | Ref: ${d.folio}
-Si ya pagó, envíe comprobante a cobranza@ibanor.com.mx.
+Datos de pago: ${getCobranzaConfig().banco} | CLABE ${getCobranzaConfig().clabe} | Ref: ${d.folio}
+Si ya pagó, envíe comprobante a ${getCobranzaConfig().email}.
 
-Cobranza ${getCobranzaCompany()} — Tel: 55 1234 5678`,
+Cobranza ${getCobranzaCompany()} — Tel: ${getCobranzaConfig().telefono}`,
 
   ultimatum: (d) =>
 `ÚLTIMO AVISO — ACCIÓN LEGAL INMINENTE
@@ -608,9 +622,9 @@ De no recibir el pago en 5 días hábiles, procederemos a:
   3. Aplicar intereses moratorios conforme a contrato
 
 Para evitar estas consecuencias realice su pago:
-  BANAMEX | CLABE 002180700123456789 | Ref: ${d.folio}
+  ${getCobranzaConfig().banco} | CLABE ${getCobranzaConfig().clabe} | Ref: ${d.folio}
 
-O llame urgentemente al 55 1234 5678.
+O llame urgentemente al ${getCobranzaConfig().telefono}.
 
 Dirección Jurídica — ${getCobranzaCompany()}`,
 
@@ -622,8 +636,8 @@ Te escribimos de ${getCobranzaCompany()}. Tenemos pendiente la factura *${d.foli
 ¿Cuándo podemos esperar el pago? 🙏
 
 Datos para transferir:
-🏦 BANAMEX
-📋 CLABE: 002180700123456789
+🏦 ${getCobranzaConfig().banco}
+📋 CLABE: ${getCobranzaConfig().clabe}
 💼 ${getCobranzaCompany()} — Ref: ${d.folio}
 
 Si ya pagaste, mándanos el comprobante aquí. ¡Gracias! 😊`,
@@ -643,21 +657,20 @@ El Departamento de Finanzas y Cobranza de ${getCobranzaCompany()} se dirige a us
 Solicitamos respetuosamente que realice la liquidación del adeudo a la brevedad, a fin de mantener la continuidad de los servicios y la relación comercial vigente.
 
 Datos bancarios para su pago:
-  Institución:  Banco Nacional de México (BANAMEX)
+  Institución:  ${getCobranzaConfig().banco}
   Beneficiario: ${getCobranzaCompany()}
-  CLABE:        002180700123456789
+  CLABE:        ${getCobranzaConfig().clabe}
   Referencia:   ${d.folio}
 
-Una vez realizado el depósito, agradeceremos enviar el comprobante a cobranza@ibanor.com.mx para su correcta aplicación en nuestros registros.
+Una vez realizado el depósito, agradeceremos enviar el comprobante a ${getCobranzaConfig().email} para su correcta aplicación en nuestros registros.
 
-Para cualquier aclaración comuníquese al 55 1234 5678.
+Para cualquier aclaración comuníquese al ${getCobranzaConfig().telefono}.
 
 Sin otro particular, reiteramos las seguridades de nuestra más atenta consideración.
 
-Lic. María García López
-Directora de Cobranza y Crédito
+${getCobranzaConfig().firmante}
 ${getCobranzaCompany()}
-cobranza@ibanor.com.mx | metatronixleads.tech`,
+${getCobranzaConfig().email}`,
 
   negociacion: (d) =>
 `Estimado ${d.cliente}:
@@ -676,9 +689,9 @@ OPCIÓN C — Pago diferido 60 días
   Pago total en 60 días con 2% mensual de interés moratorio.
 
 Para aceptar cualquier opción comuníquese antes del fin de semana:
-  Tel: 55 1234 5678 | cobranza@ibanor.com.mx
+  Tel: ${getCobranzaConfig().telefono} | ${getCobranzaConfig().email}
 
-Datos bancarios: BANAMEX | CLABE 002180700123456789 | Ref: ${d.folio}
+Datos bancarios: ${getCobranzaConfig().banco} | CLABE ${getCobranzaConfig().clabe} | Ref: ${d.folio}
 
 Gerencia de Cobranza — ${getCobranzaCompany()}`,
 };

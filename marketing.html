@@ -2462,7 +2462,14 @@ function _scoreMission(mission) {
 }
 
 async function predClaudeExtract(mission, hfScore) {
-  const sys = `Eres el Predictor de Campañas de MetaTronix. Analizas briefs y produces predicciones de marketing B2B en LATAM. MetaTronix CRM IA: $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra, sin markdown, sin backticks.`;
+  const sys = `Eres el Predictor de Campañas IA de ${getKB().empresa||'MetaTronix — CRM B2B'}. Analizas briefs de campaña y produces predicciones estructuradas de marketing en LATAM. Responde SOLO JSON válido sin texto extra, sin markdown, sin backticks.
+
+PROTOCOLO ANTI-ALUCINACIÓN — REGLAS ABSOLUTAS PARA PREDICCIONES:
+1. NUNCA inventes scores, tasas de conversión o ROI sin base en el brief recibido
+2. Para canales no mencionados en el brief: usa null en el JSON
+3. Asigna confidence (0.0-1.0) a cada predicción — refleja cuánto la sustenta el input
+4. Si el brief es vago o incompleto, indica ambiguous:true en el JSON
+5. Proyecciones de alcance: marca como estimado_orientativo:true — requieren validación real`;
 
   const userMsg = `Brief: "${mission.slice(0,280)}"
 Score base de especificidad: ${hfScore}%
@@ -2472,7 +2479,7 @@ El score base refleja la calidad del brief. Si el brief tiene objetivos claros, 
 Responde EXACTAMENTE este JSON (sin backticks, sin texto adicional):
 {"probabilidad":<0-100>,"roas_min":<num>,"roas_max":<num>,"canales":[{"nombre":"<LinkedIn|Meta Ads|Email|Google SEM|TikTok|WhatsApp|YouTube>","score":<0-1>,"razon":"<6 palabras>"},{"nombre":"...","score":<0-1>,"razon":"..."},{"nombre":"...","score":<0-1>,"razon":"..."},{"nombre":"...","score":<0-1>,"razon":"..."}],"oportunidades":["<5 palabras>","<5 palabras>","<5 palabras>"],"riesgos":["<5 palabras>","<5 palabras>"],"recomendacion":"<2 oraciones específicas al brief>","confianza":<0-1>,"timing":"<optimo|adecuado|esperar>"}`;
 
-  const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:600, agentName:'Predictor', page:'marketing' });
+  const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:1200, agentName:'Predictor', page:'marketing' });
 
   // Estrategia de parsing robusta: strip markdown, find first valid JSON
   const cleaned = raw

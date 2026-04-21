@@ -191,7 +191,7 @@ window.ops_send = async function() {
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
       body:JSON.stringify({
         model:'llama-3.3-70b-versatile',
-        max_tokens:2048,
+        max_tokens:2500,
         system:`Eres MetaOps, el Director de Operaciones IA de ${getDirectorOpsCompany()}.
 Tu especialidad: eficiencia operacional, procesos internos, KPIs de operación, mejora continua, supply chain y tecnología.
 Respondes en español con análisis de cuellos de botella, oportunidades de automatización y quick wins ejecutables.
