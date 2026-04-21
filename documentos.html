@@ -381,36 +381,17 @@ async function uploadGeneral(files) {
   if (!files || !files.length) return;
   const statusEl = document.getElementById('general-upload-status');
 
-  // Obtener company UUID válido — cascada de 3 fuentes
+  // Usar directamente el company_id del perfil del usuario (cada empresa es independiente)
   const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  let cid = null;
+  const cid = _user?.profile?.company_id;
 
-  // 1. Company switcher activo
-  const fromSwitcher = window.MTX_ACTIVE_COMPANY?.id;
-  if (fromSwitcher && _UUID_RE.test(fromSwitcher)) cid = fromSwitcher;
-
-  // 2. Profile del usuario
-  if (!cid) {
-    const fromProfile = _user?.profile?.company_id;
-    if (fromProfile && _UUID_RE.test(fromProfile)) cid = fromProfile;
-  }
-
-  // 3. user_companies en DB
-  if (!cid) {
-    try {
-      const { data: uc } = await _db.from('user_companies')
-        .select('company_id').eq('user_id', _user?.id).limit(1).single();
-      if (uc?.company_id && _UUID_RE.test(uc.company_id)) cid = uc.company_id;
-    } catch(e) { console.warn('[MTX Upload] user_companies fallback error:', e); }
-  }
-
-  if (!cid) {
-    statusEl.textContent = '⚠ No se detectó empresa activa. Selecciona una en el switcher.';
-    console.error('[MTX Upload] No valid company UUID found. user:', _user?.id, 'profile.company_id:', _user?.profile?.company_id);
+  if (!cid || !_UUID_RE.test(cid)) {
+    statusEl.textContent = '⚠ Tu perfil no tiene empresa asignada. Contacta al administrador.';
+    console.error('[MTX Upload] Sin company_id en perfil. user:', _user?.id, 'company_id:', cid);
     return;
   }
 
-  console.log('[MTX Upload] company_id usado:', cid, '| usuario:', _user?.email);
+  console.log('[MTX Upload] company_id:', cid, '| usuario:', _user?.email);
   statusEl.textContent = `Subiendo ${files.length} archivo(s)…`;
   let ok = 0;
   const errors = [];
@@ -481,13 +462,13 @@ function fmtDT(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })
-       + ' ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+        + ' ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
 }
 
 function extIcon(ext) {
   const map = {
     pdf:'🔴', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗',
-    ppt:'📙', pptx:'📙', jpg:'🖼', jpeg:'🖼', png:'🖼', gif:'🖼',
+    ppt:'📙', pptx:'📙', jpg:'🖼', jpeg:'🖼'lpng:'🖼', gig:'🖼',
     zip:'📦', rar:'📦', xml:'📋', csv:'📊', txt:'📄',
   };
   return map[ext] || '📄';
