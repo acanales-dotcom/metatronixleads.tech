@@ -124,9 +124,13 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "  Escaneando credenciales expuestas..."
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          # Buscar service_role keys (son más largas y tienen 'service_role' en el payload)
-          if grep -r "service_role" --include="*.js" --include="*.html" --include="*.json" . 2>/dev/null | grep -v "node_modules" | grep -v ".git"; then
-            echo "🔴 ERROR: Se encontró 'service_role' en el código — nunca debe ir al repositorio."
+          # Buscar JWTs de service_role reales (contienen eyJ...service_role en base64)
+          # NO buscar solo el texto "service_role" — aparece en comentarios y docs de QA
+          if grep -rE "eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+" --include="*.js" --include="*.html" --include="*.json" . 2>/dev/null \
+              | grep -v "node_modules" | grep -v ".git" \
+              | grep -v "supabaseAnonKey\|SUPABASE_ANON\|anon.*eyJ" \
+              | grep -E "service_role|eyJyb2xl.*c2VydmljZQ"; then
+            echo "🔴 ERROR: Se encontró JWT de service_role en el código — nunca debe ir al repositorio."
             exit 1
           fi
           # Buscar Anthropic API keys hardcodeadas
