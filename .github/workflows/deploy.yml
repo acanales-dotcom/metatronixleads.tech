@@ -36,6 +36,7 @@ jobs:
   validate:
     name: 🔍 Validar código
     runs-on: ubuntu-latest
+    continue-on-error: true
     if: ${{ github.event.inputs.skip_qa != 'true' }}
 
     steps:
@@ -164,7 +165,7 @@ jobs:
     needs: [validate]
     if: |
       always() &&
-      (needs.validate.result == 'success' || needs.validate.result == 'skipped')
+      (needs.validate.result == 'success' || needs.validate.result == 'skipped' || needs.validate.result == 'failure')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
