@@ -67,6 +67,16 @@
 let _user = null;
 let _streaming = false;
 
+function getDirectorOpsCompany() {
+  try {
+    const fin = JSON.parse(localStorage.getItem('fin_kb_v1') || '{}');
+    if (fin.empresa) return fin.empresa;
+    const ceo = JSON.parse(localStorage.getItem('ceo_kb_v1') || '{}');
+    if (ceo.empresa) return ceo.empresa;
+  } catch {}
+  return 'MetaTronix';
+}
+
 async function init() {
   _user = await requireAuth(true);
   if (!_user) return;
@@ -76,6 +86,12 @@ async function init() {
     document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'director-ops');
   }
   if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+  // Update company label dynamically from KB
+  setTimeout(() => {
+    const emp = getDirectorOpsCompany();
+    const lbl = document.getElementById('dops-company-label');
+    if (lbl) lbl.textContent = `Eficiencia operacional · Procesos · KPIs · Automatización · Supply Chain · ${emp}`;
+  }, 80);
 }
 
 function buildShell() {
@@ -88,7 +104,7 @@ function buildShell() {
         <div class="page-header">
           <div>
             <h1>⚙️ MetaOps — Director de Operaciones IA</h1>
-            <p>Eficiencia operacional · Procesos · KPIs · Automatización · Supply Chain · IBANOR SA de CV</p>
+            <p id="dops-company-label">Eficiencia operacional · Procesos · KPIs · Automatización · Supply Chain · MetaTronix</p>
           </div>
           <span class="agent-badge">Groq — llama-3.3-70b</span>
         </div>
@@ -176,7 +192,7 @@ window.ops_send = async function() {
       body:JSON.stringify({
         model:'llama-3.3-70b-versatile',
         max_tokens:2048,
-        system:`Eres MetaOps, el Director de Operaciones IA de IBANOR SA de CV / MetaTronix.
+        system:`Eres MetaOps, el Director de Operaciones IA de ${getDirectorOpsCompany()}.
 Tu especialidad: eficiencia operacional, procesos internos, KPIs de operación, mejora continua, supply chain y tecnología.
 Respondes en español con análisis de cuellos de botella, oportunidades de automatización y quick wins ejecutables.
 Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.

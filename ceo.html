@@ -635,7 +635,7 @@ async function sendQuery() {
       resp = await fetch(ceoQueryUrl, {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
-        body:JSON.stringify({ question, pulse: _pulse, query_type:'ad_hoc' }),
+        body:JSON.stringify({ question, pulse: _pulse, query_type:'ad_hoc', kb_context: buildCEOKBContext() }),
         signal: AbortSignal.timeout(90000),
       });
       if (resp.status === 404 || resp.status >= 400) throw new Error('endpoint error ' + resp.status);

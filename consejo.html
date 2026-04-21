@@ -693,6 +693,9 @@ async function runSession(mesaId) {
     const sysWithKB = kb.empresa
       ? mesa.system.replace(/IBANOR SA de CV \/ MetaTronix/g, kb.empresa)
       : mesa.system;
+    const userMsg = kb.empresa
+      ? kbInjected.replace(/IBANOR SA de CV \/ MetaTronix|IBANOR SA de CV|MetaTronix/g, kb.empresa)
+      : kbInjected;
 
     const resp = await fetch(proxyUrl, {
       method:'POST',
@@ -701,7 +704,7 @@ async function runSession(mesaId) {
         model:'claude-sonnet-4-6',
         max_tokens:3000,
         system: sysWithKB,
-        messages:[{role:'user', content:kbInjected}],
+        messages:[{role:'user', content:userMsg}],
         stream:true,
       }),
       signal:AbortSignal.timeout(120000),

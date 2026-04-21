@@ -5166,6 +5166,8 @@ init();
   window.addEventListener('hashchange', checkMktxAnchor);
   document.addEventListener('DOMContentLoaded', checkMktxAnchor);
   setTimeout(checkMktxAnchor, 400);
+  // Update MetaMKTX company label from KB
+  setTimeout(()=>{try{const kb=getKB();if(kb.empresa){const l=document.getElementById('mktx-company-label');if(l)l.textContent=`Estrategia de marketing digital · Generación de demanda · Brand · Campañas · ${kb.empresa}`;}}catch{}},120);
 
   window.mktx_ask = function(p) {
     const inp = document.getElementById('mktx-inp');
@@ -5199,8 +5201,8 @@ init();
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
-          max_tokens: 2048,
-          system: `Eres MetaMKTX, Director de Marketing IA de IBANOR SA de CV / MetaTronix.
+          max_tokens: 2500,
+          system: `Eres MetaMKTX, Director de Marketing IA de ${getKB().empresa||'MetaTronix — Marketing Digital B2B'}.
 Especialidad: estrategia de marketing digital B2B, posicionamiento de marca, generación de demanda, content marketing, SEO, campañas pagadas, y análisis de mercado en México y LATAM.
 Respondes en español con estrategias accionables, KPIs medibles y recomendaciones basadas en datos.
 Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.
@@ -5293,7 +5295,7 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
     <div class="mktx-header">
       <div>
         <h1>🎯 MetaMKTX — Director de Marketing IA</h1>
-        <p>Estrategia de marketing digital · Generación de demanda · Brand · Campañas · IBANOR SA de CV</p>
+        <p id="mktx-company-label">Estrategia de marketing digital · Generación de demanda · Brand · Campañas · MetaTronix</p>
       </div>
       <span class="mktx-badge">Groq — llama-3.3-70b</span>
     </div>

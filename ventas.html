@@ -3858,7 +3858,7 @@ document.addEventListener('DOMContentLoaded', init);
     <div class="dirv-ico">📈</div>
     <div>
       <div class="dirv-tit">MetaVentaX — Director Comercial IA</div>
-      <div class="dirv-rol">Pipeline · Conversión · Forecast · Estrategia B2B · IBANOR SA de CV</div>
+      <div class="dirv-rol" id="dirv-company-label">Pipeline · Conversión · Forecast · Estrategia B2B · MetaTronix</div>
     </div>
   </div>
   <div class="dirv-card">
@@ -3897,6 +3897,8 @@ document.addEventListener('DOMContentLoaded', init);
   document.addEventListener('DOMContentLoaded',checkAnchor);
   checkAnchor();
 
+  // Update MetaVentaX company label from KB
+  (function(){try{const kb=getKB();if(kb.empresa){const l=document.getElementById('dirv-company-label');if(l)l.textContent=`Pipeline · Conversión · Forecast · Estrategia B2B · ${kb.empresa}`;}}catch{}})();
   let _dvStreaming=false;
   window.dv_ask=function(p){const i=document.getElementById('dv-inp');if(i){i.value=p;i.focus();}dv_send();};
   window.dv_send=async function(){
@@ -3912,8 +3914,9 @@ document.addEventListener('DOMContentLoaded', init);
       if(!proxyUrl)throw new Error('CLAUDE_PROXY_URL no configurado');
       const resp=await fetch(proxyUrl+'/groq',{method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
-        body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:2048,
-          system:`Eres MetaVentaX, Director Comercial IA de IBANOR SA de CV / MetaTronix. Especialidad: pipeline de ventas, leads, conversión, estrategia comercial B2B en México. Responde en español con datos precisos y recomendaciones accionables. Formato: HTML semántico (h2,h3,p,ul,table,strong). Sin DOCTYPE.
+        body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:2500,
+          system:`Eres MetaVentaX, Director Comercial IA de ${getKB().empresa||'MetaTronix — CRM + IA para equipos de ventas'}. Especialidad: pipeline de ventas, leads, conversión, estrategia comercial B2B en México. Responde en español con datos precisos y recomendaciones accionables. Formato: HTML semántico (h2,h3,p,ul,table,strong). Sin DOCTYPE.
+Finaliza cada análisis con: → Acción comercial: [qué hacer esta semana para mejorar el pipeline].
 
 PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
 1. SOLO afirma lo EXPLÍCITAMENTE presente en los datos de esta conversación
@@ -3937,7 +3940,11 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
         }out.innerHTML=html;out.scrollTop=out.scrollHeight;}
       out.innerHTML=html||'<em style="color:#555">Sin respuesta.</em>';
       if(tok)tok.textContent=`${iT}↑ ${oT}↓ tokens`;
-    }catch(e){out.innerHTML=`<span style="color:#ff4646">Error: ${e.message}</span>`;}
+    }catch(e){out.innerHTML=`<div style="background:rgba(255,70,70,.08);border:1px solid rgba(255,70,70,.2);border-radius:8px;padding:14px;font-size:13px;color:rgba(255,200,200,.8)">
+      <strong>⚠ MetaVentaX temporalmente no disponible</strong><br>
+      <span style="color:rgba(255,180,180,.6);font-size:11px">${e.message}</span><br><br>
+      <span style="color:rgba(220,220,220,.7)">→ Acción: Verifica tu conexión e intenta en 30 segundos.</span>
+    </div>`;}
     finally{_dvStreaming=false;btn.disabled=false;btn.innerHTML='▶ Enviar';out.classList.remove('streaming');}
   };
 })();
