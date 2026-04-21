@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaTronix — Archivos MetaTronix</title>
+  <title>MetaTronix — Archivos Starke</title>
   <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
   <style>
@@ -699,7 +699,7 @@
     <div class="frow">
       <div class="drop-zone" id="dzone" onclick="document.getElementById('fInput').click()">
         Arrastra archivos aquí o <strong style="color:var(--accent)">haz clic</strong>
-        <div style="font-size:11px;opacity:.5;margin-top:4px">Máx. 10 MB por archivo</div>
+        <div style="font-size:11px;opacity:.5;margin-top:4px">Máx. 50 MB por archivo</div>
         <input type="file" id="fInput" multiple onchange="onFiles(this.files)">
       </div>
       <div class="file-preview" id="fPreview"></div>
@@ -772,7 +772,7 @@ let delId   = null;
 let entCtx  = null;
 
 const ADMINS  = ['admin','super_admin'];
-const MAX_MB  = 10 * 1024 * 1024;
+const MAX_MB  = 50 * 1024 * 1024;
 
 /* ── Árbol de carpetas (definición) ────────────────────── */
 const TREE = [
@@ -802,6 +802,8 @@ const TREE = [
   {
     id:'fiscal', icon:'📋', label:'Fiscal',
     children:[
+      { label:'Facturas Starke',            path:'admin/fiscal/facturas-starke/' },
+      { label:'Facturas Asimilados Starke', path:'admin/fiscal/facturas-asimilados/' },
       { label:'Declaraciones Mensuales',    path:'admin/fiscal/declaraciones-mensuales/' },
       { label:'Declaraciones Anuales',      path:'admin/fiscal/declaraciones-anuales/' },
       { label:'Documentos SAT',             path:'admin/fiscal/documentos-sat/' },
@@ -1104,7 +1106,7 @@ function onFiles(fl) {
   const prev = document.getElementById('fPreview');
   prev.innerHTML = '';
   Array.from(fl).forEach(f => {
-    if (f.size > MAX_MB) { toast(`"${f.name}" supera 10 MB`,'err'); return; }
+    if (f.size > MAX_MB) { toast(`"${f.name}" supera 50 MB`,'err'); return; }
     pending.push(f);
     prev.innerHTML += `<div class="fp-row"><span>📄 ${h(f.name)}</span><span>${fmtSz(f.size)}</span></div>`;
   });

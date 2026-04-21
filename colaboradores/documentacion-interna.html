@@ -276,7 +276,7 @@
              ondrop="handleDrop(event)">
           <div class="upload-zone-icon" id="upload-icon">📂</div>
           <div class="upload-zone-text" id="upload-text">Haz clic o arrastra un archivo aquí</div>
-          <div class="upload-zone-sub" id="upload-sub">PDF, Word, Excel, imagen — máx. 10 MB</div>
+          <div class="upload-zone-sub" id="upload-sub">PDF, Word, Excel, imagen — máx. 50 MB</div>
         </div>
         <div class="upload-progress" id="upload-progress">
           <div class="upload-progress-fill" id="upload-progress-fill" style="width:0%"></div>
@@ -587,7 +587,7 @@ function closeUploadModal(e) {
 function resetUploadZone() {
   document.getElementById('upload-icon').textContent = '📂';
   document.getElementById('upload-text').textContent = 'Haz clic o arrastra un archivo aquí';
-  document.getElementById('upload-sub').textContent = 'PDF, Word, Excel, imagen — máx. 10 MB';
+  document.getElementById('upload-sub').textContent = 'PDF, Word, Excel, imagen — máx. 50 MB';
   document.getElementById('upload-zone').style.borderColor = '';
   document.getElementById('upload-progress').style.display = 'none';
   document.getElementById('file-input').value = '';
@@ -597,7 +597,7 @@ function resetUploadZone() {
 function handleFileSelect(file) {
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) {
-    showToast('El archivo supera los 10 MB', 'error');
+    showToast('El archivo supera los 50 MB', 'error');
     return;
   }
   selectedFile = file;

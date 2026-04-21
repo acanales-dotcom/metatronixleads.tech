@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaTronix — Documentos Administrativos y Fiscales</title>
-  <link rel="stylesheet" href="/assets/style.css?v=20260420">
+  <title>MetaTronix — Archivos IBANOR</title>
+  <link rel="stylesheet" href="/assets/style.css">
   <link rel="stylesheet" href="/assets/agent.css">
   <style>
 
@@ -651,7 +651,7 @@
   <!-- ── Árbol de carpetas ── -->
   <div class="fm-tree-panel">
     <div class="fm-tree-head">
-      <div class="fm-tree-head-title">🗃 Docs Administrativos y Fiscales</div>
+      <div class="fm-tree-head-title">🏢 Archivos IBANOR</div>
     </div>
     <div class="fm-tree-scroll" id="treeScroll">
       <!-- JS lo rellena -->
@@ -663,7 +663,7 @@
 
     <div class="fm-toolbar">
       <div class="fm-bc" id="bc"><span class="cur">Selecciona una carpeta</span></div>
-      <span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#4d9fff;background:rgba(26,111,255,.12);border:1px solid rgba(26,111,255,.3);border-radius:var(--radius);padding:4px 9px;white-space:nowrap;">🗃 Documentos Administrativos</span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#4d9fff;background:rgba(26,111,255,.12);border:1px solid rgba(26,111,255,.3);border-radius:var(--radius);padding:4px 9px;white-space:nowrap;">🏢 IBANOR SA de CV</span>
       <button class="btn-ico" onclick="refresh()" title="Recargar">⟳</button>
       <button class="btn-up" id="btnUp" onclick="openUpload()" disabled>↑ Subir archivo</button>
     </div>
@@ -757,12 +757,12 @@
 ═══════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260420i"></script>
-<script src="/assets/agent.js?v=20260422"></script>
+<script src="/assets/app.js?v=4"></script>
+<script src="/assets/agent.js?v=4"></script>
 <!-- ALEX: Sales Coach Agent -->
-<script src="/assets/salescoach.js?v=20260421"></script>
+<script src="/assets/salescoach.js?v=4"></script>
 <!-- TEAM CHAT -->
-<script src="/assets/teamchat.js?v=20260420"></script>
+<script src="/assets/teamchat.js?v=4"></script>
 <script>
 /* ── Estado global ─────────────────────────────────────── */
 let CU = null;          // currentUser
@@ -772,11 +772,11 @@ let pending = [];       // archivos pendientes de subir
 let delId   = null;
 let entCtx  = null;
 
-/* Documentos Administrativos y Fiscales — acceso para usuarios autenticados */
-/* Categorías de documentos administrativos */
-const CAT_FILE   = 'archivo_admin';
-const CAT_FOLDER = 'carpeta_admin';
-const PFX        = 'admin/';
+/* Acceso exclusivo por email — IBANOR_EMAILS viene de app.js (mismo array) */
+/* Categorías y prefijo propios de IBANOR (datos separados) */
+const CAT_FILE   = 'archivo_ibanor';
+const CAT_FOLDER = 'carpeta_ibanor';
+const PFX        = 'ibanor/';
 
 const MAX_MB  = 50 * 1024 * 1024;
 
@@ -808,8 +808,8 @@ const TREE = [
   {
     id:'fiscal', icon:'📋', label:'Fiscal',
     children:[
-      { label:'Facturas Emitidas',           path:PFX+'fiscal/facturas-emitidas/' },
-      { label:'Facturas Asimilados',        path:PFX+'fiscal/facturas-asimilados/' },
+      { label:'Facturas Starke',            path:PFX+'fiscal/facturas-starke/' },
+      { label:'Facturas Asimilados Starke', path:PFX+'fiscal/facturas-asimilados/' },
       { label:'Declaraciones Mensuales',    path:PFX+'fiscal/declaraciones-mensuales/' },
       { label:'Declaraciones Anuales',      path:PFX+'fiscal/declaraciones-anuales/' },
       { label:'Documentos SAT',             path:PFX+'fiscal/documentos-sat/' },
@@ -845,7 +845,7 @@ const TREE = [
 /* ── Init ─────────────────────────────────────────────── */
 async function init() {
   CU = await requireAuth();
-  document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'docs-admin');
+  document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'archivos-ibanor');
 
   const email = (CU?.email || '').toLowerCase().trim();
   if (!IBANOR_EMAILS.includes(email)) {
@@ -902,7 +902,7 @@ async function buildTree() {
 
   const ents = { clientes:[], proveedores:[] };
   (carpetas||[]).forEach(f => {
-    const m = f.file_path.match(/^admin\/(clientes|proveedores)\/([^/]+)\//);
+    const m = f.file_path.match(/^ibanor\/(clientes|proveedores)\/([^/]+)\//);
     if (!m) return;
     const arr = ents[m[1]];
     const slug = m[2];
@@ -1088,7 +1088,7 @@ function updateBc() {
     const MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     lbl += `<span class="sep">/</span><span class="cur">${MN[parseInt(m)-1]} ${y}</span>`;
   }
-  bc.innerHTML = `Admin<span class="sep">/</span>${lbl}`;
+  bc.innerHTML = `IBANOR<span class="sep">/</span>${lbl}`;
 }
 
 /* ── Upload ───────────────────────────────────────────── */
@@ -1144,7 +1144,7 @@ async function doUpload() {
       const b64 = await toB64(file);
       const { error } = await db.from('metatronix_docs').insert({
         title: file.name,
-        description: `Documento Administrativo · ${CF.label}`,
+        description: `Archivo IBANOR · ${CF.label}`,
         category: CAT_FILE,
         visibility: 'admin',
         file_name: file.name,
@@ -1153,7 +1153,7 @@ async function doUpload() {
         file_size: file.size,
         file_data: b64,
         uploaded_by: CU?.id || null,
-        uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
+        uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'IBANOR',
       });
       if (error) throw error;
     } catch(e) { toast(`Error: ${file.name} — ${e.message}`,'err'); }
@@ -1165,19 +1165,9 @@ async function doUpload() {
 }
 
 function toB64(file) {
-  return new Promise((res, rej) => {
+  return new Promise((res,rej) => {
     const r = new FileReader();
-    r.onload = e => {
-      try {
-        const bytes = new Uint8Array(e.target.result);
-        let binary = '';
-        const CHUNK = 8192;
-        for (let i = 0; i < bytes.length; i += CHUNK) {
-          binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-        }
-        res(btoa(binary));
-      } catch(err) { rej(err); }
-    };
+    r.onload = e => res(btoa(String.fromCharCode(...new Uint8Array(e.target.result))));
     r.onerror = rej;
     r.readAsArrayBuffer(file);
   });
@@ -1246,7 +1236,7 @@ async function createEnt() {
 
   const { error } = await getDB().from('metatronix_docs').insert({
     title: name,
-    description: `Carpeta Admin ${entCtx.etype}: ${name}`,
+    description: `Carpeta IBANOR ${entCtx.etype}: ${name}`,
     category: CAT_FOLDER,
     visibility: 'admin',
     file_name: '',
@@ -1254,7 +1244,7 @@ async function createEnt() {
     file_type: 'folder',
     file_size: 0,
     uploaded_by: CU?.id || null,
-    uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'Admin',
+    uploaded_by_name: CU?.profile?.full_name || CU?.email?.split('@')[0] || 'IBANOR',
   });
 
   if (error) { toast('Error: '+error.message,'err'); return; }
