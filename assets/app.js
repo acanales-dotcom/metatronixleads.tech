@@ -821,6 +821,16 @@ async function loadCompanySwitcher() {
 
     if (error) throw error;
 
+    // Validar que la empresa activa sigue existiendo en la lista
+    if (window.MTX_ACTIVE_COMPANY?.id) {
+      const stillExists = (companies || []).some(c => c.id === window.MTX_ACTIVE_COMPANY.id);
+      if (!stillExists) {
+        console.warn('[MTX Switcher] Empresa activa ya no existe, limpiando selección:', window.MTX_ACTIVE_COMPANY.id);
+        window.MTX_ACTIVE_COMPANY = null;
+        sessionStorage.removeItem('mtx_active_company');
+      }
+    }
+
     // Auto-seleccionar empresa si solo hay una y no hay activa
     if (!window.MTX_ACTIVE_COMPANY && companies?.length === 1) {
       selectCompany(companies[0]);
