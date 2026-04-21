@@ -796,18 +796,19 @@ async function loadCompanySwitcher() {
   try {
     const db = getDB();
     const user = window._mtxCurrentUser;
-    const isAdminRole = ['admin','super_admin'].includes(user?.profile?.role);
+    const role = user?.profile?.role;
+    const isSuperAdmin = role === 'super_admin';
 
     let companies, error;
 
-    if (isAdminRole) {
-      // Admins ven todas las empresas (sin filtro de status para compatibilidad con ambos esquemas)
+    if (isSuperAdmin) {
+      // Solo super_admin ve TODAS las empresas (CEO / dueño de plataforma)
       ({ data: companies, error } = await db
         .from('companies')
         .select('id, name, rfc, status, slug')
         .order('name'));
     } else {
-      // Usuarios normales: solo empresas a las que pertenecen
+      // Todos los demás (admin, admin_restringido, etc.): solo empresas asignadas en user_companies
       const { data: memberships, error: mErr } = await db
         .from('user_companies')
         .select('company_id, companies(id, name, rfc, status)')
@@ -837,8 +838,8 @@ async function loadCompanySwitcher() {
       return;
     }
 
-    // Solo super_admin puede ver "Todas las empresas"
-    const items = isAdminRole
+    // "Todas las empresas" solo para super_admin
+    const items = isSuperAdmin
       ? [{ id: null, name: 'Todas las empresas', rfc: '', status: 'activo' }, ...(companies || [])]
       : (companies || []);
 
