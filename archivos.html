@@ -938,12 +938,17 @@ function onPeriod() {
 async function buildTree() {
   const db = getDB();
   const companyId = getActiveCompanyId();
+  // SEGURIDAD: sin empresa activa no cargar documentos de otras empresas
+  if (!companyId) {
+    document.getElementById('treeScroll').innerHTML = '';
+    return;
+  }
   let treeQ = db
     .from('metatronix_docs')
     .select('file_path, title')
     .eq('category','carpeta_admin')
-    .like('file_path','admin/%');
-  if (companyId) treeQ = treeQ.eq('company_id', companyId);
+    .like('file_path','admin/%')
+    .eq('company_id', companyId);
   const { data: carpetas } = await treeQ;
 
   const ents = { clientes:[], proveedores:[] };
@@ -1096,13 +1101,18 @@ async function loadFiles() {
 
   const db = getDB();
   const companyId = getActiveCompanyId();
+  // SEGURIDAD: sin empresa activa no cargar documentos de otras empresas
+  if (!companyId) {
+    renderFiles([]);
+    return;
+  }
   let filesQ = db
     .from('metatronix_docs')
     .select('id,title,file_name,file_type,file_size,created_at')
     .eq('category','archivo_admin')
     .like('file_path', fp + '%')
-    .order('created_at',{ascending:false});
-  if (companyId) filesQ = filesQ.eq('company_id', companyId);
+    .order('created_at',{ascending:false})
+    .eq('company_id', companyId);
   const { data: files, error } = await filesQ;
 
   if (error) {
@@ -1308,12 +1318,19 @@ async function confirmDelFolder() {
   const companyId = getActiveCompanyId();
   const fp = delFolderCtx.folderPath;
 
+  // SEGURIDAD: sin empresa activa bloquear operaciones destructivas
+  if (!companyId) {
+    toast('No hay empresa activa seleccionada', 'err');
+    btn.disabled = false; btn.textContent = 'Eliminar carpeta';
+    return;
+  }
+
   // Eliminar archivos dentro de la carpeta
   let filesQ = db.from('metatronix_docs')
     .delete()
     .eq('category','archivo_admin')
-    .like('file_path', fp + '%');
-  if (companyId) filesQ = filesQ.eq('company_id', companyId);
+    .like('file_path', fp + '%')
+    .eq('company_id', companyId);
   const { error: errFiles } = await filesQ;
 
   if (errFiles) {
@@ -1326,8 +1343,8 @@ async function confirmDelFolder() {
   let folderQ = db.from('metatronix_docs')
     .delete()
     .eq('category','carpeta_admin')
-    .eq('file_path', fp);
-  if (companyId) folderQ = folderQ.eq('company_id', companyId);
+    .eq('file_path', fp)
+    .eq('company_id', companyId);
   const { error: errFolder } = await folderQ;
 
   btn.disabled = false; btn.textContent = 'Eliminar carpeta';
