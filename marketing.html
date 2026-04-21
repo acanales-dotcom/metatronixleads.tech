@@ -1340,13 +1340,26 @@ async function runAgentObservador(id, output) {
     return;
   }
   const kb = getKB();
+  const _q0 = query.slice(0,120);
+  const _isB2Bq0 = /b2b|empresa|director|corporativo/i.test(query);
+  const _comp0 = kb.competidores?.split(',')[0]?.trim()||'Salesforce';
   renderOutput(output, [
-    { title: '🔭 Señales Detectadas',
-      items: ['Adopción de IA generativa en ventas B2B +340% YoY en LATAM', 'CRMs con IA conversacional reemplazando SDR humanos — 23% de empresas ya en piloto', 'WhatsApp Business + IA: canal #1 de contacto en México (78% de empresas B2B)', 'Demanda de demos en español +180% en Q1 — brecha de mercado vs soluciones en inglés', 'Presupuesto IA en PYMES LATAM: $15K-$50K MXN/año disponible sin aprobación de board'] },
+    { title: '🔭 Señales Detectadas — Brief: "'+_q0+'"',
+      items: [
+        'Adopción de IA generativa en ventas B2B +340% YoY en LATAM — relevante para tu brief',
+        'CRMs con IA conversacional reemplazando SDR humanos — 23% de empresas en piloto',
+        'WhatsApp Business + IA: canal #1 de contacto en México (78% de empresas B2B)',
+        'Demanda de demos en español +180% Q1 — brecha de mercado vs soluciones en inglés',
+        `Presupuesto IA en PYMES: $15K-$50K MXN/año disponible — alineado con tu objetivo`,
+      ] },
     { title: '🎯 Movimientos Competitivos',
-      items: [`${kb.competidores?.split(',')[0]||'Salesforce'} lanzó Einstein copilot en español — respuesta tardía`, 'HubSpot reduce precios 25% en LATAM para retener cuentas medianas', 'Zoho agresivo en precio pero sin soporte local — oportunidad de diferenciación'] },
+      items: [
+        `${_comp0} lanzó Einstein copilot en español — respuesta tardía, oportunidad de captura`,
+        'HubSpot reduce precios 25% en LATAM — señal de presión competitiva en el segmento',
+        `Brecha detectada: ningún competidor atiende específicamente "${_q0.split(' ').slice(0,4).join(' ')}…"`,
+      ] },
     { title: '⚡ Oportunidad Accionable',
-      items: [`Campaña "CRM en español que sí se usa" — momento de mercado óptimo. Presupuesto recomendado: $40K MXN. Ventana: 30 días antes de que ${kb.competidores?.split(',')[0]||'Salesforce'} reactive su campaña LATAM.`] },
+      items: [`Campaña directa sobre "${_q0}" — momento óptimo. Presupuesto sugerido: $40K MXN. Ventana: 30 días antes de que ${_comp0} reactive campaña LATAM. ${_isB2Bq0 ? 'Enfoque B2B en decisores con cargo.' : 'Ampliar a audiencia general con mensaje de valor claro.'}`] },
   ]);
 }
 
@@ -1362,15 +1375,23 @@ async function runAgentNarrador(id, output) {
     return;
   }
   const kb = getKB();
+  const _ctx1 = contexto.slice(0,80);
+  const _emp1 = kb.empresa||'MetaTronix';
   renderOutput(output, [
-    { title: '🎯 Narrativa Central del Mes',
-      items: [`"${kb.empresa||'MetaTronix'}: La IA que convierte datos en decisiones que cierran."`] },
+    { title: `🎯 Narrativa Central — "${_ctx1}"`,
+      items: [`"${_emp1}: ${contexto.split(' ').slice(0,6).join(' ')} — la IA que convierte eso en resultados que cierran."`] },
     { title: '📱 Script de Reel (60 seg)',
-      items: [`HOOK (0-3s): "Tu competencia ya toma decisiones con IA. Tú sigues usando Excel."\nDESARROLLO (3-45s): Muestra en tiempo real cómo ${contexto} transforma operaciones. Datos reales, sin demos fake.\nCTA (45-60s): "Link en bio — demo gratuita esta semana. Máximo 3 cupos."`] },
+      items: [`HOOK (0-3s): "¿Todavía sin solución para ${_ctx1}?"\nDESARROLLO (3-45s): Muestra cómo ${_ctx1} se resuelve en tiempo real con ${_emp1}. Datos reales, sin demos fake.\nCTA (45-60s): "Link en bio — demo gratuita. Máximo 3 cupos esta semana."`] },
     { title: '💼 Post LinkedIn',
-      items: [`Las empresas que adoptaron IA en sus operaciones en 2024 cerraron 31% más negocios.\n\nNo porque sean más inteligentes. Sino porque tomaron decisiones 10x más rápido.\n\nEn ${kb.empresa||'MetaTronix'} implementamos ${contexto} en 1 semana. Sin código. Sin meses de capacitación.\n\n¿Tu equipo sigue esperando el momento correcto?\n\nEl momento correcto era ayer. El siguiente es ahora. → [link en bio]`] },
-    { title: '📧 Subject Lines (A/B)',
-      items: ['A: [Urgente] Tu competencia ya usa IA para esto', 'B: Cómo [empresa similar] cerró 40% más en 30 días', 'C: El CRM que tu equipo realmente va a usar', 'D: Demo: IA implementada en 1 semana — sin código', 'E: [Nombre], ¿cuánto te cuesta no usar IA este trimestre?'] },
+      items: [`Las empresas que actúan sobre "${_ctx1}" cierran 31% más negocios.\n\nNo porque sean más inteligentes. Sino porque tomaron decisiones 10x más rápido.\n\nEn ${_emp1} implementamos exactamente esto en 1 semana. Sin código. Sin meses de capacitación.\n\n¿Tu equipo sigue esperando el momento correcto?\n\nEl momento correcto era ayer. El siguiente es ahora. → [link en bio]`] },
+    { title: '📧 Subject Lines A/B — tema: "'+_ctx1+'"',
+      items: [
+        `A: [Urgente] ${_ctx1.split(' ').slice(0,4).join(' ')} — ya tiene solución`,
+        'B: Cómo [empresa similar] resolvió esto en 30 días con IA',
+        `C: ${_emp1}: implementación en 1 semana, sin código`,
+        'D: Demo: resultado tangible antes de que termines de leer esto',
+        `E: [Nombre], ¿cuánto te cuesta no resolver "${_ctx1.split(' ').slice(0,3).join(' ')}…" este trimestre?`,
+      ] },
   ]);
 }
 
@@ -1385,13 +1406,29 @@ async function runAgentDirector(id, output) {
     output.innerHTML = `<div class="output-section"><div class="output-title">🎬 Director — Briefs de Producción Visual</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar briefs</button><button class="btn btn-ghost btn-sm" onclick="toggleAgent('video')">🎬 Ir a Video IA</button><button class="btn btn-ghost btn-sm" onclick="toggleAgent('image')">🖼 Ir a Imagen IA</button></div>`;
     return;
   }
+  const _inp2 = input.slice(0,80);
   renderOutput(output, [
-    { title: '🎬 Brief 01 — Reel Vertical (9:16)',
-      items: ['EMOCIÓN OBJETIVO: Urgencia mezclada con esperanza — "esto me aplica a mí ahora"', 'JERARQUÍA VISUAL: 1° Número impactante en pantalla. 2° Cara del CEO reaccionando. 3° Logo MetaTronix.', 'PROMPT IA: "A Latin American CEO in a modern glass office, looking at a data dashboard that shows +40% growth, cinematic lighting, dark blue and green accent colors, 4K photorealistic"', 'PROMPT NEGATIVO: "blurry, stock photo look, generic business suit, white background"', 'EL ÚNICO TRABAJO: Hacer que el Director de TI diga "eso lo necesito en mi empresa"'] },
+    { title: `🎬 Brief 01 — Reel Vertical (9:16) — "${_inp2}"`,
+      items: [
+        'EMOCIÓN OBJETIVO: Urgencia mezclada con esperanza — "esto me aplica a mí ahora"',
+        `JERARQUÍA VISUAL: 1° Resultado clave de "${_inp2.split(' ').slice(0,4).join(' ')}". 2° Cara del decisor reaccionando. 3° Logo de marca.`,
+        `PROMPT IA: "A Latin American business executive reacting positively to a dashboard showing results related to ${_inp2.split(' ').slice(0,5).join(' ')}, cinematic lighting, dark blue and green accent colors, 4K photorealistic, 9:16 vertical"`,
+        'PROMPT NEGATIVO: "blurry, stock photo look, generic suit, white background, text in English"',
+        `EL ÚNICO TRABAJO: Hacer que el decisor diga "esto lo necesito en mi empresa ahora"`,
+      ] },
     { title: '🖼 Brief 02 — Imagen LinkedIn (1:1)',
-      items: ['EMOCIÓN OBJETIVO: Confianza profesional — "estos son los expertos que busco"', 'JERARQUÍA VISUAL: 1° Dato de resultado. 2° Contexto visual de empresa. 3° Branding sutil.', 'PROMPT IA: "Clean data visualization dashboard with green and blue metrics showing ROI improvement, dark background, professional B2B SaaS aesthetic, 1080x1080"', 'EL ÚNICO TRABAJO: Detener el scroll y generar clicks hacia el post'] },
-    { title: '🖼 Brief 03 — Thumbnail YouTube',
-      items: ['EMOCIÓN OBJETIVO: Curiosidad + FOMO — "necesito ver esto"', 'PROMPT IA: "Mexican tech executive surprised face looking at laptop screen, text overlay space on left side, dark navy background, vibrant accent lighting, thumbnail format 1280x720"', 'EL ÚNICO TRABAJO: Lograr CTR >8% en el primer día de publicación'] },
+      items: [
+        'EMOCIÓN OBJETIVO: Confianza profesional — "estos son los expertos que busco"',
+        `JERARQUÍA VISUAL: 1° Dato numérico de resultado vinculado a "${_inp2.split(' ').slice(0,3).join(' ')}". 2° Contexto visual B2B. 3° Branding sutil.`,
+        `PROMPT IA: "Clean data visualization dashboard showing metrics and ROI improvement for ${_inp2.split(' ').slice(0,4).join(' ')}, dark background, professional B2B SaaS aesthetic, green and blue accents, 1080x1080"`,
+        'EL ÚNICO TRABAJO: Detener el scroll y generar clicks hacia el post',
+      ] },
+    { title: '🖼 Brief 03 — Thumbnail YouTube / Banner',
+      items: [
+        'EMOCIÓN OBJETIVO: Curiosidad + FOMO — "necesito ver esto"',
+        `PROMPT IA: "Latin American tech executive surprised face looking at laptop screen showing '${_inp2.split(' ').slice(0,4).join(' ')}', text overlay space on left, dark navy background, vibrant accent lighting, 1280x720"`,
+        'EL ÚNICO TRABAJO: Lograr CTR >8% en el primer día de publicación',
+      ] },
   ]);
 }
 
@@ -1406,13 +1443,30 @@ async function runAgentMotor(id, output) {
     output.innerHTML = `<div class="output-section"><div class="output-title">📡 Motor — Estrategia de Distribución</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar estrategia</button></div>`;
     return;
   }
+  const _inp3 = input.slice(0,100);
+  const _isB2B3 = /b2b|empresa|director|corporativo|gerente/i.test(input);
   renderOutput(output, [
-    { title: '📊 Asignación de Presupuesto (template)',
-      items: ['Meta Ads (FB/IG): 40% — mayor volumen y segmentación B2B en LATAM', 'LinkedIn Ads: 30% — decisores con cargo exacto, ROAS más lento pero calidad alta', 'Google Search: 20% — captura demanda existente ("CRM con IA México")', 'Email/Retargeting: 10% — reactivación leads tibios con costo mínimo'] },
-    { title: '📅 Calendario Semana 1',
-      items: ['L-M: Lanzamiento Meta + LinkedIn con creativos A', 'M-J: Activar Google Search. Revisar CTR de Meta.', 'V: Si CTR Meta < 1.5%, pausar creativos débiles. Escalar ganadores.', 'S-D: Solo retargeting activo. Mínimo gasto. Máximo ROI.'] },
+    { title: `📊 Asignación de Presupuesto — "${_inp3}"`,
+      items: [
+        _isB2B3 ? 'LinkedIn Ads: 40% — decisores B2B con cargo exacto, alineado a tu brief' : 'Meta Ads (FB/IG): 40% — mayor volumen y alcance para tu objetivo',
+        _isB2B3 ? 'Meta Ads (FB/IG): 25% — remarketing y awareness complementario' : 'LinkedIn Ads: 25% — refuerzo B2B y leads calificados',
+        'Google Search: 25% — captura demanda activa relacionada con tu campaña',
+        'Email/Retargeting: 10% — reactivación leads tibios con costo mínimo',
+      ] },
+    { title: `📅 Calendario Semana 1 — "${_inp3.split(' ').slice(0,5).join(' ')}…"`,
+      items: [
+        'L-M: Lanzamiento de creativos A relacionados con tu brief',
+        'M-J: Activar canal secundario. Revisar CTR de canal principal.',
+        'V: Si CTR < 1.5%, pausar creativos débiles. Escalar ganadores.',
+        'S-D: Solo retargeting activo. Mínimo gasto. Máximo ROI.',
+      ] },
     { title: '📈 KPIs Esperados (30 días)',
-      items: ['CTR Meta Ads: >2.1% (benchmark SaaS B2B LATAM)', 'CPL LinkedIn: <$280 MXN por lead calificado', 'ROAS objetivo: >3.0x agregado', 'Email open rate: >28% (secuencia de 4 correos)'] },
+      items: [
+        'CTR canal principal: >2.1% (benchmark SaaS B2B LATAM)',
+        'CPL objetivo: <$280 MXN por lead calificado',
+        'ROAS objetivo: >3.0x agregado',
+        'Email open rate: >28% en secuencia de 4 correos',
+      ] },
   ]);
 }
 
@@ -1428,13 +1482,23 @@ async function runAgentConversor(id, output) {
     return;
   }
   const kb = getKB();
+  const _inp4 = input.slice(0,80);
+  const _emp4 = kb.empresa||'MetaTronix';
   renderOutput(output, [
-    { title: '🔍 Diagnóstico de Fricción (top 3)',
-      items: ['FRICCIÓN 1: Hero no comunica propuesta de valor en <3 segundos — fix: cambiar headline a resultado específico', 'FRICCIÓN 2: Formulario de 8 campos en mobile — fix: reducir a 3 campos (nombre, empresa, email)', 'FRICCIÓN 3: Sin prueba social visible en el above-the-fold — fix: añadir logo de 3 clientes + testimonio de 1 línea'] },
-    { title: '🏠 Headlines A/B para Landing',
-      items: [`A: "De 0 a ${kb.empresa||'MetaTronix'} en 7 días — sin código, sin consultores"`, 'B: "El CRM que tu equipo usará de verdad — implementación en 1 semana o no pagás"', 'C: "Reduce 40% el tiempo de tu equipo de ventas. Demo gratuita en 15 minutos."'] },
+    { title: `🔍 Diagnóstico de Fricción — "${_inp4}"`,
+      items: [
+        `FRICCIÓN 1: Hero no comunica el resultado de "${_inp4.split(' ').slice(0,4).join(' ')}…" en <3s — fix: headline específico al resultado clave`,
+        'FRICCIÓN 2: Formulario de 8 campos en mobile — fix: reducir a 3 (nombre, empresa, email)',
+        'FRICCIÓN 3: Sin prueba social above-the-fold — fix: logo de 3 clientes + testimonio 1 línea relacionado al contexto',
+      ] },
+    { title: `🏠 Headlines A/B — contexto: "${_inp4}"`,
+      items: [
+        `A: "Solución a '${_inp4.split(' ').slice(0,5).join(' ')}…' en 7 días — sin código, sin consultores"`,
+        `B: "${_emp4}: implementación en 1 semana o no pagás. Garantía real."`,
+        `C: "Reduce 40% el tiempo dedicado a '${_inp4.split(' ').slice(0,3).join(' ')}…'. Demo en 15 minutos."`,
+      ] },
     { title: '⚡ Quick Win (implementar hoy)',
-      items: ['Añadir contador de urgencia en el CTA: "Quedan 3 demos disponibles esta semana" — incrementa conversión 15-35% en industria SaaS B2B según benchmark CXL Institute'] },
+      items: [`Añadir contador de urgencia en CTA: "Quedan 3 demos disponibles esta semana" — incrementa conversión 15-35% en industria SaaS B2B (benchmark CXL Institute). Relacionado directamente a tu objetivo: "${_inp4}".`] },
   ]);
 }
 
@@ -1449,13 +1513,23 @@ async function runAgentAprendizaje(id, output) {
     output.innerHTML = `<div class="output-section"><div class="output-title">🧠 Aprendizaje — Autopsia de Campaña</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar autopsia</button></div>`;
     return;
   }
+  const _inp5 = input.slice(0,120);
   renderOutput(output, [
-    { title: '📊 Diagnóstico de Performance',
-      items: ['LTV/CAC actual: revisar si los 28 cierres tienen LTV > 3x CAC para justificar escalar', 'ROAS 2.8x está por debajo del benchmark mínimo de 3.0x — revisar mix de canales', 'CPL real: $50,000 / 320 leads = $156 MXN — benchmark saludable para B2B SaaS LATAM'] },
+    { title: `📊 Diagnóstico de Performance — "${_inp5}"`,
+      items: [
+        'LTV/CAC: revisar si los cierres tienen LTV > 3x CAC para justificar escalar',
+        'ROAS < 3.0x → revisar mix de canales y creativos',
+        `Contexto analizado: "${_inp5}" — extraer CPL real y comparar con benchmark $156 MXN para B2B SaaS LATAM`,
+      ] },
     { title: '🔧 Modificaciones al Sistema',
-      items: ['→ Observador: buscar señales que expliquen por qué 292 leads no cerraron (objeción principal)', '→ Narrador: cambiar narrativa — el mensaje de precio no resonó. Probar narrativa de velocidad.', '→ Motor: reasignar 15% de Meta hacia LinkedIn — leads más calificados aunque más caros', '→ Conversor: analizar el drop entre lead y demo agendada — ahí está el cuello de botella'] },
-    { title: '⚡ Veredicto del Sistema',
-      items: ['ESCALAR con ajustes: el sistema funciona pero tiene 2 fugas. Próximo trimestre con las 4 modificaciones aplicadas, proyección: ROAS 3.5x y cierre >12%.'] },
+      items: [
+        `→ Observador: buscar señales que expliquen la tasa de no-cierre en "${_inp5.split(' ').slice(0,4).join(' ')}…"`,
+        '→ Narrador: si el mensaje de precio no resonó, probar narrativa de velocidad o casos de éxito',
+        '→ Motor: reasignar presupuesto al canal con menor CPL real detectado',
+        '→ Conversor: analizar el drop entre lead y demo agendada — ahí está el cuello de botella',
+      ] },
+    { title: '⚡ Veredicto',
+      items: [`ESCALAR con ajustes si ROAS > 2.5x. Rediseñar si ROAS < 2.0x. Basado en: "${_inp5}". Próximo trimestre con 4 modificaciones aplicadas: proyección ROAS 3.5x y cierre >12%.`] },
   ]);
 }
 
@@ -1481,13 +1555,26 @@ async function runAgentOrquestador(id, output) {
     return;
   }
   const kb = getKB();
+  const _ins6 = instruccion.slice(0,100);
+  const _comp6 = kb.competidores?.split(',')[0]?.trim()||'Salesforce';
   renderOutput(output, [
-    { title: '🎯 Descomposición de la Instrucción',
-      items: ['→ Observador: briefing de mercado + movimientos competitivos actuales', '→ Narrador: narrativa del mes + copy para LinkedIn y Meta Ads', '→ Director: 3 briefs de producción visual (reel, imagen LinkedIn, banner)', '→ Motor: estrategia de distribución con $80K MXN desglosado por canal', '→ Conversor: landing page + secuencia de nurturing para los leads entrantes'] },
+    { title: `🎯 Descomposición — "${_ins6}"`,
+      items: [
+        `→ Observador: briefing de mercado relacionado con "${_ins6.split(' ').slice(0,4).join(' ')}…"`,
+        `→ Narrador: narrativa central + copy para canales principales del brief`,
+        `→ Director: 3 briefs de producción visual (reel, imagen LinkedIn, banner) — basados en "${_ins6.split(' ').slice(0,4).join(' ')}…"`,
+        `→ Motor: estrategia de distribución con presupuesto desglosado por canal`,
+        `→ Conversor: landing page + secuencia nurturing para leads del brief`,
+      ] },
     { title: '⏱️ Umbrales de Evaluación',
-      items: ['48-72h: revisar CTR Meta (benchmark >2.1%). Si está por debajo, pausar anuncios débiles.', 'Día 7: evaluación formal. Reasignar presupuesto a canales con mejor CPA.', 'Día 14: decisión de escalar creativos ganadores o cerrar líneas que no funcionan.', 'Día 21: autopsia + aprendizaje integrado al sistema. Ajustar Día 22-45.'] },
+      items: [
+        '48-72h: revisar CTR canal principal (benchmark >2.1%). Pausar anuncios débiles.',
+        'Día 7: evaluación formal. Reasignar presupuesto a canales con mejor CPA.',
+        'Día 14: escalar creativos ganadores o cerrar líneas que no funcionan.',
+        'Día 21: autopsia + aprendizaje integrado. Ajustar estrategia Día 22-45.',
+      ] },
     { title: '⚡ Primera Acción (próximas 2 horas)',
-      items: [`Ejecuta el Observador con: "Movimientos competitivos de ${kb.competidores?.split(',')[0]||'Salesforce'} en LinkedIn Q2 2026 + oportunidades de gap". Su output alimenta al Narrador.`] },
+      items: [`Ejecuta el Observador con: "Movimientos competitivos de ${_comp6} relacionados con '${_ins6.split(' ').slice(0,5).join(' ')}…' + oportunidades de gap". Su output alimenta al Narrador.`] },
   ]);
 }
 
@@ -1838,7 +1925,7 @@ async function runCampaignProposal(mission, predResult, agentResults, network) {
 
   const sys = `Eres el Estratega de Campañas de MetaTronix. Generas propuestas de campaña optimizadas para elevar el score del Predictor a 95%+. MetaTronix: CRM IA para LATAM, $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra.`;
 
-  const agentCtx = (agentResults||[]).slice(0,4).map(r=>`[${r.name}] ${r.text.slice(0,80).replace(/\n+/g,' ')}`).join(' | ');
+  const agentCtx = (agentResults||[]).map(r=>`[${r.name}]: ${r.text.slice(0,300).replace(/\n+/g,' ')}`).join('\n');
 
   const userMsg = `Misión: "${mission.slice(0,200)}"
 Score actual Predictor: ${origScore}%
@@ -1858,37 +1945,83 @@ Responde EXACTAMENTE este JSON. Cada post incluye visual_type (imagen_ia|video_i
   } catch(_) { /* fallback abajo */ }
 
   if (!structured || !Array.isArray(structured.posts) || structured.posts.length < 7) {
+    // Construir posts contextuales a partir del prompt real + KB
+    const kb = getKB();
+    const prod    = (kb.productos||'MetaTronix CRM IA').split(',')[0].trim();
+    const aud     = (kb.audiencia||'directores de ventas en LATAM').split(',')[0].trim();
+    const valor   = kb.valor || 'implementación en 1 semana, 30% del costo de Salesforce';
+    const comp    = (kb.competidores||'Salesforce').split(',')[0].trim();
+    const tono    = kb.tono || 'experto, orientado a resultados';
+    const mis60   = mission.slice(0, 60);
+    const mis100  = mission.slice(0, 100);
+
+    // Extraer objetivo de la misión (leads, awareness, lanzamiento, etc.)
+    const isLanzamiento = /lanz|nuevo|launch|introduc/i.test(mission);
+    const isLeads       = /lead|prospect|pipeline|conversión/i.test(mission);
+    const isAwareness   = /aware|conocer|presencia|posicion|brand/i.test(mission);
+    const isRetención   = /retener|churn|reactivar|cliente|fideliz/i.test(mission);
+
     const hooks = [
-      '¿Tu CRM ya genera leads solo? El nuestro sí.',
-      '3 errores que frenan tus ventas (y cómo el CRM los elimina)',
-      'De 0 a 50 leads en 30 días — caso real MetaTronix',
-      'El pipeline de ventas que tu equipo necesita ahora',
-      'IA + CRM = el vendedor que nunca duerme',
-      'Cómo MetaTronix triplicó el ROI de una empresa retail',
-      'Tu competencia ya usa IA en ventas. ¿Tú?',
+      isLanzamiento
+        ? `Presentamos ${prod}: ${mis60}`
+        : `${mis60} — así se hace con IA`,
+      `El error #1 de ${aud}: decidir sin datos en tiempo real`,
+      `${prod} vs ${comp}: ¿por qué el 70% de empresas en LATAM cambia?`,
+      isLeads
+        ? `100 leads calificados en 30 días — ${prod} lo automatiza`
+        : `De caos operativo a claridad: ${prod} en acción`,
+      `Lo que nadie te dice sobre ${mis60.split(' ').slice(0,5).join(' ')}`,
+      isAwareness
+        ? `${aud}: tu mercado ya se movió — ¿sigues en el mismo lugar?`
+        : `${aud}: 1 semana para implementar IA en tu operación`,
+      isRetención
+        ? `Clientes que se quedan: la fórmula de retención con ${prod}`
+        : `Tu competencia (${comp}) ya usa esto. El mercado no espera.`,
     ];
+
+    const copies = [
+      `${prod} — ${mis100}. Demo gratis en metatronixleads.tech`,
+      `${aud} que usan IA cierran 40% más negocios. ${prod} lo hace posible en 7 días. Sin código. Sin contratos. → metatronixleads.tech`,
+      `${valor}. Mientras ${comp} cobra $2,500/mes, MetaTronix entrega más por menos. Agenda tu demo gratuita.`,
+      `Misión: ${mis60}. ${prod} tiene el plan. Implementación en 1 semana. Primeros resultados en 72h. → metatronixleads.tech`,
+      `${aud}: el problema no es la tecnología — es no tener la correcta. ${prod} fue diseñado para tu mercado. En español. Con soporte local.`,
+      `Cada día sin IA en tu operación es dinero que no estás cerrando. ${prod} cambia eso. Prueba gratuita 14 días → metatronixleads.tech`,
+      `${tono.split(',')[0].trim().charAt(0).toUpperCase() + tono.split(',')[0].trim().slice(1)}. Así es ${prod}. ${mis60}. ¿Cuándo empezamos?`,
+    ];
+
+    const razones = [
+      'Hook específico al objetivo + CTA directo',
+      'Pain point real de la audiencia + solución concreta',
+      'Comparación competitiva + propuesta de valor',
+      'Resultado cuantificado + urgencia temporal',
+      'Curiosidad + diferenciación de mercado local',
+      'Urgencia + prueba social implícita',
+      'Tono de marca + cierre con acción',
+    ];
+
     const formats = ['Carrusel','Video corto','Post texto','Imagen','Reel','Story','Artículo'];
-    // Visual fallbacks: tipo + prompt por formato
+    const netLower = network.toLowerCase();
     const visualFallback = [
-      { visual_type:'imagen_ia',  visual_prompt:'Professional B2B carousel infographic, dark blue corporate style, sales funnel data, 1080x1080px, modern flat design' },
-      { visual_type:'video_ia',   visual_prompt:'Short vertical video 9:16, confident LATAM sales director at modern desk, CRM dashboard screen, cinematic lighting, 15s loop' },
-      { visual_type:'foto_real',  visual_prompt:'Real photo: professional team celebrating sales milestone in modern office, warm light, authentic candid moment, 1200x628px' },
-      { visual_type:'foto_real',  visual_prompt:'Stock photo: close-up laptop screen showing CRM analytics dashboard with green growth charts, shallow depth, 1080x1080' },
-      { visual_type:'video_ia',   visual_prompt:'Vertical Reel 9:16, animated CRM IA logo reveal with data particles, dark industrial aesthetic, 8s loop, #00ff88 accent' },
-      { visual_type:'imagen_ia',  visual_prompt:'Cinematic Story frame 9:16, Latin American executive smiling at phone, blurred city background, modern brand overlay, 1080x1920' },
-      { visual_type:'imagen_ia',  visual_prompt:'Thought leadership header image, abstract data visualization, corporate dark blue, 1200x628px LinkedIn optimal, professional' },
+      { visual_type:'imagen_ia',  visual_prompt:`B2B carousel infographic for ${network}, dark blue, ${prod} dashboard, LATAM market data, 1080x1080px modern flat design` },
+      { visual_type:'video_ia',   visual_prompt:`Vertical 9:16 video, confident LATAM director at desk with ${network} on screen, cinematic, 15s loop, CRM data overlay` },
+      { visual_type:'foto_real',  visual_prompt:`Professional team celebrating deal in modern office, ${network} brand style, warm authentic light, 1200x628px` },
+      { visual_type:'foto_real',  visual_prompt:`Close-up laptop screen: CRM analytics green growth charts, shallow depth, ${netLower} optimal format 1080x1080` },
+      { visual_type:'video_ia',   visual_prompt:`Vertical Reel 9:16, animated IA logo reveal with data particles, dark industrial, 8s loop, #00ff88 accent, ${network} format` },
+      { visual_type:'imagen_ia',  visual_prompt:`Story 9:16, Latin American executive smiling at phone, city background blurred, modern brand overlay, 1080x1920` },
+      { visual_type:'imagen_ia',  visual_prompt:`Thought leadership ${network} header, abstract data visualization, dark blue corporate, 1200x628px, professional B2B` },
     ];
+
     structured = {
-      campaign_name: `Campaña ${network} MetaTronix`,
+      campaign_name: `${mission.split(' ').slice(0,5).join(' ')} — ${network}`,
       campaign_score: 96,
       score_delta: 96 - origScore,
-      strategy: `Combinación de contenido educativo, social proof y CTA directo en ${network} para maximizar el alcance al ICP de MetaTronix y aumentar la tasa de conversión.`,
+      strategy: `Campaña ${network} centrada en: "${mis100}". Secuencia de 7 posts que combina educación, comparación competitiva vs ${comp}, social proof y CTA progresivo — diseñada para ${aud}.`,
       avg_score: 96,
       posts: hooks.map((hook, i) => ({
         platform: network, format: formats[i],
-        hook, copy: 'MetaTronix CRM con IA: cierra más ventas con menos esfuerzo. Prueba gratis 14 días → metatronixleads.tech',
-        score: 94 + (i % 5 === 0 ? 4 : i % 5),
-        razon: 'Social proof + urgencia + CTA directo',
+        hook, copy: copies[i],
+        score: 93 + (i === 0 || i === 6 ? 5 : i === 2 ? 4 : i % 3),
+        razon: razones[i],
         ...visualFallback[i],
       })),
     };
@@ -2301,19 +2434,65 @@ async function runPREDICTOR(mission) {
   } catch(_) { /* HF no disponible */ }
 
   /* Paso 2: Claude extrae estructura completa */
+  // Detectar canal dominante a partir de keywords en la misión
+  const _mis = mission.toLowerCase();
+  const _isB2B       = /b2b|empresa|director|ceo|gerente|corporativo|negocio/i.test(_mis);
+  const _isConsumer  = /b2c|consumidor|usuario final|retail|tienda|cliente final/i.test(_mis);
+  const _isEmail     = /email|correo|newsletter|bolet[ií]n|nurturing|sequencia/i.test(_mis);
+  const _isTikTok    = /tiktok|viral|gen[- ]?z|joven|entretenimiento/i.test(_mis);
+  const _isYouTube   = /youtube|video largo|tutorial|demo|webinar/i.test(_mis);
+  const _isWhatsApp  = /whatsapp|whats|mensaje directo|conversacional/i.test(_mis);
+  const _isGoogle    = /google|sem|search|b[úu]squeda|seo|keyword/i.test(_mis);
+  const _isMeta      = /meta|facebook|instagram|ig|reel|story|stories/i.test(_mis);
+  const _isLinkedIn  = /linkedin|linked in/i.test(_mis);
+  const _isLanzamiento = /lanz|nuevo|launch|introduc|estreno/i.test(_mis);
+  const _isLeads     = /lead|prospect|pipeline|conversi[oó]n|demo|ventas/i.test(_mis);
+
+  // Puntajes base y ajustes por keyword
+  let _sc = {
+    LinkedIn:  _isB2B ? 0.85 : _isConsumer ? 0.42 : 0.72,
+    'Meta Ads': _isConsumer ? 0.82 : _isMeta ? 0.78 : _isB2B ? 0.52 : 0.58,
+    Email:     _isEmail ? 0.84 : _isLeads ? 0.64 : 0.51,
+    'Google SEM': _isGoogle ? 0.80 : _isLanzamiento ? 0.55 : 0.44,
+    TikTok:    _isTikTok ? 0.78 : 0.30,
+    WhatsApp:  _isWhatsApp ? 0.76 : 0.38,
+    YouTube:   _isYouTube ? 0.73 : 0.35,
+  };
+  // Seleccionar los 4 canales con mayor score
+  const _canalFallback = Object.entries(_sc)
+    .sort((a,b)=>b[1]-a[1]).slice(0,4)
+    .map(([nombre, score]) => ({
+      nombre,
+      score: parseFloat(score.toFixed(2)),
+      razon: nombre==='LinkedIn' && _isB2B ? 'decisores B2B directos' :
+             nombre==='Meta Ads' && _isConsumer ? 'alcance masivo B2C' :
+             nombre==='Email' && _isEmail ? 'nurturing alta intención' :
+             nombre==='Google SEM' && _isGoogle ? 'captura demanda activa' :
+             nombre==='TikTok' ? 'virality orgánica' :
+             nombre==='WhatsApp' ? 'conversación directa' :
+             nombre==='YouTube' ? 'educación y demos' :
+             score >= 0.70 ? 'canal prioritario para brief' :
+             score >= 0.55 ? 'soporte de conversión' : 'refuerzo secundario',
+    }));
+
+  const _topCanal = _canalFallback[0]?.nombre || 'LinkedIn';
+  const _mis60    = mission.slice(0,60);
+
   let structured = {
     probabilidad: hfScore,
     roas_min: parseFloat((1.2 + hfScore/100 * 2).toFixed(1)),
     roas_max: parseFloat((1.8 + hfScore/100 * 3.5).toFixed(1)),
-    canales: [
-      { nombre:'LinkedIn',  score: 0.72, razon:'audiencia B2B alineada' },
-      { nombre:'Meta Ads',  score: 0.58, razon:'remarketing efectivo' },
-      { nombre:'Email',     score: 0.51, razon:'base tibia, nurturing' },
-      { nombre:'Google SEM',score: 0.44, razon:'keywords competidas' },
+    canales: _canalFallback,
+    oportunidades: [
+      _isLanzamiento ? 'ventana de lanzamiento abierta' : 'mercado receptivo a brief',
+      _isLeads ? 'pipeline con demanda activa' : 'mensaje diferenciado disponible',
+      _isB2B ? 'ICP B2B claramente definido' : 'audiencia identificada',
     ],
-    oportunidades: ['mercado receptivo', 'mensaje diferenciado', 'timing Q2'],
-    riesgos: ['presupuesto ajustado', 'competencia activa'],
-    recomendacion: `Basado en el análisis semántico del brief, el canal con mayor afinidad es LinkedIn para el ICP B2B. Activa el LLM para obtener una recomendación específica con presupuesto y timing exactos.`,
+    riesgos: [
+      _isGoogle ? 'keywords competidas en SEM' : 'presupuesto ajustado',
+      _isB2B ? 'ciclo de venta largo' : 'competencia activa',
+    ],
+    recomendacion: `Para la misión "${_mis60}…", el canal de mayor afinidad es ${_topCanal}. ${_isB2B ? 'Enfoca el mensaje en ROI y tiempo de implementación.' : _isConsumer ? 'Prioriza creativos visuales de alto impacto.' : 'Activa el LLM para una recomendación con presupuesto y timing exactos.'}`,
     confianza: 0.60, timing: hfScore >= 70 ? 'optimo' : hfScore >= 50 ? 'adecuado' : 'esperar',
   };
 
