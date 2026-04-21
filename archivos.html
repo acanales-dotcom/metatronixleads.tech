@@ -788,6 +788,26 @@
 <script src="/assets/libs/supabase.min.js"></script>
 <script src="/config.js"></script>
 <script src="/assets/app.js?v=20260421"></script>
+<script>
+// Patch: getActiveCompanyId con fallback a profile.company_id
+// Necesario mientras el CDN propaga app.js con el fix de multi-empresa
+window.addEventListener('DOMContentLoaded', function patchGACI() {
+  window._patchGACI = setInterval(function() {
+    if (typeof getActiveCompanyId === 'function' &&
+        !getActiveCompanyId.toString().includes('_mtxCurrentUser')) {
+      const orig = getActiveCompanyId;
+      window.getActiveCompanyId = function() {
+        const fromSwitcher = window.MTX_ACTIVE_COMPANY?.id;
+        if (fromSwitcher && /^[0-9a-f-]{36}$/.test(fromSwitcher)) return fromSwitcher;
+        const fromProfile = window._mtxCurrentUser?.profile?.company_id;
+        if (fromProfile && /^[0-9a-f-]{36}$/.test(fromProfile)) return fromProfile;
+        return null;
+      };
+      clearInterval(window._patchGACI);
+    }
+  }, 50);
+});
+</script>
 <script src="/assets/agent.js?v=20260422"></script>
 <!-- ALEX: Sales Coach Agent -->
 <script src="/assets/salescoach.js?v=20260421"></script>
