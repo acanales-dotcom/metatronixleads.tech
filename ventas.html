@@ -1616,15 +1616,21 @@ async function runAgentProspector(id, output) {
     return;
   }
   const kb = getKB();
+  const _q0 = query.slice(0,100);
+  const _sector = kb.icp?.includes('fintech') ? 'fintech' : kb.icp?.includes('retail') ? 'retail' : 'B2B';
   renderOutput(output, [
-    { title: '🎯 Perfil ICP Refinado',
-      items: [`Director de Ventas / CEO de empresa ${kb.icp?.includes('fintech') ? 'fintech' : 'retail'} en México, 50-300 empleados, ya tiene CRM pero lo usa menos del 40% del equipo`, 'Dolor visible: forecast manual en Excel, gerencia pide reportes que tardan 2 días en armar', 'Señal de compra: buscan en LinkedIn "CRM México" o "CRM vendedores campo"'] },
+    { title: `🎯 Perfil ICP — "${_q0}"`,
+      items: [
+        `Prospecto objetivo: ${_q0}. Empresa ${_sector} en México, 50-300 empleados, ya tiene CRM pero adopción <40% del equipo`,
+        `Dolor visible para este segmento: forecast manual en Excel, gerencia pide reportes sobre "${_q0.split(' ').slice(0,4).join(' ')}…" que tardan 2 días`,
+        `Señal de compra: busca en LinkedIn "CRM México" o términos relacionados a "${_q0.split(' ').slice(0,3).join(' ')}…"`,
+      ] },
     { title: '📧 Email de Primer Contacto',
-      items: ['ASUNTO: [Nombre], vi que [empresa] tiene 80 vendedores — ¿cuánto tiempo les toma armar el reporte semanal?\nCUERPO: En [empresa similar] lo teníamos resuelto en 15 minutos con MetaTronix. ¿Tienes 20 min esta semana para ver si te sirve?\nCTA: → [link agenda]'] },
+      items: [`ASUNTO: [Nombre], vi que [empresa] tiene este reto: "${_q0.split(' ').slice(0,5).join(' ')}…" — ¿ya lo tienen resuelto?\nCUERPO: En empresas similares resolvemos exactamente eso en 1 semana con MetaTronix. ¿Tienes 20 min esta semana?\nCTA: → [link agenda]`] },
     { title: '💬 Opener LinkedIn',
-      items: ['Hola [Nombre], vi tu post sobre los retos del equipo de ventas en campo — en MetaTronix resolvemos exactamente eso. ¿Te parece si te muestro cómo en 15 minutos?'] },
+      items: [`Hola [Nombre], vi que manejan un reto de "${_q0.split(' ').slice(0,4).join(' ')}…" — en MetaTronix resolvemos exactamente eso. ¿Te muestro cómo en 15 minutos?`] },
     { title: '⚡ Acción Inmediata',
-      items: ['1. Busca en LinkedIn "Director de Ventas" + sector + México → filtra por 2do grado. 2. Envía 10 mensajes en los próximos 45 minutos. 3. Registra todos en CRM con tag "prospección_masiva_01"'] },
+      items: [`1. Busca en LinkedIn "${_q0.split(' ').slice(0,3).join(' ')}" + sector + México → filtra 2do grado. 2. Envía 10 mensajes en 45 minutos. 3. Registra en CRM con tag "prospección_${Date.now().toString().slice(-4)}"`] },
   ]);
 }
 
@@ -1640,13 +1646,28 @@ async function runAgentCalificador(id, output) {
     output.innerHTML = `<div class="output-section"><div class="output-title">⚖️ Calificador — Análisis BANT/MEDDIC</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('descubridor',this.closest('.agent-output').innerText.slice(0,400))">🧩 Ir a Discovery</button></div>`;
     return;
   }
+  const _li = leadInfo.slice(0,120);
+  const _hasBudget  = /presupuesto|budget|\$[\d,]+|\d+k\s*(mxn|usd)/i.test(leadInfo);
+  const _hasAuth    = /ceo|director|cfo|gerente|decisor|aprobador/i.test(leadInfo);
+  const _hasNeed    = /dolor|problema|necesit|urgen|forecast|manual|excel|reto/i.test(leadInfo);
+  const _hasTime    = /esta semana|este mes|q[1-4]|30 días|urgente|cierre/i.test(leadInfo);
+  const _bScore     = (_hasBudget?8:5) + (_hasAuth?8:5) + (_hasNeed?9:6) + (_hasTime?7:4);
+  const _finalScore = Math.min(92, Math.max(30, Math.round(_bScore * 2.8)));
+  const _recom      = _finalScore >= 70 ? '✅ AVANZAR — prioridad alta' : _finalScore >= 50 ? '⚠️ AVANZAR CON CAUTELA — confirmar budget y decisor' : '🔄 NURTURING — faltan señales clave';
   renderOutput(output, [
-    { title: '⚖️ Score BANT',
-      items: ['Budget: 6/10 — presupuesto no confirmado pero empresa con tamaño para pagarlo', 'Authority: 7/10 — contacto es influencer fuerte, decisor final es CFO', 'Need: 9/10 — dolor de forecast manual claramente articulado', 'Timeline: 5/10 — sin urgencia declarada, fin de trimestre puede ser palanca'] },
-    { title: '📊 Score Final: 68/100',
-      items: ['RECOMENDACIÓN: ✅ AVANZAR — el dolor es real y el tamaño justifica el esfuerzo. Prioridad media-alta.'] },
+    { title: `⚖️ Score BANT — "${_li}"`,
+      items: [
+        `Budget: ${_hasBudget ? '8/10 — presupuesto o rango mencionado' : '5/10 — presupuesto no confirmado, empresa puede tenerlo'}`,
+        `Authority: ${_hasAuth ? '8/10 — decisor o influencer clave detectado' : '5/10 — confirmar quién aprueba la compra'}`,
+        `Need: ${_hasNeed ? '9/10 — dolor articulado claramente en el brief' : '6/10 — necesidad implícita, profundizar en discovery'}`,
+        `Timeline: ${_hasTime ? '7/10 — urgencia o fecha detectada' : '4/10 — sin urgencia declarada, crear palanca de cierre'}`,
+      ] },
+    { title: `📊 Score Final: ${_finalScore}/100`,
+      items: [`RECOMENDACIÓN: ${_recom}. Basado en: "${_li}"`] },
     { title: '⚡ Siguiente Paso',
-      items: ['Agenda discovery de 30 min en los próximos 3 días. Objetivo: confirmar budget con CFO y encontrar el champion interno. Prepara 3 preguntas de dolor financiero.'] },
+      items: [_finalScore >= 70
+        ? 'Agenda discovery de 30 min en los próximos 3 días. Objetivo: confirmar budget y champion interno.'
+        : 'Antes de avanzar: confirma presupuesto y decisor final. Usa el Descubridor para preguntas de implicación.'] },
   ]);
 }
 
@@ -1662,13 +1683,19 @@ async function runAgentDescubridor(id, output) {
     output.innerHTML = `<div class="output-section"><div class="output-title">🧩 Descubridor — Guía de Discovery</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar guía</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('presentador',this.closest('.agent-output').innerText.slice(0,500))">🎤 Preparar Demo</button></div>`;
     return;
   }
+  const _ctx3 = contexto.slice(0,100);
   renderOutput(output, [
-    { title: '❓ Preguntas SPIN',
-      items: ['SITUACIÓN: "¿Cuántos vendedores tienen en campo y cómo registran actualmente sus visitas?" / "¿Qué herramienta usan hoy para el forecast mensual?"', 'PROBLEMA: "¿Con qué frecuencia el forecast real vs el proyectado tiene una diferencia mayor al 20%?" / "¿Cuánto tiempo invierte su equipo en reportes que no generan ventas?"', 'IMPLICACIÓN: "Si esa diferencia en forecast les ha costado alguna vez perder un cliente o no cumplir metas, ¿cómo afecta eso al equipo?" / "¿Qué pasa internamente cuando no se cumple la meta del trimestre?"', 'NECESIDAD: "Si tuvieran visibilidad en tiempo real del pipeline y el forecast se actualizara solo — ¿qué cambiaría en su operación?"'] },
+    { title: `❓ Preguntas SPIN — "${_ctx3}"`,
+      items: [
+        `SITUACIÓN: "¿Cómo manejan actualmente el reto de '${_ctx3.split(' ').slice(0,4).join(' ')}…'?" / "¿Qué herramienta usan hoy para esto?"`,
+        `PROBLEMA: "¿Con qué frecuencia ese proceso falla o genera datos incorrectos?" / "¿Cuánto tiempo del equipo consume sin generar ventas?"`,
+        `IMPLICACIÓN: "Si este problema no se resuelve en los próximos 90 días, ¿qué impacto tiene en el cumplimiento de metas?" / "¿Cuánto les ha costado ya — en tiempo, clientes perdidos o forecast incorrecto?"`,
+        `NECESIDAD: "Si tuvieran ${_ctx3.split(' ').slice(0,4).join(' ')}… resuelto automáticamente — ¿qué cambiaría primero en su operación?"`,
+      ] },
     { title: '🏆 Insight Challenger',
-      items: ['Los directores de ventas en LATAM pierden en promedio 8 horas/semana arreglando datos de su CRM en lugar de coachear a su equipo. MetaTronix elimina ese trabajo — no porque sea más barato, sino porque sus vendedores realmente lo usan.'] },
+      items: [`Los directores de ventas en LATAM con el reto de "${_ctx3}" pierden 8 hrs/semana corrigiendo datos en lugar de coachear. MetaTronix elimina ese trabajo — no porque sea barato, sino porque sus vendedores realmente lo usan.`] },
     { title: '⚡ Apertura de Llamada',
-      items: ['"[Nombre], agendamos 30 minutos — yo voy a hacer la mayor parte de las preguntas porque quiero entender tu operación antes de mostrarte cualquier cosa. ¿Te parece bien si arrancamos por ahí?"'] },
+      items: [`"[Nombre], agendamos 30 min — voy a hacer la mayor parte de las preguntas. Quiero entender el reto de '${_ctx3.split(' ').slice(0,4).join(' ')}…' antes de mostrarte cualquier cosa. ¿Arrancamos por ahí?"`] },
   ]);
 }
 
@@ -1685,13 +1712,19 @@ async function runAgentPresentador(id, output) {
     return;
   }
   const kb = getKB();
+  const _ctx4 = contexto.slice(0,100);
   renderOutput(output, [
-    { title: '🎬 Estructura de 30 Minutos',
-      items: ['Min 0-5: Agenda + validación del dolor. "Antes de mostrar nada, déjame confirmar que entendí bien el problema"', 'Min 5-20: Demo flujo principal enfocado en el pain. Empieza con el resultado final (dashboard), no con el setup', 'Min 20-25: Funcionalidades adicionales solo si el cliente las pide. No features dump.', 'Min 25-30: Resumen de valor + siguiente paso concreto. Propuesta en 48h máximo.'] },
+    { title: `🎬 Estructura de 30 Minutos — "${_ctx4}"`,
+      items: [
+        `Min 0-5: "Antes de mostrar nada, déjame confirmar que entendí bien el reto de '${_ctx4.split(' ').slice(0,4).join(' ')}…'. ¿Lo estoy leyendo bien?"`,
+        'Min 5-20: Demo flujo principal enfocado en el dolor detectado. Empieza con el resultado final (dashboard), no con el setup.',
+        'Min 20-25: Funcionalidades adicionales solo si el cliente las pide. No features dump.',
+        'Min 25-30: Resumen de valor + siguiente paso concreto. Propuesta en 48h máximo.',
+      ] },
     { title: '⚡ Momento WOW',
-      items: ['Muestra el dashboard de forecast en tiempo real. Luego di: "¿Cuánto tiempo les toma actualmente tener esta misma vista?" — cuando dicen "2 días" o "nunca es precisa", ese es el momento. Pausa 3 segundos. Deja que el silencio trabaje.'] },
+      items: [`Muestra cómo MetaTronix resuelve "${_ctx4.split(' ').slice(0,4).join(' ')}…" en tiempo real. Pregunta: "¿Cuánto tiempo les toma hoy tener esta misma vista?" — cuando dicen "2 días" o "nunca es precisa", ese es el momento. Pausa 3 segundos.`] },
     { title: '🏁 Cierre de Demo',
-      items: [`"${kb.empresa || 'MetaTronix'} resuelve exactamente lo que me describiste. Tengo dos opciones para presentarte — ¿te va bien que te las mande mañana antes de mediodía para que las revises antes del viernes?"` ] },
+      items: [`"${kb.empresa || 'MetaTronix'} resuelve exactamente '${_ctx4.split(' ').slice(0,4).join(' ')}…'. Tengo dos opciones para presentarte — ¿te va bien que te las mande mañana antes de mediodía?"`] },
   ]);
 }
 
@@ -1708,15 +1741,29 @@ async function runAgentNegociador(id, output) {
     return;
   }
   const kb = getKB();
+  const _obj = objecion.slice(0,100);
+  const _isPrecio   = /caro|precio|cost[eo]|presupuesto|barato|descuento/i.test(objecion);
+  const _isCompetidor = /salesforce|hubspot|zoho|pipedrive|otro|competencia|alternativa/i.test(objecion);
+  const _isTiempo   = /tiempo|ahorita|después|prioridad|no es el momento|más adelante/i.test(objecion);
   renderOutput(output, [
-    { title: '🔍 Diagnóstico de Objeción',
-      items: ['"Está muy caro" en 80% de los casos es una señal de que el valor no está claro, no que el presupuesto no existe. Pregunta antes de defenderte.'] },
+    { title: `🔍 Diagnóstico — "${_obj}"`,
+      items: [
+        _isPrecio   ? '"Está muy caro" en 80% de los casos significa que el valor no está claro. Pregunta antes de defenderte.' :
+        _isCompetidor ? 'La mención de un competidor es señal de interés real — el cliente está comparando, no rechazando.' :
+        _isTiempo   ? '"No es el momento" puede ser verdad o puede ser una forma de decir "no veo el valor suficiente aún".' :
+        `La objeción "${_obj.split(' ').slice(0,4).join(' ')}…" probablemente es una señal de compra disfrazada. Diagnostica antes de responder.`,
+      ] },
     { title: '💬 Respuesta Inmediata',
-      items: ['"Entiendo. ¿El precio que viste está por encima de lo que tenían presupuestado, o es que todavía no ven claro cómo impacta en sus números?" — Esta pregunta separa la objeción real de la objeción táctica.'] },
+      items: [
+        _isPrecio   ? `"Entiendo. ¿El precio está por encima de lo que tenían presupuestado, o es que todavía no ven claro cómo impacta en sus números?" — Separa la objeción real de la táctica.` :
+        _isCompetidor ? `"Perfecto — significa que ya están evaluando activamente. ¿Qué es lo que más les importa comparar entre las opciones?" — Controla la evaluación sin atacar al competidor.` :
+        _isTiempo   ? `"Entiendo. ¿Qué tendría que pasar en los próximos 30 días para que esto sí sea prioridad?" — Ancla en su propia urgencia.` :
+        `"Entendido. Para asegurarme de responder bien: ¿podrías explicarme un poco más sobre '${_obj.split(' ').slice(0,4).join(' ')}…'?" — Primero clarifica, luego responde.`,
+      ] },
     { title: '📊 ROI en Vivo',
-      items: [`"Hagamos el cálculo juntos. ¿Cuántos vendedores tienen? ¿Cuánto es el ticket promedio? Si MetaTronix sube su tasa de cierre solo un 5% — ¿cuánto representaría eso al año?" → El precio de ${kb.precio?.split('·')[0]?.trim() || '$299/mes'} se vuelve irrelevante cuando el cliente calcula $800K MXN de ganancia incremental.`] },
+      items: [`"Hagamos el cálculo juntos. ¿Cuántos vendedores tienen? ¿Cuánto es el ticket promedio? Si MetaTronix sube la tasa de cierre solo un 5% — ¿cuánto es eso al año?" → El precio de ${kb.precio?.split('·')[0]?.trim() || '$299/mes'} se vuelve irrelevante cuando el cliente calcula su propio ROI.`] },
     { title: '⚡ Pregunta Post-Objeción',
-      items: ['"Si el precio no fuera un factor, ¿hay algo más que necesitarías ver para tomar la decisión esta semana?"'] },
+      items: [`"Si ${_isPrecio ? 'el precio' : _isCompetidor ? 'la comparación con otros' : _isTiempo ? 'el timing' : 'ese punto'} no fuera un factor, ¿hay algo más que necesitarías ver para tomar la decisión esta semana?"`] },
   ]);
 }
 
@@ -1732,13 +1779,20 @@ async function runAgentCerrador(id, output) {
     output.innerHTML = `<div class="output-section"><div class="output-title">🏆 Cerrador — Plan de Cierre</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar plan</button><button class="btn btn-ghost btn-sm" onclick="passToAgent('seguimiento',this.closest('.agent-output').innerText.slice(0,300))">📬 Secuencia seguimiento</button></div>`;
     return;
   }
+  const _sit6 = situacion.slice(0,100);
+  const _semanas = situacion.match(/(\d+)\s*semanas?/i)?.[1] || '3';
+  const _hasPropuesta = /propuesta|enviada|manda/i.test(situacion);
   renderOutput(output, [
-    { title: '🔥 Diagnóstico de Bloqueo',
-      items: ['1. No tiene claro quién aprueba — el proceso interno de compra no está mapeado', '2. Otra prioridad interna apareció — el dolor de CRM bajó en su lista', '3. Esperando que tú hagas el siguiente movimiento — muchos vendedores dejan morir deals por miedo a presionar'] },
+    { title: `🔥 Diagnóstico — "${_sit6}"`,
+      items: [
+        `1. No tiene claro quién aprueba — el proceso interno de compra no está mapeado${_hasPropuesta ? ' (propuesta enviada sin validar decisor)' : ''}`,
+        '2. Otra prioridad interna — el dolor bajó en su lista después de tu última conversación',
+        `3. Esperando que tú hagas el siguiente movimiento — ${_semanas} semanas sin avance es señal de que el vendedor no ancló un próximo paso concreto`,
+      ] },
     { title: '📧 Email de Cierre',
-      items: ['"[Nombre], llevas 3 semanas con nuestra propuesta. Quiero ser directo: ¿qué falta para que esto avance esta semana?\nTengo un cupo de implementación disponible esta semana. Si no lo tomas, el siguiente slot es en 3 semanas.\n¿15 minutos hoy o mañana para resolverlo juntos?\n— [Tu nombre]"'] },
+      items: [`"[Nombre], llevas ${_semanas} semanas con nuestra propuesta. Quiero ser directo: ¿qué falta para que esto avance esta semana?\nTengo un cupo de implementación disponible ahora. Si no lo tomas, el siguiente slot es en 3 semanas.\n¿15 minutos hoy o mañana para resolverlo juntos?\n— [Tu nombre]"`] },
     { title: '⚡ Plan B — Follow-up a 5 días',
-      items: ['Si no responde en 48h: WhatsApp directo. "Hola [Nombre], vi que revisaste la propuesta — ¿hay algo que no quedó claro?" — una sola pregunta, sin presión visible.'] },
+      items: [`Si no responde en 48h: WhatsApp directo. "Hola [Nombre], sobre '${_sit6.split(' ').slice(0,4).join(' ')}…' — ¿hay algo que no quedó claro o que necesitas que ajustemos?" — una sola pregunta, sin presión visible.`] },
   ]);
 }
 
@@ -1764,13 +1818,22 @@ async function runAgentOrquestador(id, output) {
       </div>`;
     return;
   }
+  const _ins7 = instruccion.slice(0,120);
   renderOutput(output, [
-    { title: '🎯 Priorización de Deals',
-      items: ['DEAL #1 — El de mayor valor con stakeholder champion activo. Cierre esta semana.', 'DEAL #2 — Propuesta enviada hace <7 días. Temperatura alta. Follow-up hoy.', 'DEAL #3 — Deal grande que lleva +3 semanas. Escalada requerida — habla con el decisor final esta semana.'] },
+    { title: `🎯 Priorización — "${_ins7}"`,
+      items: [
+        `DEAL #1 — El deal de mayor valor con stakeholder champion activo en tu pipeline. Cierra esta semana. Usa el Cerrador.`,
+        `DEAL #2 — Propuesta enviada <7 días. Temperatura alta. Follow-up hoy — basado en: "${_ins7.split(' ').slice(0,5).join(' ')}…"`,
+        `DEAL #3 — Deal grande con +3 semanas sin avance. Escalada requerida — habla con decisor final esta semana.`,
+      ] },
     { title: '📅 Plan de Ataque — Próximos 3 Días',
-      items: ['HOY: Llama a los 3 deals prioritarios. No email, llamada. Agenda próximos pasos concretos.', 'MAÑANA: Envía follow-up a deals que no respondieron la llamada. Manda propuesta actualizada al Deal #3.', 'PASADO: Revisión de pipeline con el equipo. Descarta leads que no van a cerrar este trimestre — libera tiempo.'] },
+      items: [
+        `HOY: Ejecuta acción inmediata sobre "${_ins7.split(' ').slice(0,5).join(' ')}…". Llama, no email. Agenda próximo paso concreto.`,
+        'MAÑANA: Follow-up a deals que no respondieron. Propuesta actualizada al deal de mayor riesgo.',
+        'PASADO: Revisión de pipeline — descarta leads que no cierran este trimestre. Libera tiempo para los prioritarios.',
+      ] },
     { title: '⚡ Primera Acción',
-      items: ['Ejecuta el Cerrador con el deal más avanzado de tu pipeline ahora. Si no sabes cuál es, el Pipeline AI te lo dice.'] },
+      items: [`Ejecuta el Cerrador con el deal más avanzado relacionado a "${_ins7.split(' ').slice(0,4).join(' ')}…". Si no sabes cuál es, abre Pipeline AI primero.`] },
   ]);
 }
 
@@ -1791,11 +1854,21 @@ async function runAgentPropuesta(id, output) {
     return;
   }
   const kb = getKB();
+  const _dat8 = datos.slice(0,120);
+  const _vendMatch = datos.match(/(\d+)\s*vendedores?/i);
+  const _numVend = _vendMatch ? parseInt(_vendMatch[1]) : 20;
+  const _planMatch = datos.match(/\$?([\d,]+)\s*\/?\s*mes/i);
+  const _planPrecio = _planMatch ? `$${_planMatch[1]}/mes` : (kb.precio?.split('·')[1]?.trim() || '$799/mes');
   renderOutput(output, [
-    { title: '📋 Resumen Ejecutivo',
-      items: [`[Nombre del cliente] actualmente gestiona su pipeline de ventas con herramientas desconectadas que generan forecast impreciso y reportes que consumen horas del equipo. MetaTronix centraliza toda la operación comercial en una plataforma IA, dando visibilidad en tiempo real y eliminando el trabajo manual.\n\nLa propuesta incluye implementación en 7 días, migración de datos históricos, capacitación completa del equipo y soporte 24/7 en español.`] },
+    { title: `📋 Resumen Ejecutivo — "${_dat8}"`,
+      items: [`Basado en: "${_dat8}". El cliente actualmente gestiona su operación comercial con herramientas que generan fricción y forecast impreciso. MetaTronix centraliza todo en una plataforma IA, eliminando el trabajo manual y dando visibilidad en tiempo real.\n\nImplementación en 7 días, migración de datos históricos, capacitación completa y soporte 24/7 en español.`] },
     { title: '📊 ROI Proyectado (12 meses)',
-      items: ['• Tiempo recuperado: 8 hrs/vendedor/semana × 20 vendedores = 160 hrs/semana → $48,000 USD/año en productividad', `• Mejora en tasa de cierre estimada +15% → +$${Math.round(parseInt('2000000')*0.15).toLocaleString()} MXN ingreso incremental`, `• Inversión anual MetaTronix: ${kb.precio?.split('·')[1]?.trim() || '$799/mes'} × 12 meses`, '→ ROI estimado: 8-12x en 12 meses'] },
+      items: [
+        `• Tiempo recuperado: 8 hrs/vendedor/semana × ${_numVend} vendedores = ${_numVend*8} hrs/semana → productividad recuperada`,
+        `• Mejora en tasa de cierre estimada +15% → ingreso incremental significativo`,
+        `• Inversión anual MetaTronix: ${_planPrecio} × 12 meses`,
+        '→ ROI estimado: 8-12x en 12 meses (valida con tus números reales del CRM)',
+      ] },
     { title: '✅ Próximos Pasos',
       items: ['1. Firmar contrato (hoy o mañana)', '2. Kick-off con equipo de implementación (72h después)', '3. Go-live completo en 7 días hábiles'] },
   ]);
@@ -1813,14 +1886,18 @@ async function runAgentSeguimiento(id, output) {
     output.innerHTML = `<div class="output-section"><div class="output-title">📬 Seguimiento IA — Secuencia Multicanal</div><div style="white-space:pre-wrap;font-size:13px;line-height:1.8">${escHtml(result)}</div></div><div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="copyOutput(this.closest('.agent-output'))">📋 Copiar secuencia completa</button></div>`;
     return;
   }
+  const _sit9 = situacion.slice(0,100);
+  const _dias = situacion.match(/(\d+)\s*d[íi]as?/i)?.[1] || '5';
   renderOutput(output, [
-    { title: '📧 Secuencia de 4 Emails',
-      items: ['DÍA 1 — ASUNTO: "[Nombre], algo que olvidé mencionar"\nCUERPO: Vi que revisaste la propuesta. Quería añadir algo que suele ser relevante: [insight personalizado]. ¿Lo conversamos 15 min?',
-              'DÍA 3 — ASUNTO: "¿Qué opina el equipo de [empresa]?"\nCUERPO: Nada urgente — solo curiosidad si ya tuviste chance de revisar la propuesta con tu equipo. ¿Hay algo que ajustar antes de que cumpla su fecha de validez?',
-              'DÍA 7 — ASUNTO: "Este viernes vence el precio actual"\nCUERPO: Quería avisarte que el precio de la propuesta vence el viernes. No es presión — solo no quiero que pierdas las condiciones actuales. ¿15 min para resolverlo?',
-              'DÍA 14 — ASUNTO: "¿Cerramos o pausamos?"\nCUERPO: Han pasado 2 semanas. Quiero ser directo: si no es el momento correcto, no hay problema — me avisas y lo retomamos cuando tenga más sentido. Solo dime en qué posición estamos.'] },
-    { title: '⚡ Mensaje de WhatsApp — DÍA 1',
-      items: ['"Hola [Nombre], vi que revisaste la propuesta. ¿Hay alguna sección que quieras que te explique mejor? O si ya tienen dudas del equipo, encantado de agendar 15 min."'] },
+    { title: `📧 Secuencia — "${_sit9}"`,
+      items: [
+        `DÍA 1 — ASUNTO: "[Nombre], algo que olvidé mencionar sobre tu situación"\nCUERPO: Vi que ${_dias} días han pasado. Quería añadir algo relevante para '${_sit9.split(' ').slice(0,4).join(' ')}…': [insight personalizado al contexto]. ¿Lo conversamos 15 min?`,
+        `DÍA 3 — ASUNTO: "¿Qué opina el equipo sobre esto?"\nCUERPO: Nada urgente — curiosidad si ya revisaste la propuesta con tu equipo. ¿Hay algo que ajustar antes de que venza?`,
+        `DÍA 7 — ASUNTO: "El precio actual vence este viernes"\nCUERPO: Solo quiero que no pierdas las condiciones actuales relacionadas a '${_sit9.split(' ').slice(0,3).join(' ')}…'. ¿15 min para resolverlo?`,
+        `DÍA 14 — ASUNTO: "¿Cerramos o pausamos?"\nCUERPO: Han pasado 2 semanas. Directo: si no es el momento, me avisas y retomamos. Solo dime en qué posición estamos con '${_sit9.split(' ').slice(0,3).join(' ')}…'.`,
+      ] },
+    { title: '⚡ WhatsApp — DÍA 1',
+      items: [`"Hola [Nombre], sobre '${_sit9.split(' ').slice(0,4).join(' ')}…' — ¿hay alguna sección de la propuesta que quieras que te explique mejor? Encantado de agendar 15 min."`] },
   ]);
 }
 
@@ -2538,10 +2615,10 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — OBLIGATORIO:
 - Si el input es ambiguo o contradictorio, indica ambiguity:true en el JSON de salida`;
 
   const scoresText = agentScores.map(a =>
-    `${a.name}: relevancia=${a.relevance.toFixed(2)}, texto="${a.text.slice(0,120)}"`
+    `${a.name}: relevancia=${a.relevance.toFixed(2)}, texto="${a.text.slice(0,300)}"`
   ).join('\n');
 
-  const userMsg = `Misión: "${mission.slice(0,200)}"
+  const userMsg = `Misión: "${mission.slice(0,350)}"
 
 Scores de relevancia por agente:
 ${scoresText}
@@ -2570,8 +2647,12 @@ Reglas:
 
   try {
     const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 600 });
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+    const cleaned = raw.replace(/```(?:json)?/gi,'').replace(/^[^{]*/,'');
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (typeof parsed.execution_risk === 'string') return parsed;
+    }
   } catch(_) {}
 
   // Fallback si Claude falla
@@ -3126,10 +3207,10 @@ async function showGenie(mission, agentResults, intelScores = null) {
   const sectionsEl = document.getElementById('genie-sections');
   const speechEl   = document.getElementById('genie-speech');
 
-  // Preparar contexto de todos los agentes (máx 200 chars cada uno — clave para no sobrepasar el límite del Worker)
+  // Preparar contexto de todos los agentes (máx 350 chars cada uno)
   const outputsText = agentResults
     .filter(r => r.text)
-    .map(r => `[${r.name}] ${r.text.slice(0, 200).replace(/\n+/g,' ')}`)
+    .map(r => `[${r.name}]: ${r.text.slice(0, 350).replace(/\n+/g,' ')}`)
     .join('\n');
 
   if (!window.CRM_LLM?.engine) {
@@ -3173,7 +3254,7 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL MÉDICO — REGLAS NO NEGOCIABLES:
     ? `[INTEL Score:${intelScores.missionScore}/100 Riesgo:${intelScores.structured?.execution_risk||'medio'}${intelScores.structured?.critical_risks?.length ? ' ⚠ '+intelScores.structured.critical_risks[0]?.risk?.slice(0,60) : ''}]`
     : '';
 
-  const userMsg = `Misión: "${mission.slice(0,200)}" ${intelCtx}
+  const userMsg = `Misión: "${mission.slice(0,400)}" ${intelCtx}
 
 Outputs:
 ${outputsText}
@@ -3205,8 +3286,8 @@ Responde con EXACTAMENTE estas 5 secciones:
     // Reintento con prompt mínimo si falla (400 = prompt muy largo o rate limit)
     if (speechEl) speechEl.innerHTML = '🪄 Reintentando con resumen compacto…';
     try {
-      const miniOutputs = agentResults.slice(0,5).map(r=>`[${r.name}] ${r.text.slice(0,100).replace(/\n+/g,' ')}`).join('\n');
-      const miniMsg = `Misión: "${mission.slice(0,150)}"\n\nOutputs:\n${miniOutputs}\n\nDa las 5 secciones: 🔮 RESUMEN EJECUTIVO · 💡 CÓMO APLICARLO HOY · ⚡ LO PRIMERO · 🗓️ PLAN 7 DÍAS · 🎯 PREDICCIÓN`;
+      const miniOutputs = agentResults.slice(0,6).map(r=>`[${r.name}] ${r.text.slice(0,200).replace(/\n+/g,' ')}`).join('\n');
+      const miniMsg = `Misión: "${mission.slice(0,250)}"\n\nOutputs:\n${miniOutputs}\n\nDa las 5 secciones: 🔮 RESUMEN EJECUTIVO · 💡 CÓMO APLICARLO HOY · ⚡ LO PRIMERO · 🗓️ PLAN 7 DÍAS · 🎯 PREDICCIÓN`;
       const result2 = await window.CRM_LLM.chat(sys, miniMsg, { maxTokens: 900, agentName:'Genie', page:'ventas' });
       if (speechEl) speechEl.innerHTML = '✨ Síntesis lista (modo compacto).';
       buildGenieSections(sectionsEl, parseGenieSections(result2));
@@ -3541,8 +3622,9 @@ async function runINTELStandalone() {
       const msg = `Pipeline: ${pipeCtx}. Activos:${activeLeads.length}. Cerrados mes:${closedThisMonth.length}. Atascados:${stuckLeads.length}. Valor:$${Math.round(totalValue).toLocaleString()} USD. Actividad semana:${weekActivity.length}. Conversión:${conversionRate}%.
 JSON:{"diagnosis":"diagnóstico ejecutivo en 2 frases","top_risk":"riesgo #1 a atender hoy","top_opportunity":"mayor acelerador disponible","action_today":"acción concreta en próximas 2h","forecast_30d":"predicción de cierre próximos 30 días"}`;
       const raw = await window.CRM_LLM.chat(sys, msg, { maxTokens:350, agentName:'INTEL', page:'ventas' });
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (m) insight = JSON.parse(m[0]);
+      const cleaned3 = raw.replace(/```(?:json)?/gi,'').replace(/^[^{]*/,'');
+      const m = cleaned3.match(/\{[\s\S]*\}/);
+      if (m) { const p = JSON.parse(m[0]); if (p.diagnosis) insight = p; }
     } catch(_) {}
   }
 
