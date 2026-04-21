@@ -1920,71 +1920,76 @@ async function runCampaignProposal(mission, predResult, agentResults, network) {
       </div>
     </div>`;
 
-  const sys = `Eres el Estratega de Campañas de MetaTronix. Generas propuestas de campaña optimizadas para elevar el score del Predictor a 95%+. MetaTronix: CRM IA para LATAM, $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra.`;
+  // FASE 1: JSON ligero — solo estructura (sin copy completo para evitar truncación)
+  const sys = `Eres el Estratega de Campañas de MetaTronix. Generas propuestas de campaña. MetaTronix: CRM IA para LATAM, $299-$2499/mes, ICP: directores de ventas 20-500 empleados. Responde SOLO JSON válido sin texto extra ni explicaciones.`;
 
-  const agentCtx = (agentResults||[]).map(r=>`[${r.name}]: ${r.text.slice(0,300).replace(/\n+/g,' ')}`).join('\n');
+  const agentCtx = (agentResults||[]).map(r=>`[${r.name}]: ${r.text.slice(0,200).replace(/\n+/g,' ')}`).join('\n');
+  const kb = getKB();
+  const _prod  = (kb.productos||'MetaTronix CRM IA').split(',')[0].trim();
+  const _aud   = (kb.audiencia||'directores de ventas en LATAM').split(',')[0].trim();
 
-  const userMsg = `Misión: "${mission.slice(0,200)}"
-Score actual Predictor: ${origScore}%
-Red social objetivo: ${network}
-Canales débiles: ${weakChannels}
-Contexto agentes: ${agentCtx}
+  const userMsg = `Misión: "${mission.slice(0,180)}"
+Score actual: ${origScore}% | Red: ${network} | Canales débiles: ${weakChannels}
+Audiencia: ${_aud} | Producto: ${_prod}
+Contexto agentes: ${agentCtx.slice(0,400)}
 
-Responde EXACTAMENTE este JSON. El campo "copy" debe ser el texto COMPLETO y publicable del post (no un resumen), incluyendo emojis apropiados para ${network}, hashtags relevantes y CTA. Mínimo 80 palabras por post. Cada post incluye visual_type (imagen_ia|video_ia|foto_real) y visual_prompt (prompt inglés para Midjourney/DALL-E, máx 100 chars).
+Genera JSON con estructura de 7 posts para ${network}. El campo "hook" es la línea de apertura (máx 70 chars). El campo "copy_brief" es un resumen de 2-3 líneas del mensaje clave (NO el post completo — el post completo se genera después). Incluye visual_type y visual_prompt (prompt inglés, máx 80 chars).
 
-{"campaign_name":"<4-6 palabras>","campaign_score":<95-100>,"score_delta":<diferencia vs ${origScore}>,"strategy":"<2 oraciones>","avg_score":<promedio real ≥95>,"posts":[{"platform":"${network}","format":"<Carrusel|Video|Reel|Story|Post texto|Artículo|Imagen>","hook":"<línea de apertura potente máx 70 chars>","copy":"<texto COMPLETO publicable con emojis, hashtags y CTA — mínimo 80 palabras>","score":<90-100>,"razon":"<6-8 palabras>","visual_type":"<imagen_ia|video_ia|foto_real>","visual_prompt":"<prompt inglés máx 100 chars>"},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":97,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":95,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":96,"razon":"","visual_type":"","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy":"<texto completo>","score":98,"razon":"","visual_type":"","visual_prompt":""}]}`;
+{"campaign_name":"<4-6 palabras>","campaign_score":<95-100>,"score_delta":<número>,"strategy":"<2 oraciones directas>","avg_score":<≥95>,"posts":[{"platform":"${network}","format":"<Carrusel|Video|Reel|Story|Post texto|Artículo|Imagen>","hook":"<apertura potente máx 70 chars>","copy_brief":"<mensaje clave 2-3 líneas>","score":<90-100>,"razon":"<6-8 palabras>","visual_type":"<imagen_ia|video_ia|foto_real>","visual_prompt":"<prompt inglés máx 80 chars>"},{"platform":"${network}","format":"","hook":"","copy_brief":"","score":96,"razon":"","visual_type":"imagen_ia","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy_brief":"","score":95,"razon":"","visual_type":"foto_real","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy_brief":"","score":97,"razon":"","visual_type":"video_ia","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy_brief":"","score":95,"razon":"","visual_type":"imagen_ia","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy_brief":"","score":96,"razon":"","visual_type":"foto_real","visual_prompt":""},{"platform":"${network}","format":"","hook":"","copy_brief":"","score":98,"razon":"","visual_type":"imagen_ia","visual_prompt":""}]}`;
 
   let structured = null;
   try {
-    const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:2400, agentName:'CampañaGenio', page:'marketing' });
+    const raw = await window.CRM_LLM.chat(sys, userMsg, { maxTokens:1400, agentName:'CampañaGenio', page:'marketing' });
     const cleaned = raw.replace(/```(?:json)?/gi,'').replace(/^[^{]*/,'');
     const m = cleaned.match(/\{[\s\S]*\}/);
-    if (m) { const p = JSON.parse(m[0]); if (Array.isArray(p.posts)) structured = p; }
+    if (m) {
+      try {
+        const p = JSON.parse(m[0]);
+        if (Array.isArray(p.posts) && p.posts.length >= 4) structured = p;
+      } catch(_) {
+        // Intentar reparar JSON truncado — agregar cierre faltante
+        try {
+          const partial = m[0].replace(/,\s*\{[^}]*$/, '').replace(/,\s*$/, '') + ']}';
+          const p2 = JSON.parse(partial);
+          if (Array.isArray(p2.posts) && p2.posts.length >= 3) structured = p2;
+        } catch(_2) { /* sigue al fallback */ }
+      }
+    }
   } catch(_) { /* fallback abajo */ }
 
-  if (!structured || !Array.isArray(structured.posts) || structured.posts.length < 7) {
-    // Construir posts contextuales a partir del prompt real + KB
-    const kb = getKB();
-    const prod    = (kb.productos||'MetaTronix CRM IA').split(',')[0].trim();
-    const aud     = (kb.audiencia||'directores de ventas en LATAM').split(',')[0].trim();
+  if (!structured || !Array.isArray(structured.posts) || structured.posts.length < 3) {
+    // Fallback contextual — construir estructura a partir de misión + KB
+    const prod    = (_prod||'MetaTronix CRM IA');
+    const aud     = (_aud||'directores de ventas en LATAM');
     const valor   = kb.valor || 'implementación en 1 semana, 30% del costo de Salesforce';
     const comp    = (kb.competidores||'Salesforce').split(',')[0].trim();
     const tono    = kb.tono || 'experto, orientado a resultados';
     const mis60   = mission.slice(0, 60);
     const mis100  = mission.slice(0, 100);
 
-    // Extraer objetivo de la misión (leads, awareness, lanzamiento, etc.)
     const isLanzamiento = /lanz|nuevo|launch|introduc/i.test(mission);
     const isLeads       = /lead|prospect|pipeline|conversión/i.test(mission);
     const isAwareness   = /aware|conocer|presencia|posicion|brand/i.test(mission);
     const isRetención   = /retener|churn|reactivar|cliente|fideliz/i.test(mission);
 
     const hooks = [
-      isLanzamiento
-        ? `Presentamos ${prod}: ${mis60}`
-        : `${mis60} — así se hace con IA`,
+      isLanzamiento ? `Presentamos ${prod}: ${mis60}` : `${mis60} — así se hace con IA`,
       `El error #1 de ${aud}: decidir sin datos en tiempo real`,
       `${prod} vs ${comp}: ¿por qué el 70% de empresas en LATAM cambia?`,
-      isLeads
-        ? `100 leads calificados en 30 días — ${prod} lo automatiza`
-        : `De caos operativo a claridad: ${prod} en acción`,
+      isLeads ? `100 leads calificados en 30 días — ${prod} lo automatiza` : `De caos operativo a claridad: ${prod} en acción`,
       `Lo que nadie te dice sobre ${mis60.split(' ').slice(0,5).join(' ')}`,
-      isAwareness
-        ? `${aud}: tu mercado ya se movió — ¿sigues en el mismo lugar?`
-        : `${aud}: 1 semana para implementar IA en tu operación`,
-      isRetención
-        ? `Clientes que se quedan: la fórmula de retención con ${prod}`
-        : `Tu competencia (${comp}) ya usa esto. El mercado no espera.`,
+      isAwareness ? `${aud}: tu mercado ya se movió — ¿sigues en el mismo lugar?` : `${aud}: 1 semana para implementar IA en tu operación`,
+      isRetención ? `Clientes que se quedan: la fórmula de retención con ${prod}` : `Tu competencia (${comp}) ya usa esto. El mercado no espera.`,
     ];
 
-    const copies = [
-      `${prod} — ${mis100}. Demo gratis en metatronixleads.tech`,
-      `${aud} que usan IA cierran 40% más negocios. ${prod} lo hace posible en 7 días. Sin código. Sin contratos. → metatronixleads.tech`,
-      `${valor}. Mientras ${comp} cobra $2,500/mes, MetaTronix entrega más por menos. Agenda tu demo gratuita.`,
-      `Misión: ${mis60}. ${prod} tiene el plan. Implementación en 1 semana. Primeros resultados en 72h. → metatronixleads.tech`,
-      `${aud}: el problema no es la tecnología — es no tener la correcta. ${prod} fue diseñado para tu mercado. En español. Con soporte local.`,
-      `Cada día sin IA en tu operación es dinero que no estás cerrando. ${prod} cambia eso. Prueba gratuita 14 días → metatronixleads.tech`,
-      `${tono.split(',')[0].trim().charAt(0).toUpperCase() + tono.split(',')[0].trim().slice(1)}. Así es ${prod}. ${mis60}. ¿Cuándo empezamos?`,
+    const copy_briefs = [
+      `${prod} fue creado para ${aud}. Misión: "${mis60}". Demo gratuita disponible.`,
+      `${aud} que adoptan IA cierran 40% más negocios. ${prod} lo hace posible en 7 días sin código.`,
+      `${valor}. Mientras ${comp} cobra $2,500/mes, ${prod} entrega más por menos.`,
+      `Objetivo: ${mis60}. Implementación en 1 semana. Primeros resultados en 72h.`,
+      `El problema no es la tecnología — es no tener la correcta para tu mercado.`,
+      `Cada día sin IA en tu operación es dinero que no estás cerrando. 14 días gratis.`,
+      `${tono.split(',')[0].trim()}. Así trabaja ${prod}. ${mis60}.`,
     ];
 
     const razones = [
@@ -2000,24 +2005,24 @@ Responde EXACTAMENTE este JSON. El campo "copy" debe ser el texto COMPLETO y pub
     const formats = ['Carrusel','Video corto','Post texto','Imagen','Reel','Story','Artículo'];
     const netLower = network.toLowerCase();
     const visualFallback = [
-      { visual_type:'imagen_ia',  visual_prompt:`B2B carousel infographic for ${network}, dark blue, ${prod} dashboard, LATAM market data, 1080x1080px modern flat design` },
-      { visual_type:'video_ia',   visual_prompt:`Vertical 9:16 video, confident LATAM director at desk with ${network} on screen, cinematic, 15s loop, CRM data overlay` },
-      { visual_type:'foto_real',  visual_prompt:`Professional team celebrating deal in modern office, ${network} brand style, warm authentic light, 1200x628px` },
-      { visual_type:'foto_real',  visual_prompt:`Close-up laptop screen: CRM analytics green growth charts, shallow depth, ${netLower} optimal format 1080x1080` },
-      { visual_type:'video_ia',   visual_prompt:`Vertical Reel 9:16, animated IA logo reveal with data particles, dark industrial, 8s loop, #00ff88 accent, ${network} format` },
-      { visual_type:'imagen_ia',  visual_prompt:`Story 9:16, Latin American executive smiling at phone, city background blurred, modern brand overlay, 1080x1920` },
-      { visual_type:'imagen_ia',  visual_prompt:`Thought leadership ${network} header, abstract data visualization, dark blue corporate, 1200x628px, professional B2B` },
+      { visual_type:'imagen_ia',  visual_prompt:`B2B carousel infographic for ${network}, dark blue, ${prod} dashboard, LATAM data, 1080x1080px modern flat design` },
+      { visual_type:'video_ia',   visual_prompt:`Vertical 9:16 video, LATAM director at desk, cinematic, 15s loop, CRM data overlay` },
+      { visual_type:'foto_real',  visual_prompt:`Professional team celebrating deal, modern office, warm authentic light, 1200x628px` },
+      { visual_type:'foto_real',  visual_prompt:`Laptop screen CRM analytics green growth charts, shallow depth, ${netLower} format 1080x1080` },
+      { visual_type:'video_ia',   visual_prompt:`Reel 9:16, animated IA logo reveal, dark industrial, 8s loop, #00ff88 accent` },
+      { visual_type:'imagen_ia',  visual_prompt:`Story 9:16, Latin exec smiling at phone, city background blurred, modern brand overlay` },
+      { visual_type:'imagen_ia',  visual_prompt:`Thought leadership ${network} header, abstract data viz, dark blue corporate, 1200x628px` },
     ];
 
     structured = {
       campaign_name: `${mission.split(' ').slice(0,5).join(' ')} — ${network}`,
       campaign_score: 96,
       score_delta: 96 - origScore,
-      strategy: `Campaña ${network} centrada en: "${mis100}". Secuencia de 7 posts que combina educación, comparación competitiva vs ${comp}, social proof y CTA progresivo — diseñada para ${aud}.`,
+      strategy: `Campaña ${network} centrada en: "${mis100}". Secuencia de 7 posts: educación, comparación vs ${comp}, social proof y CTA progresivo para ${aud}.`,
       avg_score: 96,
       posts: hooks.map((hook, i) => ({
         platform: network, format: formats[i],
-        hook, copy: copies[i],
+        hook, copy_brief: copy_briefs[i],
         score: 93 + (i === 0 || i === 6 ? 5 : i === 2 ? 4 : i % 3),
         razon: razones[i],
         ...visualFallback[i],
@@ -2026,7 +2031,21 @@ Responde EXACTAMENTE este JSON. El campo "copy" debe ser el texto COMPLETO y pub
   }
 
   window._lastCampaignStructured = structured; // accesible por simularCampanaCompleta
+  window._lastMission = mission;
   container.innerHTML = renderCampaignPanel(structured, origScore, network);
+
+  // FASE 2: Auto-generar post completo para cada card, con delay escalonado
+  // para no saturar el proxy (max 1 llamada cada 800ms)
+  (structured.posts||[]).slice(0,7).forEach((p, i) => {
+    const cardId = `camp-card-${i}-${container.querySelector('.camp-post-card')?.id?.split('-').pop()||Date.now()}`;
+    // Buscar el cardId real del DOM
+    const cards = container.querySelectorAll('.camp-post-card');
+    if (cards[i]) {
+      const realCardId = cards[i].id;
+      const postData = { hook: p.hook||'', copy: p.copy_brief||p.copy||'', copy_brief: p.copy_brief||p.copy||'', razon: p.razon||'', platform: p.platform||network, format: p.format||'Post', score: p.score||95 };
+      setTimeout(() => generatePostForCard(realCardId, postData), i * 900);
+    }
+  });
 }
 
 function visualBadgeHtml(vtype) {
@@ -2079,7 +2098,9 @@ function renderCampaignPanel(s, origScore, network) {
     const vtype = p.visual_type || 'imagen_ia';
     const vprompt = p.visual_prompt || '';
     const cardId = `camp-card-${i}-${Date.now()}`;
-    const postDataAttr = escHtml(JSON.stringify({ hook: p.hook||'', copy: p.copy||'', razon: p.razon||'', platform: p.platform||network, format: p.format||'Post', score: sc }));
+    // Usar copy_brief como preview, copy completo se genera en expandFullPost
+    const copyBrief = p.copy_brief || p.copy || '';
+    const postDataAttr = escHtml(JSON.stringify({ hook: p.hook||'', copy: copyBrief, razon: p.razon||'', platform: p.platform||network, format: p.format||'Post', score: sc, copy_brief: copyBrief }));
     return `
     <div class="camp-post-card" id="${cardId}" style="animation:camp-in .4s ease both;animation-delay:${i*.07}s">
       <div class="camp-post-top">
@@ -2087,7 +2108,7 @@ function renderCampaignPanel(s, origScore, network) {
         <span class="camp-post-format">${escHtml(p.format||'Post')}</span>
       </div>
       <div class="camp-post-hook">${escHtml(p.hook||'')}</div>
-      <div class="camp-post-copy">${escHtml(p.copy||'')}</div>
+      <div class="camp-post-copy" style="font-style:italic;opacity:.7;font-size:12px">${escHtml(copyBrief)}</div>
       <div class="camp-post-score-row">
         <div class="camp-post-score-track">
           <div class="camp-post-score-fill" style="width:${sc}%;background:linear-gradient(90deg,${scColor},${scColor}cc)"></div>
@@ -2103,11 +2124,19 @@ function renderCampaignPanel(s, origScore, network) {
         </div>
         <div class="camp-visual-prompt">${escHtml(vprompt)}</div>
       </div>` : ''}
+      <!-- Post completo — se genera automáticamente al renderizar -->
+      <div class="camp-full-post" id="full-${cardId}" style="margin-top:10px;background:rgba(0,0,0,.3);border:1px solid rgba(34,211,238,.15);border-radius:8px;padding:12px">
+        <div style="color:#818CF8;font-size:12px;display:flex;align-items:center;gap:6px">
+          <div style="width:10px;height:10px;border:1.5px solid rgba(129,140,248,.3);border-top-color:#818CF8;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div>
+          Generando post completo para ${escHtml(p.platform||network)}…
+        </div>
+      </div>
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" style="color:#22D3EE;border-color:rgba(6,182,212,.3);font-size:11px"
+          id="copy-btn-${cardId}"
           data-post="${postDataAttr}"
-          onclick="expandFullPost(this,'${cardId}')">
-          📤 Ver post completo
+          onclick="copyFullPost('${cardId}')">
+          📋 Copiar post
         </button>
         <button class="btn btn-ghost btn-sm" style="color:#818CF8;border-color:rgba(129,140,248,.3);font-size:11px"
           data-post="${postDataAttr}"
@@ -2115,7 +2144,6 @@ function renderCampaignPanel(s, origScore, network) {
           🧬 Simular reacción
         </button>
       </div>
-      <div class="camp-full-post" id="full-${cardId}" style="display:none;margin-top:10px;background:rgba(0,0,0,.3);border:1px solid rgba(34,211,238,.15);border-radius:8px;padding:12px"></div>
     </div>`;
   }).join('');
 
@@ -2163,96 +2191,96 @@ function renderCampaignPanel(s, origScore, network) {
   </div>`;
 }
 
-/* ── Post completo: expande la card con el texto listo para publicar ── */
-async function expandFullPost(btn, cardId) {
-  const postData = JSON.parse(btn.getAttribute('data-post') || '{}');
-  const fullDiv  = document.getElementById('full-' + cardId);
-  if (!fullDiv) return;
+/* ── Genera y muestra el post completo en la card (auto al renderizar) ── */
+async function generatePostForCard(cardId, postData) {
+  const fullDiv = document.getElementById('full-' + cardId);
+  if (!fullDiv || fullDiv.dataset.loaded === '1') return;
 
-  // Toggle: si ya tiene contenido, mostrar/ocultar
-  if (fullDiv.dataset.loaded === '1') {
-    fullDiv.style.display = fullDiv.style.display === 'none' ? 'block' : 'none';
-    btn.textContent = fullDiv.style.display === 'none' ? '📤 Ver post completo' : '🔼 Ocultar post';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Generando…';
-  fullDiv.style.display = 'block';
-  fullDiv.innerHTML = '<div style="color:#818CF8;font-size:12px">Generando post completo listo para publicar…</div>';
-
-  const { hook='', copy='', razon='', platform='', format='Post' } = postData;
+  const { hook='', copy='', copy_brief='', razon='', platform='', format='Post' } = postData;
+  const copyBase = copy_brief || copy || '';
   const kb = getKB();
   const empresa  = kb.empresa  || 'MetaTronix';
   const producto = (kb.productos||'MetaTronix CRM IA').split(',')[0].trim();
   const audiencia= (kb.audiencia||'directores de ventas en LATAM').split(',')[0].trim();
   const tono     = kb.tono || 'profesional y directo';
-  const isLinkedIn = /linkedin/i.test(platform);
-  const isInstagram= /instagram|reel|story/i.test(platform) || /reel|story/i.test(format);
-  const isTikTok   = /tiktok/i.test(platform);
-  const isEmail    = /email/i.test(platform);
+  const plat     = platform || 'LinkedIn';
+  const isLinkedIn  = /linkedin/i.test(plat);
+  const isInstagram = /instagram|reel|story/i.test(plat) || /reel|story/i.test(format);
+  const isTikTok    = /tiktok/i.test(plat);
+  const isEmail     = /email/i.test(plat);
+  const isWhatsApp  = /whatsapp/i.test(plat);
 
   let fullText = '';
 
   if (window.CRM_LLM?.engine) {
     try {
-      const sys = `Eres un copywriter experto en ${platform}. Generas posts completos, listos para copiar y pegar, optimizados para engagement. Responde SOLO con el texto del post, sin explicaciones, sin títulos, sin "Aquí está el post", sin instrucciones. Solo el post.`;
-      const userMsg = `Genera el post completo para ${platform} (${format}).
+      const sys = `Eres copywriter experto en ${plat} especializado en B2B LATAM. Generas posts completos, persuasivos, listos para publicar. Responde SOLO el texto del post — sin explicaciones, sin "Aquí está el post", sin comillas al inicio/final. Solo el contenido publicable.`;
+      const wordTarget = isLinkedIn ? '150-220' : isInstagram ? '80-130' : isTikTok ? '40-70' : isEmail ? '100-150' : isWhatsApp ? '50-80' : '120-180';
+      const rules = isLinkedIn
+        ? 'Párrafos de 1-2 líneas. Primera línea es el hook. Cierra con CTA suave + pregunta para comentarios. 3-5 hashtags al final.'
+        : isInstagram
+        ? 'Emojis en cada sección. Hook visual en 1ra línea. CTA directo ("guarda esto", "etiqueta a alguien"). 8-12 hashtags al final.'
+        : isTikTok
+        ? 'Caption ultra-directa. Hook que deja pensando. 3-5 hashtags trending.'
+        : isEmail
+        ? 'Formato: "Asunto: [asunto]\\n\\nHola [Nombre],\\n\\n[cuerpo]\\n\\n→ [CTA link]\\n\\n[firma]\\n\\nP.D. [urgencia]"'
+        : isWhatsApp
+        ? 'Tono conversacional. Máx 3 párrafos cortos. Emoji al inicio. CTA directo al final.'
+        : 'Emojis apropiados. CTA al final. 5-8 hashtags relevantes.';
+      const userMsg = `Genera el post completo publicable para ${plat} (${format}).
 
-Hook de apertura: "${hook}"
-Copy base: "${copy}"
-Razón de impacto: "${razon}"
-Empresa: ${empresa} | Producto: ${producto}
-Audiencia: ${audiencia} | Tono: ${tono}
+📌 Hook: "${hook}"
+📝 Mensaje base: "${copyBase}"
+💡 Por qué funciona: "${razon}"
+🏢 Empresa: ${empresa} | 🚀 Producto: ${producto}
+👥 Audiencia: ${audiencia} | 🎨 Tono: ${tono}
 
-Reglas:
-${isLinkedIn ? '- LinkedIn: 150-250 palabras. Párrafos cortos (1-2 líneas). Línea de gancho potente. Cierra con CTA suave y pregunta para comentarios. 3-5 hashtags al final.' : ''}
-${isInstagram ? '- Instagram/Reel: 80-120 palabras. Emojis en cada párrafo. Hook visual en 1ra línea. CTA directo ("guarda esto", "etiqueta a alguien"). 8-12 hashtags al final.' : ''}
-${isTikTok ? '- TikTok: Caption corta 40-80 palabras. Hook que deja pensando. 3-5 hashtags trending. CTA de dueto o comentario.' : ''}
-${isEmail ? '- Email: Asunto poderoso (1 línea). Cuerpo 100-150 palabras. CTA de 1 link. P.D. con urgencia.' : ''}
-${!isLinkedIn && !isInstagram && !isTikTok && !isEmail ? '- 120-200 palabras. Emojis apropiados. CTA al final. Hashtags relevantes (5-8).' : ''}
+Reglas: ${wordTarget} palabras. ${rules}
 
-Genera el post completo y publicable:`;
+Post completo:`;
 
-      fullText = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 500, agentName: 'PostGenerator', page: 'marketing' });
-    } catch(e) {
-      fullText = null;
-    }
+      fullText = await window.CRM_LLM.chat(sys, userMsg, { maxTokens: 900, agentName: 'PostGenerator', page: 'marketing' });
+      fullText = fullText?.trim() || '';
+    } catch(e) { fullText = ''; }
   }
 
-  // Fallback estructurado si LLM falla
+  // Fallback estructurado si LLM no disponible
   if (!fullText) {
     const hashtagBase = [empresa.replace(/\s/g,''), producto.replace(/\s/g,''), 'CRM', 'IA', 'LATAM', 'Ventas', 'Marketing'];
     const hashtags = hashtagBase.slice(0,6).map(h=>'#'+h).join(' ');
-    const emoji1 = isLinkedIn ? '📊' : isInstagram ? '✨' : '🚀';
-    const emoji2 = isLinkedIn ? '💡' : isInstagram ? '🎯' : '⚡';
+    const e1 = isLinkedIn ? '📊' : isInstagram ? '✨' : '🚀';
+    const e2 = isLinkedIn ? '💡' : isInstagram ? '🎯' : '⚡';
     if (isEmail) {
-      fullText = `Asunto: ${hook}\n\nHola [Nombre],\n\n${copy}\n\n${emoji2} ${razon}\n\n→ [CTA principal]\n\nSaludos,\n[Tu nombre] | ${empresa}\n\nP.D. Esta oferta es válida solo hasta el viernes.`;
+      fullText = `Asunto: ${hook}\n\nHola [Nombre],\n\n${copyBase}\n\n${e2} ${razon}\n\n¿Agendamos 20 minutos esta semana? → metatronixleads.tech/demo\n\nSaludos,\n[Tu nombre] | ${empresa}\n\nP.D. Esta propuesta tiene disponibilidad limitada esta semana.`;
+    } else if (isWhatsApp) {
+      fullText = `${e1} *${hook}*\n\n${copyBase}\n\n${e2} ${razon}\n\n¿Te interesa saber más? Escríbeme.`;
     } else {
-      fullText = `${emoji1} ${hook}\n\n${copy}\n\n${emoji2} ${razon}\n\n¿Te identificas con esto? Cuéntame en los comentarios 👇\n\n${hashtags}`;
+      fullText = `${e1} ${hook}\n\n${copyBase}\n\n${e2} ${razon}\n\n¿En tu empresa están pasando por esto? Cuéntame en los comentarios 👇\n\n🔗 metatronixleads.tech/demo\n\n${hashtags}`;
     }
   }
 
-  // Render
   fullDiv.dataset.loaded = '1';
+  fullDiv.dataset.fulltext = fullText; // para copiar
   fullDiv.innerHTML = `
-    <div style="font-size:11px;color:#22D3EE;letter-spacing:.05em;margin-bottom:8px;font-family:'JetBrains Mono',monospace">
-      POST COMPLETO — ${escHtml(platform.toUpperCase())} · ${escHtml(format.toUpperCase())}
+    <div style="font-size:10px;color:#22D3EE;letter-spacing:.06em;margin-bottom:8px;font-family:'JetBrains Mono',monospace;opacity:.7">
+      ✍️ POST LISTO PARA PUBLICAR — ${escHtml(plat.toUpperCase())} · ${escHtml(format.toUpperCase())}
     </div>
-    <div style="white-space:pre-wrap;font-size:13px;line-height:1.8;color:rgba(255,255,255,.9)">${escHtml(fullText)}</div>
-    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-      <button class="btn btn-ghost btn-sm" style="color:#22D3EE;border-color:rgba(6,182,212,.3);font-size:11px"
-        onclick="navigator.clipboard?.writeText(${JSON.stringify(fullText)}).then(()=>{ if(typeof Notiflix!=='undefined') Notiflix.Notify.success('Post copiado ✓'); })">
-        📋 Copiar post
-      </button>
-      <button class="btn btn-ghost btn-sm" style="color:#818CF8;border-color:rgba(129,140,248,.3);font-size:11px"
-        onclick="(function(t){ const inp=document.getElementById('input-social_sim'); if(inp){inp.value=t;} toggleAgent('social_sim'); setTimeout(()=>runAgent('social_sim'),300); })(${JSON.stringify(fullText.slice(0,400))})">
-        🧬 Simular este post
-      </button>
-    </div>`;
+    <div style="white-space:pre-wrap;font-size:13px;line-height:1.9;color:rgba(255,255,255,.92)">${escHtml(fullText)}</div>`;
+}
 
-  btn.disabled = false;
-  btn.textContent = '🔼 Ocultar post';
+/* ── Copia el post generado al portapapeles ── */
+function copyFullPost(cardId) {
+  const fullDiv = document.getElementById('full-' + cardId);
+  const text = fullDiv?.dataset.fulltext || fullDiv?.innerText || '';
+  if (!text) { if(typeof Notiflix!=='undefined') Notiflix.Notify.warning('El post aún se está generando…'); return; }
+  navigator.clipboard?.writeText(text).then(() => {
+    if(typeof Notiflix!=='undefined') Notiflix.Notify.success('✓ Post copiado — listo para pegar');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    if(typeof Notiflix!=='undefined') Notiflix.Notify.success('✓ Post copiado');
+  });
 }
 
 /* ── Envía un post individual a la simulación social ── */
