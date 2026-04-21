@@ -631,7 +631,36 @@ async function sendQuery() {
     }
 
   } catch(e) {
-    out.innerHTML = `<span style="color:#ff4646">⚠ Error: ${escHtml ? escHtml(e.message) : e.message}</span>`;
+    // Fallback: generar análisis offline con datos del pulse actual
+    const p = _pulse || {};
+    const fmt = n=>{const v=parseFloat(n)||0;return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v.toFixed(0);};
+    const _isRisk    = /riesgo|risk|alerta|problema|urgente|peligro/i.test(question);
+    const _isVentas  = /venta|pipeline|deal|lead|cierre|revenue/i.test(question);
+    const _isFinanza = /cobr|CXC|CXP|flujo|factura|pago|finanza/i.test(question);
+    const _isPeop    = /equipo|usuario|colaborad|persona|staff/i.test(question);
+    let fallbackHtml = `<div style="background:rgba(255,70,70,.08);border:1px solid rgba(255,70,70,.2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:rgba(255,200,200,.7)">
+      ⚠ Conexión con IA temporalmente no disponible. Análisis generado desde datos actuales del sistema.
+    </div>`;
+    fallbackHtml += `<h3 style="color:#22D3EE;margin:0 0 8px">Respuesta a: "${question.slice(0,80)}${question.length>80?'…':''}"</h3>`;
+    if (_isVentas) {
+      fallbackHtml += `<p><strong>Pipeline actual:</strong> ${fmt(p.pipeline_total)} · ${p.deals_activos||0} deals activos · ${p.deals_en_riesgo||0} en riesgo · Conversión: ${p.conversion_rate||0}%</p>
+        <p>Deals ganados este mes: ${p.deals_ganados_mes||0} · Leads últimos 7 días: ${p.leads_nuevos_7d||0}</p>`;
+    } else if (_isFinanza) {
+      fallbackHtml += `<p><strong>CXC total:</strong> ${fmt(p.cxc_total)} · Vencida: ${fmt(p.cxc_vencida)}</p>
+        <p><strong>CXP:</strong> ${fmt(p.cxp_total)} · Próximos 30d: ${fmt(p.cxp_proximos_30d)}</p>
+        <p><strong>Flujo neto:</strong> ${fmt(p.flujo_neto)}</p>`;
+    } else if (_isRisk) {
+      const risks = [];
+      if (p.cxc_vencida > 0) risks.push(`CXC vencida ${fmt(p.cxc_vencida)}`);
+      if (p.deals_en_riesgo > 0) risks.push(`${p.deals_en_riesgo} deals en riesgo`);
+      if (p.cobranza_urgente > 0) risks.push(`${p.cobranza_urgente} facturas en cobranza urgente`);
+      if (p.oc_pendientes > 0) risks.push(`${p.oc_pendientes} OC pendientes`);
+      fallbackHtml += `<p><strong>Alertas activas:</strong> ${risks.length ? risks.join(' · ') : 'Sin alertas críticas detectadas'}</p>`;
+    } else {
+      fallbackHtml += `<p><strong>Salud org:</strong> ${p.org_health_score||'—'}/100 · <strong>Pipeline:</strong> ${fmt(p.pipeline_total)} · <strong>Usuarios activos:</strong> ${p.usuarios_activos||0}</p>`;
+    }
+    fallbackHtml += `<p style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.35)">Para análisis completo con IA, verifica la conexión al proxy y reinténtalo.</p>`;
+    out.innerHTML = fallbackHtml;
   } finally {
     _queryBusy = false;
     if (btn) btn.disabled = false;
@@ -657,19 +686,20 @@ PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} c
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
     body:JSON.stringify({
-      model:'claude-sonnet-4-6', max_tokens:2000, stream:true,
-      system:`Eres el Consejero Ejecutivo IA de IBANOR SA de CV / MetaTronix.
-Responde preguntas del CEO con DATOS REALES del sistema.
+      model:'claude-sonnet-4-6', max_tokens:2500, stream:true,
+      system:`Eres el Consejero Ejecutivo IA de IBANOR SA de CV / MetaTronix. Respondes preguntas del CEO con datos reales del sistema en tiempo real. Eres conciso, ejecutivo y accionable.
 
 PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO:
-1. NUNCA inventes cifras, proyecciones ni datos que no estén en el contexto provisto.
-2. Cita la fuente de cada número: (Fuente: Pipeline), (Fuente: CXC vencida), etc.
-3. HECHO vs ANÁLISIS: distingue claramente qué es dato real vs interpretación.
-4. Si el dato no está en el contexto, escribe: "Sin dato — requiere verificación manual".
+1. NUNCA inventes cifras, proyecciones ni datos sin base en el contexto provisto.
+2. Cita fuente de cada número: (Fuente: Pipeline), (Fuente: CXC vencida), etc.
+3. HECHO vs ANÁLISIS: diferencia explícita dato real de interpretación o recomendación.
+4. Si el dato no está disponible: "Sin dato — requiere verificación manual."
 5. ⚠ en recomendaciones: validar antes de actuar.
 6. † en KPIs financieros: auditar antes de decisiones ejecutivas.
-7. Formato HTML semántico (h2, h3, p, ul, table). Sin DOCTYPE, html, head, body.`,
-      messages:[{role:'user',content:`${orgCtx}\n\nPREGUNTA DEL CEO: "${question}"\n\nResponde directo, citando datos del contexto anterior.`}],
+7. HTML semántico (h2, h3, p, ul, table). Sin DOCTYPE.
+8. Proyecciones y forecasts: clarifica que son estimaciones basadas en tendencia actual, no certezas.
+9. Al final de cada respuesta: incluye 2-3 acciones concretas marcadas con "→ Acción:".`,
+      messages:[{role:'user',content:`${orgCtx}\n\nPREGUNTA DEL CEO: "${question}"\n\nResponde directo y ejecutivo (máx 300 palabras). Cita datos del contexto. Finaliza con acciones concretas.`}],
     }),
     signal: AbortSignal.timeout(90000),
   });
@@ -830,7 +860,30 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO:
     if(html) saveDecision({ question:`Briefing ${type}: ${fecha}`, response:html, domains:['estrategia'], pulse:p });
 
   } catch(e) {
-    out.innerHTML=`<span style="color:#ff4646">Error: ${escHtml?escHtml(e.message):e.message}</span>`;
+    // Fallback offline: generar briefing básico con datos del pulse
+    const p = _pulse || {};
+    const fmt2 = n=>{const v=parseFloat(n)||0;return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v.toFixed(0);};
+    const score = p.org_health_score||0;
+    const scoreColor = score>=70?'#4ADE80':score>=50?'#FCD34D':'#F87171';
+    const risks = [];
+    if (p.cxc_vencida > 0) risks.push(`🔴 CXC vencida: ${fmt2(p.cxc_vencida)}`);
+    if (p.deals_en_riesgo > 0) risks.push(`🟡 ${p.deals_en_riesgo} deals en riesgo (pipeline: ${fmt2(p.pipeline_total)})`);
+    if (p.cobranza_urgente > 0) risks.push(`🔴 ${p.cobranza_urgente} facturas en cobranza urgente (>60d)`);
+    if (p.oc_pendientes > 0) risks.push(`🟡 ${p.oc_pendientes} órdenes de compra pendientes (${fmt2(p.oc_monto_pendiente)})`);
+    const labels = { daily:'Briefing Diario', strategy:'Revisión Estratégica', risk:'Análisis de Riesgos', week:'Cierre Semanal' };
+    out.innerHTML = `
+      <div style="background:rgba(255,70,70,.08);border:1px solid rgba(255,70,70,.2);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:rgba(255,200,200,.7)">
+        ⚠ IA no disponible temporalmente — mostrando resumen desde datos del sistema
+      </div>
+      <h2>${labels[type]||'Análisis Ejecutivo'} — ${fecha}</h2>
+      <h3>🏥 Salud Organizacional</h3>
+      <p>Score: <strong style="color:${scoreColor}">${score}/100</strong> · Pipeline: ${fmt2(p.pipeline_total)} · Usuarios activos: ${p.usuarios_activos||0} · Consultas IA hoy: ${p.ai_queries_24h||0}</p>
+      <h3>📊 Estado Financiero</h3>
+      <p>CXC: ${fmt2(p.cxc_total)} (vencida: ${fmt2(p.cxc_vencida)}) · CXP: ${fmt2(p.cxp_total)} · Flujo neto: ${fmt2(p.flujo_neto)}</p>
+      <h3>🎯 Ventas</h3>
+      <p>Deals activos: ${p.deals_activos||0} · Ganados mes: ${p.deals_ganados_mes||0} · Conversión: ${p.conversion_rate||0}% · Leads 7d: ${p.leads_nuevos_7d||0}</p>
+      ${risks.length ? `<h3>⚠ Alertas Activas</h3><ul>${risks.map(r=>`<li>${r}</li>`).join('')}</ul>` : '<p>✅ Sin alertas críticas en este momento.</p>'}
+      <p style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.3)">Para análisis completo con IA, verifica conexión al proxy y reinténtalo.</p>`;
   } finally {
     _briefingBusy=false;
     btns.forEach(b=>{if(b)b.disabled=false;});
