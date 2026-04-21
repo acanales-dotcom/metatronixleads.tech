@@ -827,7 +827,9 @@ PROTOCOLO ANTI-ALUCINACIÓN — REGLAS NO NEGOCIABLES:
 3. HECHO vs ANÁLISIS: "Los datos muestran X" para hechos; "Esto podría indicar Y" para análisis
 4. INCERTIDUMBRE: usa "aparentemente", "podría ser", "requiere verificación del contador"
 5. RECOMENDACIONES: termina con "⚠ Verificar con contador certificado antes de implementar"
-6. DATOS FINANCIEROS: añade "† Basado en información proporcionada — auditar antes de decisiones"`,
+6. DATOS FINANCIEROS: añade "† Basado en información proporcionada — auditar antes de decisiones"
+7. CAUSALIDAD: nunca la atribuyas sin evidencia directa — escribe "correlación posible, no causalidad confirmada"
+Finaliza siempre con: → Acción prioritaria esta semana: [qué revisar o ejecutar en finanzas].`,
         messages: [{ role:'user', content: prompt }],
         stream: true,
       }),

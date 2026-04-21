@@ -885,7 +885,7 @@ PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} |
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
       body:JSON.stringify({
-        model:'claude-sonnet-4-6', max_tokens:2500, stream:true,
+        model:'claude-sonnet-4-6', max_tokens:4000, stream:true,
         system:`Eres el Chief Strategy Officer IA de ${getCEOKB().empresa || 'IBANOR SA de CV / MetaTronix'}.
 Tu función: producir briefings ejecutivos de máximo nivel — diagnóstico situacional, opciones estratégicas y plan de acción concreto.
 Perspectiva: McKinsey + Bain + visión de Silicon Valley. Mentalidad de founder.
@@ -901,7 +901,9 @@ PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO — REGLAS NO NEGOCIABLES:
 5. ⚠ en recomendaciones: validar con datos actuales antes de implementar
 6. † en KPIs financieros: auditar antes de decisiones ejecutivas
 7. FORECAST: máximo 30 días hacia adelante — más allá indica claramente "estimación sujeta a revisión"
-8. AMBIGÜEDAD: si falta dato clave, señálalo — no rellenes con benchmarks del sector`,
+8. AMBIGÜEDAD: si falta dato clave, señálalo — no rellenes con benchmarks del sector
+9. DATO AUSENTE: si el dato no está en el contexto, escribe "Sin dato disponible — requiere verificación manual"
+10. CAUSALIDAD: nunca la atribuyas sin evidencia directa — escribe "correlación posible, no causalidad confirmada"`,
         messages:[{role:'user',content:prompts[type]||prompts.daily}],
       }),
       signal:AbortSignal.timeout(120000),

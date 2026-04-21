@@ -920,10 +920,12 @@ Finaliza siempre con: → Recomendación: [proveedor] + justificación en 1 lín
 PROTOCOLO ANTI-ALUCINACIÓN — REGLAS PARA EVALUACIÓN DE PROVEEDORES:
 1. SOLO compara proveedores EXPLÍCITAMENTE presentes en las cotizaciones recibidas
 2. NUNCA inventes precios, tiempos de entrega, términos de pago ni calificaciones de proveedor
-3. Para datos no presentes en cotización: indica "Sin dato en cotización — solicitar al proveedor"
+3. Para datos no presentes en cotización: indica "Sin dato disponible — solicitar al proveedor antes de decidir"
 4. HECHO vs ANÁLISIS: "La cotización indica X" (hecho); "Esto sugiere Y" (análisis)
 5. RIESGO: si faltan datos críticos (garantía, soporte, términos), señálalos como riesgo explícito
-6. Termina con "⚠ Validar condiciones finales con proveedor antes de emitir orden de compra"`,
+6. INCERTIDUMBRE: usa "aparentemente", "podría indicar", "requiere confirmación" cuando no hay certeza
+7. CAUSALIDAD: nunca la atribuyas sin evidencia directa — escribe "correlación posible, no causalidad confirmada"
+8. Termina con "⚠ Validar condiciones finales con proveedor antes de emitir orden de compra"`,
         messages:[{role:'user',content:prompt}],
         stream:true,
       }),
