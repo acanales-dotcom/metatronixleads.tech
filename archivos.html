@@ -190,6 +190,23 @@
 
     .ent-hdr:hover { background: var(--surface2); color: var(--text); }
 
+    .del-ent-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-faint);
+      font-size: 13px;
+      padding: 2px 5px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity .15s, color .15s, background .15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .ent-hdr:hover .del-ent-btn { opacity: 1; }
+    .del-ent-btn:hover { color: #ff4d4d; background: rgba(255,77,77,.12); }
+
     .ent-arrow {
       font-size: 7px;
       color: var(--text-faint);
@@ -751,6 +768,18 @@
   </div>
 </div>
 
+<div class="mbg" id="mDelFolder">
+  <div class="modal">
+    <div class="m-title danger">Eliminar carpeta</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">¿Confirmas que deseas eliminar esta carpeta y <strong>todos sus archivos</strong>?</div>
+    <div class="conf-name" id="delFolderName"></div>
+    <div class="mact">
+      <button class="btn-can" onclick="closeMDelFolder()">Cancelar</button>
+      <button class="btn-dang" id="btnDelFolder" onclick="confirmDelFolder()">Eliminar carpeta</button>
+    </div>
+  </div>
+</div>
+
 <div class="toasts" id="toasts"></div>
 
 <!-- ═══════════════════════════════════════════════════════
@@ -1013,6 +1042,19 @@ function mkEnt(entity, base, subs) {
   hdr.innerHTML = `<span class="ent-arrow">▶</span>🏢 ${h(entity.name)}`;
   hdr.onclick = () => wrap.classList.toggle('open');
 
+  if (ADMINS.includes(CU?.profile?.role)) {
+    const folderPath = base + entity.slug + '/';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'del-ent-btn';
+    delBtn.title = 'Eliminar carpeta';
+    delBtn.innerHTML = '🗑️';
+    delBtn.onclick = (e) => {
+      e.stopPropagation();
+      openMDelFolder(entity.name, folderPath, wrap);
+    };
+    hdr.appendChild(delBtn);
+  }
+
   const subsEl = document.createElement('div');
   subsEl.className = 'ent-subs';
 
@@ -1241,6 +1283,69 @@ async function confirmDel() {
   if (error) { toast('Error: '+error.message,'err'); return; }
   toast('Archivo eliminado','ok');
   loadFiles();
+}
+
+/* ── Eliminar carpeta ─────────────────────────────────── */
+let delFolderCtx = null;
+
+function openMDelFolder(name, folderPath, wrapEl) {
+  delFolderCtx = { name, folderPath, wrapEl };
+  document.getElementById('delFolderName').textContent = name;
+  document.getElementById('mDelFolder').classList.add('open');
+}
+
+function closeMDelFolder() {
+  delFolderCtx = null;
+  document.getElementById('mDelFolder').classList.remove('open');
+}
+
+async function confirmDelFolder() {
+  if (!delFolderCtx) return;
+  const btn = document.getElementById('btnDelFolder');
+  btn.disabled = true; btn.textContent = 'Eliminando…';
+
+  const db = getDB();
+  const companyId = getActiveCompanyId();
+  const fp = delFolderCtx.folderPath;
+
+  // Eliminar archivos dentro de la carpeta
+  let filesQ = db.from('metatronix_docs')
+    .delete()
+    .eq('category','archivo_admin')
+    .like('file_path', fp + '%');
+  if (companyId) filesQ = filesQ.eq('company_id', companyId);
+  const { error: errFiles } = await filesQ;
+
+  if (errFiles) {
+    toast('Error eliminando archivos: ' + errFiles.message, 'err');
+    btn.disabled = false; btn.textContent = 'Eliminar carpeta';
+    return;
+  }
+
+  // Eliminar el registro de la carpeta
+  let folderQ = db.from('metatronix_docs')
+    .delete()
+    .eq('category','carpeta_admin')
+    .eq('file_path', fp);
+  if (companyId) folderQ = folderQ.eq('company_id', companyId);
+  const { error: errFolder } = await folderQ;
+
+  btn.disabled = false; btn.textContent = 'Eliminar carpeta';
+
+  if (errFolder) { toast('Error eliminando carpeta: ' + errFolder.message, 'err'); return; }
+
+  // Quitar del DOM
+  if (delFolderCtx.wrapEl) delFolderCtx.wrapEl.remove();
+
+  // Si la carpeta activa era esta, limpiar panel
+  if (CF && CF.path && CF.path.startsWith(fp)) {
+    CF = null;
+    document.getElementById('fileArea').innerHTML = '<div class="empty-state"><div class="ei">📁</div><div>Selecciona una carpeta</div></div>';
+    document.getElementById('btnUp').disabled = true;
+  }
+
+  closeMDelFolder();
+  toast('Carpeta eliminada', 'ok');
 }
 
 /* ── Entidad (cliente / proveedor) ────────────────────── */
