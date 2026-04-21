@@ -1,13 +1,13 @@
 /* ============================================================
-   MetaTronix â ALEX: Agente de Seguimiento de Ventas
-   Coaching proactivo, anÃ¡lisis de leads, consejos personalizados
-   PosiciÃ³n: bottom-left (MetaGenio estÃ¡ en bottom-right)
+   MetaTronix — ALEX: Agente de Seguimiento de Ventas
+   Coaching proactivo, análisis de leads, consejos personalizados
+   Posición: bottom-left (MetaGenio está en bottom-right)
    ============================================================ */
 (function () {
   'use strict';
-  if (document.getElementById('metafollow-btn')) return; // ya estÃ¡ cargado
+  if (document.getElementById('metafollow-btn')) return; // ya está cargado
 
-  /* ââ Config ââââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Config ──────────────────────────────────────────────── */
   const ALEX_NAME   = 'MetaFollow';
   const ALEX_TITLE  = 'Sales Coach';
   const CHECK_INTERVAL_MS = 5 * 60 * 1000; // revisa cada 5 min
@@ -17,31 +17,31 @@
   let   analysisCache= null;
   let   lastAnalyzed = 0;
 
-  /* ââ Stage helpers âââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Stage helpers ───────────────────────────────────────── */
   const STATUS_TO_STAGE = { nuevo:'generacion', contactado:'primer_contacto', en_negociacion:'negociacion', propuesta_enviada:'propuesta', cerrado_ganado:'cierre', cerrado_perdido:'cerrado_perdido' };
   const STAGE_PROB = { generacion:.05, primer_contacto:.15, calificacion:.25, propuesta:.45, negociacion:.65, cierre:.85, postventa:1, retencion:1, fidelizacion:1, cerrado_perdido:0 };
   function getStage(l) { try { const s=JSON.parse(localStorage.getItem('mtx_stages_v2')||'{}'); return s[l.id]||STATUS_TO_STAGE[l.status]||'generacion'; } catch { return 'generacion'; } }
   function daysSince(d) { return Math.round((Date.now()-new Date(d).getTime())/86400000); }
-  function fmtMXN(n) { if(!n||n===0)return'â'; return'$'+parseFloat(n).toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+  function fmtMXN(n) { if(!n||n===0)return'—'; return'$'+parseFloat(n).toLocaleString('es-MX',{minimumFractionDigits:0,maximumFractionDigits:0}); }
   function escH(s) { if(!s)return''; const d=document.createElement('div');d.textContent=String(s);return d.innerHTML; }
 
-  /* ââ Sales tips library ââââââââââââââââââââââââââââââââââââ */
+  /* ── Sales tips library ──────────────────────────────────── */
   const TIPS = [
-    { cat:'seguimiento', tip:'El 80% de las ventas se cierran despuÃ©s del 5Â° contacto. La mayorÃ­a de vendedores se rinden en el 2Â°. SÃ© persistente.' },
-    { cat:'cierre', tip:'En lugar de preguntar "Â¿quÃ© le parece?", pregunta "Â¿cuÃ¡ndo podemos arrancar?" â asume el cierre.' },
+    { cat:'seguimiento', tip:'El 80% de las ventas se cierran después del 5° contacto. La mayoría de vendedores se rinden en el 2°. Sé persistente.' },
+    { cat:'cierre', tip:'En lugar de preguntar "¿qué le parece?", pregunta "¿cuándo podemos arrancar?" — asume el cierre.' },
     { cat:'propuesta', tip:'Una propuesta sin una llamada de seguimiento tiene 40% menos probabilidad de cerrar. Agenda la llamada ANTES de enviarla.' },
-    { cat:'objeciones', tip:'La objeciÃ³n "es muy caro" casi siempre significa "no veo el valor suficiente". Regresa al problema que resuelves.' },
+    { cat:'objeciones', tip:'La objeción "es muy caro" casi siempre significa "no veo el valor suficiente". Regresa al problema que resuelves.' },
     { cat:'calificacion', tip:'BANT (Budget, Authority, Need, Timeline) no es suficiente. Agrega MEDDIC para deals complejos.' },
-    { cat:'urgencia', tip:'Un lead sin fecha de decisiÃ³n raramente cierra solo. Crea urgencia legÃ­tima: "tenemos 2 slots de implementaciÃ³n disponibles este mes."' },
-    { cat:'linkedin', tip:'Un mensaje de LinkedIn personalizado de 3 lÃ­neas tiene 8x mÃ¡s respuesta que uno genÃ©rico. Menciona algo especÃ­fico de su empresa.' },
-    { cat:'email', tip:'El mejor horario para emails de ventas: martes/miÃ©rcoles 10am-11am o 2pm-3pm. Tasas de apertura 40% mayores.' },
-    { cat:'confianza', tip:'Antes de hablar de precio, asegÃºrate de que el prospecto haya articulado el costo de NO resolver su problema.' },
-    { cat:'pipeline', tip:'Un pipeline sano tiene leads en todas las etapas, no solo al inicio. Si solo tienes generaciÃ³n, tienes un problema de conversiÃ³n.' },
-    { cat:'whitespace', tip:'Tus mejores prospectos estÃ¡n entre tus clientes actuales. Identifica oportunidades de upsell antes de buscar nuevos clientes.' },
-    { cat:'referidos', tip:'Pide referidos inmediatamente despuÃ©s del cierre, cuando el cliente estÃ¡ mÃ¡s entusiasmado. No esperes meses.' },
+    { cat:'urgencia', tip:'Un lead sin fecha de decisión raramente cierra solo. Crea urgencia legítima: "tenemos 2 slots de implementación disponibles este mes."' },
+    { cat:'linkedin', tip:'Un mensaje de LinkedIn personalizado de 3 líneas tiene 8x más respuesta que uno genérico. Menciona algo específico de su empresa.' },
+    { cat:'email', tip:'El mejor horario para emails de ventas: martes/miércoles 10am-11am o 2pm-3pm. Tasas de apertura 40% mayores.' },
+    { cat:'confianza', tip:'Antes de hablar de precio, asegúrate de que el prospecto haya articulado el costo de NO resolver su problema.' },
+    { cat:'pipeline', tip:'Un pipeline sano tiene leads en todas las etapas, no solo al inicio. Si solo tienes generación, tienes un problema de conversión.' },
+    { cat:'whitespace', tip:'Tus mejores prospectos están entre tus clientes actuales. Identifica oportunidades de upsell antes de buscar nuevos clientes.' },
+    { cat:'referidos', tip:'Pide referidos inmediatamente después del cierre, cuando el cliente está más entusiasmado. No esperes meses.' },
   ];
 
-  /* ââ Coaching engine âââââââââââââââââââââââââââââââââââââââ */
+  /* ── Coaching engine ─────────────────────────────────────── */
   function analyzeLeads(leads, userId) {
     const myLeads = leads.filter(l => !l.user_id || l.user_id === userId);
     const activos  = myLeads.filter(l => !['cerrado_ganado','cerrado_perdido'].includes(l.status));
@@ -60,9 +60,9 @@
       overdue.slice(0,3).forEach(l => {
         insights.push({
           level: 'critical',
-          icon: 'ð´',
+          icon: '🔴',
           title: `Seguimiento vencido: ${l.empresa}`,
-          body: `El seguimiento con ${escH(l.empresa)} venciÃ³ el ${l.seguimiento}. Contacta HOY â cada dÃ­a que pasa reduce la probabilidad de cierre un 10%.`,
+          body: `El seguimiento con ${escH(l.empresa)} venció el ${l.seguimiento}. Contacta HOY — cada día que pasa reduce la probabilidad de cierre un 10%.`,
           action: { label:'Abrir lead', url:'/leads.html' },
         });
       });
@@ -74,9 +74,9 @@
       if (worstStale) {
         insights.push({
           level: 'warning',
-          icon: 'ð¡',
+          icon: '🟡',
           title: `${stale.length} lead${stale.length>1?'s':''} sin actividad`,
-          body: `"${escH(worstStale.empresa)}" lleva ${daysSince(worstStale.updated_at)} dÃ­as sin actividad. Un lead inactivo pierde temperatura rÃ¡pidamente. Â¿Ya tienes su prÃ³ximo paso definido?`,
+          body: `"${escH(worstStale.empresa)}" lleva ${daysSince(worstStale.updated_at)} días sin actividad. Un lead inactivo pierde temperatura rápidamente. ¿Ya tienes su próximo paso definido?`,
           action: { label:'Ver leads', url:'/leads.html' },
         });
       }
@@ -86,9 +86,9 @@
     if (myLeads.length >= 3 && winRate < 20) {
       insights.push({
         level: 'warning',
-        icon: 'ð',
+        icon: '📊',
         title: `Win rate bajo: ${winRate}%`,
-        body: `Tu tasa de cierre es del ${winRate}%. El promedio B2B es 20-30%. Revisa tu proceso de calificaciÃ³n â es posible que estÃ©s trabajando leads no calificados.`,
+        body: `Tu tasa de cierre es del ${winRate}%. El promedio B2B es 20-30%. Revisa tu proceso de calificación — es posible que estés trabajando leads no calificados.`,
         action: { label:'Ver reportes', url:'/home.html#reportes' },
       });
     }
@@ -99,9 +99,9 @@
       const hot = hotDeals[0];
       insights.push({
         level: 'good',
-        icon: 'ð¥',
+        icon: '🔥',
         title: `Deal caliente: ${hot.empresa}`,
-        body: `${escH(hot.empresa)} (${fmtMXN(hot.valor_estimado)}) estÃ¡ en ${getStage(hot)}. Este es tu deal mÃ¡s valioso en esta etapa. PriorÃ­zalo sobre todo lo demÃ¡s.`,
+        body: `${escH(hot.empresa)} (${fmtMXN(hot.valor_estimado)}) está en ${getStage(hot)}. Este es tu deal más valioso en esta etapa. Priorízalo sobre todo lo demás.`,
         action: { label:'Ver deal', url:'/leads.html' },
       });
     }
@@ -111,7 +111,7 @@
     if (activos.length > 0 && stagesPresent < 3) {
       insights.push({
         level: 'info',
-        icon: 'ð¯',
+        icon: '🎯',
         title: 'Pipeline concentrado en pocas etapas',
         body: `Tu pipeline tiene leads en solo ${stagesPresent} etapa${stagesPresent>1?'s':''}. Un pipeline sano tiene leads en todas las etapas para asegurar flujo continuo de cierres.`,
         action: { label:'Ver pipeline', url:'/leads.html' },
@@ -122,8 +122,8 @@
     const tipIndex = new Date().getDate() % TIPS.length;
     insights.push({
       level: 'tip',
-      icon: 'ð¡',
-      title: 'Consejo del dÃ­a',
+      icon: '💡',
+      title: 'Consejo del día',
       body: TIPS[tipIndex].tip,
     });
 
@@ -134,15 +134,15 @@
     const name = currentUser?.profile?.full_name?.split(' ')[0] || 'vendedor';
     const { activos, stale, overdue, winRate } = analysis;
     if (overdue.length > 0)
-      return `Hola ${name}. Tienes ${overdue.length} seguimiento${overdue.length>1?'s':''} vencido${overdue.length>1?'s':''}. Empieza el dÃ­a por ahÃ­.`;
+      return `Hola ${name}. Tienes ${overdue.length} seguimiento${overdue.length>1?'s':''} vencido${overdue.length>1?'s':''}. Empieza el día por ahí.`;
     if (stale.length > 0)
-      return `Hola ${name}. ${stale.length} de tus leads llevan mÃ¡s de 7 dÃ­as sin actividad. Vamos a atacarlos.`;
+      return `Hola ${name}. ${stale.length} de tus leads llevan más de 7 días sin actividad. Vamos a atacarlos.`;
     if (activos.length === 0)
-      return `Hola ${name}. Tu pipeline estÃ¡ vacÃ­o. Es momento de prospectar activamente.`;
-    return `Hola ${name}. Tienes ${activos.length} leads activos con forecast de ${fmtMXN(analysis.forecast)}. Â¿CÃ³mo te puedo ayudar hoy?`;
+      return `Hola ${name}. Tu pipeline está vacío. Es momento de prospectar activamente.`;
+    return `Hola ${name}. Tienes ${activos.length} leads activos con forecast de ${fmtMXN(analysis.forecast)}. ¿Cómo te puedo ayudar hoy?`;
   }
 
-  /* ââ SVG Avatar ââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── SVG Avatar ──────────────────────────────────────────── */
   function alexSVG(cls) {
     return `<svg class="${cls}" width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="44" cy="44" r="40" fill="#0C0F17" stroke="#00D4F0" stroke-width="2"/>
@@ -173,7 +173,7 @@
     </svg>`;
   }
 
-  /* ââ CSS ââââââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── CSS ────────────────────────────────────────────────── */
   function injectCSS() {
     if (document.getElementById('metafollow-css')) return;
     const style = document.createElement('style');
@@ -297,14 +297,14 @@
     document.head.appendChild(style);
   }
 
-  /* ââ Build UI ââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Build UI ────────────────────────────────────────────── */
   function buildUI() {
     injectCSS();
 
     // Button
     const btn = document.createElement('button');
     btn.id = 'metafollow-btn';
-    btn.title = 'MetaFollow â Sales Coach IA (arrastra para mover)';
+    btn.title = 'MetaFollow — Sales Coach IA (arrastra para mover)';
     btn.innerHTML = alexSVG('metafollow-svg') + `<span id="metafollow-badge"></span>`;
     // click handled inside makeDraggable (only fires when not dragging)
 
@@ -316,17 +316,17 @@
         ${alexSVG('metafollow-avatar-sm')}
         <div>
           <div class="metafollow-name">${ALEX_NAME}</div>
-          <div class="metafollow-status"><div class="metafollow-status-dot"></div><span id="mf-status-text">Analizando leadsâ¦</span></div>
+          <div class="metafollow-status"><div class="metafollow-status-dot"></div><span id="mf-status-text">Analizando leads…</span></div>
         </div>
-        <button class="mf-close" onclick="closeMetaFollow()">â</button>
+        <button class="mf-close" onclick="closeMetaFollow()">✕</button>
       </div>
       <div class="metafollow-tabs">
-        <button class="metafollow-tab active" data-tab="insights" onclick="metafollowTab('insights',this)">ð¡ Insights</button>
-        <button class="metafollow-tab" data-tab="stats" onclick="metafollowTab('stats',this)">ð Stats</button>
-        <button class="metafollow-tab" data-tab="chat" onclick="metafollowTab('chat',this)">ð¬ Chat IA</button>
+        <button class="metafollow-tab active" data-tab="insights" onclick="metafollowTab('insights',this)">💡 Insights</button>
+        <button class="metafollow-tab" data-tab="stats" onclick="metafollowTab('stats',this)">📊 Stats</button>
+        <button class="metafollow-tab" data-tab="chat" onclick="metafollowTab('chat',this)">💬 Chat IA</button>
       </div>
       <div id="mf-tab-insights" class="metafollow-body" style="padding:10px">
-        <div id="mf-insights-list"><div style="text-align:center;padding:24px;color:#B8C8DC;font-size:13px">Analizando tus leadsâ¦</div></div>
+        <div id="mf-insights-list"><div style="text-align:center;padding:24px;color:#B8C8DC;font-size:13px">Analizando tus leads…</div></div>
       </div>
       <div id="mf-tab-stats" class="metafollow-body" style="display:none">
         <div id="mf-stats-body" style="padding:4px 0"></div>
@@ -334,8 +334,8 @@
       <div id="mf-tab-chat" style="display:none;flex:1;flex-direction:column;overflow:hidden;height:100%">
         <div class="metafollow-msgs" id="mf-msgs"></div>
         <div class="metafollow-input-wrap">
-          <input class="metafollow-input" id="mf-chat-input" placeholder="PregÃºntame algo sobre tus leadsâ¦" onkeydown="if(event.key==='Enter')metafollowChat()">
-          <button class="metafollow-send" onclick="metafollowChat()">â</button>
+          <input class="metafollow-input" id="mf-chat-input" placeholder="Pregúntame algo sobre tus leads…" onkeydown="if(event.key==='Enter')metafollowChat()">
+          <button class="metafollow-send" onclick="metafollowChat()">→</button>
         </div>
       </div>`;
 
@@ -344,7 +344,7 @@
     makeDraggable(btn);
   }
 
-  /* ââ Draggable button ââââââââââââââââââââââââââââââââââââââ */
+  /* ── Draggable button ────────────────────────────────────── */
   function makeDraggable(btn) {
     const DRAG_THRESHOLD = 4;
     const POS_KEY = 'mtx_metafollow_pos';
@@ -422,7 +422,7 @@
     function clampY(y) { return Math.max(0, Math.min(window.innerHeight - (btn.offsetHeight || 80), y)); }
   }
 
-  /* ââ Reposition panel relative to current btn position ââââ */
+  /* ── Reposition panel relative to current btn position ──── */
   function repositionPanel() {
     const btn   = document.getElementById('metafollow-btn');
     const panel = document.getElementById('metafollow-panel');
@@ -452,7 +452,7 @@
     panel.style.transformOrigin = left > bRect.left ? 'bottom left' : 'bottom right';
   }
 
-  /* ââ Panel control âââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Panel control ───────────────────────────────────────── */
   function togglePanel() {
     isOpen ? closeMetaFollow() : openMetaFollow();
   }
@@ -486,17 +486,17 @@
     });
     document.querySelectorAll('.mf-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     if (tab === 'chat' && !document.getElementById('mf-msgs')?.children.length) {
-      addMFMsg('Hola! Soy MetaFollow, tu agente de ventas. PregÃºntame sobre tus leads, consejos de cierre, o cÃ³mo manejar objeciones especÃ­ficas.');
+      addMFMsg('Hola! Soy MetaFollow, tu agente de ventas. Pregúntame sobre tus leads, consejos de cierre, o cómo manejar objeciones específicas.');
     }
     if (tab === 'stats') renderStats();
   };
 
-  /* ââ Analysis ââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Analysis ────────────────────────────────────────────── */
   async function runAnalysis() {
     if (!currentUser || !window.getDB) return;
     if (Date.now() - lastAnalyzed < 60000 && analysisCache) { renderInsights(analysisCache); return; }
 
-    setStatus('Analizando leadsâ¦');
+    setStatus('Analizando leads…');
     try {
       let _leadsQ = window.getDB().from('leads').select('*').order('updated_at',{ascending:false});
       if (window.applyCompanyFilter) _leadsQ = window.applyCompanyFilter(_leadsQ);
@@ -531,7 +531,7 @@
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#8BAFC8">Insights Personalizados</div>
-        <button class="metafollow-refresh" onclick="lastAnalyzed=0;runAnalysis()">â» Actualizar</button>
+        <button class="metafollow-refresh" onclick="lastAnalyzed=0;runAnalysis()">↻ Actualizar</button>
       </div>
       ${insights.map(i => `
         <div class="metafollow-insight ${i.level}">
@@ -540,13 +540,13 @@
             <span class="metafollow-insight-title">${i.title}</span>
           </div>
           <div class="metafollow-insight-body">${i.body}</div>
-          ${i.action ? `<a class="metafollow-insight-action" href="${i.action.url}">${i.action.label} â</a>` : ''}
+          ${i.action ? `<a class="metafollow-insight-action" href="${i.action.url}">${i.action.label} →</a>` : ''}
         </div>`).join('')}`;
   }
 
   function renderStats() {
     const body = document.getElementById('mf-stats-body');
-    if (!body || !analysisCache) { body.innerHTML = '<div style="color:#B8C8DC;text-align:center;padding:20px;font-size:12px">Abre la pestaÃ±a Insights primero</div>'; return; }
+    if (!body || !analysisCache) { body.innerHTML = '<div style="color:#B8C8DC;text-align:center;padding:20px;font-size:12px">Abre la pestaña Insights primero</div>'; return; }
     const { myLeads, activos, ganados, stale, overdue, forecast, pipeline, winRate } = analysisCache;
 
     const rows = [
@@ -570,7 +570,7 @@
     if (btn)   btn.classList.toggle('has-alert', criticals > 0);
   }
 
-  /* ââ AI Chat âââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── AI Chat ─────────────────────────────────────────────── */
   function addMFMsg(text) {
     const msgs = document.getElementById('mf-msgs');
     if (!msgs) return;
@@ -603,7 +603,7 @@
       try {
         const context = analysisCache ? `El usuario tiene ${analysisCache.activos.length} leads activos, win rate de ${analysisCache.winRate}%, ${analysisCache.stale.length} leads sin actividad y ${analysisCache.overdue.length} seguimientos vencidos.` : '';
         const response = await window.CRM_LLM.chat(
-          `Eres MetaFollow, un experto agente de ventas B2B para MetaTronix (empresa de IA en LATAM). Das consejos concisos, especÃ­ficos y accionables. MÃ¡ximo 3-4 oraciones. ${context}`,
+          `Eres MetaFollow, un experto agente de ventas B2B para MetaTronix (empresa de IA en LATAM). Das consejos concisos, específicos y accionables. Máximo 3-4 oraciones. ${context}`,
           text
         );
         addMFMsg(response);
@@ -614,19 +614,19 @@
     // Fallback: keyword-based responses
     const lower = text.toLowerCase();
     const responses = {
-      'objecion|caro|precio|presupuesto': 'ð¡ La objeciÃ³n de precio es casi siempre una objeciÃ³n de valor. Pregunta: "Dejando el precio de lado por un momento, Â¿esta soluciÃ³n resuelve tu problema?" Si dice sÃ­, vuelve al ROI. Si el cliente ve el valor, el precio se convierte en una negociaciÃ³n, no en un bloqueo.',
-      'seguimiento|follow.up|contactar': 'ð La regla de oro: sigue hasta obtener un "sÃ­" o un "no" definitivo. Un "no me interesa" es mejor que el silencio. Intenta variar el canal (email â WhatsApp â LinkedIn â llamada). Los mejores vendedores hacen 5-8 contactos por lead.',
-      'cierre|cerrar|close': 'ð Para acelerar el cierre: crea urgencia legÃ­tima (no falsa), involucra al decisor final, y pregunta directamente "Â¿quÃ© necesitamos para avanzar esta semana?"',
-      'propuesta|cotizaci': 'ð EnvÃ­a la propuesta en una videollamada, nunca solo por email. El 70% de propuestas enviadas sin llamada no reciben respuesta. Agenda el follow-up ANTES de enviarla.',
-      'pipeline|lead': 'ð Un pipeline sano tiene el doble de lo que planeas cerrar. Si tu meta es $1M, necesitas $2M en pipeline activo.',
+      'objecion|caro|precio|presupuesto': '💡 La objeción de precio es casi siempre una objeción de valor. Pregunta: "Dejando el precio de lado por un momento, ¿esta solución resuelve tu problema?" Si dice sí, vuelve al ROI. Si el cliente ve el valor, el precio se convierte en una negociación, no en un bloqueo.',
+      'seguimiento|follow.up|contactar': '📞 La regla de oro: sigue hasta obtener un "sí" o un "no" definitivo. Un "no me interesa" es mejor que el silencio. Intenta variar el canal (email → WhatsApp → LinkedIn → llamada). Los mejores vendedores hacen 5-8 contactos por lead.',
+      'cierre|cerrar|close': '🏆 Para acelerar el cierre: crea urgencia legítima (no falsa), involucra al decisor final, y pregunta directamente "¿qué necesitamos para avanzar esta semana?"',
+      'propuesta|cotizaci': '📋 Envía la propuesta en una videollamada, nunca solo por email. El 70% de propuestas enviadas sin llamada no reciben respuesta. Agenda el follow-up ANTES de enviarla.',
+      'pipeline|lead': '📊 Un pipeline sano tiene el doble de lo que planeas cerrar. Si tu meta es $1M, necesitas $2M en pipeline activo.',
     };
     for (const [pattern, resp] of Object.entries(responses)) {
       if (new RegExp(pattern, 'i').test(lower)) { addMFMsg(resp); return; }
     }
-    addMFMsg(`Entiendo. Basado en tu pipeline actual (${analysisCache?.activos?.length||0} leads activos), mi recomendaciÃ³n es priorizar los leads en etapa de negociaciÃ³n y propuesta primero. Â¿Quieres que analice algÃºn lead especÃ­fico?`);
+    addMFMsg(`Entiendo. Basado en tu pipeline actual (${analysisCache?.activos?.length||0} leads activos), mi recomendación es priorizar los leads en etapa de negociación y propuesta primero. ¿Quieres que analice algún lead específico?`);
   };
 
-  /* ââ Periodic proactive alerts âââââââââââââââââââââââââââââ */
+  /* ── Periodic proactive alerts ───────────────────────────── */
   function startMonitoring() {
     setInterval(async () => {
       if (!currentUser) return;
@@ -635,13 +635,13 @@
       // Show proactive notification if critical items found
       if (analysisCache?.insights?.some(i => i.level === 'critical') && !isOpen) {
         if (typeof Notiflix !== 'undefined') {
-          Notiflix.Notify.warning(`â ï¸ MetaFollow: Tienes seguimientos vencidos que requieren atenciÃ³n`);
+          Notiflix.Notify.warning(`⚠️ MetaFollow: Tienes seguimientos vencidos que requieren atención`);
         }
       }
     }, CHECK_INTERVAL_MS);
   }
 
-  /* ââ Init ââââââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Init ────────────────────────────────────────────────── */
   async function init() {
     // Wait for auth to be ready
     const waitForUser = () => new Promise(resolve => {

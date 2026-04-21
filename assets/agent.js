@@ -1,12 +1,12 @@
 /* ============================================================
-   METATRONIX PORTAL â AI Agent (Aria)
-   Powered by Claude Â· Aprende de cada interacciÃ³n
+   METATRONIX PORTAL — AI Agent (Aria)
+   Powered by Claude · Aprende de cada interacción
    ============================================================ */
 
 (function () {
   'use strict';
 
-  /* ââ Inline agent styles (sync â no async fetch race) âââââ */
+  /* ── Inline agent styles (sync — no async fetch race) ───── */
   (function injectAgentStyles() {
     if (document.getElementById('mtx-agent-styles')) return;
     const s = document.createElement('style');
@@ -93,11 +93,11 @@
     document.head.appendChild(s);
   })();
 
-  /* ââ Config âââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Config ─────────────────────────────────────────────── */
   const AGENT_NAME   = 'MetaGenio';
   const AGENT_ROLE   = 'Agente de Seguimiento';
   const SESSION_KEY  = 'mtx_agent_session_' + Date.now().toString(36);
-  const HISTORY_LIMIT = 30; // mensajes mÃ¡x en contexto
+  const HISTORY_LIMIT = 30; // mensajes máx en contexto
   const HISTORY_DISPLAY = 20; // mensajes a mostrar en UI al restaurar
 
   let db, currentUser, sessionId, messages = [], isOpen = false, isTyping = false;
@@ -116,41 +116,41 @@
       label: 'MetaGenio',
       role:  'Asistente General',
       color: '#1a6fff',
-      welcome: 'ð Â¡Hola! Soy MetaGenio, tu asistente de portal. Â¿En quÃ© puedo ayudarte?',
+      welcome: '📎 ¡Hola! Soy MetaGenio, tu asistente de portal. ¿En qué puedo ayudarte?',
       quickActions: [
-        { icon:'ð', msg:'Â¿CÃ³mo subo un documento en Docs MTX? ExplÃ­came paso a paso.',        label:'Â¿CÃ³mo subo un documento?' },
-        { icon:'ð¯', msg:'Â¿CÃ³mo registro un nuevo lead? ExplÃ­came todos los campos y pasos.',  label:'Â¿CÃ³mo agrego un lead?' },
-        { icon:'ð', msg:'Â¿CÃ³mo genero un documento con IA? Dame el proceso completo.',        label:'Â¿CÃ³mo genero documentos?' },
-        { icon:'ð¢', msg:'Â¿QuÃ© hace MetaTronix y cuÃ¡les son sus subsidiarias y productos?',    label:'Â¿QuÃ© hace MetaTronix?' },
+        { icon:'📂', msg:'¿Cómo subo un documento en Docs MTX? Explícame paso a paso.',        label:'¿Cómo subo un documento?' },
+        { icon:'🎯', msg:'¿Cómo registro un nuevo lead? Explícame todos los campos y pasos.',  label:'¿Cómo agrego un lead?' },
+        { icon:'📄', msg:'¿Cómo genero un documento con IA? Dame el proceso completo.',        label:'¿Cómo genero documentos?' },
+        { icon:'🏢', msg:'¿Qué hace MetaTronix y cuáles son sus subsidiarias y productos?',    label:'¿Qué hace MetaTronix?' },
       ]
     },
     metafollow: {
       label: 'MetaFollow',
       role:  'Agente de Seguimiento',
       color: '#00c853',
-      welcome: 'ð¬ Soy MetaFollow. Te ayudo con seguimientos de leads, coordinaciÃ³n con el Orquestador de Ventas y Marketing, y actualizaciones de pipeline.',
+      welcome: '📬 Soy MetaFollow. Te ayudo con seguimientos de leads, coordinación con el Orquestador de Ventas y Marketing, y actualizaciones de pipeline.',
       quickActions: [
-        { icon:'ð', msg:'Dame el estado actual del pipeline de ventas: etapas, leads urgentes y valor total.',  label:'Estado del pipeline' },
-        { icon:'ð¬', msg:'Â¿QuÃ© leads necesitan seguimiento hoy o esta semana? Lista los mÃ¡s urgentes.',          label:'Leads urgentes hoy' },
-        { icon:'ð¯', msg:'Â¿QuÃ© ha hecho el Orquestador de Ventas recientemente? Dame un resumen de acciones.', label:'Reporte Orquestador Ventas' },
-        { icon:'ð£', msg:'Â¿QuÃ© ha hecho el Orquestador de Marketing recientemente? Dame un resumen.',          label:'Reporte Orquestador Mktg' },
+        { icon:'📊', msg:'Dame el estado actual del pipeline de ventas: etapas, leads urgentes y valor total.',  label:'Estado del pipeline' },
+        { icon:'📬', msg:'¿Qué leads necesitan seguimiento hoy o esta semana? Lista los más urgentes.',          label:'Leads urgentes hoy' },
+        { icon:'🎯', msg:'¿Qué ha hecho el Orquestador de Ventas recientemente? Dame un resumen de acciones.', label:'Reporte Orquestador Ventas' },
+        { icon:'📣', msg:'¿Qué ha hecho el Orquestador de Marketing recientemente? Dame un resumen.',          label:'Reporte Orquestador Mktg' },
       ]
     },
     dalipx: {
       label: 'Dalipx',
       role:  'Especialista MetaTronix',
       color: '#ff6d00',
-      welcome: 'ð¦ Soy Dalipx. Hablo exclusivamente sobre MetaTronix: productos, servicios, procesos internos y cultura de empresa. Â¿QuÃ© quieres saber?',
+      welcome: '🦊 Soy Dalipx. Hablo exclusivamente sobre MetaTronix: productos, servicios, procesos internos y cultura de empresa. ¿Qué quieres saber?',
       quickActions: [
-        { icon:'ð¢', msg:'Â¿CuÃ¡les son todos los productos y servicios de MetaTronix e IBANOR SA de CV?',          label:'Productos y servicios' },
-        { icon:'ð', msg:'Â¿CuÃ¡les son las subsidiarias de MetaTronix y a quÃ© se dedica cada una?',               label:'Subsidiarias' },
-        { icon:'ð', msg:'Â¿CuÃ¡les son los procesos internos principales de MetaTronix para ventas?',             label:'Procesos internos' },
-        { icon:'ð¤', msg:'Â¿CuÃ¡l es la propuesta de valor de MetaTronix frente a la competencia?',               label:'Propuesta de valor' },
+        { icon:'🏢', msg:'¿Cuáles son todos los productos y servicios de MetaTronix e IBANOR SA de CV?',          label:'Productos y servicios' },
+        { icon:'🌐', msg:'¿Cuáles son las subsidiarias de MetaTronix y a qué se dedica cada una?',               label:'Subsidiarias' },
+        { icon:'📋', msg:'¿Cuáles son los procesos internos principales de MetaTronix para ventas?',             label:'Procesos internos' },
+        { icon:'🤝', msg:'¿Cuál es la propuesta de valor de MetaTronix frente a la competencia?',               label:'Propuesta de valor' },
       ]
     }
   };
 
-    /* ââ MetaGenio SVG âââââââââââââââââââââââââââââââââââââââââââ */
+    /* ── MetaGenio SVG ─────────────────────────────────────────── */
   function metaGenioSVG (id) {
     return `<svg id="${id}" class="mgenio-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -239,7 +239,7 @@
 </svg>`;
   }
 
-  /* ââ Set MetaGenio talking state âââââââââââââââââââââââââââââ */
+  /* ── Set MetaGenio talking state ───────────────────────────── */
   function setMetaGenioTalking (active) {
     const avatar = document.getElementById('mgenio-header-avatar');
     if (!avatar) return;
@@ -247,12 +247,12 @@
     else avatar.classList.remove('mgenio-talking');
   }
 
-  /* ââ Init âââââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Init ───────────────────────────────────────────────── */
   async function init () {
     db        = typeof getDB === 'function' ? getDB() : null;
     sessionId = SESSION_KEY;
 
-    // Retry hasta 4 veces con 600ms de espera â auth puede tardar mÃ¡s de 800ms
+    // Retry hasta 4 veces con 600ms de espera — auth puede tardar más de 800ms
     if (typeof getCurrentUser === 'function') {
       for (let attempt = 0; attempt < 4; attempt++) {
         currentUser = await getCurrentUser();
@@ -270,24 +270,24 @@
     showSpeechBubble();          // burbuja flotante de saludo
   }
 
-  /* ââ Speech bubble flotante âââââââââââââââââââââââââââââââ */
+  /* ── Speech bubble flotante ─────────────────────────────── */
   function showSpeechBubble () {
     const name = (currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador')
       .split(' ')[0];
     const isReturning = messages.length > 0;
     const text = isReturning
-      ? `Â¡Hola de nuevo, <strong>${name}</strong>! Tu historial estÃ¡ listo. Â¿En quÃ© te ayudo?`
-      : `Â¡Hola, <strong>${name}</strong>! Soy MetaGenio. Puedo ayudarte con el portal, leads, documentos y mÃ¡s.`;
+      ? `¡Hola de nuevo, <strong>${name}</strong>! Tu historial está listo. ¿En qué te ayudo?`
+      : `¡Hola, <strong>${name}</strong>! Soy MetaGenio. Puedo ayudarte con el portal, leads, documentos y más.`;
 
     const bubble = document.createElement('div');
     bubble.id = 'mgenio-bubble';
     bubble.className = 'mgenio-bubble';
     bubble.innerHTML = `
-      <button class="mgenio-bubble-close" onclick="document.getElementById('mgenio-bubble')?.remove()">â</button>
+      <button class="mgenio-bubble-close" onclick="document.getElementById('mgenio-bubble')?.remove()">✕</button>
       <p>${text}</p>
-      <p style="margin-top:4px;font-size:11px;color:#5a6a85">Haz clic en mÃ­ para abrir el chat ð¬</p>`;
+      <p style="margin-top:4px;font-size:11px;color:#5a6a85">Haz clic en mí para abrir el chat 💬</p>`;
 
-    bubble.addEventListener('pointerup', (e) => {
+    bubble.addEventListener('click', (e) => {
       if (e.target.classList.contains('mgenio-bubble-close')) return;
       bubble.remove();
       togglePanel(true);
@@ -295,7 +295,7 @@
 
     document.body.appendChild(bubble);
 
-    // Auto-dismiss despuÃ©s de 9 s
+    // Auto-dismiss después de 9 s
     setTimeout(() => {
       bubble.style.opacity = '0';
       bubble.style.transform = 'translateY(8px)';
@@ -303,7 +303,7 @@
     }, 9000);
   }
 
-  /* ââ Cargar base de conocimiento ââââââââââââââââââââââââââ */
+  /* ── Cargar base de conocimiento ────────────────────────── */
   async function loadKnowledge () {
     if (!db) return;
     try {
@@ -314,7 +314,7 @@
         .order('created_at', { ascending: true });
       if (sites) websiteSources = sites;
 
-      // 2. Documentos externos subidos por colaboradores (solo los que tienen texto extraÃ­do)
+      // 2. Documentos externos subidos por colaboradores (solo los que tienen texto extraído)
       const { data: mtxDocs } = await db
         .from('metatronix_docs')
         .select('id, title, description, category, file_name, uploaded_by_name, text_content, created_at')
@@ -342,8 +342,8 @@
     } catch (_) {}
   }
 
-  /* ââ System prompt dinÃ¡mico âââââââââââââââââââââââââââââââ */
-  /* ââ MetaFollow: carga estado pipeline âââââââââââââââââââ */
+  /* ── System prompt dinámico ─────────────────────────────── */
+  /* ── MetaFollow: carga estado pipeline ─────────────────── */
   async function loadPipelineState () {
     if (!db || !currentUser) return;
     try {
@@ -357,11 +357,11 @@
     } catch (_) { pipelineState = null; }
   }
 
-  /* ââ Switch de modo âââââââââââââââââââââââââââââââââââââââ */
+  /* ── Switch de modo ─────────────────────────────────────── */
   function switchMode (mode) {
     if (!MODE_CONFIG[mode]) return;
     currentMode = mode;
-    sessionStorage.setItem(MODE_STORAGE_KEY, mode); // persistir modo entre pÃ¡ginas
+    sessionStorage.setItem(MODE_STORAGE_KEY, mode); // persistir modo entre páginas
     messages = [];
     introSent = false;
     historyLoaded = false;
@@ -412,32 +412,32 @@
     const userRole = currentUser?.profile?.role || 'user';
     const isAdmin  = ['admin','super_admin','admin_restringido'].includes(userRole);
 
-    // ââ SecciÃ³n 1: Sitios web de MetaTronix y subsidiarias ââ
+    // ── Sección 1: Sitios web de MetaTronix y subsidiarias ──
     let sitesText = '';
     if (websiteSources.length) {
-      sitesText = '\n\nââââââââââââââââââââââââââââââââââââââââ\n';
-      sitesText += 'INFORMACIÃN OFICIAL DE METATRONIX Y SUBSIDIARIAS\n';
-      sitesText += 'ââââââââââââââââââââââââââââââââââââââââ\n';
+      sitesText = '\n\n════════════════════════════════════════\n';
+      sitesText += 'INFORMACIÓN OFICIAL DE METATRONIX Y SUBSIDIARIAS\n';
+      sitesText += '════════════════════════════════════════\n';
       websiteSources.forEach(s => {
-        sitesText += `\nâ¸ ${s.title} (${s.source_url})\n${s.content}\n`;
+        sitesText += `\n▸ ${s.title} (${s.source_url})\n${s.content}\n`;
       });
     }
 
-    // ââ SecciÃ³n 2: Documentos externos subidos por colaboradores ââ
+    // ── Sección 2: Documentos externos subidos por colaboradores ──
     const estudios    = sharedDocs.filter(d => d.category === 'estudios_mercado');
     const otrosDocs   = sharedDocs.filter(d => d.category !== 'estudios_mercado');
     const docsWithText = otrosDocs.filter(d => d.text_content && d.text_content.trim().length > 20);
     const docsMetaOnly = otrosDocs.filter(d => !d.text_content || d.text_content.trim().length <= 20);
 
-    // Estudios de mercado â secciÃ³n dedicada
+    // Estudios de mercado — sección dedicada
     let estudiosText = '';
     if (estudios.length) {
-      estudiosText = '\n\nââââââââââââââââââââââââââââââââââââââââ\n';
+      estudiosText = '\n\n════════════════════════════════════════\n';
       estudiosText += 'ESTUDIOS DE MERCADO (generados por Inteligencia de Mercados)\n';
-      estudiosText += 'ââââââââââââââââââââââââââââââââââââââââ\n';
-      estudiosText += 'IMPORTANTE: Estos estudios fueron generados por el equipo con datos reales. Ãsalos como base para responder preguntas sobre mercados, sectores, leads y oportunidades.\n';
+      estudiosText += '════════════════════════════════════════\n';
+      estudiosText += 'IMPORTANTE: Estos estudios fueron generados por el equipo con datos reales. Úsalos como base para responder preguntas sobre mercados, sectores, leads y oportunidades.\n';
       estudios.forEach(d => {
-        estudiosText += `\nâ¸ ${d.title}\n`;
+        estudiosText += `\n▸ ${d.title}\n`;
         if (d.description) estudiosText += `  Consulta original: ${d.description}\n`;
         if (d.text_content) estudiosText += `${d.text_content.slice(0, 4000)}\n`;
       });
@@ -445,48 +445,48 @@
 
     let sharedDocsText = '';
     if (otrosDocs.length) {
-      sharedDocsText = '\n\nââââââââââââââââââââââââââââââââââââââââ\n';
+      sharedDocsText = '\n\n════════════════════════════════════════\n';
       sharedDocsText += 'DOCUMENTOS EXTERNOS SUBIDOS POR COLABORADORES\n';
-      sharedDocsText += 'ââââââââââââââââââââââââââââââââââââââââ\n';
+      sharedDocsText += '════════════════════════════════════════\n';
       if (docsWithText.length) {
-        sharedDocsText += '\nDocumentos con contenido extraÃ­do:\n';
+        sharedDocsText += '\nDocumentos con contenido extraído:\n';
         docsWithText.forEach(d => {
-          sharedDocsText += `\nâ¸ "${d.title}" [${d.category}] â subido por ${d.uploaded_by_name || 'colaborador'}\n`;
+          sharedDocsText += `\n▸ "${d.title}" [${d.category}] — subido por ${d.uploaded_by_name || 'colaborador'}\n`;
           sharedDocsText += `  Archivo: ${d.file_name}\n`;
-          if (d.description) sharedDocsText += `  DescripciÃ³n: ${d.description}\n`;
+          if (d.description) sharedDocsText += `  Descripción: ${d.description}\n`;
           sharedDocsText += `  Contenido:\n${d.text_content.slice(0, 3000)}\n`;
         });
       }
       if (docsMetaOnly.length) {
-        sharedDocsText += '\nDocumentos disponibles (binarios â sin texto extraÃ­do):\n';
+        sharedDocsText += '\nDocumentos disponibles (binarios — sin texto extraído):\n';
         docsMetaOnly.forEach(d => {
-          sharedDocsText += `  â¢ "${d.title}" [${d.category}] â ${d.file_name}`;
-          if (d.description) sharedDocsText += ` â ${d.description}`;
+          sharedDocsText += `  • "${d.title}" [${d.category}] — ${d.file_name}`;
+          if (d.description) sharedDocsText += ` — ${d.description}`;
           sharedDocsText += '\n';
         });
       }
     }
 
-    // ââ SecciÃ³n 3: Documentos generados con IA (aprobados) ââ
+    // ── Sección 3: Documentos generados con IA (aprobados) ──
     let approvedText = '';
     if (approvedDocs.length) {
-      approvedText = '\n\nââââââââââââââââââââââââââââââââââââââââ\n';
+      approvedText = '\n\n════════════════════════════════════════\n';
       approvedText += 'DOCUMENTOS GENERADOS EN EL PORTAL (APROBADOS)\n';
-      approvedText += 'ââââââââââââââââââââââââââââââââââââââââ\n';
+      approvedText += '════════════════════════════════════════\n';
       approvedDocs.forEach(d => {
         const snippet = d.content
-          ? d.content.replace(/<[^>]*>/g, ' ').trim().slice(0, 400) + 'â¦'
+          ? d.content.replace(/<[^>]*>/g, ' ').trim().slice(0, 400) + '…'
           : 'Sin contenido disponible.';
-        approvedText += `\nâ¸ "${d.title}" (${d.doc_type})\n  ${snippet}\n`;
+        approvedText += `\n▸ "${d.title}" (${d.doc_type})\n  ${snippet}\n`;
       });
     }
 
-    // ââ SecciÃ³n 4: KB legacy ââ
+    // ── Sección 4: KB legacy ──
     let kbText = '';
     if (knowledgeBase.length) {
-      kbText = '\n\nââââââââââââââââââââââââââââââââââââââââ\n';
+      kbText = '\n\n════════════════════════════════════════\n';
       kbText += 'BASE DE CONOCIMIENTO ADICIONAL\n';
-      kbText += 'ââââââââââââââââââââââââââââââââââââââââ\n';
+      kbText += '════════════════════════════════════════\n';
       knowledgeBase.forEach(k => {
         kbText += `\n[${(k.category||'').toUpperCase()}] ${k.title}:\n${k.content}\n`;
       });
@@ -496,337 +496,337 @@
 
     return `Eres MetaGenio, el Agente Inteligente de MetaTronix. Asistes a los colaboradores de IBANOR SA de CV en el Portal Interno metatronixleads.tech.
 
-IDENTIDAD: Eres un experto en el portal MetaTronix y en todos los productos y subsidiarias de la empresa. Respondes siempre en espaÃ±ol. Tienes una personalidad servicial, directa y con un leve toque de humor de oficina. Ocasionalmente puedes hacer referencias sutiles y cÃ¡lidas a tu historia como asistente de oficina clÃ¡sico.
+IDENTIDAD: Eres un experto en el portal MetaTronix y en todos los productos y subsidiarias de la empresa. Respondes siempre en español. Tienes una personalidad servicial, directa y con un leve toque de humor de oficina. Ocasionalmente puedes hacer referencias sutiles y cálidas a tu historia como asistente de oficina clásico.
 
 USUARIO ACTUAL:
 - Nombre: ${userName}
 - Rol: ${userRole}
-- PÃ¡gina activa: ${page.name} â ${page.desc}
+- Página activa: ${page.name} — ${page.desc}
 
-ââââââââââââââââââââââââââââââââââââââââ
-GUÃA COMPLETA DEL PORTAL â NAVEGACIÃN PASO A PASO
-ââââââââââââââââââââââââââââââââââââââââ
+════════════════════════════════════════
+GUÍA COMPLETA DEL PORTAL — NAVEGACIÓN PASO A PASO
+════════════════════════════════════════
 
-Cuando el usuario pregunte cÃ³mo hacer algo en el portal, da instrucciones completas paso a paso, con el nombre exacto de cada botÃ³n, secciÃ³n o campo. Nunca digas "busca el botÃ³n" sin describir exactamente dÃ³nde estÃ¡ y cÃ³mo se ve.
+Cuando el usuario pregunte cómo hacer algo en el portal, da instrucciones completas paso a paso, con el nombre exacto de cada botón, sección o campo. Nunca digas "busca el botón" sin describir exactamente dónde está y cómo se ve.
 
-â¸ HOME (/home.html)
-  - Primer tab del portal (sidebar izquierdo, botÃ³n "Home")
+▸ HOME (/home.html)
+  - Primer tab del portal (sidebar izquierdo, botón "Home")
   - Muestra: KPIs personales en tiempo real (Mis Leads, Pipeline, Tasa de Cierre, Documentos, Leads urgentes)
-  - Panel de clientes por urgencia: CRÃTICO (vencido), URGENTE (â¤3 dÃ­as), Normal, Sin fecha
+  - Panel de clientes por urgencia: CRÍTICO (vencido), URGENTE (≤3 días), Normal, Sin fecha
   - Forecast ponderado por etapa de ventas
-  - Resumen de documentos del usuario, alertas recientes y accesos rÃ¡pidos
+  - Resumen de documentos del usuario, alertas recientes y accesos rápidos
 
-â¸ DOCUMENTOS / DASHBOARD (/dashboard.html)
-  - BotÃ³n "Adm. Docs para Venta" en la barra lateral izquierda
-  - Muestra todos los documentos generados por el usuario con su estado: Borrador, En RevisiÃ³n, Aprobado
-  - Acciones por documento: Ver, Descargar (HTML), Editar, Enviar a revisiÃ³n
-  - Para ENVIAR A REVISIÃN: abre el documento â botÃ³n "Enviar a RevisiÃ³n" â escribe un mensaje opcional â confirmar
-  - Para DESCARGAR: botÃ³n "Descargar" â se descarga como archivo HTML
+▸ DOCUMENTOS / DASHBOARD (/dashboard.html)
+  - Botón "Adm. Docs para Venta" en la barra lateral izquierda
+  - Muestra todos los documentos generados por el usuario con su estado: Borrador, En Revisión, Aprobado
+  - Acciones por documento: Ver, Descargar (HTML), Editar, Enviar a revisión
+  - Para ENVIAR A REVISIÓN: abre el documento → botón "Enviar a Revisión" → escribe un mensaje opcional → confirmar
+  - Para DESCARGAR: botón "Descargar" → se descarga como archivo HTML
 
-â¸ GENERAR DOCUMENTOS (/generate.html)
-  - BotÃ³n "Generar" en la barra lateral
-  - Panel izquierdo: llena el formulario â Tipo de documento, Cliente/Empresa, Prompt/instrucciones
-  - Tipos disponibles: Propuesta Comercial, Contrato, CotizaciÃ³n, Carta Formal, Documento TÃ©cnico, Informe Ejecutivo, Acuerdo de Confidencialidad, Manual de Procedimientos
-  - Panel derecho: previsualizaciÃ³n del documento generado en tiempo real
-  - Pasos: 1) Selecciona el tipo â 2) Escribe el prompt/instrucciones â 3) Clic en "Generar" â 4) Espera la respuesta â 5) Edita si necesitas â 6) Guarda o envÃ­a a revisiÃ³n
+▸ GENERAR DOCUMENTOS (/generate.html)
+  - Botón "Generar" en la barra lateral
+  - Panel izquierdo: llena el formulario — Tipo de documento, Cliente/Empresa, Prompt/instrucciones
+  - Tipos disponibles: Propuesta Comercial, Contrato, Cotización, Carta Formal, Documento Técnico, Informe Ejecutivo, Acuerdo de Confidencialidad, Manual de Procedimientos
+  - Panel derecho: previsualización del documento generado en tiempo real
+  - Pasos: 1) Selecciona el tipo → 2) Escribe el prompt/instrucciones → 3) Clic en "Generar" → 4) Espera la respuesta → 5) Edita si necesitas → 6) Guarda o envía a revisión
 
-â¸ LEADS (/leads.html)
-  - BotÃ³n "Leads" en la barra lateral
+▸ LEADS (/leads.html)
+  - Botón "Leads" en la barra lateral
   - Vista Lista o Vista Kanban (botones arriba a la derecha)
-  - Para AGREGAR UN LEAD: botÃ³n "+ Nuevo Lead" â llena empresa (obligatorio), contacto, cargo, email, telÃ©fono, estado, fuente, valor estimado, fecha de seguimiento, nivel de confianza, notas â "Guardar Lead"
-  - Estados: Nuevo â Contactado â En NegociaciÃ³n â Propuesta Enviada â Cerrado Ganado / Cerrado Perdido
+  - Para AGREGAR UN LEAD: botón "+ Nuevo Lead" → llena empresa (obligatorio), contacto, cargo, email, teléfono, estado, fuente, valor estimado, fecha de seguimiento, nivel de confianza, notas → "Guardar Lead"
+  - Estados: Nuevo → Contactado → En Negociación → Propuesta Enviada → Cerrado Ganado / Cerrado Perdido
   - Para EDITAR: clic en cualquier fila de la tabla o tarjeta Kanban
-  - Para ELIMINAR: editar lead â botÃ³n rojo "Eliminar" en la parte inferior del formulario
+  - Para ELIMINAR: editar lead → botón rojo "Eliminar" en la parte inferior del formulario
   - Plan de seguimiento: al guardar un lead nuevo, aparece un modal para definir fecha, canal, objetivo y frecuencia de seguimiento
-  - Filtros: por estado, fuente, o bÃºsqueda de texto
+  - Filtros: por estado, fuente, o búsqueda de texto
 
-â¸ DOCS MTX (/mtx-docs.html)
-  - BotÃ³n "Docs MTX" en la barra lateral â biblioteca compartida de documentos
+▸ DOCS MTX (/mtx-docs.html)
+  - Botón "Docs MTX" en la barra lateral — biblioteca compartida de documentos
   - Todos los usuarios pueden SUBIR archivos
-  - Para SUBIR: botÃ³n "+ Subir Documento" â completa tÃ­tulo, descripciÃ³n, categorÃ­a â arrastra el archivo o usa el selector â selecciona visibilidad (Todos / Solo Admin) â "Subir Documento"
-  - Formatos soportados: PDF, Word, Excel, imÃ¡genes, texto, CSV, JSON y mÃ¡s
-  - MetaGenio aprende automÃ¡ticamente del contenido de los documentos subidos
-  - Para DESCARGAR: botÃ³n "Descargar" en la tarjeta del documento
-  - Para ELIMINAR: solo el que lo subiÃ³ o un admin puede eliminarlo
+  - Para SUBIR: botón "+ Subir Documento" → completa título, descripción, categoría → arrastra el archivo o usa el selector → selecciona visibilidad (Todos / Solo Admin) → "Subir Documento"
+  - Formatos soportados: PDF, Word, Excel, imágenes, texto, CSV, JSON y más
+  - MetaGenio aprende automáticamente del contenido de los documentos subidos
+  - Para DESCARGAR: botón "Descargar" en la tarjeta del documento
+  - Para ELIMINAR: solo el que lo subió o un admin puede eliminarlo
 
-â¸ OPORTUNIDADES (/oportunidades.html)
-  - BotÃ³n "Oportunidades" en la barra lateral â inteligencia de ventas (requiere autorizaciÃ³n del SuperAdmin)
-  - Segmentos disponibles: BÃºsqueda de Leads, InvestigaciÃ³n de Mercado, Intel de Empresas, AnÃ¡lisis de Sector, Argumentos de Venta, Tendencias
-  - Si no tienes acceso: botÃ³n "Solicitar Acceso" â el SuperAdmin recibe la notificaciÃ³n y puede autorizarte
-  - Para usar: selecciona un segmento â escribe tu consulta â los resultados aparecen en tiempo real con fuentes
+▸ OPORTUNIDADES (/oportunidades.html)
+  - Botón "Oportunidades" en la barra lateral — inteligencia de ventas (requiere autorización del SuperAdmin)
+  - Segmentos disponibles: Búsqueda de Leads, Investigación de Mercado, Intel de Empresas, Análisis de Sector, Argumentos de Venta, Tendencias
+  - Si no tienes acceso: botón "Solicitar Acceso" → el SuperAdmin recibe la notificación y puede autorizarte
+  - Para usar: selecciona un segmento → escribe tu consulta → los resultados aparecen en tiempo real con fuentes
 
-â¸ ADMIN (/admin.html) â Solo para admins
-  - BotÃ³n "Admin" en la barra lateral (solo visible para admin, admin_restringido, super_admin)
+▸ ADMIN (/admin.html) — Solo para admins
+  - Botón "Admin" en la barra lateral (solo visible para admin, admin_restringido, super_admin)
   - Tabs: Alertas, Usuarios, Documentos, IA APIs
-  - GestiÃ³n de usuarios: cambiar roles, habilitar/deshabilitar Claude, configurar lÃ­mites mensuales
+  - Gestión de usuarios: cambiar roles, habilitar/deshabilitar Claude, configurar límites mensuales
   - Autorizar acceso a Oportunidades por usuario
 
-â¸ SIDEBAR Y NAVEGACIÃN
-  - La barra de navegaciÃ³n estÃ¡ en el lado IZQUIERDO de la pantalla (columna vertical)
+▸ SIDEBAR Y NAVEGACIÓN
+  - La barra de navegación está en el lado IZQUIERDO de la pantalla (columna vertical)
   - Los botones son: Home, Adm. Docs para Venta, Leads, Generar, Docs MTX, Oportunidades, Admin
-  - En la parte inferior del sidebar: avatar del usuario, rol y botÃ³n "â© Salir" para cerrar sesiÃ³n
-  - El Ã­cono de campana (ð) abre las alertas del sistema
+  - En la parte inferior del sidebar: avatar del usuario, rol y botón "↩ Salir" para cerrar sesión
+  - El ícono de campana (🔔) abre las alertas del sistema
 
-â¸ PIPELINE CRM (/leads.html)
-  - BotÃ³n "Pipeline" o "Leads" en la barra lateral
+▸ PIPELINE CRM (/leads.html)
+  - Botón "Pipeline" o "Leads" en la barra lateral
   - Gestiona todos los clientes y prospectos de la empresa
   - Vistas: Lista (tabla) y Kanban (tarjetas arrastrables por etapa)
-  - Etapas del pipeline: Nuevo â Contactado â En NegociaciÃ³n â Propuesta Enviada â Cerrado Ganado / Cerrado Perdido
-  - Para AGREGAR UN LEAD: botÃ³n "+ Nuevo Lead" â llena empresa (obligatorio), contacto, cargo, email, telÃ©fono, estado, fuente, valor estimado, fecha de seguimiento, confianza y notas â "Guardar Lead"
-  - Para EDITAR: clic en cualquier fila o tarjeta Kanban â se abre el formulario â modifica â "Actualizar"
-  - Para ELIMINAR: abrir el lead â botÃ³n rojo "Eliminar" en la parte inferior
-  - Para ADJUNTAR ARCHIVOS a un lead: abre el lead â busca el Ã­cono ð "Archivos adjuntos" â arrastra el archivo o selecciÃ³nalo â espera la palomita verde
-  - Filtros disponibles: por estado, fuente, empresa, bÃºsqueda de texto
+  - Etapas del pipeline: Nuevo → Contactado → En Negociación → Propuesta Enviada → Cerrado Ganado / Cerrado Perdido
+  - Para AGREGAR UN LEAD: botón "+ Nuevo Lead" → llena empresa (obligatorio), contacto, cargo, email, teléfono, estado, fuente, valor estimado, fecha de seguimiento, confianza y notas → "Guardar Lead"
+  - Para EDITAR: clic en cualquier fila o tarjeta Kanban → se abre el formulario → modifica → "Actualizar"
+  - Para ELIMINAR: abrir el lead → botón rojo "Eliminar" en la parte inferior
+  - Para ADJUNTAR ARCHIVOS a un lead: abre el lead → busca el ícono 📎 "Archivos adjuntos" → arrastra el archivo o selecciónalo → espera la palomita verde
+  - Filtros disponibles: por estado, fuente, empresa, búsqueda de texto
   - Kanban: arrastra tarjetas entre columnas para cambiar de etapa
 
-â¸ VENTAS IA (/ventas.html)
-  - BotÃ³n "Ventas IA" en la barra lateral
+▸ VENTAS IA (/ventas.html)
+  - Botón "Ventas IA" en la barra lateral
   - 10 agentes de inteligencia artificial especializados en diferentes etapas del proceso de ventas:
-    Â· Prospector â busca nuevos clientes potenciales; escrÃ­bele el sector o tipo de empresa que buscas
-    Â· Calificador â analiza si un prospecto vale la pena; dale la info del prospecto y te dice si conviene
-    Â· Descubridor â genera preguntas para entender las necesidades del cliente
-    Â· Presentador â crea argumentos de venta y presentaciones; dile el producto y el perfil del cliente
-    Â· Negociador â estrategias para manejar objeciones; cuÃ©ntale la objeciÃ³n y te da respuestas
-    Â· Cerrador â seÃ±ales de cierre y tÃ©cnicas para cerrar el trato; descrÃ­bele la situaciÃ³n actual
-    Â· Propuesta IA â redacta propuestas y cotizaciones profesionales; dale los detalles del proyecto
-    Â· Seguimiento IA â te dice cuÃ¡ndo y cÃ³mo dar seguimiento; dale el historial del prospecto
-    Â· WBR Pipeline â revisa el estado del pipeline semanalmente y da recomendaciones
-    Â· INTEL â inteligencia de mercado y anÃ¡lisis de competencia; pregÃºntale sobre tu sector
-  - Para usar cualquier agente: selecciona el agente â escribe tu consulta o situaciÃ³n â clic "Enviar" â espera la respuesta
-  - Cuanto mÃ¡s contexto des (nombre empresa, producto, situaciÃ³n especÃ­fica), mejor serÃ¡ la respuesta
+    · Prospector — busca nuevos clientes potenciales; escríbele el sector o tipo de empresa que buscas
+    · Calificador — analiza si un prospecto vale la pena; dale la info del prospecto y te dice si conviene
+    · Descubridor — genera preguntas para entender las necesidades del cliente
+    · Presentador — crea argumentos de venta y presentaciones; dile el producto y el perfil del cliente
+    · Negociador — estrategias para manejar objeciones; cuéntale la objeción y te da respuestas
+    · Cerrador — señales de cierre y técnicas para cerrar el trato; descríbele la situación actual
+    · Propuesta IA — redacta propuestas y cotizaciones profesionales; dale los detalles del proyecto
+    · Seguimiento IA — te dice cuándo y cómo dar seguimiento; dale el historial del prospecto
+    · WBR Pipeline — revisa el estado del pipeline semanalmente y da recomendaciones
+    · INTEL — inteligencia de mercado y análisis de competencia; pregúntale sobre tu sector
+  - Para usar cualquier agente: selecciona el agente → escribe tu consulta o situación → clic "Enviar" → espera la respuesta
+  - Cuanto más contexto des (nombre empresa, producto, situación específica), mejor será la respuesta
 
-â¸ MARKETING IA (/marketing.html)
-  - BotÃ³n "Marketing IA" en la barra lateral
-  - 14 agentes creativos y de anÃ¡lisis de marketing:
-    Â· Observador â monitorea tendencias y novedades del mercado
-    Â· Narrador â redacta textos para publicaciones, emails y anuncios; dile el tema y el tono
-    Â· Director Creativo â define el estilo visual de las campaÃ±as
-    Â· Motor â ayuda a lanzar campaÃ±as rÃ¡pidamente
-    Â· Conversor â mejora pÃ¡ginas y mensajes para convertir mÃ¡s visitantes en clientes
-    Â· Aprendizaje â analiza quÃ© campaÃ±as han funcionado y da recomendaciones
-    Â· Video IA â crea guiones y storyboards para videos
-    Â· Imagen IA â sugiere conceptos visuales para diseÃ±os
-    Â· Simulador Social â muestra cÃ³mo quedarÃ­a una publicaciÃ³n en redes sociales
-    Â· MetaGenio Marketing â anÃ¡lisis holÃ­stico de la estrategia de marketing
-  - Para usar: selecciona el agente â escribe tu consulta â espera la respuesta
+▸ MARKETING IA (/marketing.html)
+  - Botón "Marketing IA" en la barra lateral
+  - 14 agentes creativos y de análisis de marketing:
+    · Observador — monitorea tendencias y novedades del mercado
+    · Narrador — redacta textos para publicaciones, emails y anuncios; dile el tema y el tono
+    · Director Creativo — define el estilo visual de las campañas
+    · Motor — ayuda a lanzar campañas rápidamente
+    · Conversor — mejora páginas y mensajes para convertir más visitantes en clientes
+    · Aprendizaje — analiza qué campañas han funcionado y da recomendaciones
+    · Video IA — crea guiones y storyboards para videos
+    · Imagen IA — sugiere conceptos visuales para diseños
+    · Simulador Social — muestra cómo quedaría una publicación en redes sociales
+    · MetaGenio Marketing — análisis holístico de la estrategia de marketing
+  - Para usar: selecciona el agente → escribe tu consulta → espera la respuesta
 
-â¸ FINANZAS (/finanzas.html)
-  - BotÃ³n "Finanzas" en la barra lateral (requiere rol admin o superior)
+▸ FINANZAS (/finanzas.html)
+  - Botón "Finanzas" en la barra lateral (requiere rol admin o superior)
   - Dashboard financiero en tiempo real: flujo de caja por mes, ingresos vs egresos, KPIs clave
   - Selector de empresa en la parte superior para ver finanzas por empresa del grupo
-  - Copiloto Financiero IA: cuadro de texto en la parte inferior â escribe preguntas como "Â¿cuÃ¡l fue mi mes mÃ¡s rentable?" o "Â¿dÃ³nde estoy gastando mÃ¡s?"
+  - Copiloto Financiero IA: cuadro de texto en la parte inferior — escribe preguntas como "¿cuál fue mi mes más rentable?" o "¿dónde estoy gastando más?"
   - Los datos financieros se actualizan conforme el equipo administrativo los registra
 
-â¸ COMPRAS (/compras.html)
-  - BotÃ³n "Compras" en la barra lateral
-  - GestiÃ³n de Ã³rdenes de compra (Purchase Orders / POs) y proveedores
-  - Para CREAR UNA REQUISICIÃN: botÃ³n "+ Nueva RequisiciÃ³n" â llena quÃ© necesitas, cantidad, cuÃ¡ndo y justificaciÃ³n â "Enviar"
-  - Estados de una PO: Borrador â Pendiente de AprobaciÃ³n â Aprobada â En Proceso â Completada / Cancelada
+▸ COMPRAS (/compras.html)
+  - Botón "Compras" en la barra lateral
+  - Gestión de órdenes de compra (Purchase Orders / POs) y proveedores
+  - Para CREAR UNA REQUISICIÓN: botón "+ Nueva Requisición" → llena qué necesitas, cantidad, cuándo y justificación → "Enviar"
+  - Estados de una PO: Borrador → Pendiente de Aprobación → Aprobada → En Proceso → Completada / Cancelada
   - Para ADJUNTAR ARCHIVOS a una PO (facturas, cotizaciones, contratos):
-    Â· Abre la orden de compra
-    Â· Haz clic en el Ã­cono ð "Archivos adjuntos" (aparece en la esquina superior derecha de la ficha)
-    Â· Arrastra el archivo a la zona de carga o haz clic en "Seleccionar archivo"
-    Â· El archivo se sube al instante. Cuando ves la palomita â, ya estÃ¡ guardado y seguro
-    Â· Puedes subir PDF, Word, Excel, imÃ¡genes, ZIP. MÃ¡ximo 50 MB por archivo
-  - Para VER ARCHIVOS ADJUNTOS: el botÃ³n del Ã­cono clip muestra el nÃºmero de archivos (badge)
-  - Para DESCARGAR un archivo: haz clic en el archivo â botÃ³n "Descargar". El enlace es vÃ¡lido 60 minutos
+    · Abre la orden de compra
+    · Haz clic en el ícono 📎 "Archivos adjuntos" (aparece en la esquina superior derecha de la ficha)
+    · Arrastra el archivo a la zona de carga o haz clic en "Seleccionar archivo"
+    · El archivo se sube al instante. Cuando ves la palomita ✅, ya está guardado y seguro
+    · Puedes subir PDF, Word, Excel, imágenes, ZIP. Máximo 50 MB por archivo
+  - Para VER ARCHIVOS ADJUNTOS: el botón del ícono clip muestra el número de archivos (badge)
+  - Para DESCARGAR un archivo: haz clic en el archivo → botón "Descargar". El enlace es válido 60 minutos
 
-â¸ COBRANZA (/cobranza.html)
-  - BotÃ³n "Cobranza" en la barra lateral
-  - Cola inteligente de cuentas por cobrar, ordenada por urgencia (mÃ¡s vencida + mayor monto = primero)
-  - PriorizaciÃ³n automÃ¡tica: CRÃTICO (vencido), URGENTE (â¤7 dÃ­as), NORMAL, SIN VENCIMIENTO
-  - Para usar: selecciona un registro â el sistema muestra el historial del cliente y sugiere un mensaje de cobro
+▸ COBRANZA (/cobranza.html)
+  - Botón "Cobranza" en la barra lateral
+  - Cola inteligente de cuentas por cobrar, ordenada por urgencia (más vencida + mayor monto = primero)
+  - Priorización automática: CRÍTICO (vencido), URGENTE (≤7 días), NORMAL, SIN VENCIMIENTO
+  - Para usar: selecciona un registro → el sistema muestra el historial del cliente y sugiere un mensaje de cobro
   - Puedes usar el mensaje sugerido o editarlo antes de enviarlo
   - Registra cada contacto (llamada, email, WhatsApp) para llevar el historial completo
-  - TambiÃ©n puedes adjuntar archivos a cada cuenta por cobrar (contratos, acuses de recibo)
+  - También puedes adjuntar archivos a cada cuenta por cobrar (contratos, acuses de recibo)
 
-â¸ DOCUMENTOS (/documentos.html)
-  - BotÃ³n "Documentos" en la barra lateral
-  - Repositorio central de archivos de la empresa â todos los documentos en un solo lugar
-  - Para SUBIR: botÃ³n "Subir Archivo" o arrastra directamente a la zona marcada â elige categorÃ­a â espera palomita â
-  - CategorÃ­as disponibles: Factura Emitida, Factura de Proveedor, RequisiciÃ³n, PO, Lead, General
-  - Para BUSCAR: usa la barra de bÃºsqueda en la parte superior â resultados en tiempo real
-  - Para DESCARGAR: clic en el archivo â botÃ³n "Descargar" â el enlace es vÃ¡lido 60 minutos
-  - Formatos soportados: PDF, Word (DOCX), Excel (XLSX), PowerPoint, imÃ¡genes (JPG/PNG), ZIP, RAR, XML, CSV
-  - Diferencia clave: Documentos es el repositorio CENTRAL. AdemÃ¡s, cada registro individual (lead, PO, factura) tiene sus propios archivos adjuntos accesibles desde ese registro
+▸ DOCUMENTOS (/documentos.html)
+  - Botón "Documentos" en la barra lateral
+  - Repositorio central de archivos de la empresa — todos los documentos en un solo lugar
+  - Para SUBIR: botón "Subir Archivo" o arrastra directamente a la zona marcada → elige categoría → espera palomita ✅
+  - Categorías disponibles: Factura Emitida, Factura de Proveedor, Requisición, PO, Lead, General
+  - Para BUSCAR: usa la barra de búsqueda en la parte superior → resultados en tiempo real
+  - Para DESCARGAR: clic en el archivo → botón "Descargar" → el enlace es válido 60 minutos
+  - Formatos soportados: PDF, Word (DOCX), Excel (XLSX), PowerPoint, imágenes (JPG/PNG), ZIP, RAR, XML, CSV
+  - Diferencia clave: Documentos es el repositorio CENTRAL. Además, cada registro individual (lead, PO, factura) tiene sus propios archivos adjuntos accesibles desde ese registro
 
-â¸ SISTEMA DE ARCHIVOS ADJUNTOS (funciona en varios mÃ³dulos)
-  - El Ã­cono ð aparece en: Leads (Pipeline CRM), Ãrdenes de Compra (Compras) y registros de Cobranza
-  - CÃ³mo abrir el cajÃ³n de adjuntos: haz clic en el Ã­cono ð del registro â se abre el panel lateral derecho
+▸ SISTEMA DE ARCHIVOS ADJUNTOS (funciona en varios módulos)
+  - El ícono 📎 aparece en: Leads (Pipeline CRM), Órdenes de Compra (Compras) y registros de Cobranza
+  - Cómo abrir el cajón de adjuntos: haz clic en el ícono 📎 del registro → se abre el panel lateral derecho
   - Para subir: arrastra el archivo al panel o haz clic en "Seleccionar archivo"
-  - Para descargar: clic en el nombre del archivo â botÃ³n "Descargar"
+  - Para descargar: clic en el nombre del archivo → botón "Descargar"
   - Para cerrar: clic en la X del panel o en cualquier lugar fuera del panel
-  - El nÃºmero de archivos aparece como un badge (nÃºmero pequeÃ±o) sobre el Ã­cono ð
-  - MÃ¡ximo 50 MB por archivo. Tipos: PDF, Word, Excel, PowerPoint, imÃ¡genes, ZIP, XML, CSV
+  - El número de archivos aparece como un badge (número pequeño) sobre el ícono 📎
+  - Máximo 50 MB por archivo. Tipos: PDF, Word, Excel, PowerPoint, imágenes, ZIP, XML, CSV
 
-â¸ CEO NERVE CENTER (/ceo.html)
-  - BotÃ³n "CEO" en la barra lateral (requiere rol admin o superior)
-  - 4 directores IA que analizan el negocio desde diferentes Ã¡ngulos:
-    Â· Director de Ventas â analiza pipeline, oportunidades y rendimiento comercial
-    Â· Director de Marketing â revisa campaÃ±as, alcance y posicionamiento de marca
-    Â· Director de Operaciones â evalÃºa eficiencia, procesos y proveedores
-    Â· Director de Finanzas â analiza flujos de caja, mÃ¡rgenes y salud financiera
-  - TambiÃ©n incluye: Pulso Organizacional en tiempo real, Reportes Ejecutivos automÃ¡ticos, KPIs por Ã¡rea
-  - Para usar: selecciona el Director â escribe tu pregunta sobre el negocio â obtÃ©n anÃ¡lisis profesional
-  - Ejemplos de preguntas: "Â¿CuÃ¡l es el estado actual de nuestro pipeline?", "Â¿DÃ³nde debemos enfocar marketing este trimestre?"
+▸ CEO NERVE CENTER (/ceo.html)
+  - Botón "CEO" en la barra lateral (requiere rol admin o superior)
+  - 4 directores IA que analizan el negocio desde diferentes ángulos:
+    · Director de Ventas — analiza pipeline, oportunidades y rendimiento comercial
+    · Director de Marketing — revisa campañas, alcance y posicionamiento de marca
+    · Director de Operaciones — evalúa eficiencia, procesos y proveedores
+    · Director de Finanzas — analiza flujos de caja, márgenes y salud financiera
+  - También incluye: Pulso Organizacional en tiempo real, Reportes Ejecutivos automáticos, KPIs por área
+  - Para usar: selecciona el Director → escribe tu pregunta sobre el negocio → obtén análisis profesional
+  - Ejemplos de preguntas: "¿Cuál es el estado actual de nuestro pipeline?", "¿Dónde debemos enfocar marketing este trimestre?"
 
-â¸ CONSEJO EJECUTIVO IA (/consejo.html)
-  - BotÃ³n "Consejo" en la barra lateral (requiere rol admin o superior)
-  - 5 mesas de decisiÃ³n estratÃ©gica con agentes IA especializados:
-    Â· Mesa de InnovaciÃ³n â ideas para crecer y diferenciarse
-    Â· Mesa Legal y Compliance â aspectos legales y de cumplimiento normativo
-    Â· Mesa de Estrategia â planeaciÃ³n de largo plazo y decisiones crÃ­ticas
-    Â· Mesa de Recursos Humanos â gestiÃ³n de personas, talento y cultura
-    Â· Mesa Financiera â decisiones sobre inversiÃ³n, capital y presupuesto
-  - Para usar: selecciona la mesa â escribe tu pregunta estratÃ©gica â la IA da anÃ¡lisis completo con perspectivas mÃºltiples
-  - Ideal para decisiones importantes: expansiÃ³n, contrataciones clave, cambios de estrategia, inversiones
+▸ CONSEJO EJECUTIVO IA (/consejo.html)
+  - Botón "Consejo" en la barra lateral (requiere rol admin o superior)
+  - 5 mesas de decisión estratégica con agentes IA especializados:
+    · Mesa de Innovación — ideas para crecer y diferenciarse
+    · Mesa Legal y Compliance — aspectos legales y de cumplimiento normativo
+    · Mesa de Estrategia — planeación de largo plazo y decisiones críticas
+    · Mesa de Recursos Humanos — gestión de personas, talento y cultura
+    · Mesa Financiera — decisiones sobre inversión, capital y presupuesto
+  - Para usar: selecciona la mesa → escribe tu pregunta estratégica → la IA da análisis completo con perspectivas múltiples
+  - Ideal para decisiones importantes: expansión, contrataciones clave, cambios de estrategia, inversiones
 
-â¸ EMPRESAS (/empresas.html)
-  - BotÃ³n "Empresas" en la barra lateral (requiere rol admin o super_admin)
+▸ EMPRESAS (/empresas.html)
+  - Botón "Empresas" en la barra lateral (requiere rol admin o super_admin)
   - Muestra todas las empresas del grupo empresarial de IBANOR SA de CV
   - Puedes cambiar entre empresas usando el selector de empresa en la barra superior
-  - Al cambiar de empresa, toda la informaciÃ³n del portal (pipeline, finanzas, compras, etc.) se actualiza para mostrar los datos de esa empresa
-  - Para cambiar de empresa: barra superior â selector de empresa â clic en la empresa deseada
+  - Al cambiar de empresa, toda la información del portal (pipeline, finanzas, compras, etc.) se actualiza para mostrar los datos de esa empresa
+  - Para cambiar de empresa: barra superior → selector de empresa → clic en la empresa deseada
 
-â¸ OPS PANEL (/ops.html)
+▸ OPS PANEL (/ops.html)
   - Panel operativo para usuarios con rol Viewer y Readonly
-  - Los usuarios con rol admin/super_admin son redirigidos automÃ¡ticamente a Home (esto es correcto por diseÃ±o)
-  - Muestra mÃ©tricas operativas bÃ¡sicas de solo lectura
+  - Los usuarios con rol admin/super_admin son redirigidos automáticamente a Home (esto es correcto por diseño)
+  - Muestra métricas operativas básicas de solo lectura
 
-â¸ METAGENIO (este asistente)
-  - Aparece como un chip animado con red neuronal en la esquina inferior derecha de CUALQUIER pÃ¡gina
+▸ METAGENIO (este asistente)
+  - Aparece como un chip animado con red neuronal en la esquina inferior derecha de CUALQUIER página
   - Clic para abrir/cerrar el chat
   - Tres modos disponibles (selector en la parte superior del chat):
-    Â· MetaGenio â conoce todo el portal; pregÃºntale cualquier cosa sobre cÃ³mo funciona
-    Â· MetaFollow â especialista en seguimiento; te dice quÃ© clientes contactar hoy y con quÃ© mensaje
-    Â· Dalipx â experto en MetaTronix; responde preguntas sobre productos y propuesta de valor
-  - BotÃ³n de recarga (âº) en el header del chat para iniciar nueva conversaciÃ³n
-  - El historial se guarda automÃ¡ticamente por usuario y por sesiÃ³n
+    · MetaGenio — conoce todo el portal; pregúntale cualquier cosa sobre cómo funciona
+    · MetaFollow — especialista en seguimiento; te dice qué clientes contactar hoy y con qué mensaje
+    · Dalipx — experto en MetaTronix; responde preguntas sobre productos y propuesta de valor
+  - Botón de recarga (↺) en el header del chat para iniciar nueva conversación
+  - El historial se guarda automáticamente por usuario y por sesión
 
-ââââââââââââââââââââââââââââââââââââââââ
+════════════════════════════════════════
 CAPACIDADES DE METAGENIO
-ââââââââââââââââââââââââââââââââââââââââ
-- Explicas cÃ³mo usar cualquier funciÃ³n del portal PASO A PASO con instrucciones exactas
-- Respondes preguntas sobre MetaTronix basÃ¡ndote en los documentos y sitios web cargados
-- Ayudas con leads: redacciÃ³n de emails, estrategia de seguimiento, anÃ¡lisis de probabilidad de cierre
-- Ayudas con documentos: quÃ© tipo usar, cÃ³mo estructurar el prompt, quÃ© incluir
-- Orientas al usuario hacia la secciÃ³n correcta cuando no saben dÃ³nde ir
+════════════════════════════════════════
+- Explicas cómo usar cualquier función del portal PASO A PASO con instrucciones exactas
+- Respondes preguntas sobre MetaTronix basándote en los documentos y sitios web cargados
+- Ayudas con leads: redacción de emails, estrategia de seguimiento, análisis de probabilidad de cierre
+- Ayudas con documentos: qué tipo usar, cómo estructurar el prompt, qué incluir
+- Orientas al usuario hacia la sección correcta cuando no saben dónde ir
 
-INSTRUCCIÃN ESPECIAL â NAVEGACIÃN:
-Si el usuario quiere ir a una secciÃ³n especÃ­fica, incluye al final de tu respuesta una lÃ­nea con este formato exacto (SIN texto adicional en esa lÃ­nea):
+INSTRUCCIÓN ESPECIAL — NAVEGACIÓN:
+Si el usuario quiere ir a una sección específica, incluye al final de tu respuesta una línea con este formato exacto (SIN texto adicional en esa línea):
 [NAV:/ruta.html]
-Ejemplo: si el usuario dice "llÃ©vame a leads", incluye al final: [NAV:/leads.html]
-Solo incluye [NAV:...] si el usuario pide explÃ­citamente navegar o ir a una secciÃ³n.
+Ejemplo: si el usuario dice "llévame a leads", incluye al final: [NAV:/leads.html]
+Solo incluye [NAV:...] si el usuario pide explícitamente navegar o ir a una sección.
 
 SOBRE METATRONIX Y SUBSIDIARIAS:
 - Portal interno de IBANOR SA de CV
 - Contacto admin: acanales@ibanormexico.com
 ${estudiosText}${sitesText}${sharedDocsText}${approvedText}${kbText}
 
-ââââââââââââââââââââââââââââââââââââââââ
+════════════════════════════════════════
 REGLAS DE COMPORTAMIENTO
-ââââââââââââââââââââââââââââââââââââââââ
-1. FUENTE EXCLUSIVA para info de la empresa: usa solo las fuentes documentadas arriba. Para el portal, usa la guÃ­a de esta instrucciÃ³n.
+════════════════════════════════════════
+1. FUENTE EXCLUSIVA para info de la empresa: usa solo las fuentes documentadas arriba. Para el portal, usa la guía de esta instrucción.
 2. Si preguntan sobre MetaTronix y no tienes la info: "No tengo eso en mis fuentes. Puedes subir el documento en Docs MTX."
-3. ${isAdmin ? 'Como admin, puedes ver informaciÃ³n completa de todos los usuarios.' : 'No menciones datos de otros usuarios.'}
-4. Respuestas claras. Usa listas numeradas para instrucciones paso a paso. Usa listas con viÃ±etas para opciones.
+3. ${isAdmin ? 'Como admin, puedes ver información completa de todos los usuarios.' : 'No menciones datos de otros usuarios.'}
+4. Respuestas claras. Usa listas numeradas para instrucciones paso a paso. Usa listas con viñetas para opciones.
 5. Nunca compartas datos personales de otros colaboradores.
-6. Si el usuario parece perdido, pregÃºntale quÃ© quiere lograr y guÃ­alo proactivamente.
-${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aÃºn. Responde sobre el portal usando la guÃ­a anterior.' : ''}`;
+6. Si el usuario parece perdido, pregúntale qué quiere lograr y guíalo proactivamente.
+${!hasAnyKnowledge ? '\nNOTA: Sin documentos ni sitios web cargados aún. Responde sobre el portal usando la guía anterior.' : ''}`;
   }
 
-  /* ââ MetaFollow system prompt ââââââââââââââââââââââââââââ */
+  /* ── MetaFollow system prompt ──────────────────────────── */
   function buildMetaFollowPrompt () {
     const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador';
     let pipelineText = '';
     if (pipelineState?.leads?.length) {
-      pipelineText = '\n\nââââââââ ESTADO ACTUAL DEL PIPELINE ââââââââ\n';
+      pipelineText = '\n\n════════ ESTADO ACTUAL DEL PIPELINE ════════\n';
       const now = new Date();
       pipelineState.leads.forEach(l => {
         const fecha = l.fecha_seguimiento ? new Date(l.fecha_seguimiento) : null;
         const diasRestantes = fecha ? Math.ceil((fecha - now) / 86400000) : null;
-        const urgencia = diasRestantes !== null ? (diasRestantes < 0 ? 'ð´ VENCIDO' : diasRestantes <= 3 ? 'ð¡ URGENTE' : 'ð¢') : 'âª';
+        const urgencia = diasRestantes !== null ? (diasRestantes < 0 ? '🔴 VENCIDO' : diasRestantes <= 3 ? '🟡 URGENTE' : '🟢') : '⚪';
         pipelineText += `${urgencia} ${l.empresa} | ${l.etapa} | $${(l.valor_estimado||0).toLocaleString()} | ${fecha ? fecha.toLocaleDateString('es-MX') : 'Sin fecha'}\n`;
       });
       const total = pipelineState.leads.reduce((s, l) => s + (l.valor_estimado || 0), 0);
       pipelineText += `\nTOTAL PIPELINE: $${total.toLocaleString()} MXN | ${pipelineState.leads.length} leads activos\n`;
     }
-    return `Eres MetaFollow, el Agente de Seguimiento y CoordinaciÃ³n de MetaTronix.
+    return `Eres MetaFollow, el Agente de Seguimiento y Coordinación de MetaTronix.
 
-IDENTIDAD: Especialista en seguimiento de prospectos, coordinaciÃ³n entre equipos y actualizaciÃ³n del pipeline. Trabajas de la mano con el Orquestador de Ventas (en ventas.html) y el Orquestador de Marketing (en marketing.html). Eres directo, orientado a acciÃ³n, con respuestas concretas y ejecutables.
+IDENTIDAD: Especialista en seguimiento de prospectos, coordinación entre equipos y actualización del pipeline. Trabajas de la mano con el Orquestador de Ventas (en ventas.html) y el Orquestador de Marketing (en marketing.html). Eres directo, orientado a acción, con respuestas concretas y ejecutables.
 
 USUARIO: ${userName}
 
 TUS FUNCIONES PRINCIPALES:
 1. Reportar el estado del pipeline de ventas en tiempo real
 2. Identificar leads que necesitan seguimiento urgente
-3. Coordinar con el Orquestador de Ventas: envÃ­a resÃºmenes de pipeline, sugiere acciones de cierre
-4. Coordinar con el Orquestador de Marketing: reporta quÃ© leads llegaron por cada canal, quÃ© campaÃ±as estÃ¡n activas
+3. Coordinar con el Orquestador de Ventas: envía resúmenes de pipeline, sugiere acciones de cierre
+4. Coordinar con el Orquestador de Marketing: reporta qué leads llegaron por cada canal, qué campañas están activas
 5. Generar secuencias de seguimiento (email, WhatsApp, llamada) personalizadas
-6. Resumir quÃ© han hecho los agentes de ventas y marketing recientemente
+6. Resumir qué han hecho los agentes de ventas y marketing recientemente
 ${pipelineText}
 ORQUESTADORES DISPONIBLES:
-- Orquestador de Ventas â en /ventas.html â dirige 10 agentes: Prospector, Calificador, Descubridor, Presentador, Negociador, Cerrador, Propuesta IA, Seguimiento IA, WBR Pipeline AI
-- Orquestador de Marketing â en /marketing.html â dirige 14 agentes: Observador, Narrador, Director, Motor, Conversor, Aprendizaje, Video IA, Imagen IA, Simulador Social
+- Orquestador de Ventas → en /ventas.html → dirige 10 agentes: Prospector, Calificador, Descubridor, Presentador, Negociador, Cerrador, Propuesta IA, Seguimiento IA, WBR Pipeline AI
+- Orquestador de Marketing → en /marketing.html → dirige 14 agentes: Observador, Narrador, Director, Motor, Conversor, Aprendizaje, Video IA, Imagen IA, Simulador Social
 
 REGLAS:
-1. Siempre responde en espaÃ±ol, con acciones especÃ­ficas y ejecutables
-2. Para actualizaciones del Orquestador: sugiere quÃ© comunicar y cÃ³mo, y proporciona el mensaje listo para copiar/pegar
+1. Siempre responde en español, con acciones específicas y ejecutables
+2. Para actualizaciones del Orquestador: sugiere qué comunicar y cómo, y proporciona el mensaje listo para copiar/pegar
 3. Prioriza siempre por urgencia (leads vencidos > leads urgentes > leads normales)
-4. Cuando no tengas datos en tiempo real, indÃ­calo claramente y sugiere dÃ³nde verificar`;
+4. Cuando no tengas datos en tiempo real, indícalo claramente y sugiere dónde verificar`;
   }
 
-  /* ââ Dalipx system prompt âââââââââââââââââââââââââââââ */
+  /* ── Dalipx system prompt ───────────────────────────── */
   function buildDalipxPrompt () {
     const userName = currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador';
     let mtxKnowledge = '';
     if (websiteSources.length) {
-      websiteSources.forEach(s => { mtxKnowledge += `\nâ¸ ${s.title}:\n${s.content}\n`; });
+      websiteSources.forEach(s => { mtxKnowledge += `\n▸ ${s.title}:\n${s.content}\n`; });
     }
     if (sharedDocs.length) {
-      sharedDocs.filter(d => d.text_content).forEach(d => { mtxKnowledge += `\nâ¸ ${d.title}:\n${d.text_content?.slice(0,2000)}\n`; });
+      sharedDocs.filter(d => d.text_content).forEach(d => { mtxKnowledge += `\n▸ ${d.title}:\n${d.text_content?.slice(0,2000)}\n`; });
     }
     return `Eres Dalipx, el Especialista de Marca MetaTronix.
 
-IDENTIDAD: Agente de conocimiento profundo sobre MetaTronix e IBANOR SA de CV. Tu Ãºnico propÃ³sito es responder preguntas sobre MetaTronix: productos, servicios, subsidiarias, procesos internos, cultura, propuesta de valor y estrategia comercial.
+IDENTIDAD: Agente de conocimiento profundo sobre MetaTronix e IBANOR SA de CV. Tu único propósito es responder preguntas sobre MetaTronix: productos, servicios, subsidiarias, procesos internos, cultura, propuesta de valor y estrategia comercial.
 
 USUARIO: ${userName}
 
 REGLA ABSOLUTA: Solo hablas de MetaTronix, IBANOR SA de CV, y sus subsidiarias y productos.
-Si alguien pregunta sobre cualquier otro tema (polÃ­tica, deportes, tecnologÃ­a general, competidores, etc.), respondes amablemente:
-"Soy Dalipx, especialista exclusivo de MetaTronix. Solo puedo ayudarte con preguntas sobre MetaTronix, IBANOR SA de CV, sus productos y servicios. Â¿En quÃ© aspecto de MetaTronix puedo ayudarte?"
+Si alguien pregunta sobre cualquier otro tema (política, deportes, tecnología general, competidores, etc.), respondes amablemente:
+"Soy Dalipx, especialista exclusivo de MetaTronix. Solo puedo ayudarte con preguntas sobre MetaTronix, IBANOR SA de CV, sus productos y servicios. ¿En qué aspecto de MetaTronix puedo ayudarte?"
 
-ÃREAS DE CONOCIMIENTO METATRONIX:
+ÁREAS DE CONOCIMIENTO METATRONIX:
 - Productos y servicios de MetaTronix e IBANOR SA de CV
-- Subsidiarias y su propÃ³sito
+- Subsidiarias y su propósito
 - Propuesta de valor y diferenciadores competitivos
 - Procesos internos de ventas, marketing y operaciones
 - Cultura organizacional y valores de la empresa
-- Portal interno metatronixleads.tech y sus mÃ³dulos
+- Portal interno metatronixleads.tech y sus módulos
 - Agentes MetaGenio y MetaFollow (colaboran contigo en el mismo panel)
-- PolÃ­ticas, procedimientos y documentos oficiales
-${mtxKnowledge ? '\nââââ CONOCIMIENTO OFICIAL METATRONIX ââââ\n' + mtxKnowledge : ''}
-TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca especules sobre MetaTronix si no tienes la informaciÃ³n â di claramente que no tienes ese dato y sugiere consultar con el equipo o subir el documento en Docs MTX.`;
+- Políticas, procedimientos y documentos oficiales
+${mtxKnowledge ? '\n════ CONOCIMIENTO OFICIAL METATRONIX ════\n' + mtxKnowledge : ''}
+TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca especules sobre MetaTronix si no tienes la información — di claramente que no tienes ese dato y sugiere consultar con el equipo o subir el documento en Docs MTX.`;
   }
 
-  /* ââ Detectar pÃ¡gina actual âââââââââââââââââââââââââââââââ */
+  /* ── Detectar página actual ─────────────────────────────── */
   function detectPage () {
     const path = window.location.pathname;
     const pages = {
       '/home.html':      { name: 'Home',       desc: 'Panel de inicio con KPIs personales, leads urgentes y resumen del portal.' },
-      '/dashboard.html': { name: 'Adm. Docs para Venta', desc: 'Vista general con documentos generados y su estado de revisiÃ³n.' },
-      '/generate.html':  { name: 'Generar',    desc: 'MÃ³dulo para crear documentos con IA: propuestas, contratos, cotizaciones.' },
-      '/leads.html':     { name: 'Leads',      desc: 'GestiÃ³n de prospectos y clientes de ventas con Kanban y KPIs personales.' },
-      '/admin.html':     { name: 'Admin',      desc: 'Panel de administraciÃ³n: usuarios, alertas, configuraciÃ³n del portal.' },
+      '/dashboard.html': { name: 'Adm. Docs para Venta', desc: 'Vista general con documentos generados y su estado de revisión.' },
+      '/generate.html':  { name: 'Generar',    desc: 'Módulo para crear documentos con IA: propuestas, contratos, cotizaciones.' },
+      '/leads.html':     { name: 'Leads',      desc: 'Gestión de prospectos y clientes de ventas con Kanban y KPIs personales.' },
+      '/admin.html':     { name: 'Admin',      desc: 'Panel de administración: usuarios, alertas, configuración del portal.' },
       '/mtx-docs.html':  { name: 'Docs MTX',   desc: 'Biblioteca de documentos compartidos. Todos los usuarios pueden subir archivos.' },
-      '/oportunidades.html': { name: 'Oportunidades', desc: 'Inteligencia de ventas: leads, mercado, anÃ¡lisis de sector.' },
-      '/':               { name: 'Login',      desc: 'PÃ¡gina de acceso al portal.' },
-      '/index.html':     { name: 'Login',      desc: 'PÃ¡gina de acceso al portal.' },
+      '/oportunidades.html': { name: 'Oportunidades', desc: 'Inteligencia de ventas: leads, mercado, análisis de sector.' },
+      '/':               { name: 'Login',      desc: 'Página de acceso al portal.' },
+      '/index.html':     { name: 'Login',      desc: 'Página de acceso al portal.' },
     };
-    return pages[path] || { name: path, desc: 'PÃ¡gina del portal.' };
+    return pages[path] || { name: path, desc: 'Página del portal.' };
   }
 
-  /* ââ Cargar historial reciente ââââââââââââââââââââââââââââ */
+  /* ── Cargar historial reciente ──────────────────────────── */
   async function loadRecentHistory () {
     if (!db || !currentUser) return;
     try {
@@ -855,7 +855,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     const diffDays = Math.floor((now - d) / 86400000);
     if (diffDays === 0) return 'hoy, ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
     if (diffDays === 1) return 'ayer';
-    if (diffDays < 7)  return `hace ${diffDays} dÃ­as`;
+    if (diffDays < 7)  return `hace ${diffDays} días`;
     return d.toLocaleDateString('es-MX', { day:'numeric', month:'short' });
   }
 
@@ -868,10 +868,10 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     msgBox.querySelector('.agent-welcome')?.remove();
     msgBox.querySelector('.agent-quick-actions')?.remove();
 
-    // Separador "ConversaciÃ³n anterior"
+    // Separador "Conversación anterior"
     const sep = document.createElement('div');
     sep.className = 'history-sep';
-    sep.innerHTML = `<span>Historial Â· ${formatHistoryDate(lastDate)}</span>`;
+    sep.innerHTML = `<span>Historial · ${formatHistoryDate(lastDate)}</span>`;
     msgBox.appendChild(sep);
 
     histMsgs.forEach(m => {
@@ -880,14 +880,14 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
       }
     });
 
-    // Separador "SesiÃ³n actual"
+    // Separador "Sesión actual"
     const sep2 = document.createElement('div');
     sep2.className = 'history-sep history-sep-new';
-    sep2.innerHTML = `<span>SesiÃ³n actual</span>`;
+    sep2.innerHTML = `<span>Sesión actual</span>`;
     msgBox.appendChild(sep2);
   }
 
-  /* ââ Guardar conversaciÃ³n âââââââââââââââââââââââââââââââââ */
+  /* ── Guardar conversación ───────────────────────────────── */
   async function saveConversation () {
     if (!db || !currentUser) return;
     const topic = detectTopic();
@@ -914,7 +914,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     return 'general';
   }
 
-  /* ââ Call Claude via proxy ââââââââââââââââââââââââââââââââ */
+  /* ── Call Claude via proxy ──────────────────────────────── */
   async function callClaude (userMessage) {
     const proxyUrl = window.MTX_CONFIG?.CLAUDE_PROXY_URL;
     if (!proxyUrl) return 'Error: proxy no configurado.';
@@ -925,7 +925,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     const contextMsgs = messages.slice(-HISTORY_LIMIT);
 
     try {
-      // Inyectar JWT de Supabase para autenticaciÃ³n con el Worker v2
+      // Inyectar JWT de Supabase para autenticación con el Worker v2
       let _authH = {};
       try {
         if (db) {
@@ -963,7 +963,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop(); // Ãºltimo fragmento incompleto
+        buffer = lines.pop(); // último fragmento incompleto
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const chunk = line.slice(6).trim();
@@ -982,14 +982,14 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     } catch (e) {
       const isAuthErr = e.message && (e.message.includes('401') || e.message.includes('authentication') || e.message.includes('api-key'));
       const reply = isAuthErr
-        ? 'MetaGenio estÃ¡ pendiente de activaciÃ³n. El administrador debe configurar la API key. Contacta a acanales@ibanormexico.com.'
-        : 'OcurriÃ³ un error al conectar con MetaGenio. Intenta de nuevo en un momento.';
+        ? 'MetaGenio está pendiente de activación. El administrador debe configurar la API key. Contacta a acanales@ibanormexico.com.'
+        : 'Ocurrió un error al conectar con MetaGenio. Intenta de nuevo en un momento.';
       messages.push({ role: 'assistant', content: reply });
       return reply;
     }
   }
 
-  /* ââ Render markdown bÃ¡sico âââââââââââââââââââââââââââââââ */
+  /* ── Render markdown básico ─────────────────────────────── */
   function renderMarkdown (text) {
     return text
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1005,7 +1005,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
       .replace(/\n/g, '<br>');
   }
 
-  /* ââ Build UI âââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Build UI ───────────────────────────────────────────── */
   function buildUI () {
     // Trigger button
     const btn = document.createElement('button');
@@ -1029,14 +1029,14 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
           ${metaGenioSVG('mgenio-header')}
         </div>
         <div class="agent-header-info">
-          <div class="agent-name">${AGENT_NAME} Â· ${AGENT_ROLE}</div>
+          <div class="agent-name">${AGENT_NAME} · ${AGENT_ROLE}</div>
           <div class="agent-status">
             <span class="agent-status-dot"></span>
-            En lÃ­nea Â· MetaTronix Intelligence
+            En línea · MetaTronix Intelligence
           </div>
         </div>
         <div class="agent-header-actions">
-          <button class="agent-header-btn" id="agent-clear-btn" title="Nueva conversaciÃ³n">
+          <button class="agent-header-btn" id="agent-clear-btn" title="Nueva conversación">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <polyline points="1 4 1 10 7 10"/>
               <path d="M3.51 15a9 9 0 1 0 .49-4.51"/>
@@ -1055,24 +1055,24 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
       <!-- Messages -->
       <div class="agent-messages" id="agent-messages">
         <div class="agent-welcome">
-          <div class="agent-welcome-title">ð Â¡Hola! Parece que estÃ¡s trabajando en MetaTronix.</div>
+          <div class="agent-welcome-title">📎 ¡Hola! Parece que estás trabajando en MetaTronix.</div>
           <div class="agent-welcome-text">
             Soy MetaGenio, tu agente de seguimiento. Puedo ayudarte con documentos, prospectos,
-            el portal y cualquier duda sobre MetaTronix. Â¿Necesitas ayuda?
+            el portal y cualquier duda sobre MetaTronix. ¿Necesitas ayuda?
           </div>
         </div>
         <div class="agent-quick-actions" id="agent-quick-actions">
-          <button class="quick-action-btn" data-icon="ð" data-msg="Â¿CÃ³mo subo un documento en Docs MTX? ExplÃ­came paso a paso.">
-            Â¿CÃ³mo subo un documento?
+          <button class="quick-action-btn" data-icon="📂" data-msg="¿Cómo subo un documento en Docs MTX? Explícame paso a paso.">
+            ¿Cómo subo un documento?
           </button>
-          <button class="quick-action-btn" data-icon="ð¯" data-msg="Â¿CÃ³mo registro un nuevo lead? ExplÃ­came todos los campos y pasos.">
-            Â¿CÃ³mo agrego un lead?
+          <button class="quick-action-btn" data-icon="🎯" data-msg="¿Cómo registro un nuevo lead? Explícame todos los campos y pasos.">
+            ¿Cómo agrego un lead?
           </button>
-          <button class="quick-action-btn" data-icon="ð" data-msg="Â¿CÃ³mo genero un documento con IA? Dame el proceso completo paso a paso.">
-            Â¿CÃ³mo genero documentos?
+          <button class="quick-action-btn" data-icon="📄" data-msg="¿Cómo genero un documento con IA? Dame el proceso completo paso a paso.">
+            ¿Cómo genero documentos?
           </button>
-          <button class="quick-action-btn" data-icon="ð¢" data-msg="Â¿QuÃ© hace MetaTronix y cuÃ¡les son sus subsidiarias y productos?">
-            Â¿QuÃ© hace MetaTronix?
+          <button class="quick-action-btn" data-icon="🏢" data-msg="¿Qué hace MetaTronix y cuáles son sus subsidiarias y productos?">
+            ¿Qué hace MetaTronix?
           </button>
         </div>
       </div>
@@ -1081,7 +1081,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
       <div class="agent-input-area">
         <textarea
           id="mtx-agent-input"
-          placeholder="Escribe tu preguntaâ¦"
+          placeholder="Escribe tu pregunta…"
           rows="1"
           autocomplete="off"
           maxlength="2000"
@@ -1092,7 +1092,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
           </svg>
         </button>
       </div>
-      <div class="agent-footer-note">CLIPPY Â· METATRONIX Â· POWERED BY CLAUDE AI</div>
+      <div class="agent-footer-note">CLIPPY · METATRONIX · POWERED BY CLAUDE AI</div>
     `;
 
     document.body.appendChild(btn);
@@ -1100,7 +1100,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     initAgentDrag(btn, panel);
   }
 
-  /* ââ Draggable MetaGenio âââââââââââââââââââââââââââââââââââ */
+  /* ── Draggable MetaGenio ─────────────────────────────────── */
   function initAgentDrag(btn, panel) {
     const THRESH = 4, POS_KEY = 'mtx_agent_pos';
 
@@ -1188,7 +1188,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     function clampY(y) { return Math.max(0, Math.min(window.innerHeight - (btn.offsetHeight || 88), y)); }
   }
 
-  /* ââ Bind events ââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Bind events ────────────────────────────────────────── */
   function bindEvents () {
     const btn    = document.getElementById('mtx-agent-btn');
     const panel  = document.getElementById('mtx-agent-panel');
@@ -1202,8 +1202,8 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
       tab.addEventListener('click', () => switchMode(tab.dataset.mode));
     });
 
-    // Toggle panel â initAgentDrag handles pointerup (includes non-drag clicks).
-    // NO click listener here â it would fire AFTER pointerup causing a double-toggle
+    // Toggle panel — initAgentDrag handles pointerup (includes non-drag clicks).
+    // NO click listener here — it would fire AFTER pointerup causing a double-toggle
     // that makes the panel open and immediately close. initAgentDrag's pointerup
     // already calls togglePanel() for all clicks (pointer + touch + keyboard).
     // Fallback for keyboards only (Enter/Space on focused button):
@@ -1256,7 +1256,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     });
   }
 
-  /* ââ Toggle panel âââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Toggle panel ───────────────────────────────────────── */
   function togglePanel (force) {
     const btn   = document.getElementById('mtx-agent-btn');
     const panel = document.getElementById('mtx-agent-panel');
@@ -1278,34 +1278,34 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     }
   }
 
-  /* ââ Mensaje de intro personalizado ââââââââââââââââââââââ */
+  /* ── Mensaje de intro personalizado ────────────────────── */
   function sendIntroMessage () {
     const name  = (currentUser?.profile?.full_name || currentUser?.email?.split('@')[0] || 'colaborador').split(' ')[0];
     const page  = detectPage();
     const isReturning = historyLoaded && messages.length > 0;
 
     const intro = isReturning
-      ? `Â¡Hola de nuevo, **${name}**! ð Retomamos donde lo dejamos.\n\nEstÃ¡s en **${page.name}**. Recuerda que puedo:\n- ð Explicarte cualquier funciÃ³n del portal paso a paso\n- ð§­ Guiarte a la secciÃ³n correcta\n- ð Ayudarte con leads, documentos y oportunidades\n- ð¡ Responder preguntas sobre MetaTronix y sus productos\n\nÂ¿En quÃ© te ayudo hoy?`
-      : `Â¡Hola, **${name}**! ð Soy **MetaGenio**, tu asistente inteligente de MetaTronix.\n\nEstÃ¡s en **${page.name}**. AquÃ­ te cuento cÃ³mo puedo ayudarte:\n\n- ð§­ **Navegar el portal** â te explico cada secciÃ³n paso a paso\n- ð **Documentos** â cÃ³mo generarlos, editarlos y enviarlos a revisiÃ³n\n- ð¯ **Leads** â registrar prospectos, dar seguimiento y usar el Kanban\n- ð **Docs MTX** â cÃ³mo subir y consultar archivos compartidos\n- ðª **Oportunidades** â cÃ³mo usar la inteligencia de ventas\n- ð¢ **MetaTronix** â informaciÃ³n de la empresa, productos y subsidiarias\n\nPuedes preguntarme cualquier cosa con tus propias palabras. Â¿Por dÃ³nde empezamos?`;
+      ? `¡Hola de nuevo, **${name}**! 👋 Retomamos donde lo dejamos.\n\nEstás en **${page.name}**. Recuerda que puedo:\n- 📋 Explicarte cualquier función del portal paso a paso\n- 🧭 Guiarte a la sección correcta\n- 📂 Ayudarte con leads, documentos y oportunidades\n- 💡 Responder preguntas sobre MetaTronix y sus productos\n\n¿En qué te ayudo hoy?`
+      : `¡Hola, **${name}**! 👋 Soy **MetaGenio**, tu asistente inteligente de MetaTronix.\n\nEstás en **${page.name}**. Aquí te cuento cómo puedo ayudarte:\n\n- 🧭 **Navegar el portal** — te explico cada sección paso a paso\n- 📄 **Documentos** — cómo generarlos, editarlos y enviarlos a revisión\n- 🎯 **Leads** — registrar prospectos, dar seguimiento y usar el Kanban\n- 📂 **Docs MTX** — cómo subir y consultar archivos compartidos\n- 🪙 **Oportunidades** — cómo usar la inteligencia de ventas\n- 🏢 **MetaTronix** — información de la empresa, productos y subsidiarias\n\nPuedes preguntarme cualquier cosa con tus propias palabras. ¿Por dónde empezamos?`;
 
     appendMessage('agent', intro);
   }
 
-  /* ââ Send message âââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Send message ───────────────────────────────────────── */
   async function sendMessage (overrideText) {
     const input = document.getElementById('mtx-agent-input');
     const text  = overrideText || input?.value?.trim();
     if (!text || isTyping) return;
 
-    // ââ Verificar acceso a Claude ââââââââââââââââââââââââââ
+    // ── Verificar acceso a Claude ──────────────────────────
     if (currentUser?.id && typeof checkClaudeAccess === 'function') {
       const access = await checkClaudeAccess(currentUser.id);
       if (!access.allowed) {
         if (input && !overrideText) { input.value = ''; input.style.height = 'auto'; }
         const msgs = {
-          disabled:     'ð« El acceso a MetaGenio (Claude) estÃ¡ deshabilitado por el administrador.',
-          pending_auth: 'â³ Alcanzaste tu lÃ­mite mensual. Tu solicitud de autorizaciÃ³n fue enviada al SuperAdmin.',
-          limit_reached:`â ï¸ LÃ­mite mensual alcanzado (${access.used}/${access.limit} usos). Solicitud enviada al administrador.`,
+          disabled:     '🚫 El acceso a MetaGenio (Claude) está deshabilitado por el administrador.',
+          pending_auth: '⏳ Alcanzaste tu límite mensual. Tu solicitud de autorización fue enviada al SuperAdmin.',
+          limit_reached:`⚠️ Límite mensual alcanzado (${access.used}/${access.limit} usos). Solicitud enviada al administrador.`,
         };
         appendMessage('agent', msgs[access.reason] || 'Sin acceso a Claude en este momento.');
         return;
@@ -1329,7 +1329,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     hideTyping();
     setMetaGenioTalking(false);
 
-    // Detectar comando de navegaciÃ³n [NAV:/url]
+    // Detectar comando de navegación [NAV:/url]
     const navMatch = reply.match(/\[NAV:(\/[^\]]+)\]/);
     const cleanReply = reply.replace(/\[NAV:\/[^\]]+\]/g, '').trim();
     appendMessage('agent', cleanReply);
@@ -1340,7 +1340,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
         const navNote = document.createElement('div');
         navNote.className = 'nav-pill';
         navNote.innerHTML = `
-          <span>LlevÃ¡ndote a <strong>${targetUrl.replace('/','').replace('.html','')}</strong>â¦</span>`;
+          <span>Llevándote a <strong>${targetUrl.replace('/','').replace('.html','')}</strong>…</span>`;
         document.getElementById('agent-messages')?.appendChild(navNote);
         scrollMessages();
         setTimeout(() => { window.location.href = targetUrl; }, 900);
@@ -1348,7 +1348,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     }
 
     // Incrementar uso Claude si la llamada fue exitosa
-    if (currentUser?.id && typeof incrementClaudeUsage === 'function' && reply && !reply.startsWith('OcurriÃ³ un error')) {
+    if (currentUser?.id && typeof incrementClaudeUsage === 'function' && reply && !reply.startsWith('Ocurrió un error')) {
       incrementClaudeUsage(currentUser.id).catch(() => {});
     }
 
@@ -1356,7 +1356,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     isTyping = false;
   }
 
-  /* ââ Append message âââââââââââââââââââââââââââââââââââââââ */
+  /* ── Append message ─────────────────────────────────────── */
   function appendMessage (role, text, isHistory = false) {
     const msgBox = document.getElementById('agent-messages');
     if (!msgBox) return;
@@ -1384,7 +1384,7 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     scrollMessages();
   }
 
-  /* ââ Typing indicator âââââââââââââââââââââââââââââââââââââ */
+  /* ── Typing indicator ───────────────────────────────────── */
   function showTyping () {
     const msgBox = document.getElementById('agent-messages');
     if (!msgBox) return;
@@ -1404,13 +1404,13 @@ TONO: Experto, confiado, representante orgulloso de la marca MetaTronix. Nunca e
     document.getElementById('agent-typing')?.remove();
   }
 
-  /* ââ Scroll messages ââââââââââââââââââââââââââââââââââââââ */
+  /* ── Scroll messages ────────────────────────────────────── */
   function scrollMessages () {
     const msgBox = document.getElementById('agent-messages');
     if (msgBox) setTimeout(() => { msgBox.scrollTop = msgBox.scrollHeight; }, 50);
   }
 
-  /* ââ Boot âââââââââââââââââââââââââââââââââââââââââââââââââ */
+  /* ── Boot ───────────────────────────────────────────────── */
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
