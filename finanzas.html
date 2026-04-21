@@ -175,6 +175,25 @@
     .page-title-block h1 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.05em; color:var(--text); margin:0; }
     .page-title-block p  { font-size:12px; color:var(--text-muted); margin:2px 0 0; }
 
+    /* ── Finanzas KB Panel ── */
+    .fin-kb-panel {
+      background:linear-gradient(135deg,#0a1628 0%,#0d1f3c 100%);
+      border:1px solid rgba(0,255,136,.15); border-radius:10px;
+      padding:16px 20px; display:none;
+    }
+    .fin-kb-panel.open { display:block; }
+    .fin-kb-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
+    @media(max-width:900px){ .fin-kb-grid { grid-template-columns:1fr; } }
+    .fin-kb-field { display:flex; flex-direction:column; gap:5px; }
+    .fin-kb-field label { font-size:10px; font-weight:700; color:rgba(0,255,136,.6); letter-spacing:.08em; text-transform:uppercase; }
+    .fin-kb-field textarea,.fin-kb-field input {
+      border:1px solid rgba(0,255,136,.18); background:rgba(0,255,136,.04);
+      color:#e2e8f0; border-radius:6px; padding:8px 10px;
+      font-family:'DM Sans',sans-serif; font-size:12px; resize:none; outline:none;
+    }
+    .fin-kb-field textarea::placeholder,.fin-kb-field input::placeholder { color:rgba(255,255,255,.3); }
+    .fin-kb-field textarea:focus,.fin-kb-field input:focus { border-color:var(--accent); }
+
     /* ── Section header ── */
     .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
     .section-title { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:.05em; color:var(--text); }
@@ -266,6 +285,7 @@ async function init() {
     document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'finanzas');
   }
   if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+  setTimeout(initFinKB, 80);
 
   // Set default dates
   const today = new Date().toISOString().split('T')[0];
@@ -293,8 +313,41 @@ function buildShell() {
             <p>Cuentas por cobrar · Cuentas por pagar · Flujo de caja · Copiloto financiero IA</p>
           </div>
           <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn-secondary-sm" onclick="toggleFinKB()" style="background:rgba(0,255,136,.07);border-color:rgba(0,255,136,.2);color:var(--accent)">🧠 KB</button>
             <button class="btn-secondary-sm" onclick="loadAll()" id="btn-refresh">↺ Actualizar</button>
             <button class="btn-copiloto" onclick="openModal('modal-invoice')">+ Nueva CXC</button>
+          </div>
+        </div>
+
+        <!-- Finanzas Knowledge Base Panel -->
+        <div class="fin-kb-panel" id="fin-kb-panel">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">🧠 Contexto Financiero — Knowledge Base</div>
+          <div style="font-size:11px;color:var(--text-faint)">Este contexto se inyecta en el copiloto IA para análisis más precisos y relevantes.</div>
+          <div class="fin-kb-grid">
+            <div class="fin-kb-field">
+              <label>Empresa</label>
+              <input id="fin-kb-empresa" placeholder="IBANOR SA de CV / MetaTronix">
+            </div>
+            <div class="fin-kb-field">
+              <label>Sector / Giro</label>
+              <input id="fin-kb-sector" placeholder="SaaS B2B · Software empresarial">
+            </div>
+            <div class="fin-kb-field">
+              <label>Política de crédito</label>
+              <input id="fin-kb-credito" placeholder="Net 30, factura mensual, anticipos 50%">
+            </div>
+            <div class="fin-kb-field" style="grid-column:span 2">
+              <label>Modelo de facturación</label>
+              <textarea id="fin-kb-modelo" rows="2" placeholder="Subscripción mensual, contratos anuales, proyectos por factura. Moneda: MXN y USD. IVA 16%."></textarea>
+            </div>
+            <div class="fin-kb-field">
+              <label>Prioridades financieras</label>
+              <textarea id="fin-kb-prioridades" rows="2" placeholder="Reducir CXC vencida, mejorar flujo de caja, renegociar crédito con proveedores..."></textarea>
+            </div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button onclick="saveFinKB()" style="padding:6px 14px;font-size:11px;font-weight:700;background:var(--accent);color:#000;border:none;border-radius:6px;cursor:pointer">Guardar</button>
+            <button onclick="clearFinKB()" style="padding:6px 14px;font-size:11px;font-weight:600;background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer">Limpiar</button>
           </div>
         </div>
 
@@ -680,10 +733,11 @@ ${_apRows.slice(0,8).map(r => `  - ${r.supplier_name}: ${fmt(r.total)} | Vence: 
 
 async function generateBriefing() {
   const ctx = buildFinancialContext();
+  const kbCtx = buildFinKBContext();
   await streamCopiloto(
     'Briefing Ejecutivo Financiero',
-    `Eres el copiloto financiero de una empresa mexicana (IBANOR SA de CV / MetaTronix).
-Analiza los siguientes datos financieros y genera un BRIEFING EJECUTIVO en español:
+    `Eres el copiloto financiero de una empresa mexicana (${getFinKB().empresa || 'IBANOR SA de CV / MetaTronix'}).
+${kbCtx ? kbCtx + '\n' : ''}Analiza los siguientes datos financieros y genera un BRIEFING EJECUTIVO en español:
 
 ${ctx}
 
@@ -700,9 +754,10 @@ Sé directo, cuantifica cada punto. Usa tabla HTML cuando compare cifras.`
 
 async function generateRiskAlert() {
   const ctx = buildFinancialContext();
+  const kbCtx = buildFinKBContext();
   await streamCopiloto(
     'Alertas de Riesgo Financiero',
-    `Analiza estos datos financieros de IBANOR SA de CV y genera alertas de riesgo priorizadas:
+    `${kbCtx ? kbCtx + '\n' : ''}Analiza estos datos financieros de ${getFinKB().empresa || 'IBANOR SA de CV'} y genera alertas de riesgo priorizadas:
 
 ${ctx}
 
@@ -720,9 +775,10 @@ Ordena por urgencia. Sé concreto y accionable.`
 
 async function generateCashflowForecast() {
   const ctx = buildFinancialContext();
+  const kbCtx = buildFinKBContext();
   await streamCopiloto(
     'Proyección de Flujo 30 Días',
-    `Con base en los datos financieros de IBANOR SA de CV, proyecta el flujo de caja para los próximos 30 días:
+    `${kbCtx ? kbCtx + '\n' : ''}Con base en los datos financieros de ${getFinKB().empresa || 'IBANOR SA de CV'}, proyecta el flujo de caja para los próximos 30 días:
 
 ${ctx}
 
@@ -760,7 +816,7 @@ async function streamCopiloto(title, prompt) {
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         max_tokens: 2048,
-        system: `Eres el Director Financiero IA de IBANOR SA de CV / MetaTronix.
+        system: `Eres el Director Financiero IA de ${getFinKB().empresa || 'IBANOR SA de CV / MetaTronix'}.
 Generas análisis financieros ejecutivos en español de México, concisos y accionables.
 Usas formato HTML semántico (h2, h3, p, ul, table, strong).
 NO incluyas DOCTYPE, html, head, body, style.`,
@@ -823,6 +879,55 @@ function escHtml(s) {
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
+
+/* ── FINANZAS KNOWLEDGE BASE ─────────────────────────────────────────────── */
+function getFinKB() {
+  try { return JSON.parse(localStorage.getItem('fin_kb_v1') || '{}'); } catch { return {}; }
+}
+
+function saveFinKB() {
+  const kb = {
+    empresa:    document.getElementById('fin-kb-empresa')?.value.trim() || '',
+    sector:     document.getElementById('fin-kb-sector')?.value.trim() || '',
+    credito:    document.getElementById('fin-kb-credito')?.value.trim() || '',
+    modelo:     document.getElementById('fin-kb-modelo')?.value.trim() || '',
+    prioridades: document.getElementById('fin-kb-prioridades')?.value.trim() || '',
+  };
+  localStorage.setItem('fin_kb_v1', JSON.stringify(kb));
+  const btn = document.querySelector('[onclick="toggleFinKB()"]');
+  if (btn) { btn.textContent = '✅ KB'; setTimeout(() => { btn.textContent = '🧠 KB'; }, 1500); }
+}
+
+function clearFinKB() {
+  localStorage.removeItem('fin_kb_v1');
+  ['fin-kb-empresa','fin-kb-sector','fin-kb-credito','fin-kb-modelo','fin-kb-prioridades']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+function toggleFinKB() {
+  const p = document.getElementById('fin-kb-panel');
+  if (p) p.classList.toggle('open');
+}
+
+function buildFinKBContext() {
+  const kb = getFinKB();
+  if (!kb.empresa && !kb.modelo && !kb.prioridades) return '';
+  return `\nCONTEXTO FINANCIERO (Knowledge Base):
+${kb.empresa ? `EMPRESA: ${kb.empresa}` : ''}
+${kb.sector ? `SECTOR: ${kb.sector}` : ''}
+${kb.credito ? `POLÍTICA DE CRÉDITO: ${kb.credito}` : ''}
+${kb.modelo ? `MODELO DE FACTURACIÓN: ${kb.modelo}` : ''}
+${kb.prioridades ? `PRIORIDADES FINANCIERAS: ${kb.prioridades}` : ''}`.trim();
+}
+
+function initFinKB() {
+  const kb = getFinKB();
+  if (document.getElementById('fin-kb-empresa')) document.getElementById('fin-kb-empresa').value = kb.empresa || '';
+  if (document.getElementById('fin-kb-sector')) document.getElementById('fin-kb-sector').value = kb.sector || '';
+  if (document.getElementById('fin-kb-credito')) document.getElementById('fin-kb-credito').value = kb.credito || '';
+  if (document.getElementById('fin-kb-modelo')) document.getElementById('fin-kb-modelo').value = kb.modelo || '';
+  if (document.getElementById('fin-kb-prioridades')) document.getElementById('fin-kb-prioridades').value = kb.prioridades || '';
+}
 
 init();
 </script>

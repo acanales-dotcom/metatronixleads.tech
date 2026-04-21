@@ -137,6 +137,25 @@
     .mesa-blocked h3 { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:.06em; color:var(--text-muted); }
     .mesa-blocked p { font-size:12px; max-width:320px; line-height:1.7; }
 
+    /* Consejo KB Panel */
+    .consejo-kb-panel {
+      background:linear-gradient(135deg,#0a1628 0%,#150a28 100%);
+      border:1px solid rgba(185,102,255,.2); border-radius:10px;
+      padding:16px 20px; display:none;
+    }
+    .consejo-kb-panel.open { display:block; }
+    .consejo-kb-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
+    @media(max-width:900px){ .consejo-kb-grid { grid-template-columns:1fr; } }
+    .consejo-kb-field { display:flex; flex-direction:column; gap:5px; }
+    .consejo-kb-field label { font-size:10px; font-weight:700; color:rgba(185,102,255,.7); letter-spacing:.08em; text-transform:uppercase; }
+    .consejo-kb-field textarea,.consejo-kb-field input {
+      border:1px solid rgba(185,102,255,.2); background:rgba(185,102,255,.04);
+      color:#e2e8f0; border-radius:6px; padding:8px 10px;
+      font-family:'DM Sans',sans-serif; font-size:12px; resize:none; outline:none;
+    }
+    .consejo-kb-field textarea::placeholder,.consejo-kb-field input::placeholder { color:rgba(255,255,255,.3); }
+    .consejo-kb-field textarea:focus,.consejo-kb-field input:focus { border-color:#b966ff; }
+
     /* Session notes */
     .notes-bar {
       background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:8px;
@@ -455,6 +474,7 @@ async function init() {
     document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'consejo');
   }
   if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+  setTimeout(initConsejoKB, 80);
   switchTab(0);
 }
 
@@ -471,8 +491,43 @@ function buildShell() {
             <h1>🏛 Consejo Ejecutivo</h1>
             <p>5 mesas estratégicas · Análisis ejecutivo con Claude · IBANOR SA de CV / MetaTronix</p>
           </div>
-          <div style="font-size:11px;color:var(--text-faint);text-align:right">
-            Rol: <strong style="color:var(--text)">${_role}</strong>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onclick="toggleConsejoKB()" style="padding:6px 14px;font-size:11px;font-weight:700;background:rgba(185,102,255,.1);border:1px solid rgba(185,102,255,.25);color:#b966ff;border-radius:7px;cursor:pointer">🧠 KB</button>
+            <div style="font-size:11px;color:var(--text-faint);text-align:right">
+              Rol: <strong style="color:var(--text)">${_role}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Consejo Knowledge Base Panel -->
+        <div class="consejo-kb-panel" id="consejo-kb-panel">
+          <div style="font-size:11px;font-weight:700;color:#b966ff;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">🧠 Contexto Organizacional — Consejo Knowledge Base</div>
+          <div style="font-size:11px;color:var(--text-faint)">Este contexto se inyecta en todos los consejeros IA para análisis estratégicos más precisos.</div>
+          <div class="consejo-kb-grid">
+            <div class="consejo-kb-field">
+              <label>Empresa</label>
+              <input id="consejo-kb-empresa" placeholder="IBANOR SA de CV / MetaTronix">
+            </div>
+            <div class="consejo-kb-field">
+              <label>Sector / Industria</label>
+              <input id="consejo-kb-sector" placeholder="SaaS B2B · Software empresarial · LATAM">
+            </div>
+            <div class="consejo-kb-field">
+              <label>Competidores principales</label>
+              <input id="consejo-kb-competidores" placeholder="Salesforce, HubSpot, Zoho, Pipedrive">
+            </div>
+            <div class="consejo-kb-field" style="grid-column:span 2">
+              <label>Misión / Visión</label>
+              <textarea id="consejo-kb-mision" rows="2" placeholder="Democratizar el CRM con IA en LATAM. Ser la plataforma de ventas líder para medianas empresas en México, Colombia y Argentina para 2027."></textarea>
+            </div>
+            <div class="consejo-kb-field">
+              <label>Retos estratégicos críticos</label>
+              <textarea id="consejo-kb-retos" rows="2" placeholder="Escalar sin perder calidad, retención de talento, competencia con players globales, expansión LATAM..."></textarea>
+            </div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button onclick="saveConsejoKB()" style="padding:6px 14px;font-size:11px;font-weight:700;background:#b966ff;color:#000;border:none;border-radius:6px;cursor:pointer">Guardar</button>
+            <button onclick="clearConsejoKB()" style="padding:6px 14px;font-size:11px;font-weight:600;background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer">Limpiar</button>
           </div>
         </div>
 
@@ -624,7 +679,9 @@ async function runSession(mesaId) {
   out.innerHTML = `<div style="color:var(--text-faint);padding:24px;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px"><span class="spin"></span> ${mesa.name} en sesión...</div>`;
 
   const ctx = getCtx(mesa);
+  const kbCtx = buildConsejoKBContext();
   const prompt = mesa.promptBuilder(agenda, ctx);
+  const kbInjected = kbCtx ? kbCtx + '\n\n' + prompt : prompt;
 
   try {
     const session = await getSession();
@@ -632,14 +689,19 @@ async function runSession(mesaId) {
     const proxyUrl = (window.MTX_CONFIG?.CLAUDE_PROXY_URL||'').replace(/\/+$/,'');
     if (!proxyUrl) throw new Error('CLAUDE_PROXY_URL no configurado en config.js');
 
+    const kb = getConsejoKB();
+    const sysWithKB = kb.empresa
+      ? mesa.system.replace(/IBANOR SA de CV \/ MetaTronix/g, kb.empresa)
+      : mesa.system;
+
     const resp = await fetch(proxyUrl, {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:3000,
-        system: mesa.system,
-        messages:[{role:'user', content:prompt}],
+        system: sysWithKB,
+        messages:[{role:'user', content:kbInjected}],
         stream:true,
       }),
       signal:AbortSignal.timeout(120000),
@@ -708,6 +770,55 @@ function copyNotes(mesaId) {
   const text = el?.value || '';
   if (!text) return;
   navigator.clipboard.writeText(text).catch(() => {});
+}
+
+/* ── CONSEJO KNOWLEDGE BASE ─────────────────────────────────────────────── */
+function getConsejoKB() {
+  try { return JSON.parse(localStorage.getItem('consejo_kb_v1') || '{}'); } catch { return {}; }
+}
+
+function saveConsejoKB() {
+  const kb = {
+    empresa:      document.getElementById('consejo-kb-empresa')?.value.trim() || '',
+    sector:       document.getElementById('consejo-kb-sector')?.value.trim() || '',
+    competidores: document.getElementById('consejo-kb-competidores')?.value.trim() || '',
+    mision:       document.getElementById('consejo-kb-mision')?.value.trim() || '',
+    retos:        document.getElementById('consejo-kb-retos')?.value.trim() || '',
+  };
+  localStorage.setItem('consejo_kb_v1', JSON.stringify(kb));
+  const btn = document.querySelector('[onclick="toggleConsejoKB()"]');
+  if (btn) { btn.textContent = '✅ KB'; setTimeout(() => { btn.textContent = '🧠 KB'; }, 1500); }
+}
+
+function clearConsejoKB() {
+  localStorage.removeItem('consejo_kb_v1');
+  ['consejo-kb-empresa','consejo-kb-sector','consejo-kb-competidores','consejo-kb-mision','consejo-kb-retos']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+function toggleConsejoKB() {
+  const p = document.getElementById('consejo-kb-panel');
+  if (p) p.classList.toggle('open');
+}
+
+function buildConsejoKBContext() {
+  const kb = getConsejoKB();
+  if (!kb.empresa && !kb.mision && !kb.retos) return '';
+  return `CONTEXTO ORGANIZACIONAL:
+${kb.empresa ? `EMPRESA: ${kb.empresa}` : ''}
+${kb.sector ? `SECTOR: ${kb.sector}` : ''}
+${kb.competidores ? `COMPETIDORES: ${kb.competidores}` : ''}
+${kb.mision ? `MISIÓN/VISIÓN: ${kb.mision}` : ''}
+${kb.retos ? `RETOS ESTRATÉGICOS: ${kb.retos}` : ''}`.trim();
+}
+
+function initConsejoKB() {
+  const kb = getConsejoKB();
+  if (document.getElementById('consejo-kb-empresa')) document.getElementById('consejo-kb-empresa').value = kb.empresa || '';
+  if (document.getElementById('consejo-kb-sector')) document.getElementById('consejo-kb-sector').value = kb.sector || '';
+  if (document.getElementById('consejo-kb-competidores')) document.getElementById('consejo-kb-competidores').value = kb.competidores || '';
+  if (document.getElementById('consejo-kb-mision')) document.getElementById('consejo-kb-mision').value = kb.mision || '';
+  if (document.getElementById('consejo-kb-retos')) document.getElementById('consejo-kb-retos').value = kb.retos || '';
 }
 
 init();

@@ -149,6 +149,29 @@
     .briefing-out td { padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.04); }
     .placeholder-msg { color:var(--text-faint); font-style:italic; text-align:center; padding:40px 20px; font-size:12px; }
 
+    /* ── CEO KB PANEL ────────────────────────────────────────── */
+    .ceo-kb-panel {
+      background:linear-gradient(135deg,#0a1628 0%,#0d2040 100%);
+      border-bottom:1px solid rgba(0,229,255,.15);
+      padding:16px 24px; display:none;
+    }
+    .ceo-kb-panel.open { display:block; }
+    .ceo-kb-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
+    @media(max-width:900px){ .ceo-kb-grid { grid-template-columns:1fr; } }
+    .ceo-kb-field { display:flex; flex-direction:column; gap:5px; }
+    .ceo-kb-field label { font-size:10px; font-weight:700; color:rgba(0,229,255,.6); letter-spacing:.08em; text-transform:uppercase; }
+    .ceo-kb-field textarea,.ceo-kb-field input {
+      border:1px solid rgba(0,229,255,.18); background:rgba(0,229,255,.04);
+      color:#e2e8f0; border-radius:6px; padding:8px 10px;
+      font-family:'DM Sans',sans-serif; font-size:12px; resize:none;
+      outline:none; transition:border-color .15s;
+    }
+    .ceo-kb-field textarea::placeholder,.ceo-kb-field input::placeholder { color:rgba(255,255,255,.3); }
+    .ceo-kb-field textarea:focus,.ceo-kb-field input:focus { border-color:var(--cyan); }
+    .ceo-kb-status { font-size:10px; color:var(--text-faint); margin-top:8px; display:flex; align-items:center; gap:6px; }
+    .ceo-kb-dot { width:6px; height:6px; border-radius:50%; background:#4ADE80; display:inline-block; }
+    .ceo-kb-dot.empty { background:#4b5563; }
+
     /* ── DECISION HISTORY ────────────────────────────────────── */
     .decision-list { display:flex; flex-direction:column; gap:10px; max-height:440px; overflow-y:auto; }
     .decision-item {
@@ -245,6 +268,7 @@ async function init() {
     document.getElementById('sidebar-slot').innerHTML = renderHeader(_user, 'ceo');
   }
   if (typeof initCompanySwitcher === 'function') setTimeout(initCompanySwitcher, 60);
+  setTimeout(initCEOKB, 80);
 
   // Carga paralela
   await Promise.all([loadPulse(), loadDecisions()]);
@@ -270,11 +294,46 @@ function buildShell() {
         <div class="nc-header">
           <div class="nc-header-left">
             <h1><span class="live-dot"></span> CEO Nerve Center</h1>
-            <p>Inteligencia organizacional unificada · IBANOR SA de CV / MetaTronix</p>
+            <p>Inteligencia organizacional unificada · <span id="ceo-company-label">IBANOR SA de CV / MetaTronix</span></p>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
             <div id="health-bar-slot"></div>
+            <button class="btn-sm" onclick="toggleCEOKB()" id="ceo-kb-btn" title="Contexto de la empresa" style="background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.2);color:var(--cyan)">🧠 KB</button>
             <button class="btn-sm" onclick="refreshAll()" title="Actualizar datos">↺</button>
+          </div>
+        </div>
+
+        <!-- CEO KNOWLEDGE BASE PANEL -->
+        <div class="ceo-kb-panel" id="ceo-kb-panel">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase">🧠 Contexto Organizacional — CEO Knowledge Base</div>
+            <div class="ceo-kb-status"><span class="ceo-kb-dot empty" id="ceo-kb-dot"></span><span id="ceo-kb-status-text">Sin contexto — los agentes usarán datos del sistema únicamente</span></div>
+          </div>
+          <div class="ceo-kb-grid">
+            <div class="ceo-kb-field">
+              <label>Empresa</label>
+              <input id="ceo-kb-empresa" placeholder="MetaTronix — CRM + IA para LATAM">
+            </div>
+            <div class="ceo-kb-field">
+              <label>Sector / Industria</label>
+              <input id="ceo-kb-sector" placeholder="SaaS B2B · Software empresarial · LATAM">
+            </div>
+            <div class="ceo-kb-field">
+              <label>Competidores clave</label>
+              <input id="ceo-kb-competidores" placeholder="Salesforce, HubSpot, Pipedrive, Zoho CRM">
+            </div>
+            <div class="ceo-kb-field" style="grid-column:span 2">
+              <label>Prioridades estratégicas 2026</label>
+              <textarea id="ceo-kb-estrategia" rows="2" placeholder="Escalar a 100 clientes, lanzar módulo de IA predictiva, expandir a Colombia y Argentina, reducir churn < 5%..."></textarea>
+            </div>
+            <div class="ceo-kb-field">
+              <label>Retos críticos actuales</label>
+              <textarea id="ceo-kb-retos" rows="2" placeholder="Pipeline bajo, cobranza vencida alta, adopción de la plataforma por el equipo..."></textarea>
+            </div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button onclick="saveCEOKB()" style="padding:6px 14px;font-size:11px;font-weight:700;background:var(--cyan);color:#000;border:none;border-radius:6px;cursor:pointer">Guardar contexto</button>
+            <button onclick="clearCEOKB()" style="padding:6px 14px;font-size:11px;font-weight:600;background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer">Limpiar</button>
           </div>
         </div>
 
@@ -687,8 +746,8 @@ PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} c
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
     body:JSON.stringify({
       model:'claude-sonnet-4-6', max_tokens:2500, stream:true,
-      system:`Eres el Consejero Ejecutivo IA de IBANOR SA de CV / MetaTronix. Respondes preguntas del CEO con datos reales del sistema en tiempo real. Eres conciso, ejecutivo y accionable.
-
+      system:`Eres el Consejero Ejecutivo IA de ${getCEOKB().empresa || 'IBANOR SA de CV / MetaTronix'}. Respondes preguntas del CEO con datos reales del sistema en tiempo real. Eres conciso, ejecutivo y accionable.
+${buildCEOKBContext() ? '\n' + buildCEOKBContext() + '\n' : ''}
 PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO:
 1. NUNCA inventes cifras, proyecciones ni datos sin base en el contexto provisto.
 2. Cita fuente de cada número: (Fuente: Pipeline), (Fuente: CXC vencida), etc.
@@ -827,8 +886,8 @@ PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} |
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
       body:JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:2500, stream:true,
-        system:`Eres el Chief Strategy Officer IA de IBANOR SA de CV / MetaTronix.
-PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO:
+        system:`Eres el Chief Strategy Officer IA de ${getCEOKB().empresa || 'IBANOR SA de CV / MetaTronix'}.
+${buildCEOKBContext() ? buildCEOKBContext() + '\n' : ''}PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO:
 - NUNCA inventes cifras, datos ni proyecciones sin base en el contexto provisto.
 - Cita fuente de cada número: (Fuente: Pipeline), (Fuente: CXC), etc.
 - HECHO vs ANÁLISIS: diferencia dato real de interpretación.
@@ -898,6 +957,71 @@ function clearBriefing() {
 
 async function refreshAll() {
   await Promise.all([loadPulse(), loadDecisions()]);
+}
+
+/* ── CEO KNOWLEDGE BASE ──────────────────────────────────────────────────── */
+function getCEOKB() {
+  try { return JSON.parse(localStorage.getItem('ceo_kb_v1') || '{}'); } catch { return {}; }
+}
+
+function saveCEOKB() {
+  const kb = {
+    empresa:      document.getElementById('ceo-kb-empresa')?.value.trim() || '',
+    sector:       document.getElementById('ceo-kb-sector')?.value.trim() || '',
+    competidores: document.getElementById('ceo-kb-competidores')?.value.trim() || '',
+    estrategia:   document.getElementById('ceo-kb-estrategia')?.value.trim() || '',
+    retos:        document.getElementById('ceo-kb-retos')?.value.trim() || '',
+  };
+  localStorage.setItem('ceo_kb_v1', JSON.stringify(kb));
+  updateCEOKBStatus(!!kb.empresa || !!kb.estrategia);
+  const btn = document.getElementById('ceo-kb-btn');
+  if (btn) { btn.textContent = '✅ KB'; setTimeout(() => { btn.textContent = '🧠 KB'; }, 1500); }
+}
+
+function clearCEOKB() {
+  localStorage.removeItem('ceo_kb_v1');
+  ['ceo-kb-empresa','ceo-kb-sector','ceo-kb-competidores','ceo-kb-estrategia','ceo-kb-retos']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  updateCEOKBStatus(false);
+}
+
+function toggleCEOKB() {
+  const p = document.getElementById('ceo-kb-panel');
+  if (p) p.classList.toggle('open');
+}
+
+function updateCEOKBStatus(hasData) {
+  const dot = document.getElementById('ceo-kb-dot');
+  const txt = document.getElementById('ceo-kb-status-text');
+  if (dot) { dot.className = 'ceo-kb-dot' + (hasData ? '' : ' empty'); }
+  if (txt) txt.textContent = hasData ? 'Contexto activo — todos los análisis usarán este contexto' : 'Sin contexto — los agentes usarán datos del sistema únicamente';
+}
+
+function buildCEOKBContext() {
+  const kb = getCEOKB();
+  if (!kb.empresa && !kb.estrategia && !kb.retos) return '';
+  return `
+CONTEXTO ORGANIZACIONAL (CEO Knowledge Base):
+${kb.empresa ? `EMPRESA: ${kb.empresa}` : ''}
+${kb.sector ? `SECTOR: ${kb.sector}` : ''}
+${kb.competidores ? `COMPETIDORES: ${kb.competidores}` : ''}
+${kb.estrategia ? `PRIORIDADES ESTRATÉGICAS: ${kb.estrategia}` : ''}
+${kb.retos ? `RETOS ACTUALES: ${kb.retos}` : ''}`.trim();
+}
+
+function initCEOKB() {
+  const kb = getCEOKB();
+  if (document.getElementById('ceo-kb-empresa')) document.getElementById('ceo-kb-empresa').value = kb.empresa || '';
+  if (document.getElementById('ceo-kb-sector')) document.getElementById('ceo-kb-sector').value = kb.sector || '';
+  if (document.getElementById('ceo-kb-competidores')) document.getElementById('ceo-kb-competidores').value = kb.competidores || '';
+  if (document.getElementById('ceo-kb-estrategia')) document.getElementById('ceo-kb-estrategia').value = kb.estrategia || '';
+  if (document.getElementById('ceo-kb-retos')) document.getElementById('ceo-kb-retos').value = kb.retos || '';
+  updateCEOKBStatus(!!(kb.empresa || kb.estrategia));
+  // Update company label in header if KB has empresa
+  if (kb.empresa) {
+    const label = document.getElementById('ceo-company-label');
+    if (label) label.textContent = kb.empresa;
+  }
 }
 
 init();
