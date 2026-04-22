@@ -963,12 +963,17 @@ async function buildTree() {
     document.getElementById('treeScroll').innerHTML = '';
     return;
   }
+  const userRole = CU?.profile?.role || 'user';
+  const isAdminPlus = ['admin','super_admin'].includes(userRole);
+
   let treeQ = db
     .from('metatronix_docs')
     .select('file_path, title')
     .eq('category','carpeta_admin')
     .like('file_path','admin/%')
     .eq('company_id', companyId);
+  // DEFENSA: admin_restringido solo ve carpetas no privadas (RLS lo refuerza en BD)
+  if (!isAdminPlus) treeQ = treeQ.neq('visibility', 'admin');
   const { data: carpetas } = await treeQ;
 
   const ents = { clientes:[], proveedores:[] };
@@ -1126,6 +1131,9 @@ async function loadFiles() {
     renderFiles([]);
     return;
   }
+  const userRoleF = CU?.profile?.role || 'user';
+  const isAdminPlusF = ['admin','super_admin'].includes(userRoleF);
+
   let filesQ = db
     .from('metatronix_docs')
     .select('id,title,file_name,file_type,file_size,created_at')
@@ -1133,6 +1141,8 @@ async function loadFiles() {
     .like('file_path', fp + '%')
     .order('created_at',{ascending:false})
     .eq('company_id', companyId);
+  // DEFENSA: admin_restringido no recibe docs privados (RLS lo bloquea en BD también)
+  if (!isAdminPlusF) filesQ = filesQ.neq('visibility', 'admin');
   const { data: files, error } = await filesQ;
 
   if (error) {
