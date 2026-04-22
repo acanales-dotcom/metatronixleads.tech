@@ -252,13 +252,13 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:20px 40p
       <div class="doc-desc">Genera propuestas, emails, contratos y documentos personalizados con IA. Se guardan automáticamente en Archivos.</div>
       <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · GENERACIÓN</span><span class="doc-arrow">→</span></div>
     </a>
-    <a class="doc-card colab" href="archivos.html" data-cat="colab">
+    <a class="doc-card colab ibanor-only" href="archivos.html" data-cat="colab" style="display:none">
       <div class="doc-icon">📁</div>
       <div class="doc-title">Archivos Starke</div>
       <div class="doc-desc">Repositorio de documentos de ventas Starke. Acceso rápido, descarga y visualización de materiales del equipo.</div>
       <div class="doc-meta"><span class="doc-tag colab">COLABORADORES · ARCHIVOS</span><span class="doc-arrow">→</span></div>
     </a>
-    <a class="doc-card colab" href="archivos-ibanor.html" data-cat="colab">
+    <a class="doc-card colab ibanor-only" href="archivos-ibanor.html" data-cat="colab" style="display:none">
       <div class="doc-icon">📂</div>
       <div class="doc-title">Archivos IBANOR</div>
       <div class="doc-desc">Repositorio de documentos internos IBANOR SA de CV. Materiales corporativos, plantillas y recursos del equipo.</div>
@@ -280,6 +280,28 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:20px 40p
   <div>Portal de Documentos · metatronixleads.tech · Abril 2026 · 24 documentos organizados en 3 categorías</div>
 </footer>
 
+<script src="/assets/libs/supabase.min.js"></script>
+<script src="/config.js"></script>
+<script>
+/* ── Mostrar cards IBANOR solo si el usuario tiene acceso ── */
+(async function checkIbanorAccess() {
+  try {
+    const IBANOR_ID = 'a0000000-0000-0000-0000-000000000001';
+    const db = window.supabase.createClient(window.MTX_CONFIG.SUPABASE_URL, window.MTX_CONFIG.SUPABASE_ANON_KEY);
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) return; // no autenticado, cards quedan ocultos
+    const { data } = await db
+      .from('user_companies')
+      .select('company_id')
+      .eq('user_id', session.user.id)
+      .eq('company_id', IBANOR_ID)
+      .maybeSingle();
+    if (data) {
+      document.querySelectorAll('.ibanor-only').forEach(el => el.style.display = '');
+    }
+  } catch(e) { /* silent fail */ }
+})();
+</script>
 <script>
 function filter(cat, btn) {
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));

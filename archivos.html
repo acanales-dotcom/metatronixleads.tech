@@ -787,27 +787,7 @@
 ═══════════════════════════════════════════════════════ -->
 <script src="/assets/libs/supabase.min.js"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260421"></script>
-<script>
-// Patch: getActiveCompanyId con fallback a profile.company_id
-// Necesario mientras el CDN propaga app.js con el fix de multi-empresa
-window.addEventListener('DOMContentLoaded', function patchGACI() {
-  window._patchGACI = setInterval(function() {
-    if (typeof getActiveCompanyId === 'function' &&
-        !getActiveCompanyId.toString().includes('_mtxCurrentUser')) {
-      const orig = getActiveCompanyId;
-      window.getActiveCompanyId = function() {
-        const fromSwitcher = window.MTX_ACTIVE_COMPANY?.id;
-        if (fromSwitcher && /^[0-9a-f-]{36}$/.test(fromSwitcher)) return fromSwitcher;
-        const fromProfile = window._mtxCurrentUser?.profile?.company_id;
-        if (fromProfile && /^[0-9a-f-]{36}$/.test(fromProfile)) return fromProfile;
-        return null;
-      };
-      clearInterval(window._patchGACI);
-    }
-  }, 50);
-});
-</script>
+<script src="/assets/app.js?v=20260420i"></script>
 <script src="/assets/agent.js?v=20260422"></script>
 <!-- ALEX: Sales Coach Agent -->
 <script src="/assets/salescoach.js?v=20260421"></script>
@@ -899,6 +879,32 @@ function getActiveCompanyName() {
 /* ── Init ─────────────────────────────────────────────── */
 async function init() {
   CU = await requireAuth();
+
+  // ── Gate: solo usuarios con acceso IBANOR pueden ver esta página ──
+  const IBANOR_ID = 'a0000000-0000-0000-0000-000000000001';
+  const db = getDB();
+  const { data: ibanorAccess } = await db
+    .from('user_companies')
+    .select('company_id')
+    .eq('user_id', CU.id)
+    .eq('company_id', IBANOR_ID)
+    .maybeSingle();
+
+  if (!ibanorAccess) {
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;
+                  background:#0a0f1a;flex-direction:column;gap:16px;font-family:sans-serif">
+        <div style="font-size:48px">🔒</div>
+        <div style="color:#fff;font-size:18px;font-weight:700">Acceso restringido</div>
+        <div style="color:#666;font-size:13px">Esta sección es exclusiva de IBANOR SA de CV</div>
+        <a href="/home.html" style="margin-top:8px;color:#00ff88;font-size:13px;text-decoration:none">
+          ← Volver al inicio
+        </a>
+      </div>`;
+    return;
+  }
+  // ── /Gate ───────────────────────────────────────────────────────────
+
   document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'archivos');
 
   document.getElementById('fmLayout').style.display = 'flex';
@@ -958,22 +964,12 @@ function onPeriod() {
 async function buildTree() {
   const db = getDB();
   const companyId = getActiveCompanyId();
-  // SEGURIDAD: sin empresa activa no cargar documentos de otras empresas
-  if (!companyId) {
-    document.getElementById('treeScroll').innerHTML = '';
-    return;
-  }
-  const userRole = CU?.profile?.role || 'user';
-  const isAdminPlus = ['admin','super_admin'].includes(userRole);
-
   let treeQ = db
     .from('metatronix_docs')
     .select('file_path, title')
     .eq('category','carpeta_admin')
-    .like('file_path','admin/%')
-    .eq('company_id', companyId);
-  // DEFENSA: admin_restringido solo ve carpetas no privadas (RLS lo refuerza en BD)
-  if (!isAdminPlus) treeQ = treeQ.neq('visibility', 'admin');
+    .like('file_path','admin/%');
+  if (companyId) treeQ = treeQ.eq('company_id', companyId);
   const { data: carpetas } = await treeQ;
 
   const ents = { clientes:[], proveedores:[] };
@@ -1126,23 +1122,13 @@ async function loadFiles() {
 
   const db = getDB();
   const companyId = getActiveCompanyId();
-  // SEGURIDAD: sin empresa activa no cargar documentos de otras empresas
-  if (!companyId) {
-    renderFiles([]);
-    return;
-  }
-  const userRoleF = CU?.profile?.role || 'user';
-  const isAdminPlusF = ['admin','super_admin'].includes(userRoleF);
-
   let filesQ = db
     .from('metatronix_docs')
     .select('id,title,file_name,file_type,file_size,created_at')
     .eq('category','archivo_admin')
     .like('file_path', fp + '%')
-    .order('created_at',{ascending:false})
-    .eq('company_id', companyId);
-  // DEFENSA: admin_restringido no recibe docs privados (RLS lo bloquea en BD también)
-  if (!isAdminPlusF) filesQ = filesQ.neq('visibility', 'admin');
+    .order('created_at',{ascending:false});
+  if (companyId) filesQ = filesQ.eq('company_id', companyId);
   const { data: files, error } = await filesQ;
 
   if (error) {
@@ -1244,14 +1230,11 @@ async function doUpload() {
     pf.style.width = `${(i/pending.length)*100}%`;
     try {
       const b64 = await toB64(file);
-      // admin_restringido no puede marcar docs como privados — solo admin/super_admin
-      const uploaderRole = CU?.profile?.role || 'user';
-      const docVisibility = ['admin','super_admin'].includes(uploaderRole) ? 'admin' : 'all';
       const { error } = await db.from('metatronix_docs').insert({
         title: file.name,
         description: `Archivo admin · ${CF.label}`,
         category: 'archivo_admin',
-        visibility: docVisibility,
+        visibility: 'admin',
         file_name: file.name,
         file_path: dest,
         file_type: file.type || 'application/octet-stream',
@@ -1351,19 +1334,12 @@ async function confirmDelFolder() {
   const companyId = getActiveCompanyId();
   const fp = delFolderCtx.folderPath;
 
-  // SEGURIDAD: sin empresa activa bloquear operaciones destructivas
-  if (!companyId) {
-    toast('No hay empresa activa seleccionada', 'err');
-    btn.disabled = false; btn.textContent = 'Eliminar carpeta';
-    return;
-  }
-
   // Eliminar archivos dentro de la carpeta
   let filesQ = db.from('metatronix_docs')
     .delete()
     .eq('category','archivo_admin')
-    .like('file_path', fp + '%')
-    .eq('company_id', companyId);
+    .like('file_path', fp + '%');
+  if (companyId) filesQ = filesQ.eq('company_id', companyId);
   const { error: errFiles } = await filesQ;
 
   if (errFiles) {
@@ -1376,8 +1352,8 @@ async function confirmDelFolder() {
   let folderQ = db.from('metatronix_docs')
     .delete()
     .eq('category','carpeta_admin')
-    .eq('file_path', fp)
-    .eq('company_id', companyId);
+    .eq('file_path', fp);
+  if (companyId) folderQ = folderQ.eq('company_id', companyId);
   const { error: errFolder } = await folderQ;
 
   btn.disabled = false; btn.textContent = 'Eliminar carpeta';
@@ -1420,14 +1396,11 @@ async function createEnt() {
 
   const fp = entCtx.base + slug + '/';
 
-  // admin_restringido no puede crear carpetas privadas — solo admin/super_admin
-  const folderUploaderRole = CU?.profile?.role || 'user';
-  const folderVisibility = ['admin','super_admin'].includes(folderUploaderRole) ? 'admin' : 'all';
   const { error } = await getDB().from('metatronix_docs').insert({
     title: name,
     description: `Carpeta ${entCtx.etype}: ${name}`,
     category: 'carpeta_admin',
-    visibility: folderVisibility,
+    visibility: 'admin',
     file_name: '',
     file_path: fp,
     file_type: 'folder',
