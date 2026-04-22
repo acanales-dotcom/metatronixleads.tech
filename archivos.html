@@ -1244,11 +1244,14 @@ async function doUpload() {
     pf.style.width = `${(i/pending.length)*100}%`;
     try {
       const b64 = await toB64(file);
+      // admin_restringido no puede marcar docs como privados — solo admin/super_admin
+      const uploaderRole = CU?.profile?.role || 'user';
+      const docVisibility = ['admin','super_admin'].includes(uploaderRole) ? 'admin' : 'all';
       const { error } = await db.from('metatronix_docs').insert({
         title: file.name,
         description: `Archivo admin · ${CF.label}`,
         category: 'archivo_admin',
-        visibility: 'admin',
+        visibility: docVisibility,
         file_name: file.name,
         file_path: dest,
         file_type: file.type || 'application/octet-stream',
@@ -1417,11 +1420,14 @@ async function createEnt() {
 
   const fp = entCtx.base + slug + '/';
 
+  // admin_restringido no puede crear carpetas privadas — solo admin/super_admin
+  const folderUploaderRole = CU?.profile?.role || 'user';
+  const folderVisibility = ['admin','super_admin'].includes(folderUploaderRole) ? 'admin' : 'all';
   const { error } = await getDB().from('metatronix_docs').insert({
     title: name,
     description: `Carpeta ${entCtx.etype}: ${name}`,
     category: 'carpeta_admin',
-    visibility: 'admin',
+    visibility: folderVisibility,
     file_name: '',
     file_path: fp,
     file_type: 'folder',

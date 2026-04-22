@@ -1,15 +1,20 @@
 -- ============================================================
--- FIX: Visibilidad de documentos por rol en metatronix_docs
--- Problema: docs con visibility='admin' eran visibles para
---           admin_restringido — la política solo verificaba empresa
+-- RLS Fix v2: metatronix_docs — visibility='admin' es absoluto
+-- admin_restringido nunca puede ver docs admin, ni los propios
 --
 -- Regla de visibilidad:
---   visibility='admin'   → solo admin y super_admin (NO admin_restringido)
---   visibility='private' → solo el propio uploader
+--   visibility='admin'   → solo admin y super_admin (ABSOLUTO)
+--   visibility='private' → solo admin y super_admin (ABSOLUTO)
 --   visibility=NULL/'all'→ todos los miembros de la empresa
 --
+-- NOTA: Se eliminó la excepción uploaded_by = auth.uid()
+-- que permitía a admin_restringido ver sus propios docs 'admin'.
+-- Fix de datos: 17 docs admin_restringido normalizados a 'all'.
+-- Fix frontend: uploads por admin_restringido usan visibility='all'.
+--
 -- Ejecutar en: Supabase Dashboard → SQL Editor
--- Fecha: 2026-04-22
+-- Fecha: 2026-04-21
+-- Versión: 2
 -- ============================================================
 
 DROP POLICY IF EXISTS "docs_company_select" ON metatronix_docs;
@@ -23,15 +28,12 @@ USING (
     -- 2a. Visibilidad abierta (cualquier miembro de la empresa)
     (visibility IS NULL OR visibility NOT IN ('admin', 'private'))
     OR
-    -- 2b. Usuario con rol admin o super_admin
+    -- 2b. Solo admin/super_admin ven docs 'admin' o 'private' (SIN excepción)
     EXISTS (
       SELECT 1 FROM profiles
       WHERE id = auth.uid()
         AND role IN ('admin', 'super_admin')
     )
-    OR
-    -- 2c. El propio uploader siempre ve sus documentos
-    uploaded_by = auth.uid()
   )
 );
 
@@ -39,4 +41,9 @@ USING (
 SELECT policyname, cmd FROM pg_policies
 WHERE tablename = 'metatronix_docs' ORDER BY cmd;
 
-SELECT 'Fix visibility RLS aplicado' AS resultado;
+-- Distribución de visibilidad actual
+SELECT visibility, COUNT(*) AS total
+FROM metatronix_docs
+GROUP BY visibility ORDER BY visibility;
+
+SELECT 'RLS v2 aplicado — visibility=admin es absoluto' AS resultado;
