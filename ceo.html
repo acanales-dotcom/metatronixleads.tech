@@ -1038,20 +1038,29 @@ let _nervousChannel = null;
 let _mtzScore = null;
 
 async function initNervousSystem() {
+  if (!_db) return;
+  // Super_admin ve eventos de TODAS las empresas a las que tiene acceso
+  // Si no hay company activa, carga sin filtro (RLS limita por user_companies)
   const companyId = getActiveCompanyId();
-  if (!companyId || !_db) return;
+  const role = _user?.profile?.role;
+  const isSuperAdmin = role === 'super_admin';
 
-  // 1. Cargar MetaTronix Score
-  await refreshScore(companyId);
+  // 1. Score — usa companyId si existe, sino la primera empresa del usuario
+  let scoreCompany = companyId;
+  if (!scoreCompany && _user?.id) {
+    const { data: uc } = await _db.from('user_companies').select('company_id').eq('user_id', _user.id).limit(1);
+    scoreCompany = uc?.[0]?.company_id || null;
+  }
+  if (scoreCompany) await refreshScore(scoreCompany);
 
-  // 2. Cargar eventos recientes
-  await loadEventsFeed(companyId);
+  // 2. Cargar eventos — super_admin ve todos, otros filtran por empresa
+  await loadEventsFeed(isSuperAdmin ? null : companyId);
 
-  // 3. Suscribir a eventos en tiempo real
+  // 3. Realtime subscription
   if (_nervousChannel) _nervousChannel.unsubscribe();
   _nervousChannel = subscribeToEvents((event) => {
     handleLiveEvent(event);
-  }, companyId);
+  }, isSuperAdmin ? null : companyId);
 }
 
 async function refreshScore(companyId) {

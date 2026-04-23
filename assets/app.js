@@ -1167,13 +1167,15 @@ async function getMetaTronixScore(companyId) {
 async function getRecentEvents(companyId, limit = 50, severity = null) {
   const db = getDB();
   if (!db) return [];
+  // Si companyId es null → super_admin ve todos (RLS filtra por user_companies)
   let q = db.from('events')
     .select('*')
-    .eq('company_id', companyId)
     .order('created_at', { ascending: false })
     .limit(limit);
-  if (severity) q = q.eq('severity', severity);
-  const { data } = await q;
+  if (companyId) q = q.eq('company_id', companyId);
+  if (severity)  q = q.eq('severity', severity);
+  const { data, error } = await q;
+  if (error) console.warn('[MTX Events]', error.message);
   return data || [];
 }
 
