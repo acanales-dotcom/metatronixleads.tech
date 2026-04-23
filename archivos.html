@@ -1274,10 +1274,10 @@ function toB64(file) {
 
 /* ── Descarga ─────────────────────────────────────────── */
 async function dlFile(id) {
-  const { data, error } = await getDB()
-    .from('metatronix_docs')
-    .select('file_data,file_name,file_type')
-    .eq('id',id).single();
+  const companyId = getActiveCompanyId();
+  let q = getDB().from('metatronix_docs').select('file_data,file_name,file_type').eq('id',id);
+  if (companyId) q = q.eq('company_id', companyId);
+  const { data, error } = await q.single();
 
   if (error||!data) { toast('Error al descargar','err'); return; }
   try {
@@ -1338,7 +1338,8 @@ async function confirmDelFolder() {
   let filesQ = db.from('metatronix_docs')
     .delete()
     .eq('category','archivo_admin')
-    .like('file_path', fp + '%');
+    .like('file_path', fp + '%')
+    .select('id');
   if (companyId) filesQ = filesQ.eq('company_id', companyId);
   const { error: errFiles } = await filesQ;
 
@@ -1352,13 +1353,18 @@ async function confirmDelFolder() {
   let folderQ = db.from('metatronix_docs')
     .delete()
     .eq('category','carpeta_admin')
-    .eq('file_path', fp);
+    .eq('file_path', fp)
+    .select('id');
   if (companyId) folderQ = folderQ.eq('company_id', companyId);
-  const { error: errFolder } = await folderQ;
+  const { data: deleted, error: errFolder } = await folderQ;
 
   btn.disabled = false; btn.textContent = 'Eliminar carpeta';
 
   if (errFolder) { toast('Error eliminando carpeta: ' + errFolder.message, 'err'); return; }
+  if (!deleted || deleted.length === 0) {
+    toast('No se pudo eliminar: sin permisos o carpeta no encontrada', 'err');
+    return;
+  }
 
   // Quitar del DOM
   if (delFolderCtx.wrapEl) delFolderCtx.wrapEl.remove();

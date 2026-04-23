@@ -732,16 +732,13 @@ window.MTX_ACTIVE_COMPANY = JSON.parse(sessionStorage.getItem('mtx_active_compan
 
 /**
  * Retorna el company_id activo: primero el switcher, luego el perfil del usuario.
- * Solo retorna valores que sean UUIDs válidos (evita slugs como 'ibanor').
+ * Acepta tanto UUIDs como slugs (ej: 'metatronix', 'ibanor', 'demo').
  */
-const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function isValidUUID(v) { return typeof v === 'string' && _UUID_RE.test(v); }
-
 function getActiveCompanyId() {
   const fromSwitcher = window.MTX_ACTIVE_COMPANY?.id;
-  if (isValidUUID(fromSwitcher)) return fromSwitcher;
+  if (fromSwitcher && typeof fromSwitcher === 'string' && fromSwitcher.trim()) return fromSwitcher.trim();
   const fromProfile = window._mtxCurrentUser?.profile?.company_id;
-  if (isValidUUID(fromProfile)) return fromProfile;
+  if (fromProfile && typeof fromProfile === 'string' && fromProfile.trim()) return fromProfile.trim();
   return null;
 }
 
@@ -796,19 +793,18 @@ async function loadCompanySwitcher() {
   try {
     const db = getDB();
     const user = window._mtxCurrentUser;
-    const role = user?.profile?.role;
-    const isSuperAdmin = role === 'super_admin';
+    const isAdminRole = ['admin','super_admin'].includes(user?.profile?.role);
 
     let companies, error;
 
-    if (isSuperAdmin) {
-      // Solo super_admin ve TODAS las empresas (CEO / dueño de plataforma)
+    if (isAdminRole) {
+      // Admins ven todas las empresas (sin filtro de status para compatibilidad con ambos esquemas)
       ({ data: companies, error } = await db
         .from('companies')
         .select('id, name, rfc, status, slug')
         .order('name'));
     } else {
-      // Todos los demás (admin, admin_restringido, etc.): solo empresas asignadas en user_companies
+      // Usuarios normales: solo empresas a las que pertenecen
       const { data: memberships, error: mErr } = await db
         .from('user_companies')
         .select('company_id, companies(id, name, rfc, status)')
@@ -838,8 +834,8 @@ async function loadCompanySwitcher() {
       return;
     }
 
-    // "Todas las empresas" solo para super_admin
-    const items = isSuperAdmin
+    // Solo super_admin puede ver "Todas las empresas"
+    const items = isAdminRole
       ? [{ id: null, name: 'Todas las empresas', rfc: '', status: 'activo' }, ...(companies || [])]
       : (companies || []);
 
