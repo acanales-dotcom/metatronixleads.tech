@@ -135,7 +135,7 @@ jobs:
             {'event_type':'campaign.launched',     'module':'marketing', 'company_id':demo_id,'payload':{'campaign':'LinkedIn Q2 2026','channel':'linkedin'},'revenue_impact':None,'severity':'info'},
             {'event_type':'feedback.submitted',    'module':'feedback',  'company_id':demo_id,'payload':{'title':'App móvil nativa','type':'feature'},'revenue_impact':None,'severity':'info'},
             {'event_type':'lead.won',              'module':'ventas',    'company_id':demo_id,'payload':{'name':'LogiNorte SA','deal_value':62000},'revenue_impact':62000,'severity':'ok'},
-            {'event_type':'feature.threshold_reached','module':'feedback','company_id':demo_id,'payload':{'title':'Exportar leads a Excel','votes":8},'revenue_impact':None,'severity':'warn'},
+            {'event_type':'feature.threshold_reached','module':'feedback','company_id':demo_id,'payload':{'title':'Exportar leads a Excel','votes':8},'revenue_impact':None,'severity':'warn'},
             {'event_type':'budget.alert',          'module':'compras',   'company_id':demo_id,'payload':{'pct_used':87,'pending_pos':3},'revenue_impact':None,'severity':'warn'},
             {'event_type':'collection.started',    'module':'cobranza',  'company_id':demo_id,'payload':{'client':'TechRetail MX','amount':320000},'revenue_impact':320000,'severity':'critical'},
             {'event_type':'lead.won',              'module':'ventas',    'company_id':demo_id,'payload':{'name':'Grupo Salinas Retail','deal_value':95000},'revenue_impact':95000,'severity':'ok'},
