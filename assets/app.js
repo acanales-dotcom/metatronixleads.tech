@@ -586,6 +586,10 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">🏛</span>
         <span class="nav-label">Consejo Ejecutivo</span>
       </a>
+      <a href="/feedback.html" class="sidebar-nav-link ${activePage==='feedback'?'active':''}">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Feedback & Roadmap</span>
+      </a>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section-label">Directores IA</div>
       <a href="/ventas.html#director" class="sidebar-nav-link ${activePage==='director-ventas'?'active':''}">
@@ -1076,6 +1080,234 @@ function initSecurityMonitor() {
 
   // Log failed auth attempts (will be called from requireAuth)
   window.MTX_SECURITY_MONITOR = true;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SISTEMA NERVIOSO CENTRAL — MetaTronix Event Bus
+   Cualquier módulo llama emitEvent() para registrar una acción.
+   El CEO dashboard escucha en tiempo real via Supabase Realtime.
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Emite un evento al sistema nervioso central.
+ * @param {string} type        - Tipo: 'lead.won', 'invoice.overdue_30', etc.
+ * @param {string} module      - Módulo origen: 'ventas', 'finanzas', etc.
+ * @param {object} payload     - Datos del evento (libre)
+ * @param {object} [opts]      - { severity, revenue_impact, entity_id, entity_type }
+ */
+async function emitEvent(type, module, payload = {}, opts = {}) {
+  const db = getDB();
+  if (!db) return;
+  const user = window._mtxCurrentUser;
+  if (!user) return;
+
+  const companyId = getActiveCompanyId();
+  const event = {
+    event_type:     type,
+    module:         module,
+    company_id:     companyId || null,
+    user_id:        user.id,
+    entity_id:      opts.entity_id   || null,
+    entity_type:    opts.entity_type || null,
+    payload:        payload,
+    revenue_impact: opts.revenue_impact || null,
+    severity:       opts.severity || 'info',
+  };
+
+  // Fire-and-forget — nunca bloquea la UI
+  db.from('events').insert(event).then(({ error }) => {
+    if (error) console.warn('[MTX Event]', type, error.message);
+  });
+}
+
+/**
+ * Suscribe al CEO dashboard a eventos en tiempo real.
+ * Llama a onEvent(event) cada vez que llega un evento nuevo.
+ * @param {Function} onEvent - callback(event)
+ * @param {string}   [companyId] - filtrar por empresa (opcional)
+ * @returns {object} subscription (llama .unsubscribe() al limpiar)
+ */
+function subscribeToEvents(onEvent, companyId = null) {
+  const db = getDB();
+  if (!db) return null;
+
+  let channel = db.channel('mtx-events-' + Date.now())
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'events',
+      ...(companyId ? { filter: `company_id=eq.${companyId}` } : {}),
+    }, (payload) => {
+      onEvent(payload.new);
+    })
+    .subscribe();
+
+  return channel;
+}
+
+/**
+ * Obtiene el MetaTronix Score para una empresa.
+ * @param {string} companyId
+ * @returns {Promise<object>} { total, pipeline, collection, activity, satisfaction, ops }
+ */
+async function getMetaTronixScore(companyId) {
+  const db = getDB();
+  if (!db || !companyId) return null;
+  const { data, error } = await db.rpc('get_metatronix_score', { p_company_id: companyId });
+  if (error) { console.warn('[MTX Score]', error.message); return null; }
+  return data;
+}
+
+/**
+ * Obtiene los últimos N eventos para el feed del CEO.
+ * @param {string} companyId
+ * @param {number} limit
+ * @param {string} [severity] - filtrar por severity
+ */
+async function getRecentEvents(companyId, limit = 50, severity = null) {
+  const db = getDB();
+  if (!db) return [];
+  let q = db.from('events')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (severity) q = q.eq('severity', severity);
+  const { data } = await q;
+  return data || [];
+}
+
+/* ── Botón flotante de Feedback (aparece en todos los módulos) ─ */
+function initFeedbackButton() {
+  // No mostrar en index, reset-password ni feedback.html
+  const page = window.location.pathname;
+  if (['/index.html','/reset-password.html','/feedback.html','/registro-empresa.html'].some(p => page.includes(p))) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'mtx-feedback-btn';
+  btn.title = 'Enviar feedback o reportar problema';
+  btn.innerHTML = '💬';
+  btn.style.cssText = `
+    position:fixed;bottom:80px;right:18px;z-index:9998;
+    width:42px;height:42px;border-radius:50%;
+    background:#111827;border:1px solid rgba(0,255,136,.3);
+    color:#00ff88;font-size:18px;cursor:pointer;
+    box-shadow:0 2px 12px rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .15s,box-shadow .15s;
+  `;
+  btn.onmouseenter = () => { btn.style.transform='scale(1.12)'; btn.style.boxShadow='0 4px 20px rgba(0,255,136,.2)'; };
+  btn.onmouseleave = () => { btn.style.transform='scale(1)'; btn.style.boxShadow='0 2px 12px rgba(0,0,0,.4)'; };
+  btn.onclick = openFeedbackModal;
+  document.body.appendChild(btn);
+}
+
+function openFeedbackModal() {
+  if (document.getElementById('mtx-feedback-modal')) {
+    document.getElementById('mtx-feedback-modal').classList.add('open');
+    return;
+  }
+  const modal = document.createElement('div');
+  modal.id = 'mtx-feedback-modal';
+  const currentModule = window.location.pathname.replace(/.*\/([^.]+)\.html.*/,'$1') || 'portal';
+  modal.innerHTML = `
+    <style>
+      #mtx-feedback-modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);align-items:center;justify-content:center}
+      #mtx-feedback-modal.open{display:flex}
+      #mtx-fb-card{background:#111827;border:1px solid rgba(0,255,136,.2);border-radius:16px;padding:28px 24px;width:100%;max-width:420px;margin:16px}
+      #mtx-fb-card h3{color:#F1F5F9;font-size:16px;font-weight:600;margin-bottom:4px}
+      #mtx-fb-card p{color:#64748B;font-size:12px;margin-bottom:16px}
+      .fb-type-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+      .fb-type-btn{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#94A3B8;cursor:pointer;transition:all .15s}
+      .fb-type-btn.active{border-color:#00ff88;color:#00ff88;background:rgba(0,255,136,.08)}
+      #mtx-fb-title{width:100%;padding:9px 11px;background:#1E293B;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#F1F5F9;font-size:13px;margin-bottom:10px;outline:none;box-sizing:border-box}
+      #mtx-fb-msg{width:100%;padding:9px 11px;background:#1E293B;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#F1F5F9;font-size:13px;height:90px;resize:none;outline:none;box-sizing:border-box;font-family:inherit}
+      #mtx-fb-send{width:100%;margin-top:12px;padding:11px;background:#00ff88;color:#0A0E18;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer}
+      #mtx-fb-send:disabled{opacity:.5;cursor:not-allowed}
+      #mtx-fb-close{position:absolute;top:14px;right:14px;background:none;border:none;color:#64748B;font-size:20px;cursor:pointer}
+    </style>
+    <div id="mtx-fb-card" style="position:relative">
+      <button id="mtx-fb-close" onclick="document.getElementById('mtx-feedback-modal').classList.remove('open')">×</button>
+      <h3>¿Qué quieres reportar?</h3>
+      <p>Tu feedback va directo al equipo de producto</p>
+      <div class="fb-type-row">
+        <button class="fb-type-btn active" data-type="feature" onclick="setFbType(this)">✨ Función nueva</button>
+        <button class="fb-type-btn" data-type="improvement" onclick="setFbType(this)">⚡ Mejora</button>
+        <button class="fb-type-btn" data-type="bug" onclick="setFbType(this)">🐛 Error</button>
+        <button class="fb-type-btn" data-type="integration" onclick="setFbType(this)">🔗 Integración</button>
+      </div>
+      <input id="mtx-fb-title" placeholder="Título breve..." maxlength="120">
+      <textarea id="mtx-fb-msg" placeholder="Descríbelo con detalle…"></textarea>
+      <button id="mtx-fb-send" onclick="submitFeedback('${currentModule}')">Enviar feedback</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.classList.add('open');
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('open'); });
+}
+
+window._fbType = 'feature';
+function setFbType(btn) {
+  document.querySelectorAll('.fb-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  window._fbType = btn.dataset.type;
+}
+
+async function submitFeedback(sourceModule) {
+  const title   = document.getElementById('mtx-fb-title')?.value.trim();
+  const message = document.getElementById('mtx-fb-msg')?.value.trim();
+  const btn     = document.getElementById('mtx-fb-send');
+  if (!title || !message) { alert('Completa el título y la descripción.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  const db = getDB();
+  const user = window._mtxCurrentUser;
+  const companyId = getActiveCompanyId();
+
+  try {
+    // Busca o crea el feature request
+    let { data: existing } = await db.from('feature_requests')
+      .select('id,votes_count')
+      .ilike('title', title)
+      .eq('category', window._fbType)
+      .limit(1);
+
+    let frId;
+    if (existing?.length) {
+      frId = existing[0].id;
+    } else {
+      const { data: newFr } = await db.from('feature_requests').insert({
+        title, category: window._fbType, module: sourceModule,
+        company_id: companyId, created_by: user?.id, status: 'backlog'
+      }).select('id').single();
+      frId = newFr?.id;
+    }
+
+    if (frId) {
+      await db.from('feedback_items').insert({
+        feature_request_id: frId, user_id: user?.id,
+        company_id: companyId, message, source_module: sourceModule, type: window._fbType
+      });
+      // Emite evento al sistema nervioso
+      emitEvent('feedback.submitted', sourceModule, { title, type: window._fbType, fr_id: frId });
+    }
+
+    btn.textContent = '✓ Enviado — gracias';
+    setTimeout(() => {
+      document.getElementById('mtx-feedback-modal')?.classList.remove('open');
+      btn.disabled = false; btn.textContent = 'Enviar feedback';
+    }, 2000);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Enviar feedback';
+    console.error('[MTX Feedback]', e);
+  }
+}
+
+// Auto-inicializar el botón de feedback cuando el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFeedbackButton);
+} else {
+  initFeedbackButton();
 }
 
 /* ═══════════════════════════════════════════════════════════

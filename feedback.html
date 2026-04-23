@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Feedback & Roadmap</title>
+  <link rel="stylesheet" href="/assets/fonts.css">
+  <script src="/assets/libs/supabase.min.js"></script>
+  <script src="/assets/config.js"></script>
+  <script src="/assets/app.js"></script>
+  <style>
+    :root{--accent:#00ff88;--bg:#0A0E18;--bg2:#111827;--bg3:#1E293B;--border:rgba(255,255,255,.08);--t1:#F1F5F9;--t2:#94A3B8;--t3:#475569}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--t1);font-family:'Inter',sans-serif;min-height:100vh}
+    #header-placeholder{position:sticky;top:0;z-index:100}
+    .main{max-width:1100px;margin:0 auto;padding:28px 20px}
+
+    /* ── Topbar ── */
+    .top{display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap}
+    .top-title{font-size:22px;font-weight:700;color:var(--t1);flex:1}
+    .top-sub{font-size:13px;color:var(--t2)}
+    .view-toggle{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:3px}
+    .vt-btn{padding:6px 14px;border-radius:6px;border:none;background:transparent;color:var(--t2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+    .vt-btn.active{background:var(--bg2);color:var(--t1)}
+    .btn-new{padding:8px 16px;background:var(--accent);color:#0A0E18;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer}
+
+    /* ── Filtros ── */
+    .filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+    .filter-btn{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
+    .filter-btn.active{border-color:var(--accent);color:var(--accent)}
+    .search-box{margin-left:auto;padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-size:12px;width:200px;outline:none}
+    .search-box::placeholder{color:var(--t3)}
+
+    /* ── Vista Kanban (admin) ── */
+    .kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+    .k-col{background:var(--bg2);border-radius:12px;padding:14px}
+    .k-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .k-col-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+    .k-col-count{font-size:11px;color:var(--t2);background:var(--bg3);padding:2px 7px;border-radius:10px}
+    .k-cards{display:flex;flex-direction:column;gap:8px;min-height:80px}
+    .k-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .15s}
+    .k-card:hover{border-color:rgba(0,255,136,.3)}
+    .k-card-title{font-size:13px;font-weight:500;margin-bottom:6px;line-height:1.4}
+    .k-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .k-card-votes{font-size:11px;color:var(--t2);display:flex;align-items:center;gap:4px}
+    .cat-badge{font-size:9px;font-weight:600;text-transform:uppercase;padding:2px 6px;border-radius:4px}
+    .cat-feature{background:rgba(96,165,250,.15);color:#93C5FD}
+    .cat-bug{background:rgba(248,113,113,.15);color:#FCA5A5}
+    .cat-improvement{background:rgba(251,191,36,.15);color:#FDE68A}
+    .cat-integration{background:rgba(167,139,250,.15);color:#C4B5FD}
+    .k-card-score{margin-left:auto;font-size:10px;color:var(--accent);font-weight:600}
+
+    /* ── Vista Roadmap (usuarios) ── */
+    .roadmap{display:flex;flex-direction:column;gap:10px}
+    .rm-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;gap:16px;align-items:flex-start;cursor:pointer;transition:border-color .15s}
+    .rm-item:hover{border-color:rgba(0,255,136,.2)}
+    .rm-vote-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px}
+    .rm-vote-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+    .rm-vote-btn.voted{border-color:var(--accent);color:var(--accent);background:rgba(0,255,136,.08)}
+    .rm-vote-count{font-size:13px;font-weight:600;color:var(--t1)}
+    .rm-body{flex:1}
+    .rm-title{font-size:14px;font-weight:500;margin-bottom:4px}
+    .rm-desc{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:8px}
+    .rm-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .status-pill{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
+    .s-backlog{background:rgba(148,163,184,.15);color:#94A3B8}
+    .s-evaluando{background:rgba(251,191,36,.15);color:#FDE68A}
+    .s-planeado{background:rgba(96,165,250,.15);color:#93C5FD}
+    .s-en_desarrollo{background:rgba(167,139,250,.15);color:#C4B5FD}
+    .s-lanzado{background:rgba(0,255,136,.15);color:#00ff88}
+    .s-descartado{background:rgba(248,113,113,.15);color:#FCA5A5}
+    .rm-score{margin-left:auto;font-size:11px;color:var(--t3)}
+
+    /* ── Modal crear/ver ── */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;padding:16px}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+    .modal h2{font-size:18px;font-weight:600;margin-bottom:16px}
+    .modal label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--t2);margin-bottom:5px;margin-top:14px}
+    .modal input,.modal textarea,.modal select{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-size:13px;outline:none;font-family:inherit}
+    .modal textarea{height:100px;resize:vertical}
+    .modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end}
+    .btn-cancel{padding:9px 18px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--t2);font-size:13px;cursor:pointer}
+    .btn-save{padding:9px 18px;background:var(--accent);color:#0A0E18;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer}
+
+    /* ── Detail modal ── */
+    .fr-comments{margin-top:16px}
+    .fr-comment{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--t2);line-height:1.5}
+    .fr-comment-meta{font-size:10px;color:var(--t3);margin-bottom:4px}
+
+    /* ── Estado vacío ── */
+    .empty{text-align:center;padding:48px 20px;color:var(--t2)}
+    .empty-icon{font-size:40px;margin-bottom:12px}
+
+    /* ── Admin status changer ── */
+    .status-changer{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+    .sc-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:11px;cursor:pointer;transition:all .15s}
+    .sc-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+    @media(max-width:700px){.kanban{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start}}
+  </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+<div class="main">
+  <div class="top">
+    <div>
+      <div class="top-title">Feedback & Roadmap</div>
+      <div class="top-sub">Comparte ideas, vota funciones y ve qué estamos construyendo</div>
+    </div>
+    <div class="view-toggle">
+      <button class="vt-btn active" id="vt-road" onclick="setView('roadmap')">Roadmap</button>
+      <button class="vt-btn" id="vt-kanban" onclick="setView('kanban')">Admin</button>
+    </div>
+    <button class="btn-new" onclick="openNewModal()">+ Sugerir</button>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-cat="all" onclick="setFilter(this,'all')">Todo</button>
+    <button class="filter-btn" data-cat="feature" onclick="setFilter(this,'feature')">✨ Funciones</button>
+    <button class="filter-btn" data-cat="improvement" onclick="setFilter(this,'improvement')">⚡ Mejoras</button>
+    <button class="filter-btn" data-cat="bug" onclick="setFilter(this,'bug')">🐛 Bugs</button>
+    <button class="filter-btn" data-cat="integration" onclick="setFilter(this,'integration')">🔗 Integraciones</button>
+    <input type="text" class="search-box" id="search-box" placeholder="Buscar..." oninput="renderAll()">
+  </div>
+
+  <div id="view-container"></div>
+</div>
+
+<!-- Modal nuevo feedback -->
+<div class="modal-overlay" id="new-modal">
+  <div class="modal">
+    <h2>Proponer función o mejora</h2>
+    <label>Categoría</label>
+    <select id="nw-cat">
+      <option value="feature">✨ Función nueva</option>
+      <option value="improvement">⚡ Mejora existente</option>
+      <option value="bug">🐛 Reportar error</option>
+      <option value="integration">🔗 Integración</option>
+    </select>
+    <label>Módulo del portal</label>
+    <select id="nw-mod">
+      <option value="">General</option>
+      <option value="ventas">Ventas / Pipeline</option>
+      <option value="finanzas">Finanzas</option>
+      <option value="cobranza">Cobranza</option>
+      <option value="compras">Compras</option>
+      <option value="marketing">Marketing</option>
+      <option value="archivos">Archivos / Documentos</option>
+      <option value="ceo">CEO Dashboard</option>
+      <option value="admin">Administración</option>
+    </select>
+    <label>Título breve</label>
+    <input type="text" id="nw-title" placeholder="Ej: Exportar leads a Excel con un clic" maxlength="120">
+    <label>Descripción detallada</label>
+    <textarea id="nw-desc" placeholder="Explica el problema que resuelve, cómo lo usarías, qué beneficio genera…"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModals()">Cancelar</button>
+      <button class="btn-save" onclick="saveNew()">Enviar propuesta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal detalle -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" id="detail-content"></div>
+</div>
+
+<script>
+let _db, _user, _isAdmin = false;
+let _allFR = [], _votes = new Set(), _filterCat = 'all', _view = 'roadmap';
+
+async function init() {
+  _user = await requireAuth();
+  if (!_user) return;
+  _isAdmin = ['admin','super_admin'].includes(_user.profile?.role);
+  if (!_isAdmin) document.getElementById('vt-kanban').style.display = 'none';
+  _db = getDB();
+  document.getElementById('header-placeholder').innerHTML = renderHeader(_user, 'feedback');
+  await loadData();
+}
+
+async function loadData() {
+  const companyId = getActiveCompanyId();
+  let q = _db.from('feature_requests').select(`
+    id, title, description, category, status, votes_count, priority_score,
+    module, created_at, target_release, launched_at,
+    feedback_items(id, message, created_at)
+  `).order('priority_score', { ascending: false }).limit(200);
+
+  const { data: fr } = await q;
+  _allFR = fr || [];
+
+  // Votos del usuario actual
+  const { data: myVotes } = await _db.from('feedback_votes')
+    .select('feature_request_id').eq('user_id', _user.id);
+  _votes = new Set((myVotes || []).map(v => v.feature_request_id));
+
+  renderAll();
+}
+
+function setFilter(btn, cat) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _filterCat = cat;
+  renderAll();
+}
+
+function setView(v) {
+  _view = v;
+  document.getElementById('vt-road').classList.toggle('active', v === 'roadmap');
+  document.getElementById('vt-kanban').classList.toggle('active', v === 'kanban');
+  renderAll();
+}
+
+function getFiltered() {
+  const q = document.getElementById('search-box').value.toLowerCase();
+  return _allFR.filter(fr => {
+    const catOk = _filterCat === 'all' || fr.category === _filterCat;
+    const qOk   = !q || fr.title.toLowerCase().includes(q) || (fr.description||'').toLowerCase().includes(q);
+    return catOk && qOk;
+  });
+}
+
+function renderAll() {
+  const container = document.getElementById('view-container');
+  const fr = getFiltered();
+  if (_view === 'roadmap') {
+    renderRoadmap(container, fr);
+  } else {
+    renderKanban(container, fr);
+  }
+}
+
+function catBadge(cat) {
+  const labels = { feature:'✨ Función', improvement:'⚡ Mejora', bug:'🐛 Bug', integration:'🔗 Integración' };
+  return `<span class="cat-badge cat-${cat}">${labels[cat]||cat}</span>`;
+}
+
+function statusPill(status) {
+  const labels = { backlog:'Backlog', evaluando:'Evaluando', planeado:'Planeado',
+    en_desarrollo:'En desarrollo', lanzado:'Lanzado', descartado:'Descartado' };
+  return `<span class="status-pill s-${status}">${labels[status]||status}</span>`;
+}
+
+function renderRoadmap(container, fr) {
+  if (!fr.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">💡</div><p>Sé el primero en proponer una mejora</p></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="roadmap">${fr.map(item => `
+    <div class="rm-item" onclick="openDetail('${item.id}')">
+      <div class="rm-vote-col">
+        <button class="rm-vote-btn ${_votes.has(item.id)?'voted':''}"
+          onclick="event.stopPropagation();toggleVote('${item.id}',this)"
+          title="${_votes.has(item.id)?'Quitar voto':'Votar'}">${_votes.has(item.id)?'▲':'△'}</button>
+        <span class="rm-vote-count">${item.votes_count||0}</span>
+      </div>
+      <div class="rm-body">
+        <div class="rm-title">${escHtml(item.title)}</div>
+        ${item.description ? `<div class="rm-desc">${escHtml(item.description.slice(0,140))}${item.description.length>140?'…':''}</div>` : ''}
+        <div class="rm-tags">
+          ${catBadge(item.category)}
+          ${statusPill(item.status)}
+          ${item.module ? `<span style="font-size:10px;color:var(--t3)">${item.module}</span>` : ''}
+          ${item.target_release ? `<span style="font-size:10px;color:var(--t2);margin-left:4px">📅 ${item.target_release}</span>` : ''}
+        </div>
+      </div>
+      ${_isAdmin ? `<div class="rm-score" title="Revenue score">⚡${item.priority_score||0}</div>` : ''}
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderKanban(container, fr) {
+  const STAGES = [
+    { key:'backlog',     label:'Backlog',        color:'#94A3B8' },
+    { key:'evaluando',   label:'Evaluando',      color:'#FDE68A' },
+    { key:'planeado',    label:'Planeado',       color:'#93C5FD' },
+    { key:'en_desarrollo', label:'Desarrollando', color:'#C4B5FD' },
+    { key:'lanzado',     label:'Lanzado',        color:'#00ff88' },
+  ];
+  const byStatus = {};
+  STAGES.forEach(s => { byStatus[s.key] = fr.filter(f => f.status === s.key); });
+
+  container.innerHTML = `<div class="kanban">${STAGES.map(s => `
+    <div class="k-col">
+      <div class="k-col-header">
+        <span class="k-col-title" style="color:${s.color}">${s.label}</span>
+        <span class="k-col-count">${byStatus[s.key].length}</span>
+      </div>
+      <div class="k-cards">${byStatus[s.key].length ? byStatus[s.key].map(item => `
+        <div class="k-card" onclick="openDetail('${item.id}')">
+          <div class="k-card-title">${escHtml(item.title)}</div>
+          <div class="k-card-meta">
+            ${catBadge(item.category)}
+            <span class="k-card-votes">△ ${item.votes_count||0}</span>
+            ${_isAdmin ? `<span class="k-card-score">⚡${item.priority_score||0}</span>` : ''}
+          </div>
+        </div>
+      `).join('') : `<div style="font-size:11px;color:var(--t3);text-align:center;padding:16px 0">Sin items</div>`}
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+async function toggleVote(frId, btn) {
+  if (_votes.has(frId)) {
+    // Quitar voto
+    await _db.from('feedback_votes').delete()
+      .eq('feature_request_id', frId).eq('user_id', _user.id);
+    await _db.from('feature_requests').update({ votes_count: Math.max(0, (_allFR.find(f=>f.id===frId)?.votes_count||1)-1) }).eq('id', frId);
+    _votes.delete(frId);
+  } else {
+    // Agregar voto
+    const companyId = getActiveCompanyId();
+    await _db.from('feedback_votes').insert({ feature_request_id: frId, user_id: _user.id, company_id: companyId });
+    const cur = _allFR.find(f=>f.id===frId);
+    const newCount = (cur?.votes_count||0)+1;
+    await _db.from('feature_requests').update({ votes_count: newCount }).eq('id', frId);
+    _votes.add(frId);
+
+    // Emitir evento si supera threshold
+    if (newCount >= 5) {
+      emitEvent('feature.threshold_reached', 'feedback',
+        { fr_id: frId, title: cur?.title, votes: newCount },
+        { severity: newCount >= 10 ? 'warn' : 'info' }
+      );
+    }
+    // Emitir evento voto general
+    emitEvent('feedback.vote', 'feedback', { fr_id: frId });
+  }
+  await loadData();
+}
+
+function openDetail(frId) {
+  const fr = _allFR.find(f => f.id === frId);
+  if (!fr) return;
+  const comments = fr.feedback_items || [];
+  const voted = _votes.has(frId);
+
+  document.getElementById('detail-content').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div style="flex:1">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+          ${catBadge(fr.category)} ${statusPill(fr.status)}
+          ${fr.module ? `<span style="font-size:10px;color:var(--t3)">${fr.module}</span>` : ''}
+        </div>
+        <h2 style="font-size:17px;margin-bottom:0">${escHtml(fr.title)}</h2>
+      </div>
+      <button onclick="closeModals()" style="background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;margin-left:12px">×</button>
+    </div>
+    ${fr.description ? `<p style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:14px">${escHtml(fr.description)}</p>` : ''}
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+      <button class="rm-vote-btn ${voted?'voted':''}"
+        onclick="toggleVote('${fr.id}',this)"
+        style="width:auto;padding:7px 16px;border-radius:8px;font-size:13px;gap:8px">
+        ${voted?'▲ Votado':'△ Votar'} · <strong>${fr.votes_count||0}</strong>
+      </button>
+      ${_isAdmin ? `<span style="font-size:11px;color:var(--t2)">Score revenue: <strong style="color:var(--accent)">⚡${fr.priority_score||0}</strong></span>` : ''}
+      ${fr.target_release ? `<span style="font-size:11px;color:var(--t2)">📅 ${fr.target_release}</span>` : ''}
+    </div>
+    ${_isAdmin ? `
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--t2);margin-bottom:8px">Cambiar estado</div>
+      <div class="status-changer">
+        ${['backlog','evaluando','planeado','en_desarrollo','lanzado','descartado'].map(s =>
+          `<button class="sc-btn ${fr.status===s?'active':''}" onclick="changeStatus('${fr.id}','${s}')">${s}</button>`
+        ).join('')}
+      </div>
+    </div>` : ''}
+    <div class="fr-comments">
+      <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px">Comentarios (${comments.length})</div>
+      ${comments.map(c => `
+        <div class="fr-comment">
+          <div class="fr-comment-meta">${new Date(c.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</div>
+          ${escHtml(c.message)}
+        </div>
+      `).join('')}
+      <textarea id="new-comment-${fr.id}" placeholder="Agrega un comentario…"
+        style="width:100%;margin-top:8px;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-size:12px;height:70px;resize:none;outline:none;font-family:inherit"></textarea>
+      <button onclick="addComment('${fr.id}')" style="margin-top:6px;padding:7px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-size:12px;cursor:pointer">Comentar</button>
+    </div>
+  `;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+async function changeStatus(frId, status) {
+  await _db.from('feature_requests').update({ status }).eq('id', frId);
+  const fr = _allFR.find(f=>f.id===frId);
+  emitEvent('feature.status_changed', 'feedback',
+    { fr_id: frId, title: fr?.title, new_status: status },
+    { severity: status === 'lanzado' ? 'ok' : 'info' }
+  );
+  await loadData();
+  closeModals();
+}
+
+async function addComment(frId) {
+  const ta = document.getElementById('new-comment-' + frId);
+  const msg = ta?.value.trim();
+  if (!msg) return;
+  const companyId = getActiveCompanyId();
+  await _db.from('feedback_items').insert({
+    feature_request_id: frId, user_id: _user.id,
+    company_id: companyId, message: msg, source_module: 'feedback', type: 'feedback'
+  });
+  ta.value = '';
+  await loadData();
+  openDetail(frId);
+}
+
+function openNewModal() { document.getElementById('new-modal').classList.add('open'); }
+function closeModals() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+}
+
+async function saveNew() {
+  const title = document.getElementById('nw-title').value.trim();
+  const desc  = document.getElementById('nw-desc').value.trim();
+  const cat   = document.getElementById('nw-cat').value;
+  const mod   = document.getElementById('nw-mod').value;
+  if (!title) { alert('Escribe un título'); return; }
+
+  const companyId = getActiveCompanyId();
+  const { data: fr } = await _db.from('feature_requests').insert({
+    title, description: desc, category: cat, module: mod,
+    company_id: companyId, created_by: _user.id, status: 'backlog'
+  }).select('id').single();
+
+  if (fr?.id) {
+    // Agregar comentario inicial si hay descripción
+    if (desc) {
+      await _db.from('feedback_items').insert({
+        feature_request_id: fr.id, user_id: _user.id,
+        company_id: companyId, message: desc, source_module: mod||'feedback', type: cat
+      });
+    }
+    // Voto automático del creador
+    await _db.from('feedback_votes').insert({ feature_request_id: fr.id, user_id: _user.id, company_id: companyId });
+    await _db.from('feature_requests').update({ votes_count: 1 }).eq('id', fr.id);
+    _votes.add(fr.id);
+    emitEvent('feedback.submitted', 'feedback', { title, type: cat, fr_id: fr.id });
+  }
+
+  closeModals();
+  document.getElementById('nw-title').value = '';
+  document.getElementById('nw-desc').value = '';
+  await loadData();
+}
+
+// Cerrar modal al hacer click fuera
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModals(); });
+});
+
+init();
+</script>
+</body>
+</html>

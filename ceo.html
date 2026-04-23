@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/assets/style.css?v=20260420">
   <script src="/assets/libs/supabase.min.js"></script>
   <script src="/config.js?v=20260420"></script>
-  <script src="/assets/app.js?v=20260421"></script>
+  <script src="/assets/app.js?v=20260420i"></script>
   <style>
     :root {
       --green:#00ff88; --cyan:#00e5ff; --gold:#ffb400;
@@ -274,11 +274,15 @@ async function init() {
   await Promise.all([loadPulse(), loadDecisions()]);
   _refreshTimer = setInterval(() => { loadPulse(); loadDecisions(); }, 90_000);
 
+  // Sistema Nervioso Central
+  setTimeout(() => initNervousSystem(), 200);
+
   // Recargar al cambiar de empresa
   window.addEventListener('mtx:companySwitch', () => {
     clearInterval(_refreshTimer);
     Promise.all([loadPulse(), loadDecisions()]);
     _refreshTimer = setInterval(() => { loadPulse(); loadDecisions(); }, 90_000);
+    initNervousSystem(); // Re-suscribir con nueva empresa
   });
 }
 
@@ -334,6 +338,23 @@ function buildShell() {
           <div style="margin-top:10px;display:flex;gap:8px">
             <button onclick="saveCEOKB()" style="padding:6px 14px;font-size:11px;font-weight:700;background:var(--cyan);color:#000;border:none;border-radius:6px;cursor:pointer">Guardar contexto</button>
             <button onclick="clearCEOKB()" style="padding:6px 14px;font-size:11px;font-weight:600;background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer">Limpiar</button>
+          </div>
+        </div>
+
+        <!-- SISTEMA NERVIOSO CENTRAL — Feed de eventos en tiempo real -->
+        <div style="background:rgba(0,0,0,.3);border:1px solid rgba(0,255,136,.08);border-radius:12px;margin-bottom:16px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#00ff88;animation:blink 2s ease-in-out infinite"></span>
+              <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.5)">Sistema Nervioso — Eventos en vivo</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button onclick="loadEventsFeed(getActiveCompanyId())" style="font-size:10px;padding:3px 8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:5px;color:#94A3B8;cursor:pointer">↺ Actualizar</button>
+              <a href="/feedback.html" style="font-size:10px;padding:3px 8px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);border-radius:5px;color:#00ff88;text-decoration:none">💬 Feedback</a>
+            </div>
+          </div>
+          <div id="nervous-feed" style="max-height:220px;overflow-y:auto;font-family:'Inter',sans-serif">
+            <div style="text-align:center;padding:24px;color:#475569;font-size:12px">Iniciando sistema nervioso…</div>
           </div>
         </div>
 
@@ -635,7 +656,7 @@ async function sendQuery() {
       resp = await fetch(ceoQueryUrl, {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
-        body:JSON.stringify({ question, pulse: _pulse, query_type:'ad_hoc', kb_context: buildCEOKBContext() }),
+        body:JSON.stringify({ question, pulse: _pulse, query_type:'ad_hoc' }),
         signal: AbortSignal.timeout(90000),
       });
       if (resp.status === 404 || resp.status >= 400) throw new Error('endpoint error ' + resp.status);
@@ -885,25 +906,14 @@ PLATAFORMA: ${p.usuarios_activos||0} usuarios | IA 24h: ${p.ai_queries_24h||0} |
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+jwt},
       body:JSON.stringify({
-        model:'claude-sonnet-4-6', max_tokens:4000, stream:true,
+        model:'claude-sonnet-4-6', max_tokens:2500, stream:true,
         system:`Eres el Chief Strategy Officer IA de ${getCEOKB().empresa || 'IBANOR SA de CV / MetaTronix'}.
-Tu función: producir briefings ejecutivos de máximo nivel — diagnóstico situacional, opciones estratégicas y plan de acción concreto.
-Perspectiva: McKinsey + Bain + visión de Silicon Valley. Mentalidad de founder.
-Idioma: español de negocios México. Conciso y ejecutivo.
-Formato: HTML semántico (h2, h3, p, ul, table, strong). Sin DOCTYPE ni etiquetas de documento.
-Finaliza siempre con: → Acción prioritaria esta semana: [qué hacer concretamente].
-${buildCEOKBContext() ? buildCEOKBContext() + '\n' : ''}
-PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO — REGLAS NO NEGOCIABLES:
-1. NUNCA inventes cifras, proyecciones ni datos sin base en el contexto provisto
-2. Cita fuente de cada número: (Fuente: Pipeline), (Fuente: CXC vencida), etc.
-3. HECHO vs ANÁLISIS: "Los datos muestran X" (hecho); "Esto podría indicar Y" (análisis)
-4. INCERTIDUMBRE: usa "aparentemente", "podría ser", "requiere verificación" si no es certeza
-5. ⚠ en recomendaciones: validar con datos actuales antes de implementar
-6. † en KPIs financieros: auditar antes de decisiones ejecutivas
-7. FORECAST: máximo 30 días hacia adelante — más allá indica claramente "estimación sujeta a revisión"
-8. AMBIGÜEDAD: si falta dato clave, señálalo — no rellenes con benchmarks del sector
-9. DATO AUSENTE: si el dato no está en el contexto, escribe "Sin dato disponible — requiere verificación manual"
-10. CAUSALIDAD: nunca la atribuyas sin evidencia directa — escribe "correlación posible, no causalidad confirmada"`,
+${buildCEOKBContext() ? buildCEOKBContext() + '\n' : ''}PROTOCOLO ANTI-ALUCINACIÓN NIVEL EJECUTIVO:
+- NUNCA inventes cifras, datos ni proyecciones sin base en el contexto provisto.
+- Cita fuente de cada número: (Fuente: Pipeline), (Fuente: CXC), etc.
+- HECHO vs ANÁLISIS: diferencia dato real de interpretación.
+- ⚠ en recomendaciones. † en KPIs financieros: auditar antes de decisiones ejecutivas.
+- HTML semántico (h2,h3,p,ul,table). Sin DOCTYPE.`,
         messages:[{role:'user',content:prompts[type]||prompts.daily}],
       }),
       signal:AbortSignal.timeout(120000),
@@ -1018,6 +1028,172 @@ ${kb.sector ? `SECTOR: ${kb.sector}` : ''}
 ${kb.competidores ? `COMPETIDORES: ${kb.competidores}` : ''}
 ${kb.estrategia ? `PRIORIDADES ESTRATÉGICAS: ${kb.estrategia}` : ''}
 ${kb.retos ? `RETOS ACTUALES: ${kb.retos}` : ''}`.trim();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SISTEMA NERVIOSO CENTRAL — CEO Integration
+   ═══════════════════════════════════════════════════════════════ */
+
+let _nervousChannel = null;
+let _mtzScore = null;
+
+async function initNervousSystem() {
+  const companyId = getActiveCompanyId();
+  if (!companyId || !_db) return;
+
+  // 1. Cargar MetaTronix Score
+  await refreshScore(companyId);
+
+  // 2. Cargar eventos recientes
+  await loadEventsFeed(companyId);
+
+  // 3. Suscribir a eventos en tiempo real
+  if (_nervousChannel) _nervousChannel.unsubscribe();
+  _nervousChannel = subscribeToEvents((event) => {
+    handleLiveEvent(event);
+  }, companyId);
+}
+
+async function refreshScore(companyId) {
+  const id = companyId || getActiveCompanyId();
+  if (!id) return;
+  const score = await getMetaTronixScore(id);
+  if (!score) return;
+  _mtzScore = score;
+  renderScoreWidget(score);
+}
+
+function renderScoreWidget(score) {
+  const slot = document.getElementById('health-bar-slot');
+  if (!slot) return;
+  const color = score.total >= 75 ? '#00ff88' : score.total >= 50 ? '#FCD34D' : '#F87171';
+  slot.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.3);border:1px solid ${color}33;border-radius:10px;padding:7px 14px;cursor:pointer" onclick="showScoreDetail()" title="MetaTronix Score — salud del negocio">
+      <svg width="36" height="36" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/>
+        <circle cx="18" cy="18" r="15" fill="none" stroke="${color}" stroke-width="3"
+          stroke-dasharray="${(score.total/100)*94.2} 94.2" stroke-linecap="round"
+          transform="rotate(-90 18 18)" style="transition:stroke-dasharray .5s"/>
+        <text x="18" y="22" text-anchor="middle" fill="${color}" font-size="10" font-weight="700" font-family="JetBrains Mono,monospace">${score.total}</text>
+      </svg>
+      <div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.5)">MTX Score</div>
+        <div style="font-size:11px;font-weight:600;color:${color}">${score.total >= 75 ? 'Saludable' : score.total >= 50 ? 'Atención' : 'Crítico'}</div>
+      </div>
+    </div>`;
+}
+
+function showScoreDetail() {
+  if (!_mtzScore) return;
+  const dims = [
+    { k:'pipeline',     l:'Pipeline',       w:30 },
+    { k:'collection',   l:'Cobranza',       w:25 },
+    { k:'activity',     l:'Actividad',      w:20 },
+    { k:'satisfaction', l:'Satisfacción',   w:15 },
+    { k:'ops',          l:'Operaciones',    w:10 },
+  ];
+  const html = `<div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center" onclick="this.remove()">
+    <div style="background:#111827;border:1px solid rgba(0,255,136,.2);border-radius:14px;padding:24px;min-width:320px" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:700">MetaTronix Score: <span style="color:#00ff88">${_mtzScore.total}/100</span></div>
+        <button onclick="this.closest('[style]').remove()" style="background:none;border:none;color:#94A3B8;font-size:20px;cursor:pointer">×</button>
+      </div>
+      ${dims.map(d => {
+        const val = _mtzScore[d.k] || 0;
+        const color = val >= 75 ? '#00ff88' : val >= 50 ? '#FCD34D' : '#F87171';
+        return `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+            <span style="color:#94A3B8">${d.l} <span style="color:#475569">(${d.w}%)</span></span>
+            <span style="color:${color};font-weight:700">${val}</span>
+          </div>
+          <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px">
+            <div style="height:100%;width:${val}%;background:${color};border-radius:3px;transition:width .4s"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+/* ── Feed de eventos en tiempo real ── */
+let _eventsData = [];
+
+async function loadEventsFeed(companyId) {
+  const events = await getRecentEvents(companyId, 30);
+  _eventsData = events;
+  renderEventsFeed();
+}
+
+function handleLiveEvent(event) {
+  _eventsData.unshift(event); // add to top
+  if (_eventsData.length > 50) _eventsData.pop();
+  renderEventsFeed();
+
+  // Refresh score on relevant events
+  if (['lead.won','lead.lost','invoice.overdue_30','payment.received'].includes(event.event_type)) {
+    refreshScore(getActiveCompanyId());
+  }
+
+  // Show toast for critical events
+  if (event.severity === 'critical' || event.severity === 'warn') {
+    const msg = formatEventMessage(event);
+    if (typeof Notiflix !== 'undefined') {
+      event.severity === 'critical'
+        ? Notiflix.Notify.failure('🔴 ' + msg, { timeout: 6000 })
+        : Notiflix.Notify.warning('🟡 ' + msg, { timeout: 4000 });
+    }
+  }
+}
+
+function formatEventMessage(ev) {
+  const msgs = {
+    'lead.won': `Deal ganado${ev.payload?.name ? ': ' + ev.payload.name : ''}${ev.revenue_impact ? ' — $' + Number(ev.revenue_impact).toLocaleString('es-MX') : ''}`,
+    'lead.lost': `Deal perdido${ev.payload?.name ? ': ' + ev.payload.name : ''}`,
+    'lead.stalled': `Lead paralizado 7+ días${ev.payload?.name ? ': ' + ev.payload.name : ''}`,
+    'invoice.overdue_30': `Factura vencida 30 días${ev.revenue_impact ? ' — $' + Number(ev.revenue_impact).toLocaleString('es-MX') : ''}`,
+    'invoice.overdue_60': `⚠ Factura vencida 60 días${ev.revenue_impact ? ' — $' + Number(ev.revenue_impact).toLocaleString('es-MX') : ''}`,
+    'payment.received': `Pago recibido${ev.revenue_impact ? ' — $' + Number(ev.revenue_impact).toLocaleString('es-MX') : ''}`,
+    'feedback.submitted': `Nuevo feedback: ${ev.payload?.title || ''}`,
+    'feature.threshold_reached': `Feature popular: ${ev.payload?.title || ''} (${ev.payload?.votes} votos)`,
+    'budget.alert': `Alerta presupuesto en compras`,
+    'campaign.launched': `Campaña lanzada`,
+    'collection.resolved': `Cobranza resuelta`,
+  };
+  return msgs[ev.event_type] || ev.event_type.replace('.',' — ');
+}
+
+function severityIcon(sev) {
+  return { critical:'🔴', warn:'🟡', ok:'🟢', info:'🔵' }[sev] || '⚪';
+}
+
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (diff < 60) return 'Ahora';
+  if (diff < 3600) return Math.floor(diff/60) + 'min';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h';
+  return Math.floor(diff/86400) + 'd';
+}
+
+function renderEventsFeed() {
+  const feed = document.getElementById('nervous-feed');
+  if (!feed) return;
+  if (!_eventsData.length) {
+    feed.innerHTML = `<div style="text-align:center;padding:24px;color:#475569;font-size:12px">Sin eventos aún. Las acciones del portal aparecerán aquí en tiempo real.</div>`;
+    return;
+  }
+  feed.innerHTML = _eventsData.slice(0, 25).map(ev => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background='transparent'">
+      <span style="font-size:13px;flex-shrink:0;margin-top:1px">${severityIcon(ev.severity)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;color:#E2E8F0;line-height:1.4">${escHtml(formatEventMessage(ev))}</div>
+        <div style="font-size:10px;color:#475569;margin-top:2px;display:flex;gap:8px">
+          <span>${ev.module}</span>
+          ${ev.revenue_impact ? `<span style="color:#10B981">$${Number(ev.revenue_impact).toLocaleString('es-MX')}</span>` : ''}
+        </div>
+      </div>
+      <span style="font-size:10px;color:#475569;flex-shrink:0">${timeAgo(ev.created_at)}</span>
+    </div>`).join('');
 }
 
 function initCEOKB() {
