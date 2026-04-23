@@ -154,6 +154,7 @@ jobs:
 
           fix_user('frida@retaillab.com.mx', 'Frida')
           fix_user('aamaya@todoretail.com',   'Ana Amaya')
+          fix_user('acanales@ibanormexico.com', 'Alejandro Canales')
           print('\n✅ Fix completado')
           PYEOF
 
@@ -185,6 +186,7 @@ jobs:
 
           test_login('frida@retaillab.com.mx')
           test_login('aamaya@todoretail.com')
+          test_login('acanales@ibanormexico.com')
           print('\nPortal: https://metatronixleads.tech')
           print('Password: MetaTronix2026!')
           PYEOF
