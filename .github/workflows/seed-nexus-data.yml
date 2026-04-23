@@ -1,0 +1,302 @@
+name: Seed Nexus — Datos completos (leads, docs, AR, feedback, pipeline completo)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - name: "Detectar empresa nexus y obtener UIDs"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}'}
+
+          cos = json.loads(urllib.request.urlopen(
+              urllib.request.Request(SB+'/rest/v1/companies?select=id,slug,name', headers=H)).read())
+          demo_id = next((c['id'] for c in cos if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo')), 'nexus')
+          print(f'Demo company: {demo_id}')
+          print('Todas las empresas:', [(c['id'], c.get('name')) for c in cos])
+
+          profiles = json.loads(urllib.request.urlopen(
+              urllib.request.Request(SB+'/rest/v1/profiles?select=id,email,full_name,role&order=role&limit=20', headers=H)).read())
+          print('Usuarios:', [(p['email'], p['role'], p['id'][:8]) for p in profiles])
+
+          with open('/tmp/nexus_ctx.json','w') as f:
+              json.dump({'demo_id': demo_id, 'profiles': profiles}, f)
+          PYEOF
+
+      - name: "Insertar 25 leads en todas las etapas del pipeline"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+          from datetime import datetime, timedelta
+          import random
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
+                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
+
+          ctx = json.load(open('/tmp/nexus_ctx.json'))
+          demo_id = ctx['demo_id']
+          uids = [p['id'] for p in ctx['profiles']] or [None]
+          def uid(i): return uids[i % len(uids)]
+          def dago(n): return (datetime.now()-timedelta(days=n)).isoformat()
+          def dfwd(n): return (datetime.now()+timedelta(days=n)).strftime('%Y-%m-%d')
+          def ddate(n): return (datetime.now()+timedelta(days=n)).strftime('%Y-%m-%d')
+
+          leads = [
+            # PROSPECTOS
+            {'name':'Innovatech Solutions','company':'Innovatech SA de CV','email':'contacto@innovatech.mx','phone':'+52 55 1234 5678','stage':'prospecto','status':'activo','valor_estimado':45000,'source':'whatsapp','notes':'Interesado en módulo de ventas. CEO contactó por LinkedIn. Primera llamada pendiente.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(2),'created_at':dago(3),'updated_at':dago(1)},
+            {'name':'Retail Moderno Guadalajara','company':'Retail Moderno SA','email':'gerencia@retailmoderno.com','phone':'+52 33 9876 5432','stage':'prospecto','status':'activo','valor_estimado':28000,'source':'referido','notes':'Referido por Construmax. Tienen 15 vendedores que necesitan CRM mejor que Excel.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(3),'created_at':dago(5),'updated_at':dago(2)},
+            {'name':'Clínica del Valle Monterrey','company':'Clínica del Valle SC','email':'admin@clinicadelvalle.mx','phone':'+52 81 5555 1234','stage':'prospecto','status':'activo','valor_estimado':62000,'source':'web','notes':'Formulario web. Buscan gestión de pacientes y seguimiento de médicos.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(5),'created_at':dago(7),'updated_at':dago(3)},
+            {'name':'Constructora Hermanos Vega','company':'CHV Construcciones','email':'jvega@chvconstrucciones.com','phone':'+52 55 6789 0123','stage':'prospecto','status':'activo','valor_estimado':95000,'source':'llamada','notes':'Llamada en frío exitosa. Director de Operaciones muy interesado.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(1),'created_at':dago(10),'updated_at':dago(5)},
+            # CALIFICADOS
+            {'name':'FinTech Capital LATAM','company':'FinTech Capital SA','email':'diego.ruiz@fintechcapital.mx','phone':'+52 55 2233 4455','stage':'calificado','status':'activo','valor_estimado':148000,'source':'linkedin','notes':'VP de Ventas con 40 vendedores. Pain: forecast imposible, 30% leads se pierden. Budget Q2 aprobado.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(4),'created_at':dago(15),'updated_at':dago(4)},
+            {'name':'Distribuidora TechMex','company':'TechMex Distribution','email':'compras@techmex.com.mx','phone':'+52 33 7788 9900','stage':'calificado','status':'activo','valor_estimado':72000,'source':'whatsapp','notes':'Gerente de Compras. 3 sucursales. Necesita integración con SAP.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(6),'created_at':dago(18),'updated_at':dago(6)},
+            {'name':'Hospital Regional Norte','company':'HRN Salud SA','email':'sistemas@hrnorte.mx','phone':'+52 81 4433 2211','stage':'calificado','status':'activo','valor_estimado':210000,'source':'evento','notes':'CIO con budget autorizado. Proceso formal de 60 días. Demo agendada.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(7),'created_at':dago(20),'updated_at':dago(7)},
+            # DEMO
+            {'name':'Logística del Norte SA','company':'LogiNorte SA de CV','email':'operaciones@loginorte.mx','phone':'+52 55 8899 0011','stage':'demo','status':'activo','valor_estimado':88000,'source':'referido','notes':'Demo realizada el lunes. 8/10 calificación. Pendiente propuesta técnica con precios.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(2),'created_at':dago(25),'updated_at':dago(2)},
+            {'name':'Grupo Textil Azteca','company':'Textil Azteca SA','email':'ceo@textilazteca.com','phone':'+52 55 1122 3344','stage':'demo','status':'activo','valor_estimado':55000,'source':'web','notes':'Demo agendada para el martes. 25 vendedores. CRM actual es Excel y WhatsApp.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(3),'created_at':dago(28),'updated_at':dago(1)},
+            {'name':'DataCorp Analytics MX','company':'DataCorp MX SA','email':'tech@datacorp.mx','phone':'+52 33 6655 4433','stage':'demo','status':'activo','valor_estimado':320000,'source':'linkedin','notes':'Demo técnica con IT. Evaluando API, seguridad LFPDPPP. Decisión en 2 semanas.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(5),'created_at':dago(30),'updated_at':dago(3)},
+            # PROPUESTA
+            {'name':'Inmobiliaria Premium MX','company':'Premium Inmuebles SA','email':'director@premiuminmuebles.com','phone':'+52 55 9988 7766','stage':'propuesta','status':'activo','valor_estimado':95000,'source':'referido','notes':'Propuesta enviada. Esperando comité. Precio negociado $89,500. Call el viernes.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(-2),'created_at':dago(35),'updated_at':dago(5)},
+            {'name':'Manufactura Integral Querétaro','company':'MIQ SA de CV','email':'compras@miq.mx','phone':'+52 442 123 4567','stage':'propuesta','status':'activo','valor_estimado':165000,'source':'evento','notes':'Propuesta formal entregada. Comité de 4 personas. Reunión el próximo viernes.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(4),'created_at':dago(40),'updated_at':dago(8)},
+            {'name':'Ferretería Central del Norte','company':'Ferretería Central SA','email':'gerencia@ferrcentralnorte.mx','phone':'+52 81 3322 1100','stage':'propuesta','status':'activo','valor_estimado':38000,'source':'llamada','notes':'Propuesta enviada. Dueño necesita validar con socio. Follow-up lunes.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(1),'created_at':dago(42),'updated_at':dago(10)},
+            # NEGOCIACIÓN
+            {'name':'Grupo Alpha Empresarial','company':'Grupo Alpha SA','email':'cfo@grupoalpha.mx','phone':'+52 55 7766 5544','stage':'negociacion','status':'activo','valor_estimado':280000,'source':'linkedin','notes':'CFO negocia: 40% anticipo, 60% a 90 días. Contrato en revisión legal. Cerramos esta semana.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(1),'created_at':dago(45),'updated_at':dago(2)},
+            {'name':'TechRetail México','company':'TechRetail MX SA','email':'vp.comercial@techretail.mx','phone':'+52 55 4455 6677','stage':'negociacion','status':'activo','valor_estimado':192000,'source':'web','notes':'VP negocia descuento por volumen (6 sucursales). Precio final $178,000. Contrato pendiente.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(2),'created_at':dago(50),'updated_at':dago(4)},
+            # CERRADO GANADO
+            {'name':'Construmax Norte SA','company':'Construmax SA de CV','email':'administracion@construmax.mx','phone':'+52 55 3344 5566','stage':'cierre','status':'cerrado_ganado','valor_estimado':128000,'source':'referido','notes':'CERRADO $128,000. Contrato firmado. Onboarding semana próxima. NPS 9/10.','company_id':demo_id,'user_id':uid(0),'created_at':dago(60),'updated_at':dago(8)},
+            {'name':'Retail Premium del Bajío','company':'Premium Retail SA','email':'ceo@retailpremiumbajio.com','phone':'+52 477 100 2000','stage':'cierre','status':'cerrado_ganado','valor_estimado':85000,'source':'evento','notes':'CERRADO $85,000. 6 meses prepagado. Cliente muy satisfecho con implementación.','company_id':demo_id,'user_id':uid(1),'created_at':dago(65),'updated_at':dago(15)},
+            {'name':'Fintech Monterrey Capital','company':'FinMty Capital SA','email':'ops@fintechmty.mx','phone':'+52 81 2211 3344','stage':'cierre','status':'cerrado_ganado','valor_estimado':62000,'source':'whatsapp','notes':'CERRADO. Pagó todo por adelantado. Excelente cliente. Potencial upsell en Q3.','company_id':demo_id,'user_id':uid(2),'created_at':dago(70),'updated_at':dago(20)},
+            {'name':'Hospital Valle del Sol','company':'HVS Salud SA','email':'gerencia@hvssalud.mx','phone':'+52 33 5544 3322','stage':'postventa','status':'cerrado_ganado','valor_estimado':340000,'source':'linkedin','notes':'CERRADO $340k — MAYOR DEAL DEL AÑO. En implementación. NPS 9/10. Refiere activamente.','company_id':demo_id,'user_id':uid(0),'created_at':dago(80),'updated_at':dago(25)},
+            # PERDIDO
+            {'name':'Software Factory GDL','company':'SFG Technologies','email':'cto@sfgtec.mx','phone':'+52 33 1234 5678','stage':'perdido','status':'cerrado_perdido','valor_estimado':45000,'source':'web','notes':'Perdido vs HubSpot. Objeción: precio. Seguimiento en 6 meses cuando renueven.','company_id':demo_id,'user_id':uid(1),'created_at':dago(90),'updated_at':dago(45)},
+            {'name':'Muebles Azteca Nacional','company':'Muebles Azteca SA','email':'compras@mueblesazteca.mx','phone':'+52 55 9900 1122','stage':'perdido','status':'cerrado_perdido','valor_estimado':28000,'source':'referido','notes':'Perdido — optaron por solución interna. No había realmente budget aprobado.','company_id':demo_id,'user_id':uid(2),'created_at':dago(95),'updated_at':dago(50)},
+            # ESTANCADOS (sin actividad)
+            {'name':'Agro Industrial del Norte','company':'AgroNorte SA','email':'direccion@agronorte.mx','phone':'+52 614 300 4000','stage':'calificado','status':'activo','valor_estimado':175000,'source':'llamada','notes':'SIN ACTIVIDAD 14 DÍAS. Contacto inicial muy bueno pero desapareció. REACTIVAR URGENTE.','company_id':demo_id,'user_id':uid(0),'stalled_since':(datetime.now()-timedelta(days=14)).isoformat(),'created_at':dago(45),'updated_at':dago(14)},
+            # BLOQUEADO POR DEUDA
+            {'name':'Distribuidora Global MX','company':'Global Distribution MX','email':'ventas@globaldist.mx','phone':'+52 55 6677 8899','stage':'propuesta','status':'activo','valor_estimado':130000,'source':'web','notes':'BLOQUEADO — deuda vencida 62 días cuenta anterior $185k. No avanzar hasta pago.','company_id':demo_id,'user_id':uid(1),'blocked_by_debt':True,'created_at':dago(55),'updated_at':dago(20)},
+            # RETENCION / POST-VENTA
+            {'name':'Grupo Salinas Retail','company':'Salinas Retail SA','email':'operaciones@salinasretail.mx','phone':'+52 55 5544 3322','stage':'retencion','status':'cerrado_ganado','valor_estimado':95000,'source':'referido','notes':'En retención. Renovación anual en 45 días. Alta probabilidad de upsell módulo marketing.','company_id':demo_id,'user_id':uid(2),'created_at':dago(120),'updated_at':dago(5)},
+          ]
+
+          # Agregar seguimientos para leads activos sin seguimiento
+          for l in leads:
+              if l.get('status') == 'activo' and 'seguimiento' not in l:
+                  l['seguimiento'] = ddate(random.choice([1,3,5,7]))
+
+          body = json.dumps(leads).encode()
+          req  = urllib.request.Request(SB+'/rest/v1/leads', data=body, headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f'✅ {len(leads)} leads insertados — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              print(f'❌ Error: {e.code} — {e.read().decode()[:400]}')
+          PYEOF
+
+      - name: "Insertar documentos de prueba en metatronix_docs"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os, base64
+          from datetime import datetime, timedelta
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
+                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
+
+          ctx = json.load(open('/tmp/nexus_ctx.json'))
+          demo_id = ctx['demo_id']
+          uid = ctx['profiles'][0]['id'] if ctx['profiles'] else None
+
+          def dago(n): return (datetime.now()-timedelta(days=n)).isoformat()
+
+          # Contenido PDF mínimo válido en base64
+          MINI_PDF_B64 = base64.b64encode(b'%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000062 00000 n\n0000000115 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n183\n%%EOF').decode()
+
+          # Contenido TXT simple
+          TXT_B64 = base64.b64encode(b'Documento de prueba - Nexus Demo\nFecha: 2026-04-23\nContenido de ejemplo para testing del portal.').decode()
+
+          docs = [
+            # Carpetas (categoría carpeta_admin)
+            {'file_path':'admin/clientes/FinTechCapital/', 'title':'FinTech Capital LATAM', 'category':'carpeta_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(20)},
+            {'file_path':'admin/clientes/HospitalValleSol/', 'title':'Hospital Valle del Sol', 'category':'carpeta_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(25)},
+            {'file_path':'admin/clientes/GrupoAlpha/', 'title':'Grupo Alpha Empresarial', 'category':'carpeta_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(15)},
+            {'file_path':'admin/clientes/Construmax/', 'title':'Construmax Norte SA', 'category':'carpeta_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(30)},
+            {'file_path':'admin/proveedores/Microsoft/', 'title':'Microsoft México', 'category':'carpeta_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(45)},
+            {'file_path':'admin/proveedores/AWS/', 'title':'Amazon Web Services', 'category':'carpeta_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(50)},
+
+            # Archivos PDF en carpetas de clientes
+            {'file_path':'admin/clientes/FinTechCapital/Contrato_Marco_2026.pdf', 'title':'Contrato Marco 2026', 'file_name':'Contrato_Marco_2026.pdf', 'file_type':'application/pdf', 'file_size':24580, 'file_data':MINI_PDF_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(18)},
+            {'file_path':'admin/clientes/FinTechCapital/Propuesta_Tecnica_v2.pdf', 'title':'Propuesta Técnica v2', 'file_name':'Propuesta_Tecnica_v2.pdf', 'file_type':'application/pdf', 'file_size':18432, 'file_data':MINI_PDF_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(12)},
+            {'file_path':'admin/clientes/HospitalValleSol/Contrato_Servicios_HVS.pdf', 'title':'Contrato de Servicios HVS', 'file_name':'Contrato_Servicios_HVS.pdf', 'file_type':'application/pdf', 'file_size':31200, 'file_data':MINI_PDF_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(22)},
+            {'file_path':'admin/clientes/HospitalValleSol/NDA_HVS_2026.pdf', 'title':'NDA 2026', 'file_name':'NDA_HVS_2026.pdf', 'file_type':'application/pdf', 'file_size':8192, 'file_data':MINI_PDF_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(28)},
+            {'file_path':'admin/clientes/GrupoAlpha/Propuesta_Comercial_Alpha.pdf', 'title':'Propuesta Comercial', 'file_name':'Propuesta_Comercial_Alpha.pdf', 'file_type':'application/pdf', 'file_size':22016, 'file_data':MINI_PDF_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(10)},
+            {'file_path':'admin/clientes/Construmax/Contrato_Firmado_Construmax.pdf', 'title':'Contrato Firmado', 'file_name':'Contrato_Firmado_Construmax.pdf', 'file_type':'application/pdf', 'file_size':28672, 'file_data':MINI_PDF_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(55)},
+            {'file_path':'admin/clientes/Construmax/Acta_Entrega_Construmax.pdf', 'title':'Acta de Entrega', 'file_name':'Acta_Entrega_Construmax.pdf', 'file_type':'application/pdf', 'file_size':12288, 'file_data':MINI_PDF_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(40)},
+            # TXT en proveedores
+            {'file_path':'admin/proveedores/Microsoft/Licencias_MS365_2026.txt', 'title':'Licencias Microsoft 365', 'file_name':'Licencias_MS365_2026.txt', 'file_type':'text/plain', 'file_size':1024, 'file_data':TXT_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(35)},
+            {'file_path':'admin/proveedores/AWS/Factura_AWS_Abril2026.txt', 'title':'Factura AWS Abril 2026', 'file_name':'Factura_AWS_Abril2026.txt', 'file_type':'text/plain', 'file_size':2048, 'file_data':TXT_B64, 'category':'archivo_admin', 'company_id':demo_id, 'uploaded_by':uid, 'created_at':dago(5)},
+          ]
+
+          body = json.dumps(docs).encode()
+          req  = urllib.request.Request(SB+'/rest/v1/metatronix_docs', data=body, headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f'✅ {len(docs)} documentos insertados (6 carpetas + {len(docs)-6} archivos) — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              print(f'❌ Error docs: {e.code} — {e.read().decode()[:400]}')
+          PYEOF
+
+      - name: "Insertar cuentas por cobrar (accounts_receivable)"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+          from datetime import datetime, timedelta
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
+                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
+
+          ctx = json.load(open('/tmp/nexus_ctx.json'))
+          demo_id = ctx['demo_id']
+
+          def dago_date(n): return (datetime.now()-timedelta(days=n)).strftime('%Y-%m-%d')
+          def dfwd_date(n): return (datetime.now()+timedelta(days=n)).strftime('%Y-%m-%d')
+          def dago_ts(n):   return (datetime.now()-timedelta(days=n)).isoformat()
+
+          ar = [
+            # Pagadas
+            {'company_id':demo_id,'client_name':'Construmax Norte SA','client_email':'administracion@construmax.mx','amount':128000,'currency':'MXN','status':'pagado','folio':'FAC-2026-041','due_date':dago_date(10),'paid_at':dago_ts(8)},
+            {'company_id':demo_id,'client_name':'Retail Premium del Bajío','client_email':'ceo@retailpremiumbajio.com','amount':85000,'currency':'MXN','status':'pagado','folio':'FAC-2026-038','due_date':dago_date(20),'paid_at':dago_ts(15)},
+            {'company_id':demo_id,'client_name':'Hospital Valle del Sol','client_email':'gerencia@hvssalud.mx','amount':170000,'currency':'MXN','status':'pagado','folio':'FAC-2026-031','due_date':dago_date(30),'paid_at':dago_ts(25)},
+            {'company_id':demo_id,'client_name':'Fintech Monterrey Capital','client_email':'ops@fintechmty.mx','amount':62000,'currency':'MXN','status':'pagado','folio':'FAC-2026-027','due_date':dago_date(35),'paid_at':dago_ts(30)},
+            # Pendientes (por vencer)
+            {'company_id':demo_id,'client_name':'FinTech Capital LATAM','client_email':'diego.ruiz@fintechcapital.mx','amount':148000,'currency':'MXN','status':'pendiente','folio':'FAC-2026-052','due_date':dfwd_date(15)},
+            {'company_id':demo_id,'client_name':'Hospital Regional Norte','client_email':'sistemas@hrnorte.mx','amount':105000,'currency':'MXN','status':'pendiente','folio':'FAC-2026-049','due_date':dfwd_date(30)},
+            {'company_id':demo_id,'client_name':'Grupo Salinas Retail','client_email':'operaciones@salinasretail.mx','amount':95000,'currency':'MXN','status':'pendiente','folio':'FAC-2026-047','due_date':dfwd_date(45)},
+            # VENCIDAS
+            {'company_id':demo_id,'client_name':'Distribuidora Global MX','client_email':'ventas@globaldist.mx','amount':185000,'currency':'MXN','status':'vencido','folio':'FAC-2026-028','due_date':dago_date(62),'collection_notes':'CRÍTICA. 62 días vencida. Cliente bloqueado para nuevas ventas. Escalada a dirección.'},
+            {'company_id':demo_id,'client_name':'TechRetail México','client_email':'vp.comercial@techretail.mx','amount':95000,'currency':'MXN','status':'en_cobranza','folio':'FAC-2026-033','due_date':dago_date(35),'collection_notes':'Cliente prometió pago día 10. Seguimiento activo cada 2 días.'},
+            {'company_id':demo_id,'client_name':'Agro Industrial del Norte','client_email':'direccion@agronorte.mx','amount':52000,'currency':'MXN','status':'vencido','folio':'FAC-2026-021','due_date':dago_date(48),'collection_notes':'Sin respuesta desde hace 2 semanas. Enviar carta formal.'},
+          ]
+
+          body = json.dumps(ar).encode()
+          req  = urllib.request.Request(SB+'/rest/v1/accounts_receivable', data=body, headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f'✅ {len(ar)} cuentas por cobrar — HTTP {resp.status}')
+              total = sum(a['amount'] for a in ar)
+              pagado = sum(a['amount'] for a in ar if a['status']=='pagado')
+              vencido = sum(a['amount'] for a in ar if a['status'] in ('vencido','en_cobranza'))
+              print(f'   Total: ${total:,.0f} | Cobrado: ${pagado:,.0f} | En riesgo: ${vencido:,.0f}')
+          except urllib.error.HTTPError as e:
+              print(f'❌ Error AR: {e.code} — {e.read().decode()[:300]}')
+          PYEOF
+
+      - name: "Insertar feature requests y feedback del equipo"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+          from datetime import datetime, timedelta
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
+                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
+
+          ctx = json.load(open('/tmp/nexus_ctx.json'))
+          demo_id = ctx['demo_id']
+          uid = ctx['profiles'][0]['id'] if ctx['profiles'] else None
+          def dago(n): return (datetime.now()-timedelta(days=n)).isoformat()
+
+          frs = [
+            {'company_id':demo_id,'title':'App móvil nativa para vendedores en campo','description':'Los vendedores necesitan acceder al CRM desde su celular. App iOS/Android con modo offline y sincronización automática.','category':'feature','status':'planeado','votes_count':12,'priority_score':890000,'module':'ventas','created_by':uid,'target_release':'Q3-2026','created_at':dago(30)},
+            {'company_id':demo_id,'title':'Exportar pipeline completo a Excel/CSV','description':'Gerentes necesitan exportar el pipeline filtrado a Excel para presentaciones a dirección. Actualmente toman capturas.','category':'feature','status':'en_desarrollo','votes_count':9,'priority_score':620000,'module':'ventas','created_by':uid,'target_release':'Q2-2026','created_at':dago(45)},
+            {'company_id':demo_id,'title':'Dashboard ejecutivo con resumen semanal automático','description':'Email automático cada lunes con resumen: deals ganados, perdidos, en riesgo y métricas del equipo.','category':'feature','status':'evaluando','votes_count':7,'priority_score':480000,'module':'ceo','created_by':uid,'created_at':dago(20)},
+            {'company_id':demo_id,'title':'Integración nativa con WhatsApp Business API','description':'Ver y responder WhatsApp directamente desde la card del lead sin cambiar de aplicación.','category':'integration','status':'backlog','votes_count':15,'priority_score':1200000,'module':'ventas','created_by':uid,'created_at':dago(60)},
+            {'company_id':demo_id,'title':'Notificaciones push en tiempo real','description':'Recibir notificación cuando un lead cambia de etapa, hay nuevo lead asignado o vence un seguimiento.','category':'improvement','status':'planeado','votes_count':6,'priority_score':390000,'module':'ventas','created_by':uid,'target_release':'Q3-2026','created_at':dago(25)},
+            {'company_id':demo_id,'title':'Bug: filtro de fecha no funciona en Safari','description':'Al aplicar filtro de fecha en el pipeline en Safari, la página se queda en blanco. Chrome y Firefox OK.','category':'bug','status':'en_desarrollo','votes_count':4,'priority_score':150000,'module':'ventas','created_by':uid,'target_release':'Q2-2026','created_at':dago(10)},
+            {'company_id':demo_id,'title':'Módulo de comisiones automático por vendedor','description':'Calcular comisiones automáticamente basado en deals cerrados con reporte mensual y desglose por vendedor.','category':'feature','status':'backlog','votes_count':8,'priority_score':720000,'module':'finanzas','created_by':uid,'created_at':dago(50)},
+            {'company_id':demo_id,'title':'Firma digital de contratos integrada (e-firma)','description':'Enviar contratos para firma electrónica directamente desde el portal sin usar DocuSign por separado.','category':'integration','status':'backlog','votes_count':5,'priority_score':380000,'module':'archivos','created_by':uid,'created_at':dago(35)},
+          ]
+
+          body = json.dumps(frs).encode()
+          req  = urllib.request.Request(SB+'/rest/v1/feature_requests', data=body, headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f'✅ {len(frs)} feature requests — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              print(f'❌ FR: {e.code} — {e.read().decode()[:200]}')
+          PYEOF
+
+      - name: "Resumen final — verificar todos los datos"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}'}
+
+          ctx = json.load(open('/tmp/nexus_ctx.json'))
+          demo_id = ctx['demo_id']
+
+          print(f'\n╔═══════════════════════════════════════════════════╗')
+          print(f'  NEXUS ({demo_id}) — Datos de prueba completos')
+          print(f'╚═══════════════════════════════════════════════════╝\n')
+
+          tables = [
+              ('leads', f'?company_id=eq.{demo_id}'),
+              ('metatronix_docs', f'?company_id=eq.{demo_id}'),
+              ('accounts_receivable', f'?company_id=eq.{demo_id}'),
+              ('feature_requests', f'?company_id=eq.{demo_id}'),
+              ('events', f'?company_id=eq.{demo_id}'),
+          ]
+
+          for table, qs in tables:
+              url = f'{SB}/rest/v1/{table}{qs}&select=id'
+              try:
+                  data = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=H)).read())
+                  print(f'  ✅ {table:25} → {len(data):3} registros')
+              except Exception as ex:
+                  print(f'  ❌ {table:25} → {ex}')
+
+          # Leads por etapa
+          url = f'{SB}/rest/v1/leads?company_id=eq.{demo_id}&select=stage,status&limit=100'
+          data = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=H)).read())
+          stages = {}
+          for l in data: stages[l.get('stage','?')] = stages.get(l.get('stage','?'),0)+1
+          print(f'\n  Pipeline por etapa:')
+          order = ['prospecto','calificado','demo','propuesta','negociacion','cierre','postventa','retencion','perdido']
+          for s in order:
+              if s in stages: print(f'    {s:20} → {stages[s]}')
+
+          # AR por status
+          url = f'{SB}/rest/v1/accounts_receivable?company_id=eq.{demo_id}&select=status,amount'
+          data = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=H)).read())
+          ar_status = {}
+          for a in data: ar_status[a['status']] = ar_status.get(a['status'],0) + float(a['amount'])
+          print(f'\n  Cuentas por cobrar:')
+          for s, amt in ar_status.items(): print(f'    {s:15} → ${amt:>12,.0f} MXN')
+
+          # Docs
+          url = f'{SB}/rest/v1/metatronix_docs?company_id=eq.{demo_id}&select=category'
+          data = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=H)).read())
+          carpetas = sum(1 for d in data if d['category']=='carpeta_admin')
+          archivos = sum(1 for d in data if d['category']=='archivo_admin')
+          print(f'\n  Documentos: {carpetas} carpetas + {archivos} archivos')
+          print(f'\n✅ NEXUS listo para demostración completa')
+          PYEOF
