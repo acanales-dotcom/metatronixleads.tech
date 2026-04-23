@@ -381,7 +381,7 @@
 
 <script src="/assets/libs/supabase.min.js"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260421"></script>
+<script src="/assets/app.js?v=20260420i"></script>
 
 <!-- Neural network canvas animation -->
 <script>
@@ -528,7 +528,7 @@ async function handlePasswordReset() {
     const db = getDB();
     if (!db) throw new Error('No se pudo conectar con el servidor.');
     const { error } = await db.auth.resetPasswordForEmail(address, {
-      redirectTo: window.location.origin + '/activar-cuenta.html'
+      redirectTo: window.location.origin + '/reset-password.html'
     });
     if (error) throw error;
     err.style.color = 'var(--accent)';
