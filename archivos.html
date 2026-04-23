@@ -909,6 +909,11 @@ async function init() {
 
   document.getElementById('fmLayout').style.display = 'flex';
   fillPeriod();
+  // Asegurar que MTX_ACTIVE_COMPANY esté seteado antes de buildTree
+  // Esta página es exclusiva de IBANOR — usar siempre IBANOR_ID como fallback
+  if (!window.MTX_ACTIVE_COMPANY) {
+    window.MTX_ACTIVE_COMPANY = { id: IBANOR_ID, name: 'IBANOR SA de CV' };
+  }
   await buildTree();
 
   // Recargar árbol y archivos cuando cambia de empresa
