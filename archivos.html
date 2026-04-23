@@ -825,6 +825,12 @@ const TREE = [
     subs:['Cotizaciones','Contratos','POs','Facturas','Varios']
   },
   {
+    id:'comisionistas', icon:'🤜', label:'Comisionistas',
+    dynamic:true, etype:'comisionista',
+    base:'admin/comisionistas/',
+    subs:['Contratos','Comisiones','Facturas','Varios']
+  },
+  {
     id:'prov', icon:'🏭', label:'Proveedores',
     dynamic:true, etype:'proveedor',
     base:'admin/proveedores/',
@@ -839,7 +845,8 @@ const TREE = [
       { label:'Declaraciones Anuales',      path:'admin/fiscal/declaraciones-anuales/' },
       { label:'Documentos SAT',             path:'admin/fiscal/documentos-sat/' },
       { label:'FIEL',                       path:'admin/fiscal/fiel/' },
-      { label:'Planeaciones Fiscales',      path:'admin/fiscal/planeaciones-fiscales/' }
+      { label:'Planeaciones Fiscales',      path:'admin/fiscal/planeaciones-fiscales/' },
+      { label:'Reportes',                   path:'admin/fiscal/reportes/' }
     ]
   },
   {
@@ -864,11 +871,12 @@ const TREE = [
   {
     id:'acta', icon:'📜', label:'Acta Constitutiva',
     children:[
-      { label:'Cambios y Asambleas',         path:'admin/acta-constitutiva/cambios-asambleas/' },
-      { label:'Docs Representante Legal',    path:'admin/acta-constitutiva/representante-legal/' },
-      { label:'Alejandro Canales Farías',    path:'admin/acta-constitutiva/alejandro-canales-farias/' },
-      { label:'Alejandro Canales Ibarra',    path:'admin/acta-constitutiva/alejandro-canales-ibarra/' },
-      { label:'Norma B Canales Ibarra',      path:'admin/acta-constitutiva/norma-b-canales-ibarra/' }
+      { label:'Actas',                        path:'admin/acta-constitutiva/actas/' },
+      { label:'Cambios y Asambleas',          path:'admin/acta-constitutiva/cambios-asambleas/' },
+      { label:'Docs Representante Legal',     path:'admin/acta-constitutiva/representante-legal/' },
+      { label:'Alejandro Canales Farías',     path:'admin/acta-constitutiva/alejandro-canales-farias/' },
+      { label:'Alejandro Canales Ibarra',     path:'admin/acta-constitutiva/alejandro-canales-ibarra/' },
+      { label:'Norma B Canales Ibarra',       path:'admin/acta-constitutiva/norma-b-canales-ibarra/' }
     ]
   }
 ];
@@ -983,9 +991,9 @@ async function buildTree() {
   if (companyId) treeQ = treeQ.eq('company_id', companyId);
   const { data: carpetas } = await treeQ;
 
-  const ents = { clientes:[], proveedores:[], aduanas:[] };
+  const ents = { clientes:[], comisionistas:[], proveedores:[], aduanas:[] };
   (carpetas||[]).forEach(f => {
-    const m = f.file_path.match(/^admin\/(clientes|proveedores|fiscal\/aduanas)\/([^/]+)\//);
+    const m = f.file_path.match(/^admin\/(clientes|comisionistas|proveedores|fiscal\/aduanas)\/([^/]+)\//);
     if (!m) return;
     // Mapear 'fiscal/aduanas' → 'aduanas'
     const groupKey = m[1] === 'fiscal/aduanas' ? 'aduanas' : m[1];
@@ -1019,7 +1027,7 @@ function mkSec(section, ents) {
   body.className = 'sec-body';
 
   if (section.dynamic) {
-    const groupMap = { cliente:'clientes', proveedor:'proveedores', agencia_aduanal:'aduanas' };
+    const groupMap = { cliente:'clientes', comisionista:'comisionistas', proveedor:'proveedores', agencia_aduanal:'aduanas' };
     const group = groupMap[section.etype] || section.etype;
     (ents[group]||[]).forEach(e => body.appendChild(mkEnt(e, section.base, section.subs)));
 
@@ -1399,8 +1407,8 @@ async function confirmDelFolder() {
 /* ── Entidad (cliente / proveedor) ────────────────────── */
 function openMEnt(etype, base, subs, bodyEl, addBtn) {
   entCtx = { etype, base, subs, bodyEl, addBtn };
-  const titles  = { cliente:'Agregar Cliente', proveedor:'Agregar Proveedor', agencia_aduanal:'Agregar Agencia Aduanal' };
-  const labels  = { cliente:'Nombre del cliente', proveedor:'Nombre del proveedor', agencia_aduanal:'Nombre de la agencia aduanal' };
+  const titles  = { cliente:'Agregar Cliente', comisionista:'Agregar Comisionista', proveedor:'Agregar Proveedor', agencia_aduanal:'Agregar Agencia Aduanal' };
+  const labels  = { cliente:'Nombre del cliente', comisionista:'Nombre del comisionista', proveedor:'Nombre del proveedor', agencia_aduanal:'Nombre de la agencia aduanal' };
   document.getElementById('entTitle').textContent = titles[etype]  || `Agregar ${etype}`;
   document.getElementById('entLabel').textContent  = labels[etype] || `Nombre`;
   document.getElementById('entName').value = '';
