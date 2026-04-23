@@ -136,7 +136,8 @@ jobs:
                   co_id = d[0]['id'] if d else None
               if not co_id:
                   d, _ = api('GET', '/rest/v1/companies?select=id,name,slug&limit=10')
-                  print(f'  Empresas disponibles: {[f"{c.get(\"id\")} {c.get(\"name\")}" for c in d]}')
+                  co_info = [str(c.get('id','?')) + ' ' + str(c.get('name','?')) for c in d]
+                  print('  Empresas disponibles: ' + str(co_info))
 
               if co_id:
                   url2 = SB + '/rest/v1/user_companies'
