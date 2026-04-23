@@ -1,11 +1,11 @@
-name: Fix Roles — Restaurar roles correctos de todos los usuarios
+name: Fix Roles — Configuración completa de usuarios
 
 on:
   workflow_dispatch:
 
 jobs:
   fix-roles:
-    name: Restaurar roles en profiles
+    name: Roles + empresas + supervisores
     runs-on: ubuntu-latest
     env:
       SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
@@ -17,71 +17,190 @@ jobs:
           HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "apikey: $SK" -H "Authorization: Bearer $SK" \
             "$SB/rest/v1/profiles?select=id&limit=1")
-          echo "HTTP $HTTP"
-          [ "$HTTP" = "200" ] || { echo "❌ Conexión fallida"; exit 1; }
-          echo "✅ Conexión OK"
+          [ "$HTTP" = "200" ] && echo "✅ Conexión OK" || { echo "❌ Falla HTTP $HTTP"; exit 1; }
 
-      - name: "Estado actual de profiles"
-        run: |
-          echo "=== ANTES del fix ==="
-          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
-            "$SB/rest/v1/profiles?select=email,role,is_active&order=email" | \
-            python3 -c "
-          import json,sys
-          users = json.load(sys.stdin)
-          for u in users:
-              print(f'  {u.get(\"email\",\"?\"):45} | {u.get(\"role\",\"?\"):20} | activo:{u.get(\"is_active\")}')
-          " 2>/dev/null || echo "(parse error)"
-
-      - name: "Restaurar roles correctos"
+      - name: "Aplicar configuración completa"
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, urllib.error, os
 
           SB = os.environ['SB']
           SK = os.environ['SK']
-          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}',
-                'Content-Type': 'application/json', 'Prefer': 'return=minimal'}
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json'}
 
-          # Tabla de roles correctos: email → (role, company_id)
-          ROLES = {
-              'acanales@ibanormexico.com':  ('super_admin',       'metatronix'),
-              'ncanales@ibanormexico.com':  ('super_admin',       'metatronix'),
-              'nibarra@ibanormexico.com':   ('admin',             'metatronix'),
-              'acanalesf@ibanormexico.com': ('admin',             'metatronix'),
-              'jorge@retaillab.com.mx':     ('admin_restringido', 'metatronix'),
-              'noe@grupoamsg.com':          ('admin_restringido', 'metatronix'),
-              'rsuarez@ibanormexico.com':   ('admin_restringido', 'metatronix'),
-              'frida@retaillab.com.mx':     ('user',              'metatronix'),
-              'aamaya@todoretail.com':      ('user',              'metatronix'),
-          }
-
-          def patch_role(email, role, company_id):
-              enc_email = email.replace('@', '%40').replace('.', '%2E')
-              url  = f'{SB}/rest/v1/profiles?email=eq.{enc_email}'
-              body = json.dumps({'role': role, 'company_id': company_id, 'is_active': True}).encode()
-              req  = urllib.request.Request(url, data=body, headers=H, method='PATCH')
+          def api(method, path, body=None, prefer=None):
+              url  = SB + path
+              data = json.dumps(body).encode() if body else None
+              hdrs = {**H}
+              if prefer: hdrs['Prefer'] = prefer
+              req  = urllib.request.Request(url, data=data, headers=hdrs, method=method)
               try:
                   resp = urllib.request.urlopen(req)
-                  print(f'  ✅ {email:45} → {role:20} @ {company_id}  HTTP {resp.status}')
+                  raw  = resp.read()
+                  return (json.loads(raw) if raw else {}), resp.status
               except urllib.error.HTTPError as e:
-                  print(f'  ❌ {email} → HTTP {e.code}: {e.read().decode()[:200]}')
+                  err = e.read().decode()
+                  return (json.loads(err) if err else {}), e.code
 
+          # ── 1. Obtener IDs de empresas por slug ───────────────────
+          print('\n── Empresas disponibles ──')
+          cos, _ = api('GET', '/rest/v1/companies?select=id,name,slug')
+          co_map = {c['slug']: c['id'] for c in (cos if isinstance(cos, list) else [])}
+          for slug, cid in co_map.items():
+              print(f'  {slug:20} {cid}')
+
+          if not co_map:
+              print('❌ No se encontraron empresas. Abortando.')
+              exit(1)
+
+          MTX   = co_map.get('metatronix')
+          IBANOR= co_map.get('ibanor')
+          DEMO  = co_map.get('demo')
+
+          print(f'\n  metatronix → {MTX}')
+          print(f'  ibanor     → {IBANOR}')
+          print(f'  demo       → {DEMO}')
+
+          # ── 2. Configuración por usuario ──────────────────────────
+          # companies: lista de (slug, uc_role) a asignar en user_companies
+          USERS = {
+              'acanales@ibanormexico.com': {
+                  'role': 'super_admin',
+                  'primary': MTX,
+                  'companies': [
+                      (MTX,    'owner'),
+                      (DEMO,   'owner'),
+                      (IBANOR, 'owner'),
+                  ],
+              },
+              'ncanales@ibanormexico.com': {
+                  'role': 'super_admin',
+                  'primary': MTX,
+                  'companies': [
+                      (MTX,  'owner'),
+                      (DEMO, 'owner'),
+                  ],
+              },
+              'nibarra@ibanormexico.com': {
+                  'role': 'admin',
+                  'primary': MTX,
+                  'companies': [
+                      (MTX,    'admin'),
+                      (IBANOR, 'admin'),
+                  ],
+              },
+              'acanalesf@ibanormexico.com': {
+                  'role': 'admin',
+                  'primary': MTX,
+                  'companies': [
+                      (MTX,    'admin'),
+                      (IBANOR, 'admin'),
+                  ],
+              },
+              'jorge@retaillab.com.mx': {
+                  'role': 'admin_restringido',
+                  'primary': MTX,
+                  'companies': [
+                      (MTX,  'member'),
+                      (DEMO, 'member'),
+                  ],
+              },
+              'noe@grupoamsg.com': {
+                  'role': 'admin_restringido',
+                  'primary': MTX,
+                  'companies': [
+                      (MTX,  'member'),
+                      (DEMO, 'member'),
+                  ],
+              },
+              'rsuarez@ibanormexico.com': {
+                  'role': 'admin_restringido',
+                  'primary': MTX,
+                  'companies': [
+                      (MTX,  'member'),
+                      (DEMO, 'member'),
+                  ],
+              },
+              'frida@retaillab.com.mx': {
+                  'role': 'user',
+                  'primary': MTX,
+                  'companies': [(MTX, 'member')],
+                  'supervisor': 'jorge@retaillab.com.mx',
+              },
+              'aamaya@todoretail.com': {
+                  'role': 'user',
+                  'primary': MTX,
+                  'companies': [(MTX, 'member')],
+                  'supervisor': 'jorge@retaillab.com.mx',
+              },
+          }
+
+          # ── 3. Obtener UUIDs de todos los usuarios ────────────────
+          print('\n── Obteniendo UUIDs ──')
+          uid_map = {}
+          for email in USERS:
+              enc = email.replace('@','%40').replace('.','%2E')
+              d, _ = api('GET', f'/rest/v1/profiles?email=eq.{enc}&select=id,email')
+              if isinstance(d, list) and d:
+                  uid_map[email] = d[0]['id']
+                  print(f'  ✅ {email:45} {d[0]["id"]}')
+              else:
+                  print(f'  ⚠ {email:45} no encontrado en profiles')
+
+          # ── 4. Aplicar roles y empresa primaria ───────────────────
           print('\n── Aplicando roles ──')
-          for email, (role, company) in ROLES.items():
-              patch_role(email, role, company)
+          for email, cfg in USERS.items():
+              uid = uid_map.get(email)
+              if not uid:
+                  print(f'  SKIP {email} (sin UID)')
+                  continue
 
-          print('\n✅ Fix de roles completado')
+              patch = {'role': cfg['role'], 'is_active': True}
+              if cfg.get('primary'):
+                  patch['company_id'] = cfg['primary']
+              if cfg.get('supervisor'):
+                  sup_uid = uid_map.get(cfg['supervisor'])
+                  if sup_uid:
+                      patch['supervisor_id'] = sup_uid
+
+              enc = email.replace('@','%40').replace('.','%2E')
+              _, code = api('PATCH', f'/rest/v1/profiles?email=eq.{enc}', patch,
+                            prefer='return=minimal')
+              print(f'  {email:45} → {cfg["role"]:20} HTTP {code}')
+
+          # ── 5. Upsert membresías user_companies ───────────────────
+          print('\n── Aplicando membresías ──')
+          for email, cfg in USERS.items():
+              uid = uid_map.get(email)
+              if not uid: continue
+              for co_id, uc_role in cfg['companies']:
+                  if not co_id:
+                      print(f'  SKIP {email} — empresa no encontrada')
+                      continue
+                  body = {'user_id': uid, 'company_id': co_id, 'role': uc_role}
+                  _, code = api('POST', '/rest/v1/user_companies', body,
+                                prefer='resolution=merge-duplicates,return=minimal')
+                  slug = [s for s,i in co_map.items() if i==co_id]
+                  print(f'  {email:45} + {(slug[0] if slug else co_id):12} ({uc_role}) HTTP {code}')
+
+          print('\n✅ Configuración completada')
           PYEOF
 
-      - name: "Estado final de profiles"
+      - name: "Estado final"
         run: |
-          echo "=== DESPUÉS del fix ==="
+          echo "=== PROFILES ==="
           curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
             "$SB/rest/v1/profiles?select=email,role,company_id,is_active&order=email" | \
             python3 -c "
           import json,sys
-          users = json.load(sys.stdin)
-          for u in users:
-              print(f'  {u.get(\"email\",\"?\"):45} | {u.get(\"role\",\"?\"):20} | {u.get(\"company_id\",\"?\"):12} | activo:{u.get(\"is_active\")}')
-          " 2>/dev/null || echo "(parse error)"
+          for u in json.load(sys.stdin):
+              print(f'  {u.get(\"email\",\"?\"):45} | {u.get(\"role\",\"?\"):20} | {u.get(\"company_id\",\"?\") or \"NULL\":12} | activo:{u.get(\"is_active\")}')
+          " 2>/dev/null
+
+          echo ""
+          echo "=== USER_COMPANIES ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/user_companies?select=user_id,company_id,role" | \
+            python3 -c "
+          import json,sys; rows=json.load(sys.stdin); print(f'  Total membresías: {len(rows)}')
+          " 2>/dev/null
