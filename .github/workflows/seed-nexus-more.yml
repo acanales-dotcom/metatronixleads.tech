@@ -11,7 +11,7 @@ jobs:
       SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
     steps:
-      - name: "Setup — obtener contexto"
+      - name: "Setup — contexto nexus"
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, os
@@ -20,18 +20,24 @@ jobs:
           SK = os.environ['SK']
           H  = {'apikey': SK, 'Authorization': f'Bearer {SK}'}
 
-          cos = json.loads(urllib.request.urlopen(urllib.request.Request(SB+'/rest/v1/companies?select=id,slug', headers=H)).read())
-          demo_id = next((c['id'] for c in cos if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo')), 'nexus')
-          profiles = json.loads(urllib.request.urlopen(urllib.request.Request(SB+'/rest/v1/profiles?select=id,email,full_name,role&limit=20', headers=H)).read())
-          # Get existing leads to use their IDs
-          leads = json.loads(urllib.request.urlopen(urllib.request.Request(
-              f'{SB}/rest/v1/leads?company_id=eq.{demo_id}&select=id,name,stage,user_id&limit=50', headers=H)).read())
-          print(f'Demo: {demo_id}, Users: {len(profiles)}, Leads: {len(leads)}')
+          def safe_get(url):
+              try:
+                  return json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=H)).read())
+              except Exception as ex:
+                  print(f'  WARN {url.split("?")[0].split("/")[-1]}: {ex}')
+                  return []
+
+          cos      = safe_get(SB+'/rest/v1/companies?select=id,slug,name')
+          demo_id  = next((c['id'] for c in cos if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo')), 'nexus')
+          profiles = safe_get(SB+'/rest/v1/profiles?select=id,email,full_name,role&limit=20')
+          leads    = safe_get(f'{SB}/rest/v1/leads?company_id=eq.{demo_id}&select=id,name,stage&limit=50')
+
+          print(f'Demo: {demo_id}  |  Perfiles: {len(profiles)}  |  Leads existentes: {len(leads)}')
           with open('/tmp/ctx.json','w') as f:
               json.dump({'demo_id': demo_id, 'profiles': profiles, 'leads': leads}, f)
           PYEOF
 
-      - name: "Org Pulse — métricas ejecutivas diarias"
+      - name: "Org Pulse — 60 días de métricas ejecutivas"
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, urllib.error, os, random
@@ -41,46 +47,52 @@ jobs:
           SK = os.environ['SK']
           H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
                 'Prefer': 'resolution=ignore-duplicates,return=minimal'}
-          ctx = json.load(open('/tmp/ctx.json'))
-          demo_id = ctx['demo_id']
 
-          # Generar 60 días de org_pulse
+          # Schema real de org_pulse (sin company_id)
+          base_pipeline = 8_500_000
           pulsos = []
-          base_pipeline = 1_850_000
-          base_deals = 18
           for i in range(60, 0, -1):
-              fecha = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
-              var = random.uniform(0.95, 1.06)
+              ts = (datetime.now() - timedelta(days=i))
+              var = random.uniform(0.96, 1.05)
+              base_pipeline = round(base_pipeline * var)
               pulsos.append({
-                  'company_id': demo_id,
-                  'fecha': fecha,
-                  'pipeline_value': round(base_pipeline * var),
-                  'deals_activos': base_deals + random.randint(-2, 3),
-                  'deals_ganados_mes': random.randint(2, 5),
-                  'deals_perdidos_mes': random.randint(1, 3),
-                  'revenue_mes': round(random.uniform(280000, 420000)),
-                  'tasa_cierre': round(random.uniform(28, 42), 1),
-                  'ciclo_promedio_dias': random.randint(22, 45),
-                  'leads_nuevos': random.randint(8, 18),
-                  'actividad_equipo': round(random.uniform(70, 95), 1),
-                  'created_at': (datetime.now() - timedelta(days=i)).isoformat()
+                  'pipeline_total':     base_pipeline,
+                  'deals_activos':      random.randint(28, 42),
+                  'deals_ganados_mes':  random.randint(3, 8),
+                  'deals_en_riesgo':    random.randint(2, 6),
+                  'leads_nuevos_7d':    random.randint(5, 15),
+                  'conversion_rate':    round(random.uniform(24, 38), 1),
+                  'cxc_total':          round(random.uniform(1_200_000, 2_800_000)),
+                  'cxc_vencida':        round(random.uniform(185_000, 540_000)),
+                  'cxp_total':          round(random.uniform(420_000, 890_000)),
+                  'cxp_proximos_30d':   round(random.uniform(120_000, 380_000)),
+                  'flujo_neto':         round(random.uniform(380_000, 920_000)),
+                  'cobranza_urgente':   random.randint(2, 7),
+                  'oc_pendientes':      random.randint(3, 12),
+                  'oc_monto_pendiente': round(random.uniform(80_000, 320_000)),
+                  'requisiciones_abiertas': random.randint(1, 5),
+                  'usuarios_activos':   random.randint(6, 9),
+                  'ai_queries_24h':     random.randint(12, 48),
+                  'ai_queries_7d':      random.randint(85, 320),
+                  'org_health_score':   random.randint(62, 88),
+                  'source':             'seed_demo',
+                  'created_at':         ts.isoformat(),
               })
-              base_pipeline = round(base_pipeline * random.uniform(0.98, 1.03))
 
-          # Insertar en lotes de 20
+          ok = 0
           for i in range(0, len(pulsos), 20):
               batch = pulsos[i:i+20]
               body = json.dumps(batch).encode()
               req = urllib.request.Request(SB+'/rest/v1/org_pulse', data=body, headers=H, method='POST')
               try:
                   resp = urllib.request.urlopen(req)
-                  print(f'  Lote {i//20+1}: {len(batch)} pulsos — HTTP {resp.status}')
+                  ok += len(batch)
               except urllib.error.HTTPError as e:
-                  print(f'  Error lote {i//20+1}: {e.code} — {e.read().decode()[:200]}')
-          print(f'✅ {len(pulsos)} días de org_pulse insertados')
+                  print(f'  Lote {i//20+1} error: {e.code} — {e.read().decode()[:200]}')
+          print(f'✅ {ok}/{len(pulsos)} registros org_pulse insertados')
           PYEOF
 
-      - name: "Activity Logs — historial de actividad del equipo"
+      - name: "Activity Logs — 200 registros de actividad"
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, urllib.error, os, random
@@ -91,50 +103,51 @@ jobs:
           H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
                 'Prefer': 'resolution=ignore-duplicates,return=minimal'}
           ctx = json.load(open('/tmp/ctx.json'))
-          demo_id = ctx['demo_id']
-          profiles = ctx['profiles']
-          leads = ctx['leads']
-          uids = [p['id'] for p in profiles] or [None]
+          uids = [p['id'] for p in ctx['profiles']] or [None]
+          lead_ids = [l['id'] for l in ctx['leads']] or [None]
 
           actions = [
-              ('lead_created', 'lead'),('lead_updated', 'lead'),('lead_won', 'lead'),
-              ('document_uploaded', 'document'),('document_downloaded', 'document'),
-              ('invoice_created', 'invoice'),('payment_received', 'invoice'),
-              ('login', 'user'),('campaign_launched', 'campaign'),
-              ('proposal_sent', 'lead'),('call_logged', 'lead'),('email_sent', 'lead'),
+              ('lead_created','lead'),('lead_updated','lead'),('lead_won','lead'),('lead_lost','lead'),
+              ('document_uploaded','document'),('document_downloaded','document'),('document_deleted','document'),
+              ('invoice_created','invoice'),('payment_received','invoice'),('invoice_sent','invoice'),
+              ('login','user'),('logout','user'),
+              ('campaign_launched','campaign'),('proposal_sent','lead'),
+              ('call_logged','lead'),('email_sent','lead'),('whatsapp_sent','lead'),
+              ('note_added','lead'),('stage_changed','lead'),('task_created','task'),
           ]
 
           logs = []
-          lead_ids = [l['id'] for l in leads] if leads else [None]
           for i in range(200):
               action, entity_type = random.choice(actions)
               uid = uids[i % len(uids)]
+              lead_id = random.choice(lead_ids) if entity_type == 'lead' and lead_ids[0] else None
               days_back = random.randint(0, 30)
               logs.append({
                   'user_id': uid,
                   'action': action,
                   'entity_type': entity_type,
-                  'entity_id': random.choice(lead_ids) if entity_type == 'lead' and lead_ids[0] else None,
-                  'metadata': {'company_id': demo_id, 'source': 'nexus_portal'},
-                  'created_at': (datetime.now() - timedelta(days=days_back, hours=random.randint(0,23))).isoformat()
+                  'entity_id': str(lead_id) if lead_id else None,
+                  'metadata': {'source': 'nexus_portal', 'ip': f'192.168.1.{random.randint(1,50)}'},
+                  'created_at': (datetime.now() - timedelta(days=days_back, hours=random.randint(0,23), minutes=random.randint(0,59))).isoformat()
               })
 
+          ok = 0
           for i in range(0, len(logs), 50):
               batch = logs[i:i+50]
               body = json.dumps(batch).encode()
               req = urllib.request.Request(SB+'/rest/v1/activity_logs', data=body, headers=H, method='POST')
               try:
                   resp = urllib.request.urlopen(req)
-                  print(f'  Lote {i//50+1}: {len(batch)} logs — HTTP {resp.status}')
+                  ok += len(batch)
               except urllib.error.HTTPError as e:
-                  print(f'  Error: {e.code} — {e.read().decode()[:150]}')
-          print(f'✅ {len(logs)} activity logs insertados')
+                  print(f'  Error lote: {e.code} — {e.read().decode()[:150]}')
+          print(f'✅ {ok} activity logs insertados')
           PYEOF
 
-      - name: "15 Leads adicionales con historial rico"
+      - name: "15 leads enterprise adicionales"
         run: |
           python3 << 'PYEOF'
-          import json, urllib.request, urllib.error, os, random
+          import json, urllib.request, urllib.error, os
           from datetime import datetime, timedelta
 
           SB = os.environ['SB']
@@ -149,66 +162,33 @@ jobs:
           def ddate(n): return (datetime.now()+timedelta(days=n)).strftime('%Y-%m-%d')
 
           leads = [
-            {'name':'Grupo Empresarial FEMSA','company':'FEMSA Comercio SA','email':'corp.dev@femsa.com','phone':'+52 81 8389 0000','stage':'calificado','status':'activo','valor_estimado':580000,'source':'linkedin','notes':'Contacto con Director Corporativo. Evaluando CRM para 200 vendedores en 8 países. Proceso formal Q3.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(5),'created_at':dago(22),'updated_at':dago(3)},
-            {'name':'Soriana Corporativo','company':'Organización Soriana SA','email':'ti.proyectos@soriana.com','phone':'+52 81 8311 1000','stage':'demo','status':'activo','valor_estimado':420000,'source':'evento','notes':'Demo con equipo de TI y Dirección Comercial. Evaluando contra Salesforce. Ventaja: precio y soporte en español.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(2),'created_at':dago(35),'updated_at':dago(2)},
-            {'name':'Liverpool México','company':'El Puerto de Liverpool SA','email':'compras.tec@liverpool.mx','phone':'+52 55 5229 5000','stage':'propuesta','status':'activo','valor_estimado':750000,'source':'referido','notes':'Propuesta enviada el martes. Comité de 6 personas. Proceso de licitación. Decisión en 30 días.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(8),'created_at':dago(45),'updated_at':dago(6)},
-            {'name':'Cemex Global Tech','company':'CEMEX SA de CV','email':'digital@cemex.com','phone':'+52 81 8888 0000','stage':'negociacion','status':'activo','valor_estimado':1200000,'source':'linkedin','notes':'Director de Transformación Digital. Piloto en 3 países. Negociando precio por volumen + SLA enterprise.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(3),'created_at':dago(60),'updated_at':dago(1)},
-            {'name':'Banorte Digital','company':'Banco Mercantil del Norte SA','email':'innovacion@banorte.com','phone':'+52 81 8319 6000','stage':'calificado','status':'activo','valor_estimado':890000,'source':'evento','notes':'Gerente de Innovación. Banco con 3,000 asesores. Evaluando CRM para banca personal y empresarial.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(10),'created_at':dago(18),'updated_at':dago(5)},
-            {'name':'Telmex Empresas','company':'Teléfonos de México SA','email':'b2b.digital@telmex.com','phone':'+52 55 5222 0880','stage':'prospecto','status':'activo','valor_estimado':320000,'source':'web','notes':'Formulario enterprise. Gerente de Ventas Corporativas. 500 agentes de ventas B2B.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(4),'created_at':dago(8),'updated_at':dago(2)},
-            {'name':'Bimbo Latinoamérica','company':'Grupo Bimbo SA de CV','email':'transformacion@grupobimbo.com','phone':'+52 55 5268 6000','stage':'demo','status':'activo','valor_estimado':2100000,'source':'referido','notes':'DEAL ESTRATÉGICO. Piloto en México para 800 distribuidores. Success = expansión a 15 países LATAM.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(1),'created_at':dago(40),'updated_at':dago(1),'call_score':88},
-            {'name':'Elektra Comercio Digital','company':'Grupo Elektra SA','email':'ecommerce@elektra.com.mx','phone':'+52 55 1720 9000','stage':'propuesta','status':'activo','valor_estimado':480000,'source':'linkedin','notes':'VP de Omnicanalidad. CRM para unificar tienda física y digital. 1,200 vendedores en tiendas.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(6),'created_at':dago(50),'updated_at':dago(7)},
-            {'name':'Aeroméxico Cargo','company':'Aerovías de México SA','email':'ops.digital@aeromexico.com','phone':'+52 55 5133 4000','stage':'calificado','status':'activo','valor_estimado':195000,'source':'llamada','notes':'Director de Operaciones Cargo. CRM para gestión de 150 clientes corporativos de carga aérea.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(7),'created_at':dago(12),'updated_at':dago(4)},
-            {'name':'OXXO Franquicias','company':'OXXO Grupo SA','email':'franquicias@oxxo.mx','phone':'+52 81 8748 0000','stage':'cierre','status':'cerrado_ganado','valor_estimado':380000,'source':'referido','notes':'CERRADO $380,000. CRM para equipo de desarrollo de franquicias. 3 años de contrato. Onboarding en progreso.','company_id':demo_id,'user_id':uid(0),'created_at':dago(75),'updated_at':dago(10)},
-            {'name':'Cinépolis Corporate','company':'Cinépolis SA de CV','email':'marketing.corp@cinepolis.com','phone':'+52 452 524 0070','stage':'perdido','status':'cerrado_perdido','valor_estimado':290000,'source':'evento','notes':'Perdido. Seleccionaron HubSpot por integración con su stack actual. Recontactar en 12 meses.','company_id':demo_id,'user_id':uid(1),'created_at':dago(100),'updated_at':dago(55)},
-            {'name':'Banamex Seguros','company':'Seguros Banamex SA','email':'digital.seguros@banamex.com','phone':'+52 55 2262 3000','stage':'propuesta','status':'activo','valor_estimado':640000,'source':'linkedin','notes':'Director Comercial Seguros. CRM para 600 agentes de seguros. Propuesta técnica y comercial enviadas.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(4),'created_at':dago(30),'updated_at':dago(9)},
-            {'name':'HSBC México Corporate','company':'HSBC México SA','email':'b2b.banking@hsbc.mx','phone':'+52 55 5721 3226','stage':'calificado','status':'activo','valor_estimado':920000,'source':'referido','notes':'Gerente de Banca Corporativa. Evaluando para equipo de relación bancaria. Proceso muy largo (6-12 meses).','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(14),'created_at':dago(25),'updated_at':dago(8)},
-            {'name':'Megacable Empresas','company':'Megacable Holdings SA','email':'enterprise@megacable.com.mx','phone':'+52 33 3669 6000','stage':'negociacion','status':'activo','valor_estimado':175000,'source':'web','notes':'Director Comercial B2B. CRM para gestión de 800 clientes empresariales. Negociando implementación en 45 días.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(2),'created_at':dago(55),'updated_at':dago(3)},
-            {'name':'Grupo Herdez Digital','company':'Grupo Herdez SA de CV','email':'ventas.digital@herdez.com.mx','phone':'+52 55 5201 0900','stage':'demo','status':'activo','valor_estimado':245000,'source':'linkedin','notes':'VP Ventas. Demo realizada con equipo comercial. Excelente recepción. Esperan propuesta esta semana.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(3),'created_at':dago(28),'updated_at':dago(2),'call_score':92},
+            {'name':'Grupo FEMSA Corporativo','company':'FEMSA Comercio SA','email':'corp.dev@femsa.com','stage':'calificado','status':'activo','valor_estimado':580000,'source':'linkedin','notes':'Director Corporativo. 200 vendedores en 8 países. Proceso formal Q3 2026.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(5),'created_at':dago(22),'updated_at':dago(3)},
+            {'name':'Soriana Corporativo','company':'Organización Soriana SA','email':'ti.proyectos@soriana.com','stage':'demo','status':'activo','valor_estimado':420000,'source':'evento','notes':'Demo con TI y Dirección Comercial. Evaluando contra Salesforce. Ventaja: precio y soporte ES.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(2),'created_at':dago(35),'updated_at':dago(2)},
+            {'name':'Liverpool México','company':'El Puerto de Liverpool SA','email':'compras.tec@liverpool.mx','stage':'propuesta','status':'activo','valor_estimado':750000,'source':'referido','notes':'Propuesta enviada el martes. Comité de 6. Proceso licitación. Decisión en 30 días.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(8),'created_at':dago(45),'updated_at':dago(6)},
+            {'name':'CEMEX Global Tech','company':'CEMEX SA de CV','email':'digital@cemex.com','stage':'negociacion','status':'activo','valor_estimado':1200000,'source':'linkedin','notes':'Piloto en 3 países. Negociando precio por volumen + SLA enterprise. Deal del año.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(3),'created_at':dago(60),'updated_at':dago(1),'call_score':91},
+            {'name':'Banorte Digital','company':'Banco Mercantil del Norte','email':'innovacion@banorte.com','stage':'calificado','status':'activo','valor_estimado':890000,'source':'evento','notes':'Gerente Innovación. Banco con 3,000 asesores. Evaluando para banca personal y empresarial.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(10),'created_at':dago(18),'updated_at':dago(5)},
+            {'name':'Telmex Empresas','company':'Teléfonos de México SA','email':'b2b.digital@telmex.com','stage':'prospecto','status':'activo','valor_estimado':320000,'source':'web','notes':'Formulario enterprise. 500 agentes B2B. Primer contacto pendiente.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(4),'created_at':dago(8),'updated_at':dago(2)},
+            {'name':'Grupo Bimbo LATAM','company':'Grupo Bimbo SA de CV','email':'transformacion@grupobimbo.com','stage':'demo','status':'activo','valor_estimado':2100000,'source':'referido','notes':'DEAL ESTRATÉGICO. Piloto México para 800 distribuidores. Éxito = 15 países LATAM.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(1),'created_at':dago(40),'updated_at':dago(1),'call_score':88},
+            {'name':'Elektra Comercio Digital','company':'Grupo Elektra SA','email':'ecommerce@elektra.com.mx','stage':'propuesta','status':'activo','valor_estimado':480000,'source':'linkedin','notes':'VP Omnicanalidad. 1,200 vendedores en tiendas. Propuesta enviada.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(6),'created_at':dago(50),'updated_at':dago(7)},
+            {'name':'Aeroméxico Cargo','company':'Aerovías de México SA','email':'ops.digital@aeromexico.com','stage':'calificado','status':'activo','valor_estimado':195000,'source':'llamada','notes':'Director Operaciones Cargo. 150 clientes corporativos de carga aérea.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(7),'created_at':dago(12),'updated_at':dago(4)},
+            {'name':'OXXO Franquicias','company':'OXXO Grupo SA','email':'franquicias@oxxo.mx','stage':'cierre','status':'cerrado_ganado','valor_estimado':380000,'source':'referido','notes':'CERRADO $380k. CRM para desarrollo de franquicias. 3 años contrato. Onboarding en progreso.','company_id':demo_id,'user_id':uid(0),'created_at':dago(75),'updated_at':dago(10)},
+            {'name':'Cinépolis Corporate','company':'Cinépolis SA de CV','email':'marketing.corp@cinepolis.com','stage':'perdido','status':'cerrado_perdido','valor_estimado':290000,'source':'evento','notes':'Perdido. HubSpot ganó por integración con stack actual. Recontactar en 12 meses.','company_id':demo_id,'user_id':uid(1),'created_at':dago(100),'updated_at':dago(55)},
+            {'name':'Banamex Seguros','company':'Seguros Banamex SA','email':'digital.seguros@banamex.com','stage':'propuesta','status':'activo','valor_estimado':640000,'source':'linkedin','notes':'Director Comercial Seguros. 600 agentes. Propuesta técnica y comercial enviadas.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(4),'created_at':dago(30),'updated_at':dago(9)},
+            {'name':'HSBC México Corporate','company':'HSBC México SA','email':'b2b.banking@hsbc.mx','stage':'calificado','status':'activo','valor_estimado':920000,'source':'referido','notes':'Banca Corporativa. Proceso 6-12 meses. Alta probabilidad si pasamos evaluación técnica.','company_id':demo_id,'user_id':uid(0),'seguimiento':ddate(14),'created_at':dago(25),'updated_at':dago(8)},
+            {'name':'Megacable Empresas','company':'Megacable Holdings SA','email':'enterprise@megacable.com.mx','stage':'negociacion','status':'activo','valor_estimado':175000,'source':'web','notes':'800 clientes empresariales. Negociando implementación en 45 días. Precio acordado.','company_id':demo_id,'user_id':uid(1),'seguimiento':ddate(2),'created_at':dago(55),'updated_at':dago(3)},
+            {'name':'Grupo Herdez Digital','company':'Grupo Herdez SA de CV','email':'ventas.digital@herdez.com.mx','stage':'demo','status':'activo','valor_estimado':245000,'source':'linkedin','notes':'VP Ventas. Demo excelente. Calificación 9/10. Propuesta esta semana.','company_id':demo_id,'user_id':uid(2),'seguimiento':ddate(3),'created_at':dago(28),'updated_at':dago(2),'call_score':92},
           ]
 
           body = json.dumps(leads).encode()
           req = urllib.request.Request(SB+'/rest/v1/leads', data=body, headers=H, method='POST')
           try:
               resp = urllib.request.urlopen(req)
-              print(f'✅ {len(leads)} leads adicionales — HTTP {resp.status}')
+              print(f'✅ {len(leads)} leads enterprise — HTTP {resp.status}')
           except urllib.error.HTTPError as e:
               print(f'❌ {e.code}: {e.read().decode()[:300]}')
           PYEOF
 
-      - name: "Executive Decisions — decisiones del consejo"
-        run: |
-          python3 << 'PYEOF'
-          import json, urllib.request, urllib.error, os
-          from datetime import datetime, timedelta
-
-          SB = os.environ['SB']
-          SK = os.environ['SK']
-          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
-                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
-          ctx = json.load(open('/tmp/ctx.json'))
-          demo_id = ctx['demo_id']
-          uid = ctx['profiles'][0]['id'] if ctx['profiles'] else None
-          def dago(n): return (datetime.now()-timedelta(days=n)).isoformat()
-
-          decisions = [
-            {'company_id':demo_id,'title':'Expansión a mercado colombiano Q3 2026','category':'estrategia','decision':'Aprobar inversión de $2.8M MXN para apertura de operaciones en Colombia. Contratar 3 directores locales.','rationale':'Pipeline LATAM muestra 4 deals calificados en Colombia por $1.2M. ROI proyectado 18 meses.','status':'aprobada','impact':'alto','created_by':uid,'created_at':dago(15)},
-            {'company_id':demo_id,'title':'Lanzamiento app móvil — acelerar desarrollo','category':'producto','decision':'Asignar 2 desarrolladores adicionales al proyecto de app móvil. Nueva fecha de entrega: Q3 2026.','rationale':'12 votos en feedback. Representa $890k de clientes que la piden. Riesgo de churn si no se entrega.','status':'aprobada','impact':'alto','created_by':uid,'created_at':dago(22)},
-            {'company_id':demo_id,'title':'Contratación de 3 vendedores enterprise','category':'talento','decision':'Aprobar contratación de 3 Account Executives enterprise para cerrar deals >$500k activos.','rationale':'Pipeline enterprise = $3.2M. Capacidad actual del equipo está al límite. Cada AE cierra ~$1M/año.','status':'aprobada','impact':'alto','created_by':uid,'created_at':dago(30)},
-            {'company_id':demo_id,'title':'Integración WhatsApp Business API','category':'producto','decision':'Iniciar integración nativa con WhatsApp Business API. Inversión: $180k MXN + 6 semanas desarrollo.','rationale':'15 votos en feedback, mayor feature request. Leadsales cobra $97/mes/usuario. Internalizando: $0.','status':'en_revision','impact':'medio','created_by':uid,'created_at':dago(8)},
-            {'company_id':demo_id,'title':'Política de cobranza 60+ días — acción legal','category':'finanzas','decision':'Iniciar proceso legal para cuentas con +60 días de mora que superen $100k. Contratar despacho.','rationale':'Distribuidora Global MX: $185k a 62 días. Riesgo de irrecuperable si no se actúa antes de 90 días.','status':'aprobada','impact':'medio','created_by':uid,'created_at':dago(5)},
-            {'company_id':demo_id,'title':'Presupuesto marketing digital Q2','category':'presupuesto','decision':'Aprobar $450k MXN para campaña digital Q2: LinkedIn Ads ($200k), Google ($150k), Contenido ($100k).','rationale':'Q1 ROI de marketing: 3.2x. LinkedIn genera 40% de leads enterprise. Escalar lo que funciona.','status':'aprobada','impact':'medio','created_by':uid,'created_at':dago(45)},
-          ]
-
-          body = json.dumps(decisions).encode()
-          req = urllib.request.Request(SB+'/rest/v1/executive_decisions', data=body, headers=H, method='POST')
-          try:
-              resp = urllib.request.urlopen(req)
-              print(f'✅ {len(decisions)} decisiones ejecutivas — HTTP {resp.status}')
-          except urllib.error.HTTPError as e:
-              print(f'❌ {e.code}: {e.read().decode()[:300]}')
-          PYEOF
-
-      - name: "Más documentos — contratos, propuestas, facturas"
+      - name: "Decisiones ejecutivas + más documentos + AR adicionales"
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, urllib.error, os, base64
@@ -221,90 +201,73 @@ jobs:
           ctx = json.load(open('/tmp/ctx.json'))
           demo_id = ctx['demo_id']
           uid = ctx['profiles'][0]['id'] if ctx['profiles'] else None
-
-          PDF_B64 = base64.b64encode(b'%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\nxref\n0 4\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n183\n%%EOF').decode()
-          TXT_B64 = base64.b64encode(b'Documento Nexus Demo - MetaTronix Portal\nContenido de muestra para testing completo.').decode()
-
           def dago(n): return (datetime.now()-timedelta(days=n)).isoformat()
-
-          docs = [
-            # Nuevas carpetas
-            {'file_path':'admin/clientes/FEMSA/','title':'FEMSA Corporativo','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(22)},
-            {'file_path':'admin/clientes/Cemex/','title':'CEMEX Global Tech','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(60)},
-            {'file_path':'admin/clientes/Liverpool/','title':'Liverpool México','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(45)},
-            {'file_path':'admin/clientes/Bimbo/','title':'Grupo Bimbo','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(40)},
-            {'file_path':'admin/clientes/Banorte/','title':'Banorte Digital','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(18)},
-            {'file_path':'admin/proveedores/Salesforce/','title':'Salesforce (competidor ref)','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(90)},
-
-            # Archivos de empresas grandes
-            {'file_path':'admin/clientes/FEMSA/NDA_FEMSA_2026.pdf','title':'NDA FEMSA 2026','file_name':'NDA_FEMSA_2026.pdf','file_type':'application/pdf','file_size':18432,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(20)},
-            {'file_path':'admin/clientes/FEMSA/Propuesta_Tecnica_FEMSA_v3.pdf','title':'Propuesta Técnica v3','file_name':'Propuesta_Tecnica_FEMSA_v3.pdf','file_type':'application/pdf','file_size':45056,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(12)},
-            {'file_path':'admin/clientes/Cemex/Contrato_Piloto_Cemex.pdf','title':'Contrato Piloto CEMEX','file_name':'Contrato_Piloto_Cemex.pdf','file_type':'application/pdf','file_size':62464,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(55)},
-            {'file_path':'admin/clientes/Cemex/SLA_Enterprise_Cemex.pdf','title':'SLA Enterprise CEMEX','file_name':'SLA_Enterprise_Cemex.pdf','file_type':'application/pdf','file_size':28672,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(50)},
-            {'file_path':'admin/clientes/Liverpool/Propuesta_Comercial_Liverpool.pdf','title':'Propuesta Comercial Liverpool','file_name':'Propuesta_Comercial_Liverpool.pdf','file_type':'application/pdf','file_size':38912,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(40)},
-            {'file_path':'admin/clientes/Bimbo/Brief_Piloto_Bimbo.pdf','title':'Brief Piloto Bimbo LATAM','file_name':'Brief_Piloto_Bimbo.pdf','file_type':'application/pdf','file_size':52224,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(35)},
-            {'file_path':'admin/clientes/Banorte/Evaluacion_Tecnica_Banorte.pdf','title':'Evaluación Técnica Banorte','file_name':'Evaluacion_Tecnica_Banorte.pdf','file_type':'application/pdf','file_size':33792,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(15)},
-            {'file_path':'admin/proveedores/Salesforce/Comparativa_vs_Salesforce.txt','title':'Comparativa vs Salesforce','file_name':'Comparativa_vs_Salesforce.txt','file_type':'text/plain','file_size':4096,'file_data':TXT_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(80)},
-            # Facturas en carpeta existente
-            {'file_path':'admin/clientes/Construmax/Factura_FAC2026041.pdf','title':'Factura FAC-2026-041','file_name':'Factura_FAC2026041.pdf','file_type':'application/pdf','file_size':15360,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(10)},
-            {'file_path':'admin/clientes/Construmax/Acuerdo_Servicio_2026.pdf','title':'Acuerdo de Nivel de Servicio','file_name':'Acuerdo_Servicio_2026.pdf','file_type':'application/pdf','file_size':22528,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(58)},
-          ]
-
-          body = json.dumps(docs).encode()
-          req = urllib.request.Request(SB+'/rest/v1/metatronix_docs', data=body, headers=H, method='POST')
-          try:
-              resp = urllib.request.urlopen(req)
-              print(f'✅ {len(docs)} documentos adicionales — HTTP {resp.status}')
-          except urllib.error.HTTPError as e:
-              print(f'❌ {e.code}: {e.read().decode()[:300]}')
-          PYEOF
-
-      - name: "Más cuentas por cobrar — pipeline financiero completo"
-        run: |
-          python3 << 'PYEOF'
-          import json, urllib.request, urllib.error, os
-          from datetime import datetime, timedelta
-
-          SB = os.environ['SB']
-          SK = os.environ['SK']
-          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
-                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
-          ctx = json.load(open('/tmp/ctx.json'))
-          demo_id = ctx['demo_id']
           def dago_d(n): return (datetime.now()-timedelta(days=n)).strftime('%Y-%m-%d')
           def dfwd_d(n): return (datetime.now()+timedelta(days=n)).strftime('%Y-%m-%d')
           def dago_ts(n): return (datetime.now()-timedelta(days=n)).isoformat()
 
+          # Decisiones ejecutivas
+          decisions = [
+            {'company_id':demo_id,'title':'Expansión a Colombia Q3 2026','category':'estrategia','decision':'Aprobar $2.8M MXN para operaciones Colombia. Contratar 3 directores locales.','rationale':'4 deals calificados Colombia por $1.2M. ROI proyectado 18 meses.','status':'aprobada','impact':'alto','created_by':uid,'created_at':dago(15)},
+            {'company_id':demo_id,'title':'Acelerar desarrollo app móvil','category':'producto','decision':'Asignar 2 devs adicionales. Nueva fecha entrega: Q3 2026.','rationale':'12 votos en feedback. $890k de clientes que la piden. Riesgo churn.','status':'aprobada','impact':'alto','created_by':uid,'created_at':dago(22)},
+            {'company_id':demo_id,'title':'Contratar 3 AEs enterprise','category':'talento','decision':'3 Account Executives para deals >$500k activos.','rationale':'Pipeline enterprise $3.2M. Equipo al límite. Cada AE cierra ~$1M/año.','status':'aprobada','impact':'alto','created_by':uid,'created_at':dago(30)},
+            {'company_id':demo_id,'title':'Integración WhatsApp Business API','category':'producto','decision':'Iniciar integración. Inversión: $180k MXN + 6 semanas.','rationale':'15 votos feedback. Feature más pedido. Ahorro vs Leadsales $97/usuario/mes.','status':'en_revision','impact':'medio','created_by':uid,'created_at':dago(8)},
+            {'company_id':demo_id,'title':'Acción legal — cobranza 60+ días','category':'finanzas','decision':'Proceso legal para cuentas >$100k con +60 días mora. Contratar despacho.','rationale':'Distribuidora Global MX: $185k a 62 días. Irrecuperable si >90 días.','status':'aprobada','impact':'medio','created_by':uid,'created_at':dago(5)},
+            {'company_id':demo_id,'title':'Presupuesto marketing digital Q2 $450k','category':'presupuesto','decision':'LinkedIn Ads $200k + Google $150k + Contenido $100k.','rationale':'Q1 ROI marketing: 3.2x. LinkedIn genera 40% leads enterprise.','status':'aprobada','impact':'medio','created_by':uid,'created_at':dago(45)},
+          ]
+
+          r1 = urllib.request.Request(SB+'/rest/v1/executive_decisions', data=json.dumps(decisions).encode(), headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(r1)
+              print(f'✅ {len(decisions)} decisiones ejecutivas — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              print(f'  Decisions: {e.code} — {e.read().decode()[:150]}')
+
+          # Documentos adicionales
+          PDF_B64 = base64.b64encode(b'%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\nxref\n0 4\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n183\n%%EOF').decode()
+          TXT_B64 = base64.b64encode(b'Documento Nexus Demo - MetaTronix Portal v2\nContenido de muestra actualizado.').decode()
+
+          docs = [
+            {'file_path':'admin/clientes/FEMSA/','title':'FEMSA Corporativo','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(22)},
+            {'file_path':'admin/clientes/Cemex/','title':'CEMEX Global Tech','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(60)},
+            {'file_path':'admin/clientes/Liverpool/','title':'Liverpool México','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(45)},
+            {'file_path':'admin/clientes/Bimbo/','title':'Grupo Bimbo LATAM','category':'carpeta_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(40)},
+            {'file_path':'admin/clientes/FEMSA/NDA_FEMSA_2026.pdf','title':'NDA FEMSA 2026','file_name':'NDA_FEMSA_2026.pdf','file_type':'application/pdf','file_size':18432,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(20)},
+            {'file_path':'admin/clientes/FEMSA/Propuesta_Tecnica_v3.pdf','title':'Propuesta Técnica v3','file_name':'Propuesta_Tecnica_v3.pdf','file_type':'application/pdf','file_size':45056,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(12)},
+            {'file_path':'admin/clientes/Cemex/Contrato_Piloto.pdf','title':'Contrato Piloto CEMEX','file_name':'Contrato_Piloto.pdf','file_type':'application/pdf','file_size':62464,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(55)},
+            {'file_path':'admin/clientes/Cemex/SLA_Enterprise.pdf','title':'SLA Enterprise CEMEX','file_name':'SLA_Enterprise.pdf','file_type':'application/pdf','file_size':28672,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(50)},
+            {'file_path':'admin/clientes/Liverpool/Propuesta_Liverpool.pdf','title':'Propuesta Comercial Liverpool','file_name':'Propuesta_Liverpool.pdf','file_type':'application/pdf','file_size':38912,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(40)},
+            {'file_path':'admin/clientes/Bimbo/Brief_Piloto_Bimbo.pdf','title':'Brief Piloto Bimbo LATAM','file_name':'Brief_Piloto_Bimbo.pdf','file_type':'application/pdf','file_size':52224,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(35)},
+            {'file_path':'admin/clientes/Construmax/Factura_FAC2026041.pdf','title':'Factura FAC-2026-041 Construmax','file_name':'Factura_FAC2026041.pdf','file_type':'application/pdf','file_size':15360,'file_data':PDF_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(10)},
+            {'file_path':'admin/clientes/HospitalValleSol/Reporte_Avance_Implementacion.txt','title':'Reporte Avance Implementación','file_name':'Reporte_Avance.txt','file_type':'text/plain','file_size':4096,'file_data':TXT_B64,'category':'archivo_admin','company_id':demo_id,'uploaded_by':uid,'created_at':dago(3)},
+          ]
+
+          r2 = urllib.request.Request(SB+'/rest/v1/metatronix_docs', data=json.dumps(docs).encode(), headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(r2)
+              print(f'✅ {len(docs)} documentos adicionales — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              print(f'  Docs: {e.code} — {e.read().decode()[:150]}')
+
+          # AR adicionales
           ar = [
-            # Pagadas adicionales
             {'company_id':demo_id,'client_name':'OXXO Franquicias','amount':380000,'currency':'MXN','status':'pagado','folio':'FAC-2026-018','due_date':dago_d(75),'paid_at':dago_ts(70)},
             {'company_id':demo_id,'client_name':'Grupo Herdez','amount':82000,'currency':'MXN','status':'pagado','folio':'FAC-2026-009','due_date':dago_d(90),'paid_at':dago_ts(85)},
-            {'company_id':demo_id,'client_name':'Megacable Empresas','amount':58000,'currency':'MXN','status':'pagado','folio':'FAC-2026-003','due_date':dago_d(100),'paid_at':dago_ts(95)},
-            # Pendientes grandes
             {'company_id':demo_id,'client_name':'CEMEX Global Tech','amount':400000,'currency':'MXN','status':'pendiente','folio':'FAC-2026-067','due_date':dfwd_d(20)},
             {'company_id':demo_id,'client_name':'Liverpool México','amount':250000,'currency':'MXN','status':'pendiente','folio':'FAC-2026-061','due_date':dfwd_d(35)},
             {'company_id':demo_id,'client_name':'Banorte Digital','amount':296667,'currency':'MXN','status':'pendiente','folio':'FAC-2026-058','due_date':dfwd_d(60)},
-            {'company_id':demo_id,'client_name':'Aeroméxico Cargo','amount':65000,'currency':'MXN','status':'pendiente','folio':'FAC-2026-054','due_date':dfwd_d(25)},
-            # Vencidas adicionales
-            {'company_id':demo_id,'client_name':'Software Factory GDL','amount':22500,'currency':'MXN','status':'vencido','folio':'FAC-2025-098','due_date':dago_d(120),'collection_notes':'Cuenta considerada incobrable. En proceso legal.'},
-            {'company_id':demo_id,'client_name':'Retail Moderno SA','amount':14000,'currency':'MXN','status':'vencido','folio':'FAC-2026-015','due_date':dago_d(40),'collection_notes':'Promesa de pago esta semana. Tercer seguimiento.'},
+            {'company_id':demo_id,'client_name':'Software Factory GDL','amount':22500,'currency':'MXN','status':'vencido','folio':'FAC-2025-098','due_date':dago_d(120),'collection_notes':'Incobrable. En proceso legal.'},
           ]
 
-          body = json.dumps(ar).encode()
-          req = urllib.request.Request(SB+'/rest/v1/accounts_receivable', data=body, headers=H, method='POST')
+          r3 = urllib.request.Request(SB+'/rest/v1/accounts_receivable', data=json.dumps(ar).encode(), headers=H, method='POST')
           try:
-              resp = urllib.request.urlopen(req)
-              d_all = json.loads(urllib.request.urlopen(urllib.request.Request(
-                  f'{SB}/rest/v1/accounts_receivable?company_id=eq.{demo_id}&select=amount,status',
-                  headers={'apikey': SK, 'Authorization': f'Bearer {SK}'})).read())
-              total = sum(float(a['amount']) for a in d_all)
-              pagado = sum(float(a['amount']) for a in d_all if a['status']=='pagado')
-              print(f'✅ AR total nexus: ${total:,.0f} MXN | Cobrado: ${pagado:,.0f} | {len(d_all)} registros')
+              resp = urllib.request.urlopen(r3)
+              print(f'✅ {len(ar)} AR adicionales — HTTP {resp.status}')
           except urllib.error.HTTPError as e:
-              print(f'❌ {e.code}: {e.read().decode()[:200]}')
+              print(f'  AR: {e.code} — {e.read().decode()[:150]}')
           PYEOF
 
-      - name: "Resumen final — todos los datos de Nexus"
+      - name: "Resumen final — inventario completo Nexus"
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, os
@@ -315,47 +278,33 @@ jobs:
           ctx = json.load(open('/tmp/ctx.json'))
           demo_id = ctx['demo_id']
 
-          print(f'\n╔══════════════════════════════════════════════════════╗')
-          print(f'  NEXUS ({demo_id}) — Inventario completo de datos')
-          print(f'╚══════════════════════════════════════════════════════╝\n')
-
-          checks = [
-              ('leads',               f'?company_id=eq.{demo_id}&select=id'),
-              ('metatronix_docs',     f'?company_id=eq.{demo_id}&select=id'),
-              ('accounts_receivable', f'?company_id=eq.{demo_id}&select=id'),
-              ('feature_requests',    f'?company_id=eq.{demo_id}&select=id'),
-              ('events',              f'?company_id=eq.{demo_id}&select=id'),
-              ('org_pulse',           f'?company_id=eq.{demo_id}&select=id'),
-              ('executive_decisions', f'?company_id=eq.{demo_id}&select=id'),
-              ('activity_logs',       f'?select=id&limit=1'),
-          ]
-
-          for table, qs in checks:
-              url = f'{SB}/rest/v1/{table}{qs}'
+          def count(table, qs=''):
               try:
-                  data = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=H)).read())
-                  icon = '✅' if len(data) > 0 else '⚠️ '
-                  print(f'  {icon} {table:25} → {len(data):4} registros')
-              except Exception as ex:
-                  print(f'  ❌ {table:25} → {str(ex)[:60]}')
+                  data = json.loads(urllib.request.urlopen(urllib.request.Request(f'{SB}/rest/v1/{table}?select=id{qs}&limit=500', headers=H)).read())
+                  return len(data)
+              except: return '?'
+
+          print(f'\n╔═══════════════════════════════════════════════════╗')
+          print(f'  NEXUS ({demo_id}) — Inventario completo')
+          print(f'╚═══════════════════════════════════════════════════╝')
+          print(f'  leads               → {count("leads", f"&company_id=eq.{demo_id}")}')
+          print(f'  metatronix_docs     → {count("metatronix_docs", f"&company_id=eq.{demo_id}")}')
+          print(f'  accounts_receivable → {count("accounts_receivable", f"&company_id=eq.{demo_id}")}')
+          print(f'  feature_requests    → {count("feature_requests", f"&company_id=eq.{demo_id}")}')
+          print(f'  events              → {count("events", f"&company_id=eq.{demo_id}")}')
+          print(f'  org_pulse           → {count("org_pulse")}')
+          print(f'  executive_decisions → {count("executive_decisions", f"&company_id=eq.{demo_id}")}')
+          print(f'  activity_logs       → {count("activity_logs")} (global)')
 
           # Pipeline breakdown
           url = f'{SB}/rest/v1/leads?company_id=eq.{demo_id}&select=stage,valor_estimado&limit=100'
-          leads = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=H)).read())
-          pipeline = {}
-          for l in leads:
-              s = l.get('stage','?')
-              pipeline[s] = pipeline.get(s, {'count':0,'value':0})
-              pipeline[s]['count'] += 1
-              pipeline[s]['value'] += float(l.get('valor_estimado') or 0)
-
-          print(f'\n  Pipeline por etapa:')
-          total_pipeline = 0
+          leads_data = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=H)).read())
+          pipeline_val = sum(float(l.get('valor_estimado') or 0) for l in leads_data if l.get('stage') not in ['perdido','cerrado_perdido'])
+          by_stage = {}
+          for l in leads_data: by_stage[l.get('stage','?')] = by_stage.get(l.get('stage','?'),0)+1
+          print(f'\n  Pipeline total activo: ${pipeline_val:,.0f} MXN')
+          print(f'  Distribución:')
           for s in ['prospecto','calificado','demo','propuesta','negociacion','cierre','postventa','retencion','perdido']:
-              if s in pipeline:
-                  p = pipeline[s]
-                  total_pipeline += p['value'] if s not in ['perdido'] else 0
-                  print(f'    {s:20} → {p["count"]:2} leads  ${p["value"]:>12,.0f} MXN')
-          print(f'    {"TOTAL PIPELINE":20} → {"":2}      ${total_pipeline:>12,.0f} MXN')
+              if s in by_stage: print(f'    {s:20} → {by_stage[s]}')
           print(f'\n✅ Nexus lista para demo completa del portal')
           PYEOF
