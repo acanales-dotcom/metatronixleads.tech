@@ -843,6 +843,12 @@ const TREE = [
     ]
   },
   {
+    id:'aduanas', icon:'🚢', label:'Aduanas',
+    dynamic:true, etype:'agencia_aduanal',
+    base:'admin/fiscal/aduanas/',
+    subs:['Pedimentos','Declaraciones','Contratos','Facturas','Permisos','Varios']
+  },
+  {
     id:'cont', icon:'📊', label:'Contabilidad',
     children:[
       { label:'Pagos Pesos · Egresos',      path:'admin/contabilidad/pagos-pesos/egresos/',        nm:true },
@@ -977,11 +983,14 @@ async function buildTree() {
   if (companyId) treeQ = treeQ.eq('company_id', companyId);
   const { data: carpetas } = await treeQ;
 
-  const ents = { clientes:[], proveedores:[] };
+  const ents = { clientes:[], proveedores:[], aduanas:[] };
   (carpetas||[]).forEach(f => {
-    const m = f.file_path.match(/^admin\/(clientes|proveedores)\/([^/]+)\//);
+    const m = f.file_path.match(/^admin\/(clientes|proveedores|fiscal\/aduanas)\/([^/]+)\//);
     if (!m) return;
-    const arr = ents[m[1]];
+    // Mapear 'fiscal/aduanas' → 'aduanas'
+    const groupKey = m[1] === 'fiscal/aduanas' ? 'aduanas' : m[1];
+    const arr = ents[groupKey];
+    if (!arr) return;
     const slug = m[2];
     if (!arr.find(e => e.slug===slug)) arr.push({ slug, name: f.title||slug });
   });
@@ -1010,12 +1019,14 @@ function mkSec(section, ents) {
   body.className = 'sec-body';
 
   if (section.dynamic) {
-    const group = section.etype === 'cliente' ? 'clientes' : 'proveedores';
-    ents[group].forEach(e => body.appendChild(mkEnt(e, section.base, section.subs)));
+    const groupMap = { cliente:'clientes', proveedor:'proveedores', agencia_aduanal:'aduanas' };
+    const group = groupMap[section.etype] || section.etype;
+    (ents[group]||[]).forEach(e => body.appendChild(mkEnt(e, section.base, section.subs)));
 
     const addBtn = document.createElement('button');
     addBtn.className = 'add-ent-btn';
-    addBtn.textContent = `＋ Agregar ${section.etype}`;
+    const labelMap = { cliente:'cliente', proveedor:'proveedor', agencia_aduanal:'agencia aduanal' };
+    addBtn.textContent = `＋ Agregar ${labelMap[section.etype]||section.etype}`;
     addBtn.onclick = () => openMEnt(section.etype, section.base, section.subs, body, addBtn);
     body.appendChild(addBtn);
 
@@ -1388,9 +1399,10 @@ async function confirmDelFolder() {
 /* ── Entidad (cliente / proveedor) ────────────────────── */
 function openMEnt(etype, base, subs, bodyEl, addBtn) {
   entCtx = { etype, base, subs, bodyEl, addBtn };
-  const isCli = etype === 'cliente';
-  document.getElementById('entTitle').textContent = isCli ? 'Agregar Cliente' : 'Agregar Proveedor';
-  document.getElementById('entLabel').textContent  = isCli ? 'Nombre del cliente' : 'Nombre del proveedor';
+  const titles  = { cliente:'Agregar Cliente', proveedor:'Agregar Proveedor', agencia_aduanal:'Agregar Agencia Aduanal' };
+  const labels  = { cliente:'Nombre del cliente', proveedor:'Nombre del proveedor', agencia_aduanal:'Nombre de la agencia aduanal' };
+  document.getElementById('entTitle').textContent = titles[etype]  || `Agregar ${etype}`;
+  document.getElementById('entLabel').textContent  = labels[etype] || `Nombre`;
   document.getElementById('entName').value = '';
   document.getElementById('mEnt').classList.add('open');
 }
