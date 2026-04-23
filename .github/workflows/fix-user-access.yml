@@ -110,17 +110,12 @@ jobs:
                   print('  ❌ Sin UID, abortando')
                   return
 
-              # Upsert profile
-              print(f'  Upsertando profile...')
-              result, code = api('POST', '/rest/v1/profiles', {
-                  'id': user_id, 'email': email, 'full_name': name,
-                  'role': 'user', 'is_active': True,
-              })
-              # Use Prefer header for upsert
+              # Upsert profile — solo crea si no existe; NO sobreescribe role ni company_id
+              print(f'  Upsertando profile (sin tocar role)...')
               url = SB + '/rest/v1/profiles'
               body = json.dumps({'id': user_id, 'email': email, 'full_name': name,
-                                 'role': 'user', 'is_active': True}).encode()
-              H2 = {**H, 'Prefer': 'resolution=merge-duplicates,return=minimal'}
+                                 'is_active': True}).encode()
+              H2 = {**H, 'Prefer': 'resolution=ignore-duplicates,return=minimal'}
               req = urllib.request.Request(url, data=body, headers=H2, method='POST')
               try:
                   resp = urllib.request.urlopen(req)
