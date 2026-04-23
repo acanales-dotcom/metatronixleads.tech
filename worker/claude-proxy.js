@@ -662,6 +662,340 @@ export default {
     if (path === '/ceo-query')   return handleCeoQuery(request, env, origin);
     if (path === '/db-migrate')  return handleDbMigrate(request, env, origin);
 
+    // ── Sistema Nervioso Central — Rutas de integración externa ──
+    if (path.startsWith('/api/crm/'))     return handleCRMIntegration(request, env, origin, path);
+    if (path.startsWith('/api/finance/')) return handleFinanceIntegration(request, env, origin, path);
+    if (path.startsWith('/api/admin/'))   return handleAdminIntegration(request, env, origin, path);
+    if (path.startsWith('/api/events/'))  return handleEventsIntegration(request, env, origin, path);
+
     return handleClaude(request, env, origin);
   },
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   SISTEMA NERVIOSO CENTRAL — Integraciones externas
+   Las API keys se agregan como secrets en Cloudflare Workers:
+   wrangler secret put LEADSALES_API_KEY
+   wrangler secret put YAYDOO_BEARER_TOKEN
+   wrangler secret put LISTO_API_KEY
+   wrangler secret put BUK_AUTH_TOKEN
+   wrangler secret put MONDAY_API_TOKEN
+   wrangler secret put DIIO_BEARER_TOKEN
+   wrangler secret put JELOU_BEARER_TOKEN
+   wrangler secret put VIXIEES_API_KEY
+   ═══════════════════════════════════════════════════════════════ */
+
+function integrationHeaders(origin) {
+  return { ...corsHeaders(origin), ...SECURITY_HEADERS, 'Content-Type': 'application/json' };
+}
+
+function integrationError(msg, status = 400, origin) {
+  return new Response(JSON.stringify({ error: msg }), {
+    status, headers: integrationHeaders(origin)
+  });
+}
+
+/* ── /api/crm/* — Leadsales, Vixiees, Diio ── */
+async function handleCRMIntegration(request, env, origin, path) {
+  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) });
+
+  // POST /api/crm/whatsapp/send → Leadsales API
+  if (path === '/api/crm/whatsapp/send') {
+    if (!env.LEADSALES_API_KEY) return integrationError('LEADSALES_API_KEY not configured', 503, origin);
+    const body = await request.json().catch(() => ({}));
+    const resp = await fetch('https://api.leadsales.io/api/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': env.LEADSALES_API_KEY },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json().catch(() => ({}));
+    return new Response(JSON.stringify(data), { status: resp.status, headers: integrationHeaders(origin) });
+  }
+
+  // POST /api/crm/webhook/leadsales — inbound WhatsApp → responde 200 siempre
+  if (path === '/api/crm/webhook/leadsales') {
+    const body = await request.json().catch(() => ({}));
+    // Forward al Supabase via REST para crear/actualizar lead
+    if (env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY && body.from) {
+      await fetch(`${env.SUPABASE_URL}/rest/v1/events`, {
+        method: 'POST',
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          event_type: 'whatsapp.inbound',
+          module: 'ventas',
+          payload: body,
+          severity: 'info'
+        })
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), { headers: integrationHeaders(origin) });
+  }
+
+  // POST /api/crm/playbook/execute → Vixiees
+  if (path === '/api/crm/playbook/execute') {
+    if (!env.VIXIEES_API_KEY) return integrationError('VIXIEES_API_KEY not configured — contactar a Vixiees para obtener API key', 503, origin);
+    const body = await request.json().catch(() => ({}));
+    const resp = await fetch(`https://api.vixiees.com/api/playbooks/${body.playbook_id}/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.VIXIEES_API_KEY}` },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json().catch(() => ({}));
+    return new Response(JSON.stringify(data), { status: resp.status, headers: integrationHeaders(origin) });
+  }
+
+  // POST /api/crm/webhook/diio — análisis de llamada → auto-fill lead
+  if (path === '/api/crm/webhook/diio') {
+    const body = await request.json().catch(() => ({}));
+    if (env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY && body.lead_id) {
+      await fetch(`${env.SUPABASE_URL}/rest/v1/leads?id=eq.${body.lead_id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          call_score: body.score || null,
+          call_notes: body.summary || body.transcript_summary || null,
+          call_recording_url: body.recording_url || null,
+          last_contact_at: new Date().toISOString()
+        })
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), { headers: integrationHeaders(origin) });
+  }
+
+  return integrationError('CRM route not found: ' + path, 404, origin);
+}
+
+/* ── /api/finance/* — Yaydoo, Listo ── */
+async function handleFinanceIntegration(request, env, origin, path) {
+  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) });
+
+  // POST /api/finance/payment/create → Yaydoo cobro SPEI
+  if (path === '/api/finance/payment/create') {
+    if (!env.YAYDOO_BEARER_TOKEN) return integrationError('YAYDOO_BEARER_TOKEN not configured', 503, origin);
+    const body = await request.json().catch(() => ({}));
+    const resp = await fetch(`https://api.yaydoo.com/api/payments/${body.company_id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.YAYDOO_BEARER_TOKEN}` },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json().catch(() => ({}));
+    return new Response(JSON.stringify(data), { status: resp.status, headers: integrationHeaders(origin) });
+  }
+
+  // GET /api/finance/payment/:id/status → estado cobro Yaydoo
+  if (path.startsWith('/api/finance/payment/') && path.endsWith('/status')) {
+    if (!env.YAYDOO_BEARER_TOKEN) return integrationError('YAYDOO_BEARER_TOKEN not configured', 503, origin);
+    const payId = path.split('/')[4];
+    const resp = await fetch(`https://api.yaydoo.com/api/payments/${payId}/status`, {
+      headers: { 'Authorization': `Bearer ${env.YAYDOO_BEARER_TOKEN}` }
+    });
+    const data = await resp.json().catch(() => ({}));
+    return new Response(JSON.stringify(data), { status: resp.status, headers: integrationHeaders(origin) });
+  }
+
+  // POST /api/finance/cfdi/stamp → Listo timbrado CFDI 4.0
+  if (path === '/api/finance/cfdi/stamp') {
+    if (!env.LISTO_API_KEY) return integrationError('LISTO_API_KEY not configured', 503, origin);
+    const body = await request.json().catch(() => ({}));
+    const resp = await fetch('https://api.listo.mx/api/cfdi/stamp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.LISTO_API_KEY}` },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json().catch(() => ({}));
+    return new Response(JSON.stringify(data), { status: resp.status, headers: integrationHeaders(origin) });
+  }
+
+  // POST /api/finance/webhook/yaydoo — payment.completed → actualiza BD
+  if (path === '/api/finance/webhook/yaydoo') {
+    const body = await request.json().catch(() => ({}));
+    if (env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY && body.payment_id) {
+      // Actualizar accounts_receivable
+      if (body.ar_id) {
+        await fetch(`${env.SUPABASE_URL}/rest/v1/accounts_receivable?id=eq.${body.ar_id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': env.SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ status: 'pagado', paid_at: new Date().toISOString(), yaydoo_payment_id: body.payment_id })
+        });
+      }
+      // Emitir evento al sistema nervioso
+      await fetch(`${env.SUPABASE_URL}/rest/v1/events`, {
+        method: 'POST',
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          event_type: 'payment.received',
+          module: 'finanzas',
+          company_id: body.company_id || null,
+          payload: body,
+          revenue_impact: body.amount || null,
+          severity: 'ok'
+        })
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), { headers: integrationHeaders(origin) });
+  }
+
+  return integrationError('Finance route not found: ' + path, 404, origin);
+}
+
+/* ── /api/admin/* — Buk, Monday, Jelou ── */
+async function handleAdminIntegration(request, env, origin, path) {
+  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) });
+
+  // GET /api/admin/employees/sync → Buk empleados
+  if (path === '/api/admin/employees/sync') {
+    if (!env.BUK_AUTH_TOKEN || !env.BUK_TENANT) return integrationError('BUK_AUTH_TOKEN / BUK_TENANT not configured', 503, origin);
+    const country = new URL(request.url).searchParams.get('country') || 'mx';
+    const resp = await fetch(`https://${env.BUK_TENANT}.buk.cl/api/v1/${country}/employees`, {
+      headers: { 'auth_token': env.BUK_AUTH_TOKEN, 'Content-Type': 'application/json' }
+    });
+    const data = await resp.json().catch(() => ({}));
+    return new Response(JSON.stringify(data), { status: resp.status, headers: integrationHeaders(origin) });
+  }
+
+  // POST /api/admin/monday/graphql → Monday.com GraphQL proxy
+  if (path === '/api/admin/monday/graphql') {
+    if (!env.MONDAY_API_TOKEN) return integrationError('MONDAY_API_TOKEN not configured', 503, origin);
+    const body = await request.json().catch(() => ({}));
+    const resp = await fetch('https://api.monday.com/v2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': env.MONDAY_API_TOKEN },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json().catch(() => ({}));
+    return new Response(JSON.stringify(data), { status: resp.status, headers: integrationHeaders(origin) });
+  }
+
+  // POST /api/admin/jelou/webhook — lead calificado → escribe en Supabase
+  if (path === '/api/admin/jelou/webhook') {
+    const body = await request.json().catch(() => ({}));
+    if (env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY && body.lead_qualified) {
+      const companyId = body.company_id || null;
+      // Crear lead calificado en Supabase
+      await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
+        method: 'POST',
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          name: body.name || 'Lead Jelou',
+          email: body.email || null,
+          phone: body.phone || null,
+          company: body.company || null,
+          company_id: companyId,
+          source: 'whatsapp',
+          status: 'calificado',
+          created_at: new Date().toISOString()
+        })
+      });
+      // Emitir evento
+      await fetch(`${env.SUPABASE_URL}/rest/v1/events`, {
+        method: 'POST',
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          event_type: 'lead.created',
+          module: 'ventas',
+          company_id: companyId,
+          payload: { name: body.name, source: 'jelou_chatbot' },
+          severity: 'info'
+        })
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), { headers: integrationHeaders(origin) });
+  }
+
+  return integrationError('Admin route not found: ' + path, 404, origin);
+}
+
+/* ── /api/events/* — Procesador de cascadas ── */
+async function handleEventsIntegration(request, env, origin, path) {
+  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) });
+
+  // POST /api/events/cascade — recibe evento y dispara cascadas
+  if (path === '/api/events/cascade') {
+    const body = await request.json().catch(() => ({}));
+    const { event_type, company_id, payload, revenue_impact } = body;
+
+    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) {
+      return integrationError('Supabase not configured', 503, origin);
+    }
+
+    const sbHeaders = {
+      'apikey': env.SUPABASE_SERVICE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    };
+
+    const emitEvent = async (type, module, evPayload, severity = 'info', revImpact = null) => {
+      await fetch(`${env.SUPABASE_URL}/rest/v1/events`, {
+        method: 'POST', headers: sbHeaders,
+        body: JSON.stringify({ event_type: type, module, company_id, payload: evPayload, severity, revenue_impact: revImpact })
+      });
+    };
+
+    // Cascada: lead.won → crear cuenta por cobrar + alertar finanzas
+    if (event_type === 'lead.won' && payload?.lead_id) {
+      await fetch(`${env.SUPABASE_URL}/rest/v1/accounts_receivable`, {
+        method: 'POST', headers: { ...sbHeaders, 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+        body: JSON.stringify({
+          company_id, lead_id: payload.lead_id,
+          client_name: payload.name || 'Cliente',
+          amount: revenue_impact || 0, status: 'pendiente', currency: 'MXN'
+        })
+      });
+      await emitEvent('invoice.created', 'finanzas', { source: 'lead.won', lead_id: payload.lead_id }, 'ok', revenue_impact);
+    }
+
+    // Cascada: invoice.overdue_60 → bloquear cliente en ventas
+    if (event_type === 'invoice.overdue_60' && payload?.lead_id) {
+      await fetch(`${env.SUPABASE_URL}/rest/v1/leads?id=eq.${payload.lead_id}`, {
+        method: 'PATCH', headers: sbHeaders,
+        body: JSON.stringify({ blocked_by_debt: true })
+      });
+      await emitEvent('client.blocked', 'cobranza', { reason: 'overdue_60', ...payload }, 'critical', revenue_impact);
+    }
+
+    // Cascada: payment.received → liberar bloqueo
+    if (event_type === 'payment.received' && payload?.lead_id) {
+      await fetch(`${env.SUPABASE_URL}/rest/v1/leads?id=eq.${payload.lead_id}`, {
+        method: 'PATCH', headers: sbHeaders,
+        body: JSON.stringify({ blocked_by_debt: false })
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, cascades_processed: event_type }), {
+      headers: integrationHeaders(origin)
+    });
+  }
+
+  return integrationError('Events route not found: ' + path, 404, origin);
+}
