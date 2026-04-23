@@ -1,0 +1,226 @@
+name: "Fix User Access — Frida y Ana"
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_role_key:
+        description: 'Supabase service_role key (Settings → API → service_role secret)'
+        required: true
+        type: string
+
+jobs:
+  fix-access:
+    name: Diagnose and Fix User Login
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ github.event.inputs.service_role_key }}
+      ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY"
+
+    steps:
+      - name: "Verificar conexión"
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=id&limit=1")
+          echo "HTTP $HTTP"
+          [ "$HTTP" = "200" ] || { echo "❌ service_role_key inválido o sin conexión"; exit 1; }
+          echo "✅ Conexión OK"
+
+      - name: "Diagnóstico — estado actual de usuarios"
+        run: |
+          echo "════════════════════════════════"
+          echo "  ESTADO EN AUTH.USERS"
+          echo "════════════════════════════════"
+
+          for EMAIL in frida@retaillab.com.mx aamaya@todoretail.com; do
+            echo ""
+            echo "── $EMAIL ──"
+            RESULT=$(curl -s \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              "$SB/auth/v1/admin/users?email=${EMAIL}&email_filter=exact")
+            echo "$RESULT" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          users = d.get('users', [])
+          if not users:
+              print('  ⚠ NO ENCONTRADO en auth.users')
+          else:
+              u = users[0]
+              print(f'  id              : {u.get(\"id\")}')
+              print(f'  email           : {u.get(\"email\")}')
+              print(f'  confirmed       : {bool(u.get(\"email_confirmed_at\"))}')
+              print(f'  banned          : {bool(u.get(\"banned_until\"))}')
+              print(f'  has_password    : {bool(u.get(\"encrypted_password\"))}')
+              print(f'  identities count: {len(u.get(\"identities\", []))}')
+              print(f'  aud             : {u.get(\"aud\")}')
+              print(f'  role            : {u.get(\"role\")}')
+          " 2>/dev/null || echo "  (error parsing response)"
+          done
+
+          echo ""
+          echo "════════════════════════════════"
+          echo "  ESTADO EN PROFILES"
+          echo "════════════════════════════════"
+          curl -s \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?email=in.(frida%40retaillab.com.mx,aamaya%40todoretail.com)&select=email,full_name,role,company_id,is_active" | \
+            python3 -c "
+          import json, sys
+          users = json.load(sys.stdin)
+          if not users:
+              print('  ⚠ SIN REGISTROS en profiles')
+          for u in users:
+              print(f'  {u.get(\"email\"):35} | role={u.get(\"role\"):15} | active={u.get(\"is_active\")} | company={u.get(\"company_id\")}')
+          " 2>/dev/null
+
+          echo ""
+          echo "════════════════════════════════"
+          echo "  MEMBRESÍAS user_companies"
+          echo "════════════════════════════════"
+          # Need UIDs first
+          FRIDA_UID=$(curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/auth/v1/admin/users?email=frida@retaillab.com.mx&email_filter=exact" | \
+            python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('users',[{}])[0].get('id',''))" 2>/dev/null)
+          ANA_UID=$(curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/auth/v1/admin/users?email=aamaya@todoretail.com&email_filter=exact" | \
+            python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('users',[{}])[0].get('id',''))" 2>/dev/null)
+
+          echo "frida_uid=$FRIDA_UID"
+          echo "ana_uid=$ANA_UID"
+
+          for UID in "$FRIDA_UID" "$ANA_UID"; do
+            [ -z "$UID" ] && continue
+            RESULT=$(curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              "$SB/rest/v1/user_companies?user_id=eq.${UID}&select=company_id,role")
+            echo "  uid=$UID memberships: $RESULT"
+          done
+
+      - name: "Fix — Recrear identidades y resetear passwords"
+        run: |
+          echo "════════════════════════════════"
+          echo "  RESETEANDO PASSWORDS"
+          echo "════════════════════════════════"
+
+          reset_user() {
+            local EMAIL="$1"
+            local NAME="$2"
+            local COMPANY_ID="$3"
+
+            echo ""
+            echo "── Procesando $EMAIL ──"
+
+            # Obtener UID existente
+            UID=$(curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              "$SB/auth/v1/admin/users?email=${EMAIL}&email_filter=exact" | \
+              python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('users',[{}])[0].get('id',''))" 2>/dev/null)
+
+            if [ -z "$UID" ]; then
+              echo "  ⚠ Usuario no encontrado. Creando desde cero..."
+              HTTP=$(curl -s -o /tmp/create_result.json -w "%{http_code}" \
+                -X POST \
+                -H "apikey: $SK" \
+                -H "Authorization: Bearer $SK" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"email\": \"$EMAIL\",
+                  \"password\": \"MetaTronix2026!\",
+                  \"email_confirm\": true,
+                  \"user_metadata\": {\"full_name\": \"$NAME\", \"role\": \"user\"}
+                }" \
+                "$SB/auth/v1/admin/users")
+              echo "  CREATE HTTP $HTTP"
+              UID=$(python3 -c "import json; d=json.load(open('/tmp/create_result.json')); print(d.get('id',''))" 2>/dev/null)
+              echo "  Nuevo UID: $UID"
+            else
+              echo "  UID encontrado: $UID"
+              echo "  Actualizando password..."
+              HTTP=$(curl -s -o /tmp/update_result.json -w "%{http_code}" \
+                -X PUT \
+                -H "apikey: $SK" \
+                -H "Authorization: Bearer $SK" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"password\": \"MetaTronix2026!\",
+                  \"email_confirm\": true,
+                  \"ban_duration\": \"none\"
+                }" \
+                "$SB/auth/v1/admin/users/$UID")
+              echo "  UPDATE HTTP $HTTP"
+              cat /tmp/update_result.json | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          if 'error' in d:
+              print('  ERROR:', d.get('error'), '-', d.get('message',''))
+          else:
+              print('  ✅ Password actualizado OK')
+              print('  confirmed:', bool(d.get('email_confirmed_at')))
+          " 2>/dev/null
+            fi
+
+            # Asegurar profile existe y es correcto
+            if [ -n "$UID" ]; then
+              echo "  Asegurando profile..."
+              HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+                -X POST \
+                -H "apikey: $SK" \
+                -H "Authorization: Bearer $SK" \
+                -H "Content-Type: application/json" \
+                -H "Prefer: resolution=merge-duplicates,return=minimal" \
+                -d "{\"id\":\"$UID\",\"email\":\"$EMAIL\",\"full_name\":\"$NAME\",\"role\":\"user\",\"is_active\":true}" \
+                "$SB/rest/v1/profiles")
+              echo "  Profile upsert HTTP $HTTP"
+
+              # Asegurar membresía a MetaTronix
+              HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+                -X POST \
+                -H "apikey: $SK" \
+                -H "Authorization: Bearer $SK" \
+                -H "Content-Type: application/json" \
+                -H "Prefer: resolution=merge-duplicates,return=minimal" \
+                -d "{\"user_id\":\"$UID\",\"company_id\":\"c0000000-0000-0000-0000-000000000001\",\"role\":\"member\"}" \
+                "$SB/rest/v1/user_companies")
+              echo "  MetaTronix membership HTTP $HTTP"
+            fi
+          }
+
+          reset_user "frida@retaillab.com.mx"  "Frida"     "c0000000-0000-0000-0000-000000000001"
+          reset_user "aamaya@todoretail.com"    "Ana Amaya" "c0000000-0000-0000-0000-000000000001"
+
+      - name: "Verificación — Test de Login"
+        run: |
+          echo "════════════════════════════════"
+          echo "  TEST DE AUTENTICACIÓN"
+          echo "════════════════════════════════"
+
+          test_login() {
+            local EMAIL="$1"
+            echo ""
+            echo "── $EMAIL ──"
+            RESULT=$(curl -s -X POST "$SB/auth/v1/token?grant_type=password" \
+              -H "apikey: $ANON" \
+              -H "Content-Type: application/json" \
+              -d "{\"email\":\"$EMAIL\",\"password\":\"MetaTronix2026!\"}")
+            echo "$RESULT" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          if 'access_token' in d:
+              print('  ✅ LOGIN EXITOSO')
+              print('  user_id:', d.get('user',{}).get('id','?'))
+          elif 'error' in d:
+              print('  ❌ LOGIN FALLIDO:', d.get('error'), '-', d.get('error_description',''))
+          else:
+              print('  ⚠ Respuesta inesperada:', str(d)[:200])
+          " 2>/dev/null || echo "  (error en respuesta)"
+          }
+
+          test_login "frida@retaillab.com.mx"
+          test_login "aamaya@todoretail.com"
+
+          echo ""
+          echo "════════════════════════════════"
+          echo "  RESUMEN FINAL"
+          echo "════════════════════════════════"
+          echo "  Portal: https://metatronixleads.tech"
+          echo "  Password: MetaTronix2026!"
+          echo "════════════════════════════════"
