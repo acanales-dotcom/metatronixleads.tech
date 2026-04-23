@@ -1,0 +1,163 @@
+name: Seed Demo Events — Nexus (empresa demo)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - name: "Verificar y crear empresa nexus si no existe"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json'}
+
+          def api(method, path, body=None, prefer=None):
+              url  = SB + path
+              data = json.dumps(body).encode() if body else None
+              hdrs = dict(H)
+              if prefer: hdrs['Prefer'] = prefer
+              req  = urllib.request.Request(url, data=data, headers=hdrs, method=method)
+              try:
+                  resp = urllib.request.urlopen(req)
+                  raw  = resp.read()
+                  return json.loads(raw) if raw else {}, resp.status
+              except urllib.error.HTTPError as e:
+                  return json.loads(e.read().decode() or '{}'), e.code
+
+          # Verificar empresas existentes
+          companies, _ = api('GET', '/rest/v1/companies?select=id,name,slug')
+          print('Empresas:', [(c.get('id'), c.get('name')) for c in (companies if isinstance(companies, list) else [])])
+
+          # Crear nexus si no existe
+          co_ids = {c.get('slug') or c.get('id') for c in (companies if isinstance(companies, list) else [])}
+          if 'nexus' not in co_ids and 'demo' not in co_ids:
+              r, code = api('POST', '/rest/v1/companies',
+                  {'id': 'nexus', 'name': 'Nexus Demo', 'slug': 'nexus',
+                   'owner_email': 'acanales@ibanormexico.com', 'plan': 'enterprise', 'is_active': True},
+                  prefer='resolution=merge-duplicates,return=minimal')
+              print(f'Nexus creado: HTTP {code}')
+          else:
+              print('Nexus/demo ya existe')
+
+          # Verificar estado final
+          companies2, _ = api('GET', '/rest/v1/companies?select=id,name,slug')
+          print('Empresas finales:', [(c.get('id'), c.get('name')) for c in (companies2 if isinstance(companies2, list) else [])])
+          PYEOF
+
+      - name: "Insertar eventos de demostración en nexus"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}',
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
+
+          # Detectar ID de la empresa demo (nexus o demo)
+          req = urllib.request.Request(SB+'/rest/v1/companies?select=id,slug,name',
+              headers={'apikey': SK, 'Authorization': f'Bearer {SK}'}, method='GET')
+          companies = json.loads(urllib.request.urlopen(req).read())
+          demo_id = None
+          for c in companies:
+              if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo'):
+                  demo_id = c.get('id')
+                  print(f'Demo company: {demo_id} ({c.get("name")})')
+                  break
+          if not demo_id:
+              demo_id = 'nexus'
+              print(f'Usando demo_id default: nexus')
+
+          events = [
+            {'event_type':'lead.won',         'module':'ventas',    'company_id':demo_id,'payload':{'name':'Inmobiliaria Premier','deal_value':95000},'revenue_impact':95000,'severity':'ok'},
+            {'event_type':'invoice.overdue_60','module':'finanzas',  'company_id':demo_id,'payload':{'client':'Distribuidora Global','days_overdue':62},'revenue_impact':185000,'severity':'critical'},
+            {'event_type':'lead.stalled',      'module':'ventas',    'company_id':demo_id,'payload':{'name':'Grupo Alpha','days_stalled':8,'assigned_to':'rsuarez'},'revenue_impact':280000,'severity':'warn'},
+            {'event_type':'payment.received',  'module':'finanzas',  'company_id':demo_id,'payload':{'client':'Construmax MX','invoice':'INV-076'},'revenue_impact':45000,'severity':'ok'},
+            {'event_type':'campaign.launched', 'module':'marketing', 'company_id':demo_id,'payload':{'campaign':'LinkedIn Q2 2026','channel':'linkedin'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'feedback.submitted','module':'feedback',  'company_id':demo_id,'payload':{'title':'Exportar leads a Excel con un clic','type':'feature'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'lead.won',          'module':'ventas',    'company_id':demo_id,'payload':{'name':'LogiNorte SA','deal_value':62000},'revenue_impact':62000,'severity':'ok'},
+            {'event_type':'feature.threshold_reached','module':'feedback','company_id':demo_id,'payload':{'title':'App móvil nativa','votes':8,'revenue_score':450000},'revenue_impact':None,'severity':'warn'},
+            {'event_type':'lead.created',      'module':'ventas',    'company_id':demo_id,'payload':{'name':'Fintech Monterrey','source':'whatsapp'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'budget.alert',      'module':'compras',   'company_id':demo_id,'payload':{'pct_used':87,'pending_pos':3,'total_pending':62000},'revenue_impact':None,'severity':'warn'},
+            {'event_type':'collection.started','module':'cobranza',  'company_id':demo_id,'payload':{'client':'TechRetail MX','amount':320000,'days_overdue':45},'revenue_impact':320000,'severity':'critical'},
+            {'event_type':'lead.won',          'module':'ventas',    'company_id':demo_id,'payload':{'name':'Grupo Salinas Retail','deal_value':128000},'revenue_impact':128000,'severity':'ok'},
+          ]
+
+          body = json.dumps(events).encode()
+          req2 = urllib.request.Request(SB+'/rest/v1/events', data=body, headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req2)
+              print(f'✅ {len(events)} eventos insertados en {demo_id} — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              err = e.read().decode()
+              print(f'❌ Error: {err[:300]}')
+
+          # Verificar
+          req3 = urllib.request.Request(
+              f'{SB}/rest/v1/events?select=event_type,severity,created_at&company_id=eq.{demo_id}&order=created_at.desc&limit=15',
+              headers={'apikey': SK, 'Authorization': f'Bearer {SK}'}, method='GET')
+          data = json.loads(urllib.request.urlopen(req3).read())
+          print(f'\n📊 Eventos en {demo_id}: {len(data)}')
+          for e in data[:6]:
+              print(f'  [{e["severity"]:8}] {e["event_type"]}')
+          PYEOF
+
+      - name: "Agregar membresía nexus a usuarios que no la tienen"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json'}
+
+          def get_uid(email):
+              url = f'{SB}/auth/v1/admin/users?email={email}&email_filter=exact'
+              req = urllib.request.Request(url, headers=H, method='GET')
+              try:
+                  d = json.loads(urllib.request.urlopen(req).read())
+                  users = d.get('users', [])
+                  for u in users:
+                      if u.get('email','').lower() == email.lower():
+                          return u['id']
+              except: pass
+              return None
+
+          # Detectar demo_id
+          req = urllib.request.Request(SB+'/rest/v1/companies?select=id,slug',
+              headers={'apikey': SK, 'Authorization': f'Bearer {SK}'}, method='GET')
+          companies = json.loads(urllib.request.urlopen(req).read())
+          demo_id = next((c['id'] for c in companies if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo')), 'nexus')
+
+          users_to_add = [
+              ('acanales@ibanormexico.com', 'owner'),
+              ('ncanales@ibanormexico.com', 'owner'),
+              ('jorge@retaillab.com.mx',   'member'),
+              ('noe@grupoamsg.com',         'member'),
+              ('rsuarez@ibanormexico.com',  'member'),
+          ]
+
+          for email, role in users_to_add:
+              uid = get_uid(email)
+              if not uid:
+                  print(f'  SKIP {email} (no UID)')
+                  continue
+              body = json.dumps({'user_id': uid, 'company_id': demo_id, 'role': role}).encode()
+              H2 = {**H, 'Prefer': 'resolution=merge-duplicates,return=minimal'}
+              req2 = urllib.request.Request(SB+'/rest/v1/user_companies', data=body, headers=H2, method='POST')
+              try:
+                  resp = urllib.request.urlopen(req2)
+                  print(f'  ✅ {email} → {demo_id} ({role}) HTTP {resp.status}')
+              except urllib.error.HTTPError as e:
+                  print(f'  ❌ {email}: {e.code}')
+          PYEOF
