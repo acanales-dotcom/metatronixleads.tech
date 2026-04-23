@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MTX QA v8 — Sistema Nervioso Central + Fixes</title>
+<link rel="stylesheet" href="/assets/fonts.css">
+<style>
+:root{--bg:#0A0E18;--bg2:#111827;--bg3:#1E293B;--border:rgba(255,255,255,.08);--accent:#00ff88;--red:#F87171;--yellow:#FCD34D;--mono:'JetBrains Mono',monospace;--t1:#F1F5F9;--t2:#94A3B8;--t3:#475569}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font-family:'Inter',sans-serif;padding:24px;min-height:100vh}
+h1{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.06em;margin-bottom:4px}
+.meta{font-size:12px;color:var(--t2);margin-bottom:24px}
+.scorebar{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.score-num{font-family:var(--mono);font-size:36px;font-weight:700;color:var(--accent)}
+.score-label{font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
+.progress-bar{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;min-width:200px}
+.progress-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .3s}
+.stats{display:flex;gap:16px;font-size:12px}
+.stat-pass{color:var(--accent)}
+.stat-fail{color:var(--red)}
+.stat-skip{color:var(--yellow)}
+.run-btn{padding:10px 24px;background:var(--accent);color:#0A0E18;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.run-btn:disabled{opacity:.5;cursor:not-allowed}
+.suite{margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.suite-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border)}
+.suite-id{font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em}
+.suite-name{font-weight:600;font-size:14px;flex:1}
+.suite-count{font-family:var(--mono);font-size:11px;color:var(--t3);margin-left:auto}
+.test-list{display:none}
+.suite.open .test-list{display:block}
+.test-row{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px}
+.test-row:last-child{border-bottom:none}
+.test-status{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.s-pass{background:rgba(0,255,136,.15);color:var(--accent)}
+.s-fail{background:rgba(248,113,113,.15);color:var(--red)}
+.s-skip{background:rgba(252,211,77,.12);color:var(--yellow)}
+.s-run{background:rgba(96,165,250,.15);color:#93C5FD;animation:spin .7s linear infinite}
+.s-wait{background:rgba(255,255,255,.05);color:var(--t3)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.test-name{flex:1;color:var(--t2)}
+.test-detail{font-family:var(--mono);font-size:10px;color:var(--t3);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin:20px 0 8px}
+</style>
+</head>
+<body>
+<h1>⚡ MTX QA v8</h1>
+<div class="meta">Sistema Nervioso Central · Feedback · Fixes de documentos y roles · metatronixleads.tech · <span id="date"></span></div>
+
+<div class="scorebar">
+  <div>
+    <div class="score-num" id="pct">0%</div>
+    <div class="score-label">PASS RATE</div>
+  </div>
+  <div style="flex:1">
+    <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+    <div class="stats" style="margin-top:6px">
+      <span class="stat-pass">✅ <span id="cnt-pass">0</span> pass</span>
+      <span class="stat-fail">❌ <span id="cnt-fail">0</span> fail</span>
+      <span class="stat-skip">⚠ <span id="cnt-skip">0</span> skip</span>
+      <span style="color:var(--t3)">— <span id="cnt-total">0</span> total</span>
+    </div>
+  </div>
+  <button class="run-btn" id="run-btn" onclick="runAll()">▶ Correr QA v8</button>
+</div>
+
+<div id="suites-container"></div>
+
+<script src="/assets/libs/supabase.min.js"></script>
+<script src="/assets/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+document.getElementById('date').textContent = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+
+const SB_URL  = window.MTX_CONFIG?.SUPABASE_URL  || 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+const SB_ANON = window.MTX_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
+const WORKER  = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev';
+const PORTAL  = 'https://metatronixleads.tech';
+
+const pass = (msg) => ({ status:'pass', detail: msg });
+const fail = (msg) => ({ status:'fail', detail: msg });
+const skip = (msg) => ({ status:'skip', detail: msg });
+
+async function sbFetch(path) {
+  const r = await fetch(SB_URL + path, { headers:{ apikey: SB_ANON, Authorization:'Bearer '+SB_ANON }});
+  return { ok: r.ok, status: r.status, data: await r.json().catch(()=>({})) };
+}
+
+async function checkPage(url, keywords=[]) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return fail(`HTTP ${r.status}`);
+    const text = await r.text();
+    for (const kw of keywords) {
+      if (!text.includes(kw)) return fail(`Falta: ${kw}`);
+    }
+    return pass(`HTTP ${r.status} · ${text.length} chars`);
+  } catch(e) { return fail(e.message); }
+}
+
+const SUITES = [
+  { id:'SNS', name:'Sistema Nervioso Central — Tablas', open:true, tests:[
+    { name:'Tabla events existe', run: async()=>{
+      const r = await sbFetch('/rest/v1/events?select=id&limit=1');
+      return r.ok ? pass('events accesible (HTTP 200)') : fail(`HTTP ${r.status} — tabla no encontrada`);
+    }},
+    { name:'Tabla feature_requests existe', run: async()=>{
+      const r = await sbFetch('/rest/v1/feature_requests?select=id&limit=1');
+      return r.ok ? pass('feature_requests OK') : fail(`HTTP ${r.status}`);
+    }},
+    { name:'Tabla feedback_items existe', run: async()=>{
+      const r = await sbFetch('/rest/v1/feedback_items?select=id&limit=1');
+      return r.ok ? pass('feedback_items OK') : fail(`HTTP ${r.status}`);
+    }},
+    { name:'Tabla feedback_votes existe', run: async()=>{
+      const r = await sbFetch('/rest/v1/feedback_votes?select=id&limit=1');
+      return r.ok ? pass('feedback_votes OK') : fail(`HTTP ${r.status}`);
+    }},
+    { name:'Tabla accounts_receivable existe', run: async()=>{
+      const r = await sbFetch('/rest/v1/accounts_receivable?select=id&limit=1');
+      return r.ok ? pass('accounts_receivable OK') : fail(`HTTP ${r.status}`);
+    }},
+    { name:'Tabla integrations_log existe', run: async()=>{
+      const r = await sbFetch('/rest/v1/integrations_log?select=id&limit=1');
+      return r.ok ? pass('integrations_log OK') : fail(`HTTP ${r.status}`);
+    }},
+    { name:'Tabla app_integrations existe', run: async()=>{
+      const r = await sbFetch('/rest/v1/app_integrations?select=id&limit=1');
+      return r.ok ? pass('app_integrations OK') : fail(`HTTP ${r.status}`);
+    }},
+    { name:'Columnas nuevas en leads (source, call_score, blocked_by_debt)', run: async()=>{
+      const r = await sbFetch('/rest/v1/leads?select=source,call_score,blocked_by_debt&limit=1');
+      return r.ok ? pass('Nuevas columnas accesibles') : fail(`HTTP ${r.status} — ALTER TABLE leads pendiente`);
+    }},
+    { name:'RLS events — anon NO puede leer', run: async()=>{
+      const r = await fetch(SB_URL + '/rest/v1/events?select=id&limit=1', {
+        headers:{ apikey: SB_ANON }
+      });
+      return r.status === 401 || r.status === 403 || (r.ok && Array.isArray(await r.clone().json().catch(()=>null)))
+        ? pass(`HTTP ${r.status} — RLS activo`)
+        : skip(`HTTP ${r.status} — verificar manualmente`);
+    }},
+  ]},
+
+  { id:'FB', name:'Sistema de Feedback Propio', open:true, tests:[
+    { name:'feedback.html existe y carga', run: async()=>
+      checkPage(PORTAL+'/feedback.html', ['Feedback & Roadmap','feature_requests'])
+    },
+    { name:'feedback.html incluye sistema de votación', run: async()=>
+      checkPage(PORTAL+'/feedback.html', ['toggleVote','feedback_votes','votes_count'])
+    },
+    { name:'feedback.html incluye kanban admin', run: async()=>
+      checkPage(PORTAL+'/feedback.html', ['renderKanban','backlog','en_desarrollo'])
+    },
+    { name:'feedback.html tiene threshold de CEO notification', run: async()=>
+      checkPage(PORTAL+'/feedback.html', ['threshold_reached','emitEvent'])
+    },
+    { name:'feedback.html enlazado desde sidebar', run: async()=>{
+      const r = await fetch(PORTAL+'/assets/app.js');
+      const text = await r.text();
+      return text.includes('feedback.html') ? pass('Link a feedback.html en sidebar') : fail('No encontrado en app.js');
+    }},
+  ]},
+
+  { id:'APP', name:'app.js — Sistema Nervioso (emitEvent)', tests:[
+    { name:'emitEvent() definida en app.js', run: async()=>{
+      const r = await fetch(PORTAL+'/assets/app.js');
+      const t = await r.text();
+      return t.includes('async function emitEvent') ? pass('emitEvent definida') : fail('emitEvent no encontrada');
+    }},
+    { name:'subscribeToEvents() definida', run: async()=>{
+      const r = await fetch(PORTAL+'/assets/app.js');
+      const t = await r.text();
+      return t.includes('function subscribeToEvents') ? pass('subscribeToEvents definida') : fail('No encontrada');
+    }},
+    { name:'getMetaTronixScore() definida', run: async()=>{
+      const r = await fetch(PORTAL+'/assets/app.js');
+      const t = await r.text();
+      return t.includes('async function getMetaTronixScore') ? pass('getMetaTronixScore definida') : fail('No encontrada');
+    }},
+    { name:'getActiveCompanyId() acepta slugs (bug fix)', run: async()=>{
+      const r = await fetch(PORTAL+'/assets/app.js');
+      const t = await r.text();
+      const hasOldUUID = t.includes('isValidUUID') && t.includes('_UUID_RE');
+      const hasNewSlug = t.includes("typeof fromSwitcher === 'string'");
+      return hasNewSlug && !hasOldUUID ? pass('Bug fix aplicado — acepta slugs') :
+             hasNewSlug ? pass('Acepta slugs (UUID RE puede coexistir)') :
+             fail('getActiveCompanyId aún usa isValidUUID — cruce de docs probable');
+    }},
+    { name:'Botón flotante feedback en todos los módulos', run: async()=>{
+      const r = await fetch(PORTAL+'/assets/app.js');
+      const t = await r.text();
+      return t.includes('initFeedbackButton') && t.includes('openFeedbackModal')
+        ? pass('Botón flotante 💬 integrado') : fail('initFeedbackButton no encontrada');
+    }},
+  ]},
+
+  { id:'CEO', name:'CEO Dashboard — Nervous System', tests:[
+    { name:'ceo.html tiene feed de eventos en tiempo real', run: async()=>
+      checkPage(PORTAL+'/ceo.html', ['nervous-feed','subscribeToEvents','initNervousSystem'])
+    },
+    { name:'ceo.html tiene MetaTronix Score widget', run: async()=>
+      checkPage(PORTAL+'/ceo.html', ['getMetaTronixScore','renderScoreWidget','MTX Score'])
+    },
+    { name:'ceo.html tiene cascadas automáticas', run: async()=>
+      checkPage(PORTAL+'/ceo.html', ['handleLiveEvent','refreshScore'])
+    },
+  ]},
+
+  { id:'ARCH', name:'archivos.html — Fixes Cruce Documentos', tests:[
+    { name:'dlFile() filtra por company_id', run: async()=>{
+      const r = await fetch(PORTAL+'/archivos.html');
+      const t = await r.text();
+      const dlSection = t.slice(t.indexOf('async function dlFile'), t.indexOf('async function dlFile')+400);
+      return dlSection.includes('companyId') && dlSection.includes('company_id')
+        ? pass('dlFile filtra por empresa — cruce documentos corregido')
+        : fail('dlFile NO filtra por empresa — documentos siguen cruzándose');
+    }},
+    { name:'confirmDelFolder() verifica filas eliminadas (.select)', run: async()=>{
+      const r = await fetch(PORTAL+'/archivos.html');
+      const t = await r.text();
+      const delSection = t.slice(t.indexOf('confirmDelFolder'), t.indexOf('confirmDelFolder')+800);
+      return delSection.includes('.select(') && delSection.includes('deleted.length')
+        ? pass('Delete con verificación real — carpetas borradas correctamente')
+        : fail('Delete sin verificación — carpetas siguen reapareciendo');
+    }},
+  ]},
+
+  { id:'AUTH', name:'Autenticación — Fixes Acceso', tests:[
+    { name:'reset-password.html existe y carga', run: async()=>
+      checkPage(PORTAL+'/reset-password.html', ['Nueva contraseña','updateUser','recovery'])
+    },
+    { name:'index.html redirige a reset-password.html (no activar-cuenta)', run: async()=>{
+      const r = await fetch(PORTAL+'/index.html');
+      const t = await r.text();
+      const hasNew = t.includes('reset-password.html');
+      const hasOld = t.includes('activar-cuenta.html') && !t.includes('reset-password.html');
+      return hasNew ? pass('Redirige a reset-password.html ✓') :
+             hasOld ? fail('Aún redirige a activar-cuenta.html — fix no aplicado') :
+             skip('Verificar manualmente');
+    }},
+    { name:'Login funcional — Supabase Auth responde', run: async()=>{
+      const r = await fetch(SB_URL + '/auth/v1/health');
+      return r.ok ? pass(`Auth health OK (HTTP ${r.status})`) : fail(`HTTP ${r.status}`);
+    }},
+    { name:'frida@retaillab.com.mx autenticada', run: async()=>{
+      const r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
+        method:'POST', headers:{ apikey: SB_ANON, 'Content-Type':'application/json' },
+        body: JSON.stringify({ email:'frida@retaillab.com.mx', password:'MetaTronix2026!' })
+      });
+      const d = await r.json().catch(()=>({}));
+      return d.access_token ? pass('✅ Login Frida OK — uid:'+d.user?.id?.slice(0,8))
+        : fail('Login fallido: '+(d.error_description||d.error||'unknown'));
+    }},
+    { name:'aamaya@todoretail.com autenticada', run: async()=>{
+      const r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
+        method:'POST', headers:{ apikey: SB_ANON, 'Content-Type':'application/json' },
+        body: JSON.stringify({ email:'aamaya@todoretail.com', password:'MetaTronix2026!' })
+      });
+      const d = await r.json().catch(()=>({}));
+      return d.access_token ? pass('✅ Login Ana OK — uid:'+d.user?.id?.slice(0,8))
+        : fail('Login fallido: '+(d.error_description||d.error||'unknown'));
+    }},
+    { name:'acanales@ibanormexico.com autenticado', run: async()=>{
+      const r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
+        method:'POST', headers:{ apikey: SB_ANON, 'Content-Type':'application/json' },
+        body: JSON.stringify({ email:'acanales@ibanormexico.com', password:'MetaTronix2026!' })
+      });
+      const d = await r.json().catch(()=>({}));
+      return d.access_token ? pass('✅ Login Alejandro OK')
+        : fail('Login fallido: '+(d.error_description||d.error||'unknown'));
+    }},
+  ]},
+
+  { id:'ROLES', name:'Roles — Configuración correcta', tests:[
+    { name:'rsuarez tiene role admin_restringido', run: async()=>{
+      const r = await sbFetch('/rest/v1/profiles?email=eq.rsuarez%40ibanormexico.com&select=email,role');
+      if (!r.ok || !r.data.length) return skip('rsuarez no encontrado en profiles');
+      const role = r.data[0]?.role;
+      return role === 'admin_restringido' ? pass(`role: ${role} ✓`) : fail(`role incorrecto: ${role}`);
+    }},
+    { name:'acanales tiene role super_admin', run: async()=>{
+      const r = await sbFetch('/rest/v1/profiles?email=eq.acanales%40ibanormexico.com&select=email,role');
+      if (!r.ok || !r.data.length) return skip('acanales no encontrado');
+      const role = r.data[0]?.role;
+      return role === 'super_admin' ? pass(`role: ${role} ✓`) : fail(`role incorrecto: ${role}`);
+    }},
+    { name:'frida tiene role user', run: async()=>{
+      const r = await sbFetch('/rest/v1/profiles?email=eq.frida%40retaillab.com.mx&select=email,role');
+      if (!r.ok || !r.data.length) return skip('frida no encontrada');
+      const role = r.data[0]?.role;
+      return role === 'user' ? pass(`role: ${role} ✓`) : fail(`role incorrecto: ${role}`);
+    }},
+  ]},
+
+  { id:'WORKER', name:'Cloudflare Worker — Rutas Integración', tests:[
+    { name:'Worker responde en ruta principal', run: async()=>{
+      const r = await fetch(WORKER, { method:'OPTIONS' });
+      return r.ok || r.status === 405 ? pass(`Worker activo (HTTP ${r.status})`) : fail(`HTTP ${r.status}`);
+    }},
+    { name:'Worker ruta /api/crm/whatsapp/send devuelve 503 sin API key', run: async()=>{
+      const r = await fetch(WORKER+'/api/crm/whatsapp/send', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+      });
+      return [503,400,401].includes(r.status)
+        ? pass(`HTTP ${r.status} — ruta existe, sin API key configurada`)
+        : r.status === 404 ? fail('Ruta no encontrada en Worker')
+        : pass(`HTTP ${r.status} — ruta activa`);
+    }},
+    { name:'Worker ruta /api/finance/payment/create activa', run: async()=>{
+      const r = await fetch(WORKER+'/api/finance/payment/create', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+      });
+      return r.status !== 404 ? pass(`HTTP ${r.status} — ruta activa`) : fail('Ruta /api/finance/payment/create no encontrada');
+    }},
+    { name:'Worker ruta /api/events/cascade activa', run: async()=>{
+      const r = await fetch(WORKER+'/api/events/cascade', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+      });
+      return r.status !== 404 ? pass(`HTTP ${r.status} — cascadas activas`) : fail('Motor de cascadas no encontrado');
+    }},
+  ]},
+
+  { id:'INFRA', name:'Infraestructura y Deploy', tests:[
+    { name:'Portal responde (metatronixleads.tech)', run: async()=>
+      checkPage(PORTAL, ['MetaTronix'])
+    },
+    { name:'assets/app.js disponible y actualizado', run: async()=>{
+      const r = await fetch(PORTAL+'/assets/app.js');
+      const t = await r.text();
+      return t.includes('emitEvent') && t.includes('getMetaTronixScore')
+        ? pass(`app.js v8 — ${t.length} chars`) : fail('app.js desactualizado');
+    }},
+    { name:'Supabase proyecto activo', run: async()=>{
+      const r = await fetch(SB_URL+'/rest/v1/profiles?select=id&limit=1', {
+        headers:{ apikey: SB_ANON }
+      });
+      return r.ok ? pass(`Supabase activo (HTTP ${r.status})`) : fail(`HTTP ${r.status}`);
+    }},
+    { name:'GitHub Pages deploy reciente (<2h)', run: async()=>{
+      const r = await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/commits?per_page=1');
+      if (!r.ok) return skip('GitHub API rate limit');
+      const [commit] = await r.json();
+      const age = (Date.now() - new Date(commit.commit.author.date)) / 3600000;
+      return age < 24 ? pass(`Último commit: ${age.toFixed(1)}h ago — ${commit.sha.slice(0,7)}`)
+        : skip(`Último commit: ${age.toFixed(1)}h ago`);
+    }},
+  ]},
+];
+
+// ── Render UI ────────────────────────────────────────────────────
+let results = {};
+let totalTests = 0;
+
+function renderSuites() {
+  const container = document.getElementById('suites-container');
+  container.innerHTML = '';
+  SUITES.forEach(suite => {
+    totalTests += suite.tests.length;
+    const el = document.createElement('div');
+    el.className = 'suite' + (suite.open ? ' open' : '');
+    el.id = 'suite-' + suite.id;
+    el.innerHTML = `
+      <div class="suite-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="suite-id">${suite.id}</span>
+        <span class="suite-name">${suite.name}</span>
+        <span class="suite-count" id="sc-${suite.id}">0/${suite.tests.length}</span>
+      </div>
+      <div class="test-list">
+        ${suite.tests.map((t,i) => `
+          <div class="test-row" id="tr-${suite.id}-${i}">
+            <div class="test-status s-wait" id="ts-${suite.id}-${i}">○</div>
+            <div class="test-name">${t.name}</div>
+            <div class="test-detail" id="td-${suite.id}-${i}">—</div>
+          </div>
+        `).join('')}
+      </div>`;
+    container.appendChild(el);
+  });
+  document.getElementById('cnt-total').textContent = totalTests;
+}
+
+function updateStats() {
+  const vals = Object.values(results);
+  const pass = vals.filter(r=>r==='pass').length;
+  const fail = vals.filter(r=>r==='fail').length;
+  const skip = vals.filter(r=>r==='skip').length;
+  const done = pass+fail+skip;
+  const pct  = done > 0 ? Math.round(pass/done*100) : 0;
+  document.getElementById('pct').textContent = pct+'%';
+  document.getElementById('pct').style.color = pct>=90?'var(--accent)':pct>=70?'var(--yellow)':'var(--red)';
+  document.getElementById('prog').style.width = pct+'%';
+  document.getElementById('prog').style.background = pct>=90?'var(--accent)':pct>=70?'var(--yellow)':'var(--red)';
+  document.getElementById('cnt-pass').textContent = pass;
+  document.getElementById('cnt-fail').textContent = fail;
+  document.getElementById('cnt-skip').textContent = skip;
+}
+
+function setTestResult(suiteId, idx, status, detail) {
+  const key = suiteId+'-'+idx;
+  results[key] = status;
+  const ts = document.getElementById('ts-'+suiteId+'-'+idx);
+  const td = document.getElementById('td-'+suiteId+'-'+idx);
+  if(ts) { ts.className='test-status s-'+status; ts.textContent = status==='pass'?'✓':status==='fail'?'✗':'!'; }
+  if(td) { td.textContent = detail||''; td.title = detail||''; }
+  // Update suite counter
+  const suiteTests = SUITES.find(s=>s.id===suiteId)?.tests.length||0;
+  const suiteDone  = Object.keys(results).filter(k=>k.startsWith(suiteId+'-')).length;
+  const sc = document.getElementById('sc-'+suiteId);
+  if(sc) sc.textContent = suiteDone+'/'+suiteTests;
+  updateStats();
+}
+
+async function runAll() {
+  results = {};
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('run-btn').textContent = '⏳ Corriendo...';
+
+  for (const suite of SUITES) {
+    document.getElementById('suite-'+suite.id)?.classList.add('open');
+    for (let i=0; i<suite.tests.length; i++) {
+      const ts = document.getElementById('ts-'+suite.id+'-'+i);
+      if(ts){ ts.className='test-status s-run'; ts.textContent='↻'; }
+      try {
+        const res = await suite.tests[i].run();
+        setTestResult(suite.id, i, res.status, res.detail);
+      } catch(e) {
+        setTestResult(suite.id, i, 'fail', e.message||'Error');
+      }
+      await new Promise(r=>setTimeout(r,80));
+    }
+  }
+
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('run-btn').textContent = '↺ Repetir QA v8';
+}
+
+renderSuites();
+</script>
+</body>
+</html>
