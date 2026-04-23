@@ -1,0 +1,124 @@
+name: Ejecutar SQL — Sistema Nervioso Central
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-sql:
+    name: Instalar tablas del sistema nervioso
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Verificar conexión"
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=id&limit=1")
+          [ "$HTTP" = "200" ] && echo "✅ Conexión OK" || { echo "❌ Falla"; exit 1; }
+
+      - name: "Instalar tablas via SQL statements"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os, time
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}',
+                'Content-Type': 'application/json', 'Prefer': 'return=minimal'}
+
+          def rest(method, path, body=None, prefer=None):
+              url  = SB + path
+              data = json.dumps(body).encode() if body else None
+              hdrs = dict(H)
+              if prefer: hdrs['Prefer'] = prefer
+              req  = urllib.request.Request(url, data=data, headers=hdrs, method=method)
+              try:
+                  resp = urllib.request.urlopen(req)
+                  raw  = resp.read()
+                  return (json.loads(raw) if raw else {}), resp.status
+              except urllib.error.HTTPError as e:
+                  err = e.read().decode()
+                  return (json.loads(err) if err else {'error': str(e)}), e.code
+
+          def check_table(table):
+              d, code = rest('GET', f'/rest/v1/{table}?select=id&limit=1')
+              return code == 200
+
+          print('\n═══ SISTEMA NERVIOSO CENTRAL — Instalación ═══\n')
+
+          # ── 1. Verificar tablas existentes ────────────────────────
+          tables_to_check = ['events','accounts_receivable','feature_requests',
+                             'feedback_items','feedback_votes','integrations_log','app_integrations']
+          existing = []
+          for t in tables_to_check:
+              if check_table(t):
+                  print(f'  ✅ Tabla {t} ya existe')
+                  existing.append(t)
+              else:
+                  print(f'  ⚠ Tabla {t} no existe — se creará via exec_sql')
+
+          # ── 2. Intentar exec_sql RPC ────────────────────────────────
+          sql_full = open('sql/nervous-system.sql').read()
+
+          d, code = rest('POST', '/rest/v1/rpc/exec_sql', {'sql': sql_full})
+          if code in (200, 201):
+              print('\n✅ exec_sql exitoso — todas las tablas creadas')
+          else:
+              print(f'\n⚠ exec_sql no disponible (HTTP {code}): {str(d)[:200]}')
+              print('\n── Intentando creación tabla por tabla via REST ──')
+
+              # Crear events via upsert si no existe
+              if 'events' not in existing:
+                  # No podemos crear tablas via REST, pero podemos reportar
+                  print('  ℹ events: requiere SQL directo — ver instrucciones abajo')
+
+              print('''
+          ════════════════════════════════════════════════════════════
+          ACCIÓN REQUERIDA — ejecutar en Supabase SQL Editor:
+          https://supabase.com/dashboard/project/hodrfonbpmqulkyzrzpq/sql/new
+
+          Copiar y pegar el contenido de: sql/nervous-system.sql
+          ════════════════════════════════════════════════════════════
+          ''')
+
+          # ── 3. Verificar columnas en leads ────────────────────────
+          print('\n── Verificando columnas nuevas en leads ──')
+          d, code = rest('GET', '/rest/v1/leads?select=source,call_score,call_notes,whatsapp_thread_id,blocked_by_debt&limit=1')
+          if code == 200:
+              print('  ✅ Columnas nuevas en leads YA EXISTEN')
+          else:
+              print(f'  ⚠ Columnas no existen aún (HTTP {code}) — necesitan ALTER TABLE')
+
+          # ── 4. Verificar/crear feature_requests básico via REST ──
+          print('\n── Verificando sistema de feedback ──')
+          d, code = rest('GET', '/rest/v1/feature_requests?select=id&limit=1')
+          if code == 200:
+              print('  ✅ feature_requests existe')
+          else:
+              print(f'  ⚠ feature_requests no existe aún (HTTP {code})')
+
+          print('\n✅ Diagnóstico completado')
+          print(f'   Tablas existentes: {len(existing)}/{len(tables_to_check)}')
+          PYEOF
+
+      - name: "Estado final de tablas"
+        run: |
+          echo "=== TABLAS DISPONIBLES ==="
+          for TABLE in events accounts_receivable feature_requests feedback_items feedback_votes integrations_log app_integrations; do
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+              "$SB/rest/v1/${TABLE}?select=id&limit=1")
+            if [ "$HTTP" = "200" ]; then
+              echo "  ✅ $TABLE"
+            else
+              echo "  ❌ $TABLE (HTTP $HTTP) — requiere SQL en dashboard"
+            fi
+          done
+          echo ""
+          echo "Si hay tablas ❌, copiar sql/nervous-system.sql en:"
+          echo "https://supabase.com/dashboard/project/hodrfonbpmqulkyzrzpq/sql/new"
