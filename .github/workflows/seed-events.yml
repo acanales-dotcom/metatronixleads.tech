@@ -1,4 +1,4 @@
-name: Seed Demo Events — Nexus (empresa demo)
+name: Seed Events — Todas las Empresas (metatronix, ibanor, nexus)
 
 on:
   workflow_dispatch:
@@ -33,86 +33,125 @@ jobs:
               except urllib.error.HTTPError as e:
                   return json.loads(e.read().decode() or '{}'), e.code
 
-          # Verificar empresas existentes
           companies, _ = api('GET', '/rest/v1/companies?select=id,name,slug')
-          print('Empresas:', [(c.get('id'), c.get('name')) for c in (companies if isinstance(companies, list) else [])])
+          co_slugs = {c.get('slug') or c.get('id') for c in (companies if isinstance(companies, list) else [])}
+          print('Empresas existentes:', sorted(co_slugs))
 
           # Crear nexus si no existe
-          co_ids = {c.get('slug') or c.get('id') for c in (companies if isinstance(companies, list) else [])}
-          if 'nexus' not in co_ids and 'demo' not in co_ids:
+          if 'nexus' not in co_slugs and 'demo' not in co_slugs:
               r, code = api('POST', '/rest/v1/companies',
                   {'id': 'nexus', 'name': 'Nexus Demo', 'slug': 'nexus',
                    'owner_email': 'acanales@ibanormexico.com', 'plan': 'enterprise', 'is_active': True},
                   prefer='resolution=merge-duplicates,return=minimal')
-              print(f'Nexus creado: HTTP {code}')
+              print(f'✅ Nexus creado: HTTP {code}')
           else:
-              print('Nexus/demo ya existe')
-
-          # Verificar estado final
-          companies2, _ = api('GET', '/rest/v1/companies?select=id,name,slug')
-          print('Empresas finales:', [(c.get('id'), c.get('name')) for c in (companies2 if isinstance(companies2, list) else [])])
+              print('✅ Nexus/demo ya existe')
           PYEOF
 
-      - name: "Insertar eventos de demostración en nexus"
+      - name: "Insertar eventos para METATRONIX"
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, urllib.error, os
 
           SB = os.environ['SB']
           SK = os.environ['SK']
-          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}',
-                'Content-Type': 'application/json',
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
                 'Prefer': 'resolution=ignore-duplicates,return=minimal'}
 
-          # Detectar ID de la empresa demo (nexus o demo)
-          req = urllib.request.Request(SB+'/rest/v1/companies?select=id,slug,name',
-              headers={'apikey': SK, 'Authorization': f'Bearer {SK}'}, method='GET')
-          companies = json.loads(urllib.request.urlopen(req).read())
-          demo_id = None
-          for c in companies:
-              if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo'):
-                  demo_id = c.get('id')
-                  print(f'Demo company: {demo_id} ({c.get("name")})')
-                  break
-          if not demo_id:
-              demo_id = 'nexus'
-              print(f'Usando demo_id default: nexus')
-
-          events = [
-            {'event_type':'lead.won',         'module':'ventas',    'company_id':demo_id,'payload':{'name':'Inmobiliaria Premier','deal_value':95000},'revenue_impact':95000,'severity':'ok'},
-            {'event_type':'invoice.overdue_60','module':'finanzas',  'company_id':demo_id,'payload':{'client':'Distribuidora Global','days_overdue':62},'revenue_impact':185000,'severity':'critical'},
-            {'event_type':'lead.stalled',      'module':'ventas',    'company_id':demo_id,'payload':{'name':'Grupo Alpha','days_stalled':8,'assigned_to':'rsuarez'},'revenue_impact':280000,'severity':'warn'},
-            {'event_type':'payment.received',  'module':'finanzas',  'company_id':demo_id,'payload':{'client':'Construmax MX','invoice':'INV-076'},'revenue_impact':45000,'severity':'ok'},
-            {'event_type':'campaign.launched', 'module':'marketing', 'company_id':demo_id,'payload':{'campaign':'LinkedIn Q2 2026','channel':'linkedin'},'revenue_impact':None,'severity':'info'},
-            {'event_type':'feedback.submitted','module':'feedback',  'company_id':demo_id,'payload':{'title':'Exportar leads a Excel con un clic','type':'feature'},'revenue_impact':None,'severity':'info'},
-            {'event_type':'lead.won',          'module':'ventas',    'company_id':demo_id,'payload':{'name':'LogiNorte SA','deal_value':62000},'revenue_impact':62000,'severity':'ok'},
-            {'event_type':'feature.threshold_reached','module':'feedback','company_id':demo_id,'payload':{'title':'App móvil nativa','votes':8,'revenue_score':450000},'revenue_impact':None,'severity':'warn'},
-            {'event_type':'lead.created',      'module':'ventas',    'company_id':demo_id,'payload':{'name':'Fintech Monterrey','source':'whatsapp'},'revenue_impact':None,'severity':'info'},
-            {'event_type':'budget.alert',      'module':'compras',   'company_id':demo_id,'payload':{'pct_used':87,'pending_pos':3,'total_pending':62000},'revenue_impact':None,'severity':'warn'},
-            {'event_type':'collection.started','module':'cobranza',  'company_id':demo_id,'payload':{'client':'TechRetail MX','amount':320000,'days_overdue':45},'revenue_impact':320000,'severity':'critical'},
-            {'event_type':'lead.won',          'module':'ventas',    'company_id':demo_id,'payload':{'name':'Grupo Salinas Retail','deal_value':128000},'revenue_impact':128000,'severity':'ok'},
+          events_mtx = [
+            {'event_type':'lead.won',           'module':'ventas',    'company_id':'metatronix','payload':{'name':'Inmobiliaria Premier','deal_value':95000},'revenue_impact':95000,'severity':'ok'},
+            {'event_type':'invoice.overdue_30',  'module':'finanzas',  'company_id':'metatronix','payload':{'client':'Retail Global MX','days_overdue':32},'revenue_impact':78000,'severity':'warn'},
+            {'event_type':'payment.received',    'module':'finanzas',  'company_id':'metatronix','payload':{'client':'Grupo Construmax','amount':45000},'revenue_impact':45000,'severity':'ok'},
+            {'event_type':'lead.stalled',        'module':'ventas',    'company_id':'metatronix','payload':{'name':'TechMex Solutions','days_stalled':7},'revenue_impact':120000,'severity':'warn'},
+            {'event_type':'campaign.launched',   'module':'marketing', 'company_id':'metatronix','payload':{'campaign':'Q2 LinkedIn MetaTronix'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'lead.won',            'module':'ventas',    'company_id':'metatronix','payload':{'name':'LogiSur SA','deal_value':62000},'revenue_impact':62000,'severity':'ok'},
+            {'event_type':'feedback.submitted',  'module':'feedback',  'company_id':'metatronix','payload':{'title':'Dashboard ejecutivo móvil','type':'feature'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'lead.created',        'module':'ventas',    'company_id':'metatronix','payload':{'name':'Fintech Norte','source':'whatsapp'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'budget.alert',        'module':'compras',   'company_id':'metatronix','payload':{'pct_used':82,'month':'Abril'},'revenue_impact':None,'severity':'warn'},
+            {'event_type':'collection.started',  'module':'cobranza',  'company_id':'metatronix','payload':{'client':'DataCorp MX','amount':95000,'overdue_days':35},'revenue_impact':95000,'severity':'critical'},
           ]
 
-          body = json.dumps(events).encode()
-          req2 = urllib.request.Request(SB+'/rest/v1/events', data=body, headers=H, method='POST')
+          body = json.dumps(events_mtx).encode()
+          req  = urllib.request.Request(SB+'/rest/v1/events', data=body, headers=H, method='POST')
           try:
-              resp = urllib.request.urlopen(req2)
-              print(f'✅ {len(events)} eventos insertados en {demo_id} — HTTP {resp.status}')
+              resp = urllib.request.urlopen(req)
+              print(f'✅ {len(events_mtx)} eventos METATRONIX — HTTP {resp.status}')
           except urllib.error.HTTPError as e:
-              err = e.read().decode()
-              print(f'❌ Error: {err[:300]}')
-
-          # Verificar
-          req3 = urllib.request.Request(
-              f'{SB}/rest/v1/events?select=event_type,severity,created_at&company_id=eq.{demo_id}&order=created_at.desc&limit=15',
-              headers={'apikey': SK, 'Authorization': f'Bearer {SK}'}, method='GET')
-          data = json.loads(urllib.request.urlopen(req3).read())
-          print(f'\n📊 Eventos en {demo_id}: {len(data)}')
-          for e in data[:6]:
-              print(f'  [{e["severity"]:8}] {e["event_type"]}')
+              print(f'❌ Error METATRONIX: {e.code} — {e.read().decode()[:200]}')
           PYEOF
 
-      - name: "Agregar membresía nexus a usuarios que no la tienen"
+      - name: "Insertar eventos para IBANOR"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
+                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
+
+          events_ibanor = [
+            {'event_type':'invoice.overdue_60', 'module':'finanzas',  'company_id':'ibanor','payload':{'client':'Distribuidora Norte SA','days_overdue':62},'revenue_impact':185000,'severity':'critical'},
+            {'event_type':'payment.received',   'module':'finanzas',  'company_id':'ibanor','payload':{'client':'Muebles Azteca','amount':38000},'revenue_impact':38000,'severity':'ok'},
+            {'event_type':'lead.won',           'module':'ventas',    'company_id':'ibanor','payload':{'name':'Hospital Regional Norte','deal_value':210000},'revenue_impact':210000,'severity':'ok'},
+            {'event_type':'doc.uploaded',       'module':'archivos',  'company_id':'ibanor','payload':{'file':'Contrato_Marco_2026.pdf','category':'contratos'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'lead.stalled',       'module':'ventas',    'company_id':'ibanor','payload':{'name':'Constructora Hermanos Vega','days_stalled':9},'revenue_impact':340000,'severity':'warn'},
+            {'event_type':'budget.alert',       'module':'compras',   'company_id':'ibanor','payload':{'pct_used':91,'categoria':'servicios_externos'},'revenue_impact':None,'severity':'critical'},
+            {'event_type':'collection.started', 'module':'cobranza',  'company_id':'ibanor','payload':{'client':'Ferretería Central','amount':52000},'revenue_impact':52000,'severity':'warn'},
+            {'event_type':'lead.created',       'module':'ventas',    'company_id':'ibanor','payload':{'name':'Clínica del Valle','source':'referido'},'revenue_impact':None,'severity':'info'},
+          ]
+
+          body = json.dumps(events_ibanor).encode()
+          req  = urllib.request.Request(SB+'/rest/v1/events', data=body, headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f'✅ {len(events_ibanor)} eventos IBANOR — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              print(f'❌ Error IBANOR: {e.code} — {e.read().decode()[:200]}')
+          PYEOF
+
+      - name: "Insertar eventos para NEXUS (demo)"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json',
+                'Prefer': 'resolution=ignore-duplicates,return=minimal'}
+
+          # Detectar ID real de nexus
+          req0 = urllib.request.Request(SB+'/rest/v1/companies?select=id,slug',
+              headers={'apikey': SK, 'Authorization': f'Bearer {SK}'}, method='GET')
+          companies = json.loads(urllib.request.urlopen(req0).read())
+          demo_id = next((c['id'] for c in companies if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo')), 'nexus')
+          print(f'Demo company ID: {demo_id}')
+
+          events_nexus = [
+            {'event_type':'lead.won',              'module':'ventas',    'company_id':demo_id,'payload':{'name':'Retail Premium SA','deal_value':128000},'revenue_impact':128000,'severity':'ok'},
+            {'event_type':'invoice.overdue_60',    'module':'finanzas',  'company_id':demo_id,'payload':{'client':'Distribuidora Global','days_overdue':62},'revenue_impact':185000,'severity':'critical'},
+            {'event_type':'lead.stalled',          'module':'ventas',    'company_id':demo_id,'payload':{'name':'Grupo Alpha','days_stalled':8},'revenue_impact':280000,'severity':'warn'},
+            {'event_type':'payment.received',      'module':'finanzas',  'company_id':demo_id,'payload':{'client':'Construmax MX'},'revenue_impact':45000,'severity':'ok'},
+            {'event_type':'campaign.launched',     'module':'marketing', 'company_id':demo_id,'payload':{'campaign':'LinkedIn Q2 2026','channel':'linkedin'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'feedback.submitted',    'module':'feedback',  'company_id':demo_id,'payload':{'title':'App móvil nativa','type':'feature'},'revenue_impact':None,'severity':'info'},
+            {'event_type':'lead.won',              'module':'ventas',    'company_id':demo_id,'payload':{'name':'LogiNorte SA','deal_value':62000},'revenue_impact':62000,'severity':'ok'},
+            {'event_type':'feature.threshold_reached','module':'feedback','company_id':demo_id,'payload':{'title':'Exportar leads a Excel','votes":8},'revenue_impact':None,'severity':'warn'},
+            {'event_type':'budget.alert',          'module':'compras',   'company_id':demo_id,'payload':{'pct_used':87,'pending_pos':3},'revenue_impact':None,'severity':'warn'},
+            {'event_type':'collection.started',    'module':'cobranza',  'company_id':demo_id,'payload':{'client':'TechRetail MX','amount':320000},'revenue_impact':320000,'severity':'critical'},
+            {'event_type':'lead.won',              'module':'ventas',    'company_id':demo_id,'payload':{'name':'Grupo Salinas Retail','deal_value':95000},'revenue_impact':95000,'severity':'ok'},
+            {'event_type':'lead.created',          'module':'ventas',    'company_id':demo_id,'payload':{'name':'Fintech Monterrey','source':'whatsapp'},'revenue_impact':None,'severity':'info'},
+          ]
+
+          body = json.dumps(events_nexus).encode()
+          req  = urllib.request.Request(SB+'/rest/v1/events', data=body, headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f'✅ {len(events_nexus)} eventos NEXUS — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              print(f'❌ Error NEXUS: {e.code} — {e.read().decode()[:200]}')
+          PYEOF
+
+      - name: "Agregar membresías nexus + verificar totales"
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, urllib.error, os
@@ -126,38 +165,53 @@ jobs:
               req = urllib.request.Request(url, headers=H, method='GET')
               try:
                   d = json.loads(urllib.request.urlopen(req).read())
-                  users = d.get('users', [])
-                  for u in users:
+                  for u in d.get('users', []):
                       if u.get('email','').lower() == email.lower():
                           return u['id']
               except: pass
               return None
 
           # Detectar demo_id
-          req = urllib.request.Request(SB+'/rest/v1/companies?select=id,slug',
+          req0 = urllib.request.Request(SB+'/rest/v1/companies?select=id,slug',
               headers={'apikey': SK, 'Authorization': f'Bearer {SK}'}, method='GET')
-          companies = json.loads(urllib.request.urlopen(req).read())
+          companies = json.loads(urllib.request.urlopen(req0).read())
           demo_id = next((c['id'] for c in companies if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo')), 'nexus')
 
-          users_to_add = [
+          # Usuarios con acceso a nexus
+          nexus_users = [
               ('acanales@ibanormexico.com', 'owner'),
               ('ncanales@ibanormexico.com', 'owner'),
+              ('nibarra@ibanormexico.com',  'admin'),
+              ('acanalesf@ibanormexico.com','admin'),
               ('jorge@retaillab.com.mx',   'member'),
               ('noe@grupoamsg.com',         'member'),
               ('rsuarez@ibanormexico.com',  'member'),
+              ('frida@retaillab.com.mx',   'member'),
+              ('aamaya@todoretail.com',     'member'),
           ]
 
-          for email, role in users_to_add:
+          print(f'\n── Membresías nexus ({demo_id}) ──')
+          H2 = {**H, 'Prefer': 'resolution=merge-duplicates,return=minimal'}
+          for email, role in nexus_users:
               uid = get_uid(email)
-              if not uid:
-                  print(f'  SKIP {email} (no UID)')
-                  continue
+              if not uid: print(f'  SKIP {email}'); continue
               body = json.dumps({'user_id': uid, 'company_id': demo_id, 'role': role}).encode()
-              H2 = {**H, 'Prefer': 'resolution=merge-duplicates,return=minimal'}
               req2 = urllib.request.Request(SB+'/rest/v1/user_companies', data=body, headers=H2, method='POST')
               try:
                   resp = urllib.request.urlopen(req2)
-                  print(f'  ✅ {email} → {demo_id} ({role}) HTTP {resp.status}')
+                  print(f'  ✅ {email:45} → {demo_id} ({role})')
               except urllib.error.HTTPError as e:
                   print(f'  ❌ {email}: {e.code}')
+
+          # Resumen final
+          print('\n── Totales de eventos por empresa ──')
+          for co in ['metatronix', 'ibanor', demo_id]:
+              req3 = urllib.request.Request(
+                  f'{SB}/rest/v1/events?select=id&company_id=eq.{co}',
+                  headers={'apikey': SK, 'Authorization': f'Bearer {SK}'}, method='GET')
+              try:
+                  data = json.loads(urllib.request.urlopen(req3).read())
+                  print(f'  {co:15} → {len(data)} eventos')
+              except Exception as ex:
+                  print(f'  {co:15} → error: {ex}')
           PYEOF
