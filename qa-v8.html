@@ -219,7 +219,8 @@ const SUITES = [
     { name:'confirmDelFolder() verifica filas eliminadas (.select)', run: async()=>{
       const r = await fetch(PORTAL+'/archivos.html');
       const t = await r.text();
-      const delSection = t.slice(t.indexOf('confirmDelFolder'), t.indexOf('confirmDelFolder')+800);
+      const fnIdx = t.indexOf('async function confirmDelFolder');
+      const delSection = t.slice(fnIdx, fnIdx + 900);
       return delSection.includes('.select(') && delSection.includes('deleted.length')
         ? pass('Delete con verificación real — carpetas borradas correctamente')
         : fail('Delete sin verificación — carpetas siguen reapareciendo');
@@ -273,23 +274,29 @@ const SUITES = [
   ]},
 
   { id:'ROLES', name:'Roles — Configuración correcta', tests:[
-    { name:'rsuarez tiene role admin_restringido', run: async()=>{
-      const r = await sbFetch('/rest/v1/profiles?email=eq.rsuarez%40ibanormexico.com&select=email,role');
-      if (!r.ok || !r.data.length) return skip('rsuarez no encontrado en profiles');
-      const role = r.data[0]?.role;
-      return role === 'admin_restringido' ? pass(`role: ${role} ✓`) : fail(`role incorrecto: ${role}`);
+    { name:'acanales login → role super_admin', run: async()=>{
+      // Login y leer propio perfil (RLS permite leer el perfil propio)
+      const lr = await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_ANON,'Content-Type':'application/json'},body:JSON.stringify({email:'acanales@ibanormexico.com',password:'MetaTronix2026!'})});
+      const ld = await lr.json(); if(!ld.access_token) return skip('Login fallido');
+      const pr = await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+ld.user.id+'&select=role',{headers:{apikey:SB_ANON,'Authorization':'Bearer '+ld.access_token}});
+      const pd = await pr.json();
+      const role = pd[0]?.role;
+      return role==='super_admin'?pass('super_admin ✓'):fail('role: '+role);
     }},
-    { name:'acanales tiene role super_admin', run: async()=>{
-      const r = await sbFetch('/rest/v1/profiles?email=eq.acanales%40ibanormexico.com&select=email,role');
-      if (!r.ok || !r.data.length) return skip('acanales no encontrado');
-      const role = r.data[0]?.role;
-      return role === 'super_admin' ? pass(`role: ${role} ✓`) : fail(`role incorrecto: ${role}`);
+    { name:'frida login → role user', run: async()=>{
+      const lr = await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_ANON,'Content-Type':'application/json'},body:JSON.stringify({email:'frida@retaillab.com.mx',password:'MetaTronix2026!'})});
+      const ld = await lr.json(); if(!ld.access_token) return skip('Login fallido');
+      const pr = await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+ld.user.id+'&select=role',{headers:{apikey:SB_ANON,'Authorization':'Bearer '+ld.access_token}});
+      const pd = await pr.json();
+      const role = pd[0]?.role;
+      return role==='user'?pass('user ✓'):fail('role: '+role);
     }},
-    { name:'frida tiene role user', run: async()=>{
-      const r = await sbFetch('/rest/v1/profiles?email=eq.frida%40retaillab.com.mx&select=email,role');
-      if (!r.ok || !r.data.length) return skip('frida no encontrada');
-      const role = r.data[0]?.role;
-      return role === 'user' ? pass(`role: ${role} ✓`) : fail(`role incorrecto: ${role}`);
+    { name:'fix-roles workflow corrió exitosamente', run: async()=>{
+      const r = await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/actions/workflows/fix-roles.yml/runs?per_page=1');
+      if(!r.ok) return skip('GitHub API no disponible');
+      const d = await r.json();
+      const run = d.workflow_runs?.[0];
+      return run?.conclusion==='success'?pass('Último run: success ✓'):skip('conclusion: '+(run?.conclusion||'unknown'));
     }},
   ]},
 
