@@ -51,7 +51,7 @@ jobs:
               'acanalesf@ibanormexico.com': ('admin',             'metatronix'),
               'jorge@retaillab.com.mx':     ('admin_restringido', 'metatronix'),
               'noe@grupoamsg.com':          ('admin_restringido', 'metatronix'),
-              'rsuarez@ibanormexico.com':   ('admin',             'ibanor'),
+              'rsuarez@ibanormexico.com':   ('admin_restringido', 'ibanor'),
               'frida@retaillab.com.mx':     ('user',              'metatronix'),
               'aamaya@todoretail.com':      ('user',              'metatronix'),
           }
