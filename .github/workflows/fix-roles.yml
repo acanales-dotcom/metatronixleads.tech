@@ -1,0 +1,87 @@
+name: Fix Roles — Restaurar roles correctos de todos los usuarios
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-roles:
+    name: Restaurar roles en profiles
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - name: "Verificar conexión"
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=id&limit=1")
+          echo "HTTP $HTTP"
+          [ "$HTTP" = "200" ] || { echo "❌ Conexión fallida"; exit 1; }
+          echo "✅ Conexión OK"
+
+      - name: "Estado actual de profiles"
+        run: |
+          echo "=== ANTES del fix ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=email,role,is_active&order=email" | \
+            python3 -c "
+          import json,sys
+          users = json.load(sys.stdin)
+          for u in users:
+              print(f'  {u.get(\"email\",\"?\"):45} | {u.get(\"role\",\"?\"):20} | activo:{u.get(\"is_active\")}')
+          " 2>/dev/null || echo "(parse error)"
+
+      - name: "Restaurar roles correctos"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}',
+                'Content-Type': 'application/json', 'Prefer': 'return=minimal'}
+
+          # Tabla de roles correctos: email → (role, company_id)
+          ROLES = {
+              'acanales@ibanormexico.com':  ('super_admin',       'metatronix'),
+              'ncanales@ibanormexico.com':  ('super_admin',       'metatronix'),
+              'nibarra@ibanormexico.com':   ('admin',             'metatronix'),
+              'acanalesf@ibanormexico.com': ('admin',             'metatronix'),
+              'jorge@retaillab.com.mx':     ('admin_restringido', 'metatronix'),
+              'noe@grupoamsg.com':          ('admin_restringido', 'metatronix'),
+              'rsuarez@ibanormexico.com':   ('admin',             'ibanor'),
+              'frida@retaillab.com.mx':     ('user',              'metatronix'),
+              'aamaya@todoretail.com':      ('user',              'metatronix'),
+          }
+
+          def patch_role(email, role, company_id):
+              enc_email = email.replace('@', '%40').replace('.', '%2E')
+              url  = f'{SB}/rest/v1/profiles?email=eq.{enc_email}'
+              body = json.dumps({'role': role, 'company_id': company_id, 'is_active': True}).encode()
+              req  = urllib.request.Request(url, data=body, headers=H, method='PATCH')
+              try:
+                  resp = urllib.request.urlopen(req)
+                  print(f'  ✅ {email:45} → {role:20} @ {company_id}  HTTP {resp.status}')
+              except urllib.error.HTTPError as e:
+                  print(f'  ❌ {email} → HTTP {e.code}: {e.read().decode()[:200]}')
+
+          print('\n── Aplicando roles ──')
+          for email, (role, company) in ROLES.items():
+              patch_role(email, role, company)
+
+          print('\n✅ Fix de roles completado')
+          PYEOF
+
+      - name: "Estado final de profiles"
+        run: |
+          echo "=== DESPUÉS del fix ==="
+          curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=email,role,company_id,is_active&order=email" | \
+            python3 -c "
+          import json,sys
+          users = json.load(sys.stdin)
+          for u in users:
+              print(f'  {u.get(\"email\",\"?\"):45} | {u.get(\"role\",\"?\"):20} | {u.get(\"company_id\",\"?\"):12} | activo:{u.get(\"is_active\")}')
+          " 2>/dev/null || echo "(parse error)"
