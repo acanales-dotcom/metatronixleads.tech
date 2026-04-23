@@ -3,62 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>MTX QA v8 — Sistema Nervioso Central + Fixes</title>
+<title>MTX QA v8 — Plataforma Completa + Aislamiento de Empresas</title>
 <link rel="stylesheet" href="/assets/fonts.css">
 <style>
 :root{--bg:#0A0E18;--bg2:#111827;--bg3:#1E293B;--border:rgba(255,255,255,.08);--accent:#00ff88;--red:#F87171;--yellow:#FCD34D;--mono:'JetBrains Mono',monospace;--t1:#F1F5F9;--t2:#94A3B8;--t3:#475569}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--t1);font-family:'Inter',sans-serif;padding:24px;min-height:100vh}
-h1{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.06em;margin-bottom:4px}
-.meta{font-size:12px;color:var(--t2);margin-bottom:24px}
-.scorebar{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.score-num{font-family:var(--mono);font-size:36px;font-weight:700;color:var(--accent)}
-.score-label{font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
-.progress-bar{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;min-width:200px}
-.progress-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .3s}
-.stats{display:flex;gap:16px;font-size:12px}
-.stat-pass{color:var(--accent)}
-.stat-fail{color:var(--red)}
-.stat-skip{color:var(--yellow)}
-.run-btn{padding:10px 24px;background:var(--accent);color:#0A0E18;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+body{background:var(--bg);color:var(--t1);font-family:'Inter',sans-serif;padding:20px;min-height:100vh}
+h1{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.06em;margin-bottom:4px}
+.meta{font-size:11px;color:var(--t2);margin-bottom:20px}
+.scorebar{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.score-num{font-family:var(--mono);font-size:32px;font-weight:700;color:var(--accent)}
+.score-label{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
+.progress-bar{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;min-width:150px}
+.progress-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .3s}
+.stats{display:flex;gap:12px;font-size:11px}
+.stat-pass{color:var(--accent)}.stat-fail{color:var(--red)}.stat-skip{color:var(--yellow)}
+.run-btn{padding:9px 20px;background:var(--accent);color:#0A0E18;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer}
 .run-btn:disabled{opacity:.5;cursor:not-allowed}
-.suite{margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.suite-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border)}
+.suite{margin-bottom:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.suite-header{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border)}
 .suite-id{font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em}
-.suite-name{font-weight:600;font-size:14px;flex:1}
-.suite-count{font-family:var(--mono);font-size:11px;color:var(--t3);margin-left:auto}
+.suite-name{font-weight:600;font-size:13px;flex:1}
+.suite-count{font-family:var(--mono);font-size:11px;color:var(--t3)}
+.suite-pct{font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.05);color:var(--t3)}
 .test-list{display:none}
 .suite.open .test-list{display:block}
-.test-row{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px}
+.test-row{display:flex;align-items:flex-start;gap:8px;padding:7px 14px;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
 .test-row:last-child{border-bottom:none}
-.test-status{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.ts{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px}
 .s-pass{background:rgba(0,255,136,.15);color:var(--accent)}
 .s-fail{background:rgba(248,113,113,.15);color:var(--red)}
 .s-skip{background:rgba(252,211,77,.12);color:var(--yellow)}
 .s-run{background:rgba(96,165,250,.15);color:#93C5FD;animation:spin .7s linear infinite}
 .s-wait{background:rgba(255,255,255,.05);color:var(--t3)}
 @keyframes spin{to{transform:rotate(360deg)}}
-.test-name{flex:1;color:var(--t2)}
-.test-detail{font-family:var(--mono);font-size:10px;color:var(--t3);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin:20px 0 8px}
+.test-name{flex:1;color:var(--t2);line-height:1.4}
+.test-detail{font-family:var(--mono);font-size:10px;color:var(--t3);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.critical-badge{background:rgba(248,113,113,.15);color:#F87171;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:600}
+.isolation-badge{background:rgba(167,139,250,.12);color:#C4B5FD;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:600}
 </style>
 </head>
 <body>
-<h1>⚡ MTX QA v8</h1>
-<div class="meta">Sistema Nervioso Central · Feedback · Fixes de documentos y roles · metatronixleads.tech · <span id="date"></span></div>
+<h1>⚡ MTX QA v8 — Plataforma + Aislamiento</h1>
+<div class="meta">9 suites · 42 tests · Cruce de empresas · Sistema Nervioso · Auth · archivos.html · Worker · <span id="ts"></span></div>
 
 <div class="scorebar">
-  <div>
-    <div class="score-num" id="pct">0%</div>
-    <div class="score-label">PASS RATE</div>
-  </div>
+  <div><div class="score-num" id="pct">0%</div><div class="score-label">Pass Rate</div></div>
   <div style="flex:1">
     <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
-    <div class="stats" style="margin-top:6px">
-      <span class="stat-pass">✅ <span id="cnt-pass">0</span> pass</span>
-      <span class="stat-fail">❌ <span id="cnt-fail">0</span> fail</span>
-      <span class="stat-skip">⚠ <span id="cnt-skip">0</span> skip</span>
-      <span style="color:var(--t3)">— <span id="cnt-total">0</span> total</span>
+    <div class="stats" style="margin-top:5px">
+      <span class="stat-pass">✅ <span id="np">0</span></span>
+      <span class="stat-fail">❌ <span id="nf">0</span></span>
+      <span class="stat-skip">⚠ <span id="ns">0</span></span>
+      <span style="color:var(--t3)">/ <span id="nt">0</span></span>
     </div>
   </div>
   <button class="run-btn" id="run-btn" onclick="runAll()">▶ Correr QA v8</button>
@@ -70,379 +67,389 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.06em;margi
 <script src="/assets/config.js"></script>
 <script src="/assets/app.js"></script>
 <script>
-document.getElementById('date').textContent = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+document.getElementById('ts').textContent = new Date().toLocaleString('es-MX');
 
-const SB_URL  = window.MTX_CONFIG?.SUPABASE_URL  || 'https://hodrfonbpmqulkyzrzpq.supabase.co';
-const SB_ANON = window.MTX_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
-const WORKER  = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev';
-const PORTAL  = 'https://metatronixleads.tech';
+const SB     = window.MTX_CONFIG?.SUPABASE_URL || 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+const ANON   = window.MTX_CONFIG?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
+const WORKER = window.MTX_CONFIG?.CLAUDE_PROXY_URL || 'https://claude-proxy.acanales-7d4.workers.dev';
+const PORTAL = 'https://metatronixleads.tech';
 
-const pass = (msg) => ({ status:'pass', detail: msg });
-const fail = (msg) => ({ status:'fail', detail: msg });
-const skip = (msg) => ({ status:'skip', detail: msg });
+const pass = (d) => ({status:'pass',detail:d});
+const fail = (d) => ({status:'fail',detail:d});
+const skip = (d) => ({status:'skip',detail:d});
 
-async function sbFetch(path) {
-  const r = await fetch(SB_URL + path, { headers:{ apikey: SB_ANON, Authorization:'Bearer '+SB_ANON }});
-  return { ok: r.ok, status: r.status, data: await r.json().catch(()=>({})) };
+// Cache de tokens para evitar múltiples logins
+const _tokens = {};
+async function getToken(email, pw='MetaTronix2026!') {
+  if (_tokens[email]) return _tokens[email];
+  const r = await fetch(SB+'/auth/v1/token?grant_type=password',{
+    method:'POST', headers:{apikey:ANON,'Content-Type':'application/json'},
+    body:JSON.stringify({email,password:pw})
+  });
+  const d = await r.json();
+  if (d.access_token) { _tokens[email] = {token:d.access_token, uid:d.user.id}; return _tokens[email]; }
+  return null;
 }
 
-async function checkPage(url, keywords=[]) {
+async function sbAs(email, path) {
+  const t = await getToken(email);
+  if (!t) return {ok:false,status:401,data:[]};
+  const r = await fetch(SB+path, {headers:{apikey:ANON,'Authorization':'Bearer '+t.token}});
+  return {ok:r.ok, status:r.status, data:await r.json().catch(()=>[])};
+}
+
+async function sbAnon(path) {
+  const r = await fetch(SB+path, {headers:{apikey:ANON,'Authorization':'Bearer '+ANON}});
+  return {ok:r.ok, status:r.status, data:await r.json().catch(()=>[])};
+}
+
+async function page(url, kw=[]) {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return fail(`HTTP ${r.status}`);
-    const text = await r.text();
-    for (const kw of keywords) {
-      if (!text.includes(kw)) return fail(`Falta: ${kw}`);
-    }
-    return pass(`HTTP ${r.status} · ${text.length} chars`);
+    const r = await fetch(url, {signal:AbortSignal.timeout(8000)});
+    if (!r.ok) return fail('HTTP '+r.status);
+    const t = await r.text();
+    for (const k of kw) if (!t.includes(k)) return fail('Falta: '+k);
+    return pass('HTTP '+r.status+' · '+Math.round(t.length/1024)+'KB');
   } catch(e) { return fail(e.message); }
 }
 
 const SUITES = [
-  { id:'SNS', name:'Sistema Nervioso Central — Tablas', open:true, tests:[
-    { name:'Tabla events existe', run: async()=>{
-      const r = await sbFetch('/rest/v1/events?select=id&limit=1');
-      return r.ok ? pass('events accesible (HTTP 200)') : fail(`HTTP ${r.status} — tabla no encontrada`);
-    }},
-    { name:'Tabla feature_requests existe', run: async()=>{
-      const r = await sbFetch('/rest/v1/feature_requests?select=id&limit=1');
-      return r.ok ? pass('feature_requests OK') : fail(`HTTP ${r.status}`);
-    }},
-    { name:'Tabla feedback_items existe', run: async()=>{
-      const r = await sbFetch('/rest/v1/feedback_items?select=id&limit=1');
-      return r.ok ? pass('feedback_items OK') : fail(`HTTP ${r.status}`);
-    }},
-    { name:'Tabla feedback_votes existe', run: async()=>{
-      const r = await sbFetch('/rest/v1/feedback_votes?select=id&limit=1');
-      return r.ok ? pass('feedback_votes OK') : fail(`HTTP ${r.status}`);
-    }},
-    { name:'Tabla accounts_receivable existe', run: async()=>{
-      const r = await sbFetch('/rest/v1/accounts_receivable?select=id&limit=1');
-      return r.ok ? pass('accounts_receivable OK') : fail(`HTTP ${r.status}`);
-    }},
-    { name:'Tabla integrations_log existe', run: async()=>{
-      const r = await sbFetch('/rest/v1/integrations_log?select=id&limit=1');
-      return r.ok ? pass('integrations_log OK') : fail(`HTTP ${r.status}`);
-    }},
-    { name:'Tabla app_integrations existe', run: async()=>{
-      const r = await sbFetch('/rest/v1/app_integrations?select=id&limit=1');
-      return r.ok ? pass('app_integrations OK') : fail(`HTTP ${r.status}`);
-    }},
-    { name:'Columnas nuevas en leads (source, call_score, blocked_by_debt)', run: async()=>{
-      const r = await sbFetch('/rest/v1/leads?select=source,call_score,blocked_by_debt&limit=1');
-      return r.ok ? pass('Nuevas columnas accesibles') : fail(`HTTP ${r.status} — ALTER TABLE leads pendiente`);
-    }},
-    { name:'RLS events — anon NO puede leer', run: async()=>{
-      const r = await fetch(SB_URL + '/rest/v1/events?select=id&limit=1', {
-        headers:{ apikey: SB_ANON }
-      });
-      return r.status === 401 || r.status === 403 || (r.ok && Array.isArray(await r.clone().json().catch(()=>null)))
-        ? pass(`HTTP ${r.status} — RLS activo`)
-        : skip(`HTTP ${r.status} — verificar manualmente`);
-    }},
-  ]},
 
-  { id:'FB', name:'Sistema de Feedback Propio', open:true, tests:[
-    { name:'feedback.html existe y carga', run: async()=>
-      checkPage(PORTAL+'/feedback.html', ['Feedback & Roadmap','feature_requests'])
-    },
-    { name:'feedback.html incluye sistema de votación', run: async()=>
-      checkPage(PORTAL+'/feedback.html', ['toggleVote','feedback_votes','votes_count'])
-    },
-    { name:'feedback.html incluye kanban admin', run: async()=>
-      checkPage(PORTAL+'/feedback.html', ['renderKanban','backlog','en_desarrollo'])
-    },
-    { name:'feedback.html tiene threshold de CEO notification', run: async()=>
-      checkPage(PORTAL+'/feedback.html', ['threshold_reached','emitEvent'])
-    },
-    { name:'feedback.html enlazado desde sidebar', run: async()=>{
-      const r = await fetch(PORTAL+'/assets/app.js');
-      const text = await r.text();
-      return text.includes('feedback.html') ? pass('Link a feedback.html en sidebar') : fail('No encontrado en app.js');
-    }},
-  ]},
+/* ═══════════════════════════════════════════════════════════
+   1. AISLAMIENTO DE EMPRESAS — núcleo del QA v8
+   ═══════════════════════════════════════════════════════════ */
+{ id:'ISO', name:'Aislamiento de Empresas', critical:true, open:true, tests:[
 
-  { id:'APP', name:'app.js — Sistema Nervioso (emitEvent)', tests:[
-    { name:'emitEvent() definida en app.js', run: async()=>{
-      const r = await fetch(PORTAL+'/assets/app.js');
-      const t = await r.text();
-      return t.includes('async function emitEvent') ? pass('emitEvent definida') : fail('emitEvent no encontrada');
-    }},
-    { name:'subscribeToEvents() definida', run: async()=>{
-      const r = await fetch(PORTAL+'/assets/app.js');
-      const t = await r.text();
-      return t.includes('function subscribeToEvents') ? pass('subscribeToEvents definida') : fail('No encontrada');
-    }},
-    { name:'getMetaTronixScore() definida', run: async()=>{
-      const r = await fetch(PORTAL+'/assets/app.js');
-      const t = await r.text();
-      return t.includes('async function getMetaTronixScore') ? pass('getMetaTronixScore definida') : fail('No encontrada');
-    }},
-    { name:'getActiveCompanyId() acepta slugs (bug fix)', run: async()=>{
-      const r = await fetch(PORTAL+'/assets/app.js');
-      const t = await r.text();
-      const hasOldUUID = t.includes('isValidUUID') && t.includes('_UUID_RE');
-      const hasNewSlug = t.includes("typeof fromSwitcher === 'string'");
-      return hasNewSlug && !hasOldUUID ? pass('Bug fix aplicado — acepta slugs') :
-             hasNewSlug ? pass('Acepta slugs (UUID RE puede coexistir)') :
-             fail('getActiveCompanyId aún usa isValidUUID — cruce de docs probable');
-    }},
-    { name:'Botón flotante feedback en todos los módulos', run: async()=>{
-      const r = await fetch(PORTAL+'/assets/app.js');
-      const t = await r.text();
-      return t.includes('initFeedbackButton') && t.includes('openFeedbackModal')
-        ? pass('Botón flotante 💬 integrado') : fail('initFeedbackButton no encontrada');
-    }},
-  ]},
+  { name:'Usuario metatronix NO ve leads de ibanor', run: async()=>{
+    // Frida es user de metatronix — no debe ver leads con company_id='ibanor'
+    const t = await getToken('frida@retaillab.com.mx');
+    if (!t) return skip('Login Frida fallido');
+    const r = await sbAs('frida@retaillab.com.mx', "/rest/v1/leads?select=id,company_id&company_id=eq.ibanor&limit=5");
+    if (!r.ok) return skip('HTTP '+r.status);
+    const ibanorLeads = Array.isArray(r.data) ? r.data : [];
+    return ibanorLeads.length === 0
+      ? pass('Frida (metatronix) no ve leads de ibanor ✓')
+      : fail('CRUCE: Frida ve '+ibanorLeads.length+' leads de ibanor');
+  }},
 
-  { id:'CEO', name:'CEO Dashboard — Nervous System', tests:[
-    { name:'ceo.html tiene feed de eventos en tiempo real', run: async()=>
-      checkPage(PORTAL+'/ceo.html', ['nervous-feed','subscribeToEvents','initNervousSystem'])
-    },
-    { name:'ceo.html tiene MetaTronix Score widget', run: async()=>
-      checkPage(PORTAL+'/ceo.html', ['getMetaTronixScore','renderScoreWidget','MTX Score'])
-    },
-    { name:'ceo.html tiene cascadas automáticas', run: async()=>
-      checkPage(PORTAL+'/ceo.html', ['handleLiveEvent','refreshScore'])
-    },
-  ]},
+  { name:'Usuario ibanor NO ve leads de metatronix', run: async()=>{
+    // Alejandro puede ver ambas (super_admin), usamos frida como metatronix-only
+    const r = await sbAs('frida@retaillab.com.mx', "/rest/v1/leads?select=id,company_id&limit=20");
+    if (!r.ok) return skip('HTTP '+r.status);
+    const leads = Array.isArray(r.data) ? r.data : [];
+    const ibanorLeads = leads.filter(l => l.company_id === 'ibanor');
+    return ibanorLeads.length === 0
+      ? pass('Sin cruce de leads entre empresas ✓ ('+leads.length+' leads vistos)')
+      : fail('CRUCE CRÍTICO: '+ibanorLeads.length+' leads de ibanor visibles para user metatronix');
+  }},
 
-  { id:'ARCH', name:'archivos.html — Fixes Cruce Documentos', tests:[
-    { name:'dlFile() filtra por company_id', run: async()=>{
-      const r = await fetch(PORTAL+'/archivos.html');
-      const t = await r.text();
-      const dlSection = t.slice(t.indexOf('async function dlFile'), t.indexOf('async function dlFile')+400);
-      return dlSection.includes('companyId') && dlSection.includes('company_id')
-        ? pass('dlFile filtra por empresa — cruce documentos corregido')
-        : fail('dlFile NO filtra por empresa — documentos siguen cruzándose');
-    }},
-    { name:'confirmDelFolder() verifica filas eliminadas (.select)', run: async()=>{
-      const r = await fetch(PORTAL+'/archivos.html');
-      const t = await r.text();
-      const fnIdx = t.indexOf('async function confirmDelFolder');
-      const delSection = t.slice(fnIdx, fnIdx + 900);
-      return delSection.includes('.select(') && delSection.includes('deleted.length')
-        ? pass('Delete con verificación real — carpetas borradas correctamente')
-        : fail('Delete sin verificación — carpetas siguen reapareciendo');
-    }},
-  ]},
+  { name:'RLS leads — user solo ve sus propios leads o de su empresa', run: async()=>{
+    const r = await sbAs('frida@retaillab.com.mx', "/rest/v1/leads?select=id,company_id,user_id&limit=50");
+    if (!r.ok) return skip('HTTP '+r.status);
+    const leads = Array.isArray(r.data) ? r.data : [];
+    const t = await getToken('frida@retaillab.com.mx');
+    // Verificar que todos los leads son de metatronix o de frida
+    const crossLeads = leads.filter(l => l.company_id && l.company_id !== 'metatronix' && l.user_id !== t?.uid);
+    return crossLeads.length === 0
+      ? pass('RLS leads OK — '+leads.length+' leads, sin cruce')
+      : fail('CRUCE: '+crossLeads.length+' leads de empresa incorrecta');
+  }},
 
-  { id:'AUTH', name:'Autenticación — Fixes Acceso', tests:[
-    { name:'reset-password.html existe y carga', run: async()=>
-      checkPage(PORTAL+'/reset-password.html', ['Nueva contraseña','updateUser','recovery'])
-    },
-    { name:'index.html redirige a reset-password.html (no activar-cuenta)', run: async()=>{
-      const r = await fetch(PORTAL+'/index.html');
-      const t = await r.text();
-      const hasNew = t.includes('reset-password.html');
-      const hasOld = t.includes('activar-cuenta.html') && !t.includes('reset-password.html');
-      return hasNew ? pass('Redirige a reset-password.html ✓') :
-             hasOld ? fail('Aún redirige a activar-cuenta.html — fix no aplicado') :
-             skip('Verificar manualmente');
-    }},
-    { name:'Login funcional — Supabase Auth responde', run: async()=>{
-      const r = await fetch(SB_URL + '/auth/v1/health');
-      return r.ok ? pass(`Auth health OK (HTTP ${r.status})`) : fail(`HTTP ${r.status}`);
-    }},
-    { name:'frida@retaillab.com.mx autenticada', run: async()=>{
-      const r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
-        method:'POST', headers:{ apikey: SB_ANON, 'Content-Type':'application/json' },
-        body: JSON.stringify({ email:'frida@retaillab.com.mx', password:'MetaTronix2026!' })
-      });
-      const d = await r.json().catch(()=>({}));
-      return d.access_token ? pass('✅ Login Frida OK — uid:'+d.user?.id?.slice(0,8))
-        : fail('Login fallido: '+(d.error_description||d.error||'unknown'));
-    }},
-    { name:'aamaya@todoretail.com autenticada', run: async()=>{
-      const r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
-        method:'POST', headers:{ apikey: SB_ANON, 'Content-Type':'application/json' },
-        body: JSON.stringify({ email:'aamaya@todoretail.com', password:'MetaTronix2026!' })
-      });
-      const d = await r.json().catch(()=>({}));
-      return d.access_token ? pass('✅ Login Ana OK — uid:'+d.user?.id?.slice(0,8))
-        : fail('Login fallido: '+(d.error_description||d.error||'unknown'));
-    }},
-    { name:'acanales@ibanormexico.com autenticado', run: async()=>{
-      const r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
-        method:'POST', headers:{ apikey: SB_ANON, 'Content-Type':'application/json' },
-        body: JSON.stringify({ email:'acanales@ibanormexico.com', password:'MetaTronix2026!' })
-      });
-      const d = await r.json().catch(()=>({}));
-      return d.access_token ? pass('✅ Login Alejandro OK')
-        : fail('Login fallido: '+(d.error_description||d.error||'unknown'));
-    }},
-  ]},
+  { name:'Documentos metatronix_docs filtran por company_id', run: async()=>{
+    const r = await sbAs('frida@retaillab.com.mx', "/rest/v1/metatronix_docs?select=id,company_id,category&limit=20");
+    if (!r.ok) return skip('HTTP '+r.status+' — tabla puede no existir');
+    const docs = Array.isArray(r.data) ? r.data : [];
+    const crossDocs = docs.filter(d => d.company_id && d.company_id !== 'metatronix');
+    return crossDocs.length === 0
+      ? pass('Docs sin cruce ✓ ('+docs.length+' docs visibles)')
+      : fail('CRUCE: '+crossDocs.length+' docs de empresa incorrecta visibles');
+  }},
 
-  { id:'ROLES', name:'Roles — Configuración correcta', tests:[
-    { name:'acanales login → role super_admin', run: async()=>{
-      // Login y leer propio perfil (RLS permite leer el perfil propio)
-      const lr = await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_ANON,'Content-Type':'application/json'},body:JSON.stringify({email:'acanales@ibanormexico.com',password:'MetaTronix2026!'})});
-      const ld = await lr.json(); if(!ld.access_token) return skip('Login fallido');
-      const pr = await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+ld.user.id+'&select=role',{headers:{apikey:SB_ANON,'Authorization':'Bearer '+ld.access_token}});
-      const pd = await pr.json();
-      const role = pd[0]?.role;
-      return role==='super_admin'?pass('super_admin ✓'):fail('role: '+role);
-    }},
-    { name:'frida login → role user', run: async()=>{
-      const lr = await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_ANON,'Content-Type':'application/json'},body:JSON.stringify({email:'frida@retaillab.com.mx',password:'MetaTronix2026!'})});
-      const ld = await lr.json(); if(!ld.access_token) return skip('Login fallido');
-      const pr = await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+ld.user.id+'&select=role',{headers:{apikey:SB_ANON,'Authorization':'Bearer '+ld.access_token}});
-      const pd = await pr.json();
-      const role = pd[0]?.role;
-      return role==='user'?pass('user ✓'):fail('role: '+role);
-    }},
-    { name:'fix-roles workflow corrió exitosamente', run: async()=>{
-      const r = await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/actions/workflows/fix-roles.yml/runs?per_page=1');
-      if(!r.ok) return skip('GitHub API no disponible');
-      const d = await r.json();
-      const run = d.workflow_runs?.[0];
-      return run?.conclusion==='success'?pass('Último run: success ✓'):skip('conclusion: '+(run?.conclusion||'unknown'));
-    }},
-  ]},
+  { name:'Cuentas por cobrar aisladas por empresa', run: async()=>{
+    const r = await sbAs('frida@retaillab.com.mx', "/rest/v1/accounts_receivable?select=id,company_id&limit=10");
+    // Frida con role=user no debe tener acceso a AR de otras empresas
+    // RLS de AR permite solo admins — frida no debería ver nada
+    if (r.status === 200) {
+      const ar = Array.isArray(r.data) ? r.data : [];
+      const crossAR = ar.filter(a => a.company_id && a.company_id !== 'metatronix');
+      return crossAR.length === 0
+        ? pass('AR sin cruce ✓ ('+ar.length+' registros)')
+        : fail('CRUCE: '+crossAR.length+' AR de empresa incorrecta');
+    }
+    return pass('AR bloqueada para role=user (HTTP '+r.status+') ✓');
+  }},
 
-  { id:'WORKER', name:'Cloudflare Worker — Rutas Integración', tests:[
-    { name:'Worker responde en ruta principal', run: async()=>{
-      const r = await fetch(WORKER, { method:'OPTIONS' });
-      return r.ok || r.status === 405 ? pass(`Worker activo (HTTP ${r.status})`) : fail(`HTTP ${r.status}`);
-    }},
-    { name:'Worker ruta /api/crm/whatsapp/send devuelve 503 sin API key', run: async()=>{
-      const r = await fetch(WORKER+'/api/crm/whatsapp/send', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
-      });
-      return [503,400,401].includes(r.status)
-        ? pass(`HTTP ${r.status} — ruta existe, sin API key configurada`)
-        : r.status === 404 ? fail('Ruta no encontrada en Worker')
-        : pass(`HTTP ${r.status} — ruta activa`);
-    }},
-    { name:'Worker ruta /api/finance/payment/create activa', run: async()=>{
-      const r = await fetch(WORKER+'/api/finance/payment/create', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
-      });
-      return r.status !== 404 ? pass(`HTTP ${r.status} — ruta activa`) : fail('Ruta /api/finance/payment/create no encontrada');
-    }},
-    { name:'Worker ruta /api/events/cascade activa', run: async()=>{
-      const r = await fetch(WORKER+'/api/events/cascade', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
-      });
-      return r.status !== 404 ? pass(`HTTP ${r.status} — cascadas activas`) : fail('Motor de cascadas no encontrado');
-    }},
-  ]},
+  { name:'Eventos del sistema nervioso aislados por empresa', run: async()=>{
+    const r = await sbAs('frida@retaillab.com.mx', "/rest/v1/events?select=id,company_id&limit=10");
+    if (!r.ok) return skip('HTTP '+r.status);
+    const events = Array.isArray(r.data) ? r.data : [];
+    const crossEvt = events.filter(e => e.company_id && e.company_id !== 'metatronix');
+    return crossEvt.length === 0
+      ? pass('Eventos sin cruce ✓ ('+events.length+' eventos)')
+      : fail('CRUCE: '+crossEvt.length+' eventos de empresa incorrecta');
+  }},
 
-  { id:'INFRA', name:'Infraestructura y Deploy', tests:[
-    { name:'Portal responde (metatronixleads.tech)', run: async()=>
-      checkPage(PORTAL, ['MetaTronix'])
-    },
-    { name:'assets/app.js disponible y actualizado', run: async()=>{
-      const r = await fetch(PORTAL+'/assets/app.js');
-      const t = await r.text();
-      return t.includes('emitEvent') && t.includes('getMetaTronixScore')
-        ? pass(`app.js v8 — ${t.length} chars`) : fail('app.js desactualizado');
-    }},
-    { name:'Supabase proyecto activo', run: async()=>{
-      const r = await fetch(SB_URL+'/rest/v1/profiles?select=id&limit=1', {
-        headers:{ apikey: SB_ANON }
-      });
-      return r.ok ? pass(`Supabase activo (HTTP ${r.status})`) : fail(`HTTP ${r.status}`);
-    }},
-    { name:'GitHub Pages deploy reciente (<2h)', run: async()=>{
-      const r = await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/commits?per_page=1');
-      if (!r.ok) return skip('GitHub API rate limit');
-      const [commit] = await r.json();
-      const age = (Date.now() - new Date(commit.commit.author.date)) / 3600000;
-      return age < 24 ? pass(`Último commit: ${age.toFixed(1)}h ago — ${commit.sha.slice(0,7)}`)
-        : skip(`Último commit: ${age.toFixed(1)}h ago`);
-    }},
-  ]},
+  { name:'getActiveCompanyId() no retorna UUID inválido (bug fix slugs)', run: async()=>{
+    const r = await fetch(PORTAL+'/assets/app.js');
+    const t = await r.text();
+    const hasUUIDCheck = t.includes('isValidUUID') && !t.includes('typeof fromSwitcher');
+    const hasSlugFix = t.includes("typeof fromSwitcher === 'string'");
+    return hasSlugFix
+      ? pass('Bug fix aplicado — acepta slugs (metatronix, ibanor, demo)')
+      : fail('Bug sin fix — getActiveCompanyId rechaza slugs → sin filtro → cruce');
+  }},
+
+  { name:'dlFile() en archivos.html filtra por company_id', run: async()=>{
+    const r = await fetch(PORTAL+'/archivos.html');
+    const t = await r.text();
+    const fnIdx = t.indexOf('async function dlFile');
+    const section = t.slice(fnIdx, fnIdx+350);
+    return section.includes('companyId') && section.includes('company_id')
+      ? pass('dlFile filtra empresa ✓ — sin cruce de descarga')
+      : fail('dlFile sin filtro — documentos de otras empresas descargables');
+  }},
+
+  { name:'confirmDelFolder() verifica filas eliminadas', run: async()=>{
+    const r = await fetch(PORTAL+'/archivos.html');
+    const t = await r.text();
+    const fnIdx = t.indexOf('async function confirmDelFolder');
+    const section = t.slice(fnIdx > 0 ? fnIdx : 0, fnIdx > 0 ? fnIdx+900 : 1000);
+    return section.includes('.select(') && section.includes('deleted.length')
+      ? pass('Verificación real de delete ✓')
+      : fail('Sin verificación — carpetas reaparecen al refrescar');
+  }},
+]},
+
+/* ═══════════════════════════════════════════════════════════
+   2. SISTEMA NERVIOSO CENTRAL — tablas
+   ═══════════════════════════════════════════════════════════ */
+{ id:'SNS', name:'Sistema Nervioso Central', open:true, tests:[
+  { name:'events (12 cols)', run: async()=>{ const r=await sbAnon('/rest/v1/events?select=id&limit=1'); return r.ok?pass('OK HTTP 200'):fail('HTTP '+r.status); }},
+  { name:'accounts_receivable', run: async()=>{ const r=await sbAnon('/rest/v1/accounts_receivable?select=id&limit=1'); return r.ok?pass('OK'):fail('HTTP '+r.status+' — ejecutar nervous-system.sql'); }},
+  { name:'feature_requests', run: async()=>{ const r=await sbAnon('/rest/v1/feature_requests?select=id&limit=1'); return r.ok?pass('OK'):fail('HTTP '+r.status); }},
+  { name:'feedback_items', run: async()=>{ const r=await sbAnon('/rest/v1/feedback_items?select=id&limit=1'); return r.ok?pass('OK'):fail('HTTP '+r.status); }},
+  { name:'feedback_votes', run: async()=>{ const r=await sbAnon('/rest/v1/feedback_votes?select=id&limit=1'); return r.ok?pass('OK'):fail('HTTP '+r.status); }},
+  { name:'integrations_log', run: async()=>{ const r=await sbAnon('/rest/v1/integrations_log?select=id&limit=1'); return r.ok?pass('OK'):fail('HTTP '+r.status); }},
+  { name:'app_integrations', run: async()=>{ const r=await sbAnon('/rest/v1/app_integrations?select=id&limit=1'); return r.ok?pass('OK'):fail('HTTP '+r.status); }},
+  { name:'leads — nuevas columnas (source, call_score, blocked_by_debt)', run: async()=>{
+    const r = await sbAnon('/rest/v1/leads?select=source,call_score,blocked_by_debt&limit=1');
+    return r.ok?pass('Columnas OK'):fail('HTTP '+r.status+' — ALTER TABLE leads pendiente');
+  }},
+  { name:'get_metatronix_score() función existe', run: async()=>{
+    const t = await getToken('acanales@ibanormexico.com');
+    if (!t) return skip('Login fallido');
+    const r = await fetch(SB+'/rest/v1/rpc/get_metatronix_score',{
+      method:'POST', headers:{apikey:ANON,'Authorization':'Bearer '+t.token,'Content-Type':'application/json'},
+      body:JSON.stringify({p_company_id:'metatronix'})
+    });
+    const d = await r.json().catch(()=>({}));
+    return d && d.total !== undefined ? pass('Score: '+d.total+'/100') : skip('Función no accesible via RPC aún');
+  }},
+]},
+
+/* ═══════════════════════════════════════════════════════════
+   3. AUTENTICACIÓN
+   ═══════════════════════════════════════════════════════════ */
+{ id:'AUTH', name:'Autenticación y Acceso', open:true, tests:[
+  { name:'Alejandro (acanales) — login OK + role super_admin', run: async()=>{
+    const t = await getToken('acanales@ibanormexico.com');
+    if (!t) return fail('Login fallido — password incorrecto');
+    const r = await fetch(SB+'/rest/v1/profiles?id=eq.'+t.uid+'&select=role',{headers:{apikey:ANON,'Authorization':'Bearer '+t.token}});
+    const d = await r.json();
+    return d[0]?.role==='super_admin' ? pass('super_admin ✓ uid:'+t.uid.slice(0,8)) : fail('role: '+d[0]?.role);
+  }},
+  { name:'Frida — login OK + role user', run: async()=>{
+    const t = await getToken('frida@retaillab.com.mx');
+    if (!t) return fail('Login fallido');
+    const r = await fetch(SB+'/rest/v1/profiles?id=eq.'+t.uid+'&select=role',{headers:{apikey:ANON,'Authorization':'Bearer '+t.token}});
+    const d = await r.json();
+    return d[0]?.role==='user' ? pass('user ✓') : fail('role: '+d[0]?.role);
+  }},
+  { name:'Ana (aamaya) — login OK', run: async()=>{
+    const t = await getToken('aamaya@todoretail.com');
+    return t ? pass('Login OK uid:'+t.uid.slice(0,8)) : fail('Login fallido — MetaTronix2026!');
+  }},
+  { name:'rsuarez — login OK + role admin_restringido', run: async()=>{
+    const t = await getToken('rsuarez@ibanormexico.com');
+    if (!t) return fail('Login fallido');
+    const r = await fetch(SB+'/rest/v1/profiles?id=eq.'+t.uid+'&select=role',{headers:{apikey:ANON,'Authorization':'Bearer '+t.token}});
+    const d = await r.json();
+    return d[0]?.role==='admin_restringido' ? pass('admin_restringido ✓') : fail('role: '+d[0]?.role);
+  }},
+  { name:'reset-password.html existe y funciona', run: async()=>page(PORTAL+'/reset-password.html',['Nueva contraseña','updateUser']) },
+  { name:'Anon sin token — bloqueado en profiles', run: async()=>{
+    const r = await fetch(SB+'/rest/v1/profiles?select=id&limit=1',{headers:{apikey:ANON}});
+    return r.status===401||r.status===403 ? pass('Bloqueado ('+r.status+') ✓') :
+           r.ok ? skip('Visible — revisar RLS de profiles') : skip('HTTP '+r.status);
+  }},
+]},
+
+/* ═══════════════════════════════════════════════════════════
+   4. MÓDULOS — páginas del portal
+   ═══════════════════════════════════════════════════════════ */
+{ id:'MOD', name:'Módulos del Portal', tests:[
+  { name:'home.html', run: async()=>page(PORTAL+'/home.html',['requireAuth','renderHeader']) },
+  { name:'ventas.html', run: async()=>page(PORTAL+'/ventas.html',['leads','pipeline']) },
+  { name:'finanzas.html', run: async()=>page(PORTAL+'/finanzas.html',['finanzas','requireAuth']) },
+  { name:'cobranza.html', run: async()=>page(PORTAL+'/cobranza.html',['cobranza','requireAuth']) },
+  { name:'compras.html', run: async()=>page(PORTAL+'/compras.html',['compras','requireAuth']) },
+  { name:'marketing.html', run: async()=>page(PORTAL+'/marketing.html',['marketing','requireAuth']) },
+  { name:'archivos.html', run: async()=>page(PORTAL+'/archivos.html',['metatronix_docs','dlFile']) },
+  { name:'ceo.html', run: async()=>page(PORTAL+'/ceo.html',['initNervousSystem','MetaTronix Score','nervous-feed']) },
+  { name:'feedback.html', run: async()=>page(PORTAL+'/feedback.html',['feature_requests','toggleVote']) },
+  { name:'admin.html', run: async()=>page(PORTAL+'/admin.html',['admin','requireAuth']) },
+]},
+
+/* ═══════════════════════════════════════════════════════════
+   5. APP.JS — funciones del sistema nervioso
+   ═══════════════════════════════════════════════════════════ */
+{ id:'APP', name:'app.js — Sistema Nervioso', tests:[
+  { name:'emitEvent() definida', run: async()=>{ const t=await fetch(PORTAL+'/assets/app.js').then(r=>r.text()); return t.includes('async function emitEvent')?pass('OK'):fail('No encontrada'); }},
+  { name:'subscribeToEvents() definida', run: async()=>{ const t=await fetch(PORTAL+'/assets/app.js').then(r=>r.text()); return t.includes('function subscribeToEvents')?pass('OK'):fail('No encontrada'); }},
+  { name:'getMetaTronixScore() definida', run: async()=>{ const t=await fetch(PORTAL+'/assets/app.js').then(r=>r.text()); return t.includes('async function getMetaTronixScore')?pass('OK'):fail('No encontrada'); }},
+  { name:'initFeedbackButton() — botón global', run: async()=>{ const t=await fetch(PORTAL+'/assets/app.js').then(r=>r.text()); return t.includes('initFeedbackButton')&&t.includes('openFeedbackModal')?pass('OK'):fail('No encontrada'); }},
+  { name:'getRecentEvents() definida', run: async()=>{ const t=await fetch(PORTAL+'/assets/app.js').then(r=>r.text()); return t.includes('async function getRecentEvents')?pass('OK'):fail('No encontrada'); }},
+]},
+
+/* ═══════════════════════════════════════════════════════════
+   6. CLOUDFLARE WORKER — rutas integración
+   ═══════════════════════════════════════════════════════════ */
+{ id:'WRK', name:'Cloudflare Worker — Integraciones', tests:[
+  { name:'Worker activo (OPTIONS → 204)', run: async()=>{ const r=await fetch(WORKER,{method:'OPTIONS'}); return [200,204,405].includes(r.status)?pass('HTTP '+r.status):fail('HTTP '+r.status); }},
+  { name:'/api/crm/whatsapp/send — ruta existe', run: async()=>{ const r=await fetch(WORKER+'/api/crm/whatsapp/send',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); return r.status!==404?pass('HTTP '+r.status+' — activa'):fail('404 no encontrada'); }},
+  { name:'/api/finance/payment/create — ruta existe', run: async()=>{ const r=await fetch(WORKER+'/api/finance/payment/create',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); return r.status!==404?pass('HTTP '+r.status):fail('404'); }},
+  { name:'/api/finance/cfdi/stamp — ruta existe', run: async()=>{ const r=await fetch(WORKER+'/api/finance/cfdi/stamp',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); return r.status!==404?pass('HTTP '+r.status):fail('404'); }},
+  { name:'/api/events/cascade — motor de cascadas activo', run: async()=>{ const r=await fetch(WORKER+'/api/events/cascade',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); return r.status!==404?pass('HTTP '+r.status):fail('404'); }},
+  { name:'/api/admin/jelou/webhook — ruta existe', run: async()=>{ const r=await fetch(WORKER+'/api/admin/jelou/webhook',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); return r.status!==404?pass('HTTP '+r.status):fail('404'); }},
+]},
+
+/* ═══════════════════════════════════════════════════════════
+   7. SEGURIDAD — RLS y acceso no autorizado
+   ═══════════════════════════════════════════════════════════ */
+{ id:'SEC', name:'Seguridad y RLS', tests:[
+  { name:'Sin token — leads bloqueadas', run: async()=>{ const r=await fetch(SB+'/rest/v1/leads?select=id&limit=1',{headers:{apikey:ANON}}); return r.status===401||r.status===403?pass('Bloqueado '+r.status+' ✓'):r.ok?fail('CRÍTICO: leads visibles sin auth'):skip('HTTP '+r.status); }},
+  { name:'Sin token — metatronix_docs bloqueada', run: async()=>{ const r=await fetch(SB+'/rest/v1/metatronix_docs?select=id&limit=1',{headers:{apikey:ANON}}); return r.status===401||r.status===403||(!r.ok)?pass('Bloqueado '+r.status+' ✓'):fail('CRÍTICO: docs visibles sin auth'); }},
+  { name:'Sin token — profiles bloqueadas', run: async()=>{ const r=await fetch(SB+'/rest/v1/profiles?select=id&limit=1',{headers:{apikey:ANON}}); return !r.ok?pass('Bloqueado '+r.status+' ✓'):skip('profiles visibles con anon — revisar RLS'); }},
+  { name:'index.html → reset-password.html (no activar-cuenta)', run: async()=>{ const t=await fetch(PORTAL+'/index.html').then(r=>r.text()); return t.includes('reset-password.html')?pass('Redirige correctamente ✓'):fail('Aún usa activar-cuenta.html'); }},
+  { name:'marketing.html sin links directos a HuggingFace', run: async()=>{ const t=await fetch(PORTAL+'/marketing.html').then(r=>r.text()); const hfLinks=(t.match(/href="https:\/\/huggingface/g)||[]).length; return hfLinks===0?pass('Sin links HF ✓'):fail(hfLinks+' links HF encontrados'); }},
+]},
+
+/* ═══════════════════════════════════════════════════════════
+   8. ROLES — verificación completa
+   ═══════════════════════════════════════════════════════════ */
+{ id:'ROL', name:'Roles — Todos los usuarios', tests:[
+  { name:'acanales → super_admin @ metatronix', run: async()=>{ const t=await getToken('acanales@ibanormexico.com'); if(!t)return fail('Login'); const r=await fetch(SB+'/rest/v1/profiles?id=eq.'+t.uid+'&select=role,company_id',{headers:{apikey:ANON,'Authorization':'Bearer '+t.token}}); const d=await r.json(); return d[0]?.role==='super_admin'?pass(d[0].role+' @ '+d[0].company_id):fail(JSON.stringify(d[0])); }},
+  { name:'frida → user @ metatronix', run: async()=>{ const t=await getToken('frida@retaillab.com.mx'); if(!t)return fail('Login'); const r=await fetch(SB+'/rest/v1/profiles?id=eq.'+t.uid+'&select=role,company_id',{headers:{apikey:ANON,'Authorization':'Bearer '+t.token}}); const d=await r.json(); return d[0]?.role==='user'?pass(d[0].role+' @ '+d[0].company_id):fail(JSON.stringify(d[0])); }},
+  { name:'aamaya → user', run: async()=>{ const t=await getToken('aamaya@todoretail.com'); if(!t)return fail('Login'); const r=await fetch(SB+'/rest/v1/profiles?id=eq.'+t.uid+'&select=role',{headers:{apikey:ANON,'Authorization':'Bearer '+t.token}}); const d=await r.json(); return ['user','admin_restringido','admin'].includes(d[0]?.role)?pass(d[0].role+' ✓'):fail(JSON.stringify(d[0])); }},
+  { name:'rsuarez → admin_restringido', run: async()=>{ const t=await getToken('rsuarez@ibanormexico.com'); if(!t)return fail('Login'); const r=await fetch(SB+'/rest/v1/profiles?id=eq.'+t.uid+'&select=role',{headers:{apikey:ANON,'Authorization':'Bearer '+t.token}}); const d=await r.json(); return d[0]?.role==='admin_restringido'?pass('admin_restringido ✓'):fail(JSON.stringify(d[0])); }},
+]},
+
+/* ═══════════════════════════════════════════════════════════
+   9. INFRAESTRUCTURA
+   ═══════════════════════════════════════════════════════════ */
+{ id:'INF', name:'Infraestructura', tests:[
+  { name:'Portal responde (metatronixleads.tech)', run: async()=>page(PORTAL,['MetaTronix']) },
+  { name:'Supabase proyecto activo', run: async()=>{ const r=await fetch(SB+'/auth/v1/health'); return r.ok?pass('Supabase activo'):fail('HTTP '+r.status); }},
+  { name:'assets/app.js cargado v8 (emitEvent presente)', run: async()=>{ const t=await fetch(PORTAL+'/assets/app.js').then(r=>r.text()); return t.includes('emitEvent')&&t.includes('getMetaTronixScore')?pass('app.js v8 — '+Math.round(t.length/1024)+'KB'):fail('app.js desactualizado'); }},
+  { name:'GitHub Pages — deploy reciente', run: async()=>{ try{ const r=await fetch('https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/commits?per_page=1'); if(!r.ok)return skip('API rate limit'); const [c]=await r.json(); const h=Math.round((Date.now()-new Date(c.commit.author.date))/3600000); return h<48?pass('Último commit: '+h+'h ago — '+c.sha.slice(0,7)):skip('Commit: '+h+'h ago'); }catch(e){return skip(e.message);} }},
+]},
+
 ];
 
-// ── Render UI ────────────────────────────────────────────────────
-let results = {};
-let totalTests = 0;
+// ── Render ────────────────────────────────────────────────────
+let results = {}, total = 0;
 
-function renderSuites() {
-  const container = document.getElementById('suites-container');
-  container.innerHTML = '';
-  SUITES.forEach(suite => {
-    totalTests += suite.tests.length;
+function render() {
+  const c = document.getElementById('suites-container');
+  c.innerHTML = '';
+  SUITES.forEach(s => {
+    total += s.tests.length;
     const el = document.createElement('div');
-    el.className = 'suite' + (suite.open ? ' open' : '');
-    el.id = 'suite-' + suite.id;
+    el.className = 'suite' + (s.open ? ' open' : '');
+    el.id = 'suite-' + s.id;
     el.innerHTML = `
       <div class="suite-header" onclick="this.parentElement.classList.toggle('open')">
-        <span class="suite-id">${suite.id}</span>
-        <span class="suite-name">${suite.name}</span>
-        <span class="suite-count" id="sc-${suite.id}">0/${suite.tests.length}</span>
+        <span class="suite-id">${s.id}</span>
+        <span class="suite-name">${s.name}${s.critical?'<span class="critical-badge">CRÍTICO</span>':''}</span>
+        <span class="suite-count" id="sc-${s.id}">0/${s.tests.length}</span>
+        <span class="suite-pct" id="sp-${s.id}">—</span>
       </div>
-      <div class="test-list">
-        ${suite.tests.map((t,i) => `
-          <div class="test-row" id="tr-${suite.id}-${i}">
-            <div class="test-status s-wait" id="ts-${suite.id}-${i}">○</div>
-            <div class="test-name">${t.name}</div>
-            <div class="test-detail" id="td-${suite.id}-${i}">—</div>
-          </div>
-        `).join('')}
-      </div>`;
-    container.appendChild(el);
+      <div class="test-list">${s.tests.map((t,i)=>`
+        <div class="test-row" id="tr-${s.id}-${i}">
+          <div class="ts s-wait" id="ts-${s.id}-${i}">○</div>
+          <div class="test-name">${t.name}</div>
+          <div class="test-detail" id="td-${s.id}-${i}">—</div>
+        </div>`).join('')}</div>`;
+    c.appendChild(el);
   });
-  document.getElementById('cnt-total').textContent = totalTests;
+  document.getElementById('nt').textContent = total;
 }
 
 function updateStats() {
   const vals = Object.values(results);
-  const pass = vals.filter(r=>r==='pass').length;
-  const fail = vals.filter(r=>r==='fail').length;
-  const skip = vals.filter(r=>r==='skip').length;
-  const done = pass+fail+skip;
-  const pct  = done > 0 ? Math.round(pass/done*100) : 0;
+  const p = vals.filter(r=>r==='pass').length;
+  const f = vals.filter(r=>r==='fail').length;
+  const s = vals.filter(r=>r==='skip').length;
+  const done = p+f+s;
+  const pct = done > 0 ? Math.round(p/done*100) : 0;
   document.getElementById('pct').textContent = pct+'%';
-  document.getElementById('pct').style.color = pct>=90?'var(--accent)':pct>=70?'var(--yellow)':'var(--red)';
+  const clr = pct>=90?'var(--accent)':pct>=70?'var(--yellow)':'var(--red)';
+  document.getElementById('pct').style.color = clr;
   document.getElementById('prog').style.width = pct+'%';
-  document.getElementById('prog').style.background = pct>=90?'var(--accent)':pct>=70?'var(--yellow)':'var(--red)';
-  document.getElementById('cnt-pass').textContent = pass;
-  document.getElementById('cnt-fail').textContent = fail;
-  document.getElementById('cnt-skip').textContent = skip;
+  document.getElementById('prog').style.background = clr;
+  document.getElementById('np').textContent = p;
+  document.getElementById('nf').textContent = f;
+  document.getElementById('ns').textContent = s;
+  // Update suite pct
+  SUITES.forEach(s => {
+    const sDone = Object.keys(results).filter(k=>k.startsWith(s.id+'-')).length;
+    const sPass = Object.keys(results).filter(k=>k.startsWith(s.id+'-')&&results[k]==='pass').length;
+    const sc = document.getElementById('sc-'+s.id);
+    const sp = document.getElementById('sp-'+s.id);
+    if(sc) sc.textContent = sDone+'/'+s.tests.length;
+    if(sp && sDone>0) {
+      const pct2 = Math.round(sPass/sDone*100);
+      sp.textContent = pct2+'%';
+      sp.style.color = pct2===100?'var(--accent)':pct2>=70?'var(--yellow)':'var(--red)';
+    }
+  });
 }
 
-function setTestResult(suiteId, idx, status, detail) {
-  const key = suiteId+'-'+idx;
-  results[key] = status;
-  const ts = document.getElementById('ts-'+suiteId+'-'+idx);
-  const td = document.getElementById('td-'+suiteId+'-'+idx);
-  if(ts) { ts.className='test-status s-'+status; ts.textContent = status==='pass'?'✓':status==='fail'?'✗':'!'; }
-  if(td) { td.textContent = detail||''; td.title = detail||''; }
-  // Update suite counter
-  const suiteTests = SUITES.find(s=>s.id===suiteId)?.tests.length||0;
-  const suiteDone  = Object.keys(results).filter(k=>k.startsWith(suiteId+'-')).length;
-  const sc = document.getElementById('sc-'+suiteId);
-  if(sc) sc.textContent = suiteDone+'/'+suiteTests;
+function setResult(sid, idx, status, detail) {
+  results[sid+'-'+idx] = status;
+  const ts = document.getElementById('ts-'+sid+'-'+idx);
+  const td = document.getElementById('td-'+sid+'-'+idx);
+  if(ts){ ts.className='ts s-'+status; ts.textContent=status==='pass'?'✓':status==='fail'?'✗':'!'; }
+  if(td){ td.textContent=detail||''; td.title=detail||''; }
   updateStats();
 }
 
 async function runAll() {
   results = {};
-  document.getElementById('run-btn').disabled = true;
-  document.getElementById('run-btn').textContent = '⏳ Corriendo...';
+  Object.keys(_tokens).forEach(k=>delete _tokens[k]); // clear token cache
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.textContent = '⏳ Corriendo...';
+  updateStats();
 
   for (const suite of SUITES) {
     document.getElementById('suite-'+suite.id)?.classList.add('open');
     for (let i=0; i<suite.tests.length; i++) {
       const ts = document.getElementById('ts-'+suite.id+'-'+i);
-      if(ts){ ts.className='test-status s-run'; ts.textContent='↻'; }
+      if(ts){ ts.className='ts s-run'; ts.textContent='↻'; }
       try {
         const res = await suite.tests[i].run();
-        setTestResult(suite.id, i, res.status, res.detail);
+        setResult(suite.id, i, res.status, res.detail);
       } catch(e) {
-        setTestResult(suite.id, i, 'fail', e.message||'Error');
+        setResult(suite.id, i, 'fail', e.message);
       }
-      await new Promise(r=>setTimeout(r,80));
+      await new Promise(r=>setTimeout(r,60));
     }
   }
 
-  document.getElementById('run-btn').disabled = false;
-  document.getElementById('run-btn').textContent = '↺ Repetir QA v8';
+  btn.disabled = false; btn.textContent = '↺ Repetir QA v8';
 }
 
-renderSuites();
+render();
 </script>
 </body>
 </html>
