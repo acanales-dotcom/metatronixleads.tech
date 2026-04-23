@@ -2,11 +2,6 @@ name: "Fix User Access — Frida y Ana"
 
 on:
   workflow_dispatch:
-    inputs:
-      service_role_key:
-        description: 'Supabase service_role key (Settings → API → service_role secret)'
-        required: true
-        type: string
 
 jobs:
   fix-access:
@@ -14,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
-      SK: ${{ github.event.inputs.service_role_key }}
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
       ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY"
 
     steps:
@@ -24,7 +19,7 @@ jobs:
             -H "apikey: $SK" -H "Authorization: Bearer $SK" \
             "$SB/rest/v1/profiles?select=id&limit=1")
           echo "HTTP $HTTP"
-          [ "$HTTP" = "200" ] || { echo "❌ service_role_key inválido o sin conexión"; exit 1; }
+          [ "$HTTP" = "200" ] || { echo "❌ SUPABASE_SERVICE_KEY inválido o sin conexión"; exit 1; }
           echo "✅ Conexión OK"
 
       - name: "Diagnóstico — estado actual de usuarios"
@@ -78,7 +73,6 @@ jobs:
           echo "════════════════════════════════"
           echo "  MEMBRESÍAS user_companies"
           echo "════════════════════════════════"
-          # Need UIDs first
           FRIDA_UID=$(curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
             "$SB/auth/v1/admin/users?email=frida@retaillab.com.mx&email_filter=exact" | \
             python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('users',[{}])[0].get('id',''))" 2>/dev/null)
@@ -96,7 +90,7 @@ jobs:
             echo "  uid=$UID memberships: $RESULT"
           done
 
-      - name: "Fix — Recrear identidades y resetear passwords"
+      - name: "Fix — Reset passwords via Admin API"
         run: |
           echo "════════════════════════════════"
           echo "  RESETEANDO PASSWORDS"
@@ -105,7 +99,6 @@ jobs:
           reset_user() {
             local EMAIL="$1"
             local NAME="$2"
-            local COMPANY_ID="$3"
 
             echo ""
             echo "── Procesando $EMAIL ──"
@@ -130,8 +123,13 @@ jobs:
                 }" \
                 "$SB/auth/v1/admin/users")
               echo "  CREATE HTTP $HTTP"
+              cat /tmp/create_result.json | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          if 'error' in d: print('  ERROR:', d.get('error'), '-', d.get('message',''))
+          else: print('  UID:', d.get('id','?'))
+          " 2>/dev/null
               UID=$(python3 -c "import json; d=json.load(open('/tmp/create_result.json')); print(d.get('id',''))" 2>/dev/null)
-              echo "  Nuevo UID: $UID"
             else
               echo "  UID encontrado: $UID"
               echo "  Actualizando password..."
@@ -171,21 +169,54 @@ jobs:
                 "$SB/rest/v1/profiles")
               echo "  Profile upsert HTTP $HTTP"
 
-              # Asegurar membresía a MetaTronix
-              HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-                -X POST \
-                -H "apikey: $SK" \
-                -H "Authorization: Bearer $SK" \
-                -H "Content-Type: application/json" \
-                -H "Prefer: resolution=merge-duplicates,return=minimal" \
-                -d "{\"user_id\":\"$UID\",\"company_id\":\"c0000000-0000-0000-0000-000000000001\",\"role\":\"member\"}" \
-                "$SB/rest/v1/user_companies")
-              echo "  MetaTronix membership HTTP $HTTP"
+              # Obtener id de empresa MetaTronix (intentar UUID y slug)
+              MTTX_UUID="c0000000-0000-0000-0000-000000000001"
+
+              # Verificar si existe la empresa con UUID
+              CO_CHECK=$(curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+                "$SB/rest/v1/companies?id=eq.$MTTX_UUID&select=id" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          print(d[0]['id'] if d else '')
+          " 2>/dev/null)
+
+              if [ -n "$CO_CHECK" ]; then
+                CO_ID="$MTTX_UUID"
+              else
+                # Intentar con slug 'metatronix'
+                CO_ID=$(curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+                  "$SB/rest/v1/companies?slug=eq.metatronix&select=id" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          print(d[0]['id'] if d else '')
+          " 2>/dev/null)
+              fi
+
+              if [ -n "$CO_ID" ]; then
+                HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+                  -X POST \
+                  -H "apikey: $SK" \
+                  -H "Authorization: Bearer $SK" \
+                  -H "Content-Type: application/json" \
+                  -H "Prefer: resolution=merge-duplicates,return=minimal" \
+                  -d "{\"user_id\":\"$UID\",\"company_id\":\"$CO_ID\",\"role\":\"member\"}" \
+                  "$SB/rest/v1/user_companies")
+                echo "  MetaTronix membership ($CO_ID) HTTP $HTTP"
+              else
+                echo "  ⚠ No se encontró empresa MetaTronix en companies table"
+                # Listar empresas para debug
+                curl -s -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+                  "$SB/rest/v1/companies?select=id,name,slug" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          for c in d: print(f'  empresa: id={c.get(\"id\")} name={c.get(\"name\")} slug={c.get(\"slug\")}')
+          " 2>/dev/null
+              fi
             fi
           }
 
-          reset_user "frida@retaillab.com.mx"  "Frida"     "c0000000-0000-0000-0000-000000000001"
-          reset_user "aamaya@todoretail.com"    "Ana Amaya" "c0000000-0000-0000-0000-000000000001"
+          reset_user "frida@retaillab.com.mx"  "Frida"
+          reset_user "aamaya@todoretail.com"    "Ana Amaya"
 
       - name: "Verificación — Test de Login"
         run: |
@@ -210,7 +241,7 @@ jobs:
           elif 'error' in d:
               print('  ❌ LOGIN FALLIDO:', d.get('error'), '-', d.get('error_description',''))
           else:
-              print('  ⚠ Respuesta inesperada:', str(d)[:200])
+              print('  ⚠ Respuesta inesperada:', str(d)[:300])
           " 2>/dev/null || echo "  (error en respuesta)"
           }
 
@@ -219,8 +250,6 @@ jobs:
 
           echo ""
           echo "════════════════════════════════"
-          echo "  RESUMEN FINAL"
-          echo "════════════════════════════════"
-          echo "  Portal: https://metatronixleads.tech"
-          echo "  Password: MetaTronix2026!"
+          echo "Portal: https://metatronixleads.tech"
+          echo "Password: MetaTronix2026!"
           echo "════════════════════════════════"
