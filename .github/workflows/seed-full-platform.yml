@@ -1,0 +1,129 @@
+name: Seed COMPLETO — Toda la plataforma con datos reales visibles
+
+on:
+  workflow_dispatch:
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - name: "Setup"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, os
+          SB,SK = os.environ['SB'], os.environ['SK']
+          H = {'apikey':SK,'Authorization':f'Bearer {SK}'}
+          def safe(url):
+              try: return json.loads(urllib.request.urlopen(urllib.request.Request(url,headers=H)).read())
+              except: return []
+          cos = safe(SB+'/rest/v1/companies?select=id,slug,name')
+          demo_id = next((c['id'] for c in cos if c.get('slug') in ('nexus','demo') or c.get('id') in ('nexus','demo')),'nexus')
+          profiles = safe(SB+'/rest/v1/profiles?select=id,email,role&limit=20')
+          print(f'Demo: {demo_id} | Perfiles: {len(profiles)}')
+          with open('/tmp/ctx.json','w') as f: json.dump({'demo_id':demo_id,'profiles':profiles},f)
+          PYEOF
+
+      - name: "LEADS — schema correcto (empresa, contacto_nombre, status, fuente)"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+          from datetime import datetime, timedelta
+          import random
+
+          SB,SK = os.environ['SB'],os.environ['SK']
+          H = {'apikey':SK,'Authorization':f'Bearer {SK}','Content-Type':'application/json',
+               'Prefer':'resolution=ignore-duplicates,return=minimal'}
+          ctx = json.load(open('/tmp/ctx.json'))
+          demo_id = ctx['demo_id']
+          uids = [p['id'] for p in ctx['profiles']] or [None]
+          def uid(i): return uids[i%len(uids)]
+          def dago(n): return (datetime.now()-timedelta(days=n)).isoformat()
+          def dfwd(n): return (datetime.now()+timedelta(days=n)).strftime('%Y-%m-%d')
+
+          # STATUS VALUES que mapean a stages en leads.html:
+          # nuevo → generacion
+          # contactado → primer_contacto (calificacion no tiene status directo, se necesita LS)
+          # propuesta_enviada → propuesta
+          # en_negociacion → negociacion
+          # cerrado_ganado → cierre / postventa
+          # cerrado_perdido → cerrado_perdido
+
+          leads = [
+            # GENERACION (status=nuevo)
+            {'empresa':'Innovatech Solutions SA','contacto_nombre':'Carlos Medina','cargo':'Director General','contacto_email':'c.medina@innovatech.mx','contacto_telefono':'+52 55 1234 5678','status':'nuevo','fuente':'linkedin','valor_estimado':45000,'seguimiento':dfwd(2),'notas':'Primer contacto por LinkedIn. Empresa de 50 empleados en retail. Muy interesados en CRM con IA.','user_id':uid(0),'company_id':demo_id,'created_at':dago(3),'updated_at':dago(1)},
+            {'empresa':'Retail Moderno Guadalajara','contacto_nombre':'Ana Pérez','cargo':'Gerente Comercial','contacto_email':'aperez@retailmoderno.com','contacto_telefono':'+52 33 9876 5432','status':'nuevo','fuente':'referido','valor_estimado':28000,'seguimiento':dfwd(3),'notas':'Referido por Construmax. 15 vendedores usando Excel. Urgente cambiar.','user_id':uid(1),'company_id':demo_id,'created_at':dago(5),'updated_at':dago(2)},
+            {'empresa':'Telmex Empresas División B2B','contacto_nombre':'Roberto Silva','cargo':'VP Ventas Corporativas','contacto_email':'r.silva@telmex.com','contacto_telefono':'+52 55 5222 0880','status':'nuevo','fuente':'web','valor_estimado':320000,'seguimiento':dfwd(4),'notas':'Formulario enterprise. 500 agentes B2B. Primer contacto pendiente.','user_id':uid(2),'company_id':demo_id,'created_at':dago(8),'updated_at':dago(2)},
+            {'empresa':'Constructora Hermanos Vega','contacto_nombre':'José Vega','cargo':'Director de Operaciones','contacto_email':'jvega@chvconstrucciones.com','contacto_telefono':'+52 55 6789 0123','status':'nuevo','fuente':'llamada','valor_estimado':95000,'seguimiento':dfwd(1),'notas':'Llamada en frío exitosa. Director interesado. Agendar demo esta semana.','user_id':uid(0),'company_id':demo_id,'created_at':dago(10),'updated_at':dago(5)},
+
+            # PRIMER CONTACTO (status=contactado)
+            {'empresa':'FinTech Capital LATAM','contacto_nombre':'Diego Ruiz','cargo':'VP de Ventas','contacto_email':'d.ruiz@fintechcapital.mx','contacto_telefono':'+52 55 2233 4455','status':'contactado','fuente':'linkedin','valor_estimado':148000,'seguimiento':dfwd(4),'notas':'Primera llamada excelente. Pain: forecast imposible. 40 vendedores. Budget Q2 aprobado. Agendar demo.','user_id':uid(1),'company_id':demo_id,'created_at':dago(15),'updated_at':dago(4)},
+            {'empresa':'Distribuidora TechMex','contacto_nombre':'Laura Torres','cargo':'Gerente de Compras','contacto_email':'l.torres@techmex.com.mx','contacto_telefono':'+52 33 7788 9900','status':'contactado','fuente':'whatsapp','valor_estimado':72000,'seguimiento':dfwd(6),'notas':'Contacto por WhatsApp. 3 sucursales. Necesita integración SAP. Llamada programada.','user_id':uid(2),'company_id':demo_id,'created_at':dago(18),'updated_at':dago(6)},
+            {'empresa':'Aeroméxico Cargo División','contacto_nombre':'Miguel Ángel Soto','cargo':'Director Operaciones Cargo','contacto_email':'ma.soto@aeromexico.com','contacto_telefono':'+52 55 5133 4000','status':'contactado','fuente':'llamada','valor_estimado':195000,'seguimiento':dfwd(7),'notas':'150 clientes corporativos de carga aérea. Quieren CRM especializado B2B. Demo agendada.','user_id':uid(0),'company_id':demo_id,'created_at':dago(12),'updated_at':dago(4)},
+            {'empresa':'Grupo Bimbo LATAM Corp','contacto_nombre':'Patricia Mora','cargo':'VP Transformación Digital','contacto_email':'p.mora@grupobimbo.com','contacto_telefono':'+52 55 5268 6000','status':'contactado','fuente':'referido','valor_estimado':2100000,'seguimiento':dfwd(1),'notas':'DEAL ESTRATÉGICO. Piloto México para 800 distribuidores. Éxito = 15 países LATAM. Proceso de evaluación iniciado.','user_id':uid(1),'company_id':demo_id,'created_at':dago(40),'updated_at':dago(1)},
+
+            # PROPUESTA (status=propuesta_enviada)
+            {'empresa':'Inmobiliaria Premium MX','contacto_nombre':'Fernando Guzmán','cargo':'Director General','contacto_email':'f.guzman@premiuminmuebles.com','contacto_telefono':'+52 55 9988 7766','status':'propuesta_enviada','fuente':'referido','valor_estimado':95000,'seguimiento':dfwd(-2),'notas':'Propuesta enviada el jueves. Esperando comité. Precio negociado $89,500. Call el viernes.','user_id':uid(2),'company_id':demo_id,'created_at':dago(35),'updated_at':dago(5)},
+            {'empresa':'Manufactura Integral Querétaro','contacto_nombre':'Sofía Ramírez','cargo':'Directora de Compras','contacto_email':'s.ramirez@miq.mx','contacto_telefono':'+52 442 123 4567','status':'propuesta_enviada','fuente':'evento','valor_estimado':165000,'seguimiento':dfwd(4),'notas':'Propuesta formal entregada. Comité de 4 personas. Reunión el viernes. Muy buena disposición.','user_id':uid(0),'company_id':demo_id,'created_at':dago(40),'updated_at':dago(8)},
+            {'empresa':'Liverpool México Corporativo','contacto_nombre':'Andrés Cortés','cargo':'CTO','contacto_email':'a.cortes@liverpool.mx','contacto_telefono':'+52 55 5229 5000','status':'propuesta_enviada','fuente':'referido','valor_estimado':750000,'seguimiento':dfwd(8),'notas':'Propuesta enviada. Comité de 6. Proceso licitación formal. Decisión en 30 días.','user_id':uid(1),'company_id':demo_id,'created_at':dago(45),'updated_at':dago(6)},
+            {'empresa':'Banamex Seguros SA','contacto_nombre':'Valentina Cruz','cargo':'Directora Comercial','contacto_email':'v.cruz@banamex.com','contacto_telefono':'+52 55 2262 3000','status':'propuesta_enviada','fuente':'linkedin','valor_estimado':640000,'seguimiento':dfwd(4),'notas':'600 agentes de seguros. Propuesta técnica y comercial enviadas. Esperando feedback TI.','user_id':uid(2),'company_id':demo_id,'created_at':dago(30),'updated_at':dago(9)},
+
+            # NEGOCIACION (status=en_negociacion)
+            {'empresa':'Grupo Alpha Empresarial','contacto_nombre':'Héctor Sánchez','cargo':'CFO','contacto_email':'h.sanchez@grupoalpha.mx','contacto_telefono':'+52 55 7766 5544','status':'en_negociacion','fuente':'linkedin','valor_estimado':280000,'seguimiento':dfwd(1),'notas':'CFO negocia: 40% anticipo, 60% a 90 días. Contrato en revisión legal. Cerramos esta semana.','user_id':uid(0),'company_id':demo_id,'created_at':dago(45),'updated_at':dago(2)},
+            {'empresa':'TechRetail México SA','contacto_nombre':'Gabriela López','cargo':'VP Comercial','contacto_email':'g.lopez@techretail.mx','contacto_telefono':'+52 55 4455 6677','status':'en_negociacion','fuente':'web','valor_estimado':192000,'seguimiento':dfwd(2),'notas':'Negociando descuento por 6 sucursales. Precio final $178,000. Contrato listo pendiente firma.','user_id':uid(1),'company_id':demo_id,'created_at':dago(50),'updated_at':dago(4)},
+            {'empresa':'CEMEX Global Technology','contacto_nombre':'Ricardo Morales','cargo':'Director Transformación Digital','contacto_email':'r.morales@cemex.com','contacto_telefono':'+52 81 8888 0000','status':'en_negociacion','fuente':'linkedin','valor_estimado':1200000,'seguimiento':dfwd(3),'notas':'Piloto en 3 países. Negociando precio por volumen + SLA enterprise. Deal del año.','user_id':uid(2),'company_id':demo_id,'created_at':dago(60),'updated_at':dago(1)},
+
+            # CERRADO GANADO (status=cerrado_ganado)
+            {'empresa':'Construmax Norte SA de CV','contacto_nombre':'Jorge Alvarado','cargo':'Director Administrativo','contacto_email':'j.alvarado@construmax.mx','contacto_telefono':'+52 55 3344 5566','status':'cerrado_ganado','fuente':'referido','valor_estimado':128000,'seguimiento':None,'notas':'CERRADO $128,000. Contrato firmado. Onboarding completado. NPS 9/10. Cliente muy satisfecho.','user_id':uid(0),'company_id':demo_id,'created_at':dago(60),'updated_at':dago(8)},
+            {'empresa':'Retail Premium del Bajío SA','contacto_nombre':'Claudia Hernández','cargo':'CEO','contacto_email':'c.hernandez@retailpremiumbajio.com','contacto_telefono':'+52 477 100 2000','status':'cerrado_ganado','fuente':'evento','valor_estimado':85000,'seguimiento':None,'notas':'CERRADO $85,000. 6 meses prepagado. Implementación exitosa. Renovación en Octubre.','user_id':uid(1),'company_id':demo_id,'created_at':dago(65),'updated_at':dago(15)},
+            {'empresa':'Fintech Monterrey Capital','contacto_nombre':'Luis Martínez','cargo':'COO','contacto_email':'l.martinez@fintechmty.mx','contacto_telefono':'+52 81 2211 3344','status':'cerrado_ganado','fuente':'whatsapp','valor_estimado':62000,'seguimiento':None,'notas':'CERRADO. Pagó todo por adelantado. Excelente cliente. Potencial upsell módulo marketing Q3.','user_id':uid(2),'company_id':demo_id,'created_at':dago(70),'updated_at':dago(20)},
+            {'empresa':'Hospital Valle del Sol SA','contacto_nombre':'Dra. María Gutiérrez','cargo':'Directora General','contacto_email':'m.gutierrez@hvssalud.mx','contacto_telefono':'+52 33 5544 3322','status':'cerrado_ganado','fuente':'linkedin','valor_estimado':340000,'seguimiento':None,'notas':'CERRADO $340k — MAYOR DEAL DEL AÑO. En implementación Q2. NPS 9/10. Refiere activamente.','user_id':uid(0),'company_id':demo_id,'created_at':dago(80),'updated_at':dago(25)},
+            {'empresa':'OXXO Franquicias División','contacto_nombre':'Ernesto Campos','cargo':'Director Desarrollo Franquicias','contacto_email':'e.campos@oxxo.mx','contacto_telefono':'+52 81 8748 0000','status':'cerrado_ganado','fuente':'referido','valor_estimado':380000,'seguimiento':None,'notas':'CERRADO $380k. CRM para desarrollo franquicias. 3 años de contrato. Onboarding en progreso.','user_id':uid(1),'company_id':demo_id,'created_at':dago(75),'updated_at':dago(10)},
+
+            # CERRADO PERDIDO (status=cerrado_perdido)
+            {'empresa':'Software Factory Guadalajara','contacto_nombre':'Ing. Ramón Díaz','cargo':'CTO','contacto_email':'r.diaz@sfgtec.mx','contacto_telefono':'+52 33 1234 5678','status':'cerrado_perdido','fuente':'web','valor_estimado':45000,'seguimiento':None,'notas':'Perdido vs HubSpot. Precio fue la objeción principal. Recontactar en 6 meses.','user_id':uid(2),'company_id':demo_id,'created_at':dago(90),'updated_at':dago(45)},
+            {'empresa':'Muebles Azteca Nacional SA','contacto_nombre':'Roberto Azteca','cargo':'Director de Compras','contacto_email':'r.azteca@mueblesazteca.mx','contacto_telefono':'+52 55 9900 1122','status':'cerrado_perdido','fuente':'referido','valor_estimado':28000,'seguimiento':None,'notas':'Perdido — optaron por solución interna. No tenían budget real aprobado.','user_id':uid(0),'company_id':demo_id,'created_at':dago(95),'updated_at':dago(50)},
+            {'empresa':'Cinépolis Corporate','contacto_nombre':'Lic. Andrea Ríos','cargo':'VP Marketing','contacto_email':'a.rios@cinepolis.com','contacto_telefono':'+52 452 524 0070','status':'cerrado_perdido','fuente':'evento','valor_estimado':290000,'seguimiento':None,'notas':'Perdido. HubSpot ganó por integración con su stack actual. Recontactar en 12 meses.','user_id':uid(1),'company_id':demo_id,'created_at':dago(100),'updated_at':dago(55)},
+          ]
+
+          body = json.dumps(leads).encode()
+          req  = urllib.request.Request(SB+'/rest/v1/leads', data=body, headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req)
+              print(f'✅ {len(leads)} leads insertados — HTTP {resp.status}')
+              # Contar por status
+              counts = {}
+              for l in leads: counts[l['status']] = counts.get(l['status'],0)+1
+              for k,v in sorted(counts.items()): print(f'   {k:25} → {v} leads')
+          except urllib.error.HTTPError as e:
+              print(f'❌ Error: {e.code} — {e.read().decode()[:400]}')
+          PYEOF
+
+      - name: "Verificar leads en DB + RLS"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, os
+
+          SB,SK = os.environ['SB'],os.environ['SK']
+          H = {'apikey':SK,'Authorization':f'Bearer {SK}'}
+          ctx = json.load(open('/tmp/ctx.json'))
+          demo_id = ctx['demo_id']
+
+          # Contar leads totales
+          data = json.loads(urllib.request.urlopen(urllib.request.Request(
+              f'{SB}/rest/v1/leads?company_id=eq.{demo_id}&select=id,empresa,status&limit=200', headers=H)).read())
+          print(f'✅ Leads en DB para {demo_id}: {len(data)}')
+          by_status = {}
+          for l in data: by_status[l['status']] = by_status.get(l['status'],0)+1
+          for k,v in sorted(by_status.items()): print(f'   {k:25} → {v}')
+
+          # También check RLS — anon user
+          anon='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY'
+          r2 = urllib.request.urlopen(urllib.request.Request(
+              SB+'/rest/v1/leads?select=id&limit=1',
+              headers={'apikey':anon,'Authorization':'Bearer '+anon}))
+          print(f'RLS anon HTTP: {r2.status} — {"leads visibles a anon (issue)" if json.loads(r2.read()) else "bloqueado OK"}')
+          PYEOF
