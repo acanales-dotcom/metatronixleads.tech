@@ -55,8 +55,11 @@ jobs:
 
           MTX   = co_map.get('metatronix')
           IBANOR= co_map.get('ibanor')
-          # nexus es la empresa demo (slug puede ser 'nexus' o 'demo')
-          DEMO  = co_map.get('nexus') or co_map.get('demo')
+          # nexus es la empresa demo — buscar por múltiples slugs posibles
+          DEMO  = (co_map.get('nexus') or co_map.get('demo') or
+                   co_map.get('nexus-demo') or co_map.get('nexusdemo') or
+                   # Si ningún slug coincide, buscar por nombre que contenga nexus o demo
+                   next((v for k,v in co_map.items() if 'nexus' in k.lower() or 'demo' in k.lower()), None))
 
           print(f'\n  metatronix → {MTX}')
           print(f'  ibanor     → {IBANOR}')
