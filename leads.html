@@ -883,7 +883,7 @@
 <!-- CORE -->
 <script src="/assets/libs/supabase.min.js"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260421"></script>
+<script src="/assets/app.js?v=20260420i"></script>
 <script src="/assets/agent.js?v=20260422"></script>
 <!-- ALEX: Sales Coach Agent -->
 <script src="/assets/salescoach.js?v=20260421"></script>
@@ -1361,9 +1361,11 @@ async function seedTestData() {
 /* ── SUPABASE CRUD ──────────────────────────────────────── */
 async function loadLeads() {
   const db = getDB();
-  // limit(500): previene timeout en tablas grandes; los últimos 500 actualizados cubren
-  // el 99% de los casos activos. Para datasets > 500 usar filtro por periodo en futuro.
-  const { data, error } = await db.from('leads').select('*').order('updated_at',{ascending:false}).limit(500);
+  const companyId = getActiveCompanyId();
+  let q = db.from('leads').select('*').order('updated_at',{ascending:false}).limit(500);
+  // Filtrar por empresa activa — evita cruce de datos entre IBANOR/MetaTronix/Nexus
+  if (companyId) q = q.eq('company_id', companyId);
+  const { data, error } = await q;
   if (error) { notify('Error al cargar leads: '+error.message, 'error'); return; }
   allLeads = data || [];
   renderCurrentView();
@@ -1380,6 +1382,7 @@ async function saveLead() {
   const stage = document.getElementById('f-stage').value;
   const payload = {
     user_id:           currentUser.id,
+    company_id:        getActiveCompanyId(),   // ← aislamiento por empresa
     empresa,
     contacto_nombre:   document.getElementById('f-contacto').value.trim()    || null,
     cargo:             document.getElementById('f-cargo').value.trim()         || null,
@@ -1440,7 +1443,10 @@ async function deleteLeadConfirm() {
       confirmButtonText:'Eliminar', cancelButtonText:'Cancelar' });
     if (!r.isConfirmed) return;
   } else if (!confirm(`¿Eliminar "${lead?.empresa}"?`)) return;
-  const { error } = await getDB().from('leads').delete().eq('id',editingLeadId);
+  const companyId = getActiveCompanyId();
+  let delQ = getDB().from('leads').delete().eq('id',editingLeadId);
+  if (companyId) delQ = delQ.eq('company_id', companyId); // seguridad: no borrar leads de otra empresa
+  const { error } = await delQ;
   if (error) { notify('Error: '+error.message,'error'); return; }
   notify('Lead eliminado','info');
   closeLeadForm();
