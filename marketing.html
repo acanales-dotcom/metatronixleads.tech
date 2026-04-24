@@ -4171,7 +4171,8 @@ window.saveSocialCred = async function(platform) {
   localStorage.setItem('mtx_social_creds', JSON.stringify(creds));
   // Also save to Supabase
   try {
-    await getDB().from('portal_settings').upsert({ key:`social_${platform}_token`, value:val });
+    const _cid = typeof getActiveCompanyId === 'function' ? getActiveCompanyId() : null;
+    await getDB().from('portal_settings').upsert({ key:`social_${platform}_token`, value:val, company_id: _cid });
   } catch {}
   if(typeof Notiflix!=='undefined') Notiflix.Notify.success(`${platform.charAt(0).toUpperCase()+platform.slice(1)} conectado ✓`);
   // Refresh form

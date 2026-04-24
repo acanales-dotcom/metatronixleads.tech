@@ -642,7 +642,7 @@
 
 <script src="/assets/libs/supabase.min.js"></script>
 <script src="/config.js"></script>
-<script src="/assets/app.js?v=20260421"></script>
+<script src="/assets/app.js?v=20260420i"></script>
 <script src="/assets/agent.js?v=20260422"></script>
 <!-- ALEX: Sales Coach Agent -->
 <script src="/assets/salescoach.js?v=20260421"></script>
@@ -712,11 +712,18 @@ async function refreshAll() {
 
 async function loadStats() {
   const db = getDB();
+  const cid = getActiveCompanyId();
+  // Filtrar por empresa activa para evitar cruce de datos entre empresas
+  const profilesQ = db.from('profiles').select('id', { count: 'exact', head: true });
+  const docsQ     = db.from('documents').select('id', { count: 'exact', head: true });
+  const pendQ     = db.from('documents').select('id', { count: 'exact', head: true }).eq('status', 'pending_review');
+  const alertsQ   = db.from('alerts').select('id', { count: 'exact', head: true }).eq('is_read', false);
+  // Aplicar filtro de empresa donde aplica
   const [users, docs, pending, alerts] = await Promise.all([
-    db.from('profiles').select('id', { count: 'exact', head: true }),
-    db.from('documents').select('id', { count: 'exact', head: true }),
-    db.from('documents').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
-    db.from('alerts').select('id', { count: 'exact', head: true }).eq('is_read', false),
+    cid ? profilesQ.in('id', db.from('user_companies').select('user_id').eq('company_id', cid)) : profilesQ,
+    cid ? docsQ.eq('company_id', cid) : docsQ,
+    cid ? pendQ.eq('company_id', cid) : pendQ,
+    alertsQ,
   ]);
   document.getElementById('stat-users').textContent = users.count ?? '—';
   document.getElementById('stat-docs').textContent = docs.count ?? '—';
@@ -1151,9 +1158,12 @@ const LEAD_STATUS_LABELS = {
 
 async function loadLeadsAdmin() {
   const db = getDB();
-  const { data } = await db.from('leads')
+  const cid = getActiveCompanyId();
+  let q = db.from('leads')
     .select('*, profiles!user_id(full_name, email)')
     .order('updated_at', { ascending: false });
+  if (cid) q = q.eq('company_id', cid); // solo leads de la empresa activa
+  const { data } = await q;
   allLeadsAdmin = data || [];
 
   // Poblar filtro de usuario
@@ -1245,10 +1255,15 @@ async function loadColaboradores() {
   const container = document.getElementById('colaboradores-grid');
   container.innerHTML = '<div style="color:var(--text-muted);padding:24px">Cargando datos...</div>';
 
+  const cid2 = getActiveCompanyId();
+  // Filtrar por empresa activa — evita mezclar colaboradores de IBANOR/MetaTronix/Nexus
+  let leadsColQ = db.from('leads').select('id,user_id,status,valor_estimado,empresa,created_at');
+  let docsColQ  = db.from('documents').select('id,user_id,status,doc_type,title,updated_at');
+  if (cid2) { leadsColQ = leadsColQ.eq('company_id', cid2); docsColQ = docsColQ.eq('company_id', cid2); }
   const [{ data: users }, { data: leads }, { data: docs }, { data: acts }] = await Promise.all([
     db.from('profiles').select('id,email,full_name,role,is_active,last_seen'),
-    db.from('leads').select('id,user_id,status,valor_estimado,empresa,created_at'),
-    db.from('documents').select('id,user_id,status,doc_type,title,updated_at'),
+    leadsColQ,
+    docsColQ,
     db.from('activity_logs').select('user_id,action,created_at').order('created_at',{ascending:false}).limit(500),
   ]);
 
