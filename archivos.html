@@ -891,41 +891,29 @@ function getActiveCompanyName() {
 /* ── Init ─────────────────────────────────────────────── */
 async function init() {
   CU = await requireAuth();
+  if (!CU) return;
 
-  // ── Gate: solo usuarios con acceso IBANOR pueden ver esta página ──
-  const IBANOR_ID = 'a0000000-0000-0000-0000-000000000001';
   const db = getDB();
-  const { data: ibanorAccess } = await db
-    .from('user_companies')
-    .select('company_id')
-    .eq('user_id', CU.id)
-    .eq('company_id', IBANOR_ID)
-    .maybeSingle();
-
-  if (!ibanorAccess) {
-    document.body.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;height:100vh;
-                  background:#0a0f1a;flex-direction:column;gap:16px;font-family:sans-serif">
-        <div style="font-size:48px">🔒</div>
-        <div style="color:#fff;font-size:18px;font-weight:700">Acceso restringido</div>
-        <div style="color:#666;font-size:13px">Esta sección es exclusiva de IBANOR SA de CV</div>
-        <a href="/home.html" style="margin-top:8px;color:#00ff88;font-size:13px;text-decoration:none">
-          ← Volver al inicio
-        </a>
-      </div>`;
-    return;
-  }
-  // ── /Gate ───────────────────────────────────────────────────────────
 
   document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'archivos');
-
   document.getElementById('fmLayout').style.display = 'flex';
   fillPeriod();
-  // Asegurar que MTX_ACTIVE_COMPANY esté seteado antes de buildTree
-  // Esta página es exclusiva de IBANOR — usar siempre IBANOR_ID como fallback
+
+  // Si no hay empresa activa en el switcher, usar la primera empresa del usuario
   if (!window.MTX_ACTIVE_COMPANY) {
-    window.MTX_ACTIVE_COMPANY = { id: IBANOR_ID, name: 'IBANOR SA de CV' };
+    const { data: uc } = await db
+      .from('user_companies')
+      .select('company_id, companies(id, name)')
+      .eq('user_id', CU.id)
+      .limit(1)
+      .maybeSingle();
+    if (uc?.companies) {
+      window.MTX_ACTIVE_COMPANY = { id: uc.companies.id, name: uc.companies.name };
+    } else if (CU.profile?.company_id) {
+      window.MTX_ACTIVE_COMPANY = { id: CU.profile.company_id, name: CU.profile.company_id };
+    }
   }
+
   await buildTree();
 
   // Recargar árbol y archivos cuando cambia de empresa

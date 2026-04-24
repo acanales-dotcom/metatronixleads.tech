@@ -630,6 +630,10 @@ function renderHeader(user, activePage) {
 
       <!-- DOCUMENTOS -->
       <div class="sidebar-section-label">Documentos</div>
+      <a href="/archivos.html" class="sidebar-nav-link ${activePage==='archivos'?'active':''}">
+        <span class="nav-icon">🗂️</span>
+        <span class="nav-label">Archivos Admin</span>
+      </a>
       <a href="/documentos.html" class="sidebar-nav-link ${activePage==='documentos'?'active':''}">
         <span class="nav-icon">📁</span>
         <span class="nav-label">Biblioteca Docs</span>
