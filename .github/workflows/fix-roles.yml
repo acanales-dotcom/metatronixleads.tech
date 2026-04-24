@@ -84,10 +84,10 @@ jobs:
               },
               'nibarra@ibanormexico.com': {
                   'role': 'admin',
-                  'primary': MTX,
+                  'primary': IBANOR,  # empresa primaria = IBANOR
                   'companies': [
-                      (MTX,    'admin'),
                       (IBANOR, 'admin'),
+                      (MTX,    'admin'),
                   ],
               },
               'acanalesf@ibanormexico.com': {
