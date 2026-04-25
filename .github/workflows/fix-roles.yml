@@ -137,13 +137,13 @@ jobs:
               'frida@retaillab.com.mx': {
                   'role': 'user',
                   'primary': MTX,
-                  'companies': [(MTX, 'member')],
+                  'companies': [(MTX, 'member'), (DEMO, 'member')],
                   'supervisor': 'jorge@retaillab.com.mx',
               },
               'aamaya@todoretail.com': {
                   'role': 'user',
                   'primary': MTX,
-                  'companies': [(MTX, 'member')],
+                  'companies': [(MTX, 'member'), (DEMO, 'member')],
                   'supervisor': 'jorge@retaillab.com.mx',
               },
           }
