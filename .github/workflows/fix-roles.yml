@@ -102,6 +102,14 @@ jobs:
                       (DEMO,   'member'),            # Nexus-Demo: acceso básico
                   ],
               },
+              'clopez@ibanormexico.com': {
+                  'role': 'admin_restringido',
+                  'primary': MTX,
+                  'companies': [
+                      (MTX,  'member'),
+                      (DEMO, 'member'),
+                  ],
+              },
               'jorge@retaillab.com.mx': {
                   'role': 'admin_restringido',
                   'primary': MTX,
