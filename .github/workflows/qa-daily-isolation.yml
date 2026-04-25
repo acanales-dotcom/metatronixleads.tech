@@ -109,6 +109,46 @@ jobs:
 
           print()
 
+          # ── 2b. USUARIOS por empresa — verificar aislamiento ──────────────
+          print('  ── Base de datos de usuarios por empresa ────────────')
+          uc_all = api_sk('/rest/v1/user_companies?select=user_id,company_id,role&limit=2000')
+          if isinstance(uc_all, list) and uc_all:
+              # Agrupar membresías por empresa
+              uc_by_co = {}
+              for row in uc_all:
+                  cid = row.get('company_id')
+                  if not cid:
+                      warnings.append('user_companies: fila sin company_id')
+                      continue
+                  if cid not in all_company_ids:
+                      failures.append(f'CRÍTICO user_companies: company_id desconocido {cid}')
+                      continue
+                  uc_by_co.setdefault(cid, []).append(row)
+
+              label_map = {c['id']: c['slug'] for c in companies}
+              for cid, members in uc_by_co.items():
+                  slug = label_map.get(cid, cid[:12])
+                  roles = {}
+                  for m in members:
+                      r = m.get('role', 'unknown')
+                      roles[r] = roles.get(r, 0) + 1
+                  role_str = ' | '.join(f'{r}:{n}' for r,n in sorted(roles.items()))
+                  print(f'  ✅ {slug:20} {len(members):3} usuarios — {role_str}')
+
+              # Verificar usuarios sin membresía en ninguna empresa
+              all_uids_uc = {r['user_id'] for r in uc_all}
+              profiles_all = api_sk('/rest/v1/profiles?select=id,email&limit=2000')
+              if isinstance(profiles_all, list):
+                  orphans = [p for p in profiles_all if p['id'] not in all_uids_uc]
+                  if orphans:
+                      warnings.append(f'{len(orphans)} perfiles sin empresa asignada en user_companies')
+                      print(f'  ⚠ {len(orphans)} perfiles sin empresa: {[p["email"] for p in orphans[:5]]}')
+                  else:
+                      print(f'  ✅ Todos los perfiles tienen empresa asignada ✓')
+          else:
+              warnings.append('No se pudo verificar user_companies')
+          print()
+
           # ── 3. Verificar CRUCE por empresa — cada empresa ve solo lo suyo ─
           print('  ── Cruce entre empresas (por par) ──────────────────')
           tables_to_cross_check = ['leads', 'metatronix_docs', 'events']

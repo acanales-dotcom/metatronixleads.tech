@@ -672,6 +672,10 @@ function renderHeader(user, activePage) {
         <span class="nav-icon">⚙</span>
         <span class="nav-label">Panel Sistema</span>
       </a>
+      <a href="/usuarios.html" class="sidebar-nav-link ${activePage==='usuarios'?'active':''}">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Usuarios por Empresa</span>
+      </a>
       <a href="/empresas.html" class="sidebar-nav-link ${activePage==='empresas'?'active':''}">
         <span class="nav-icon">🏢</span>
         <span class="nav-label">Empresas</span>

@@ -824,9 +824,32 @@ function filterDocs() {
 }
 
 async function loadUsers() {
-  const db = getDB();
-  const { data } = await db.from('profiles').select('*').order('created_at', { ascending: false });
-  allUsersData = data || [];
+  const db  = getDB();
+  const cid = getActiveCompanyId();
+
+  // ── Query aislada por empresa ─────────────────────────────────
+  // Siempre filtra por empresa activa via user_companies → NO hay lista global
+  let ucQuery = db
+    .from('user_companies')
+    .select('id, role, user_id, profiles(id, email, full_name, role, is_active, last_seen)')
+    .order('created_at', { ascending: false });
+
+  if (cid) ucQuery = ucQuery.eq('company_id', cid);
+
+  const { data: ucRows } = await ucQuery;
+
+  // Extraer perfiles únicos con su rol EN esta empresa
+  const seen = new Set();
+  allUsersData = [];
+  (ucRows || []).forEach(row => {
+    if (!row.profiles?.id || seen.has(row.profiles.id)) return;
+    seen.add(row.profiles.id);
+    allUsersData.push({
+      ...row.profiles,
+      company_role: row.role,   // rol específico en esta empresa
+      uc_id: row.id,
+    });
+  });
 
   // Populate activity filter
   const sel = document.getElementById('activity-user-filter');
@@ -835,28 +858,32 @@ async function loadUsers() {
     allUsersData.map(u => `<option value="${u.id}">${escHtml(u.full_name || u.email)}</option>`).join('');
   if (cur) sel.value = cur;
 
-  // Get doc counts
-  const { data: docCounts } = await db.from('documents').select('user_id');
+  // Get doc counts (solo de esta empresa)
+  let docQuery = db.from('documents').select('user_id');
+  if (cid) docQuery = docQuery.eq('company_id', cid);
+  const { data: docCounts } = await docQuery;
   const countMap = {};
   (docCounts || []).forEach(d => { countMap[d.user_id] = (countMap[d.user_id] || 0) + 1; });
 
   const tbody = document.getElementById('users-tbody');
   if (!allUsersData.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Sin usuarios</td></tr>';
+    const coName = window.MTX_ACTIVE_COMPANY?.name || 'esta empresa';
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Sin usuarios en ${escHtml(coName)} — <a href="/usuarios.html" style="color:var(--accent)">Gestionar usuarios →</a></td></tr>`;
     return;
   }
+
+  const ROLE_LABEL = { super_admin:'Super Admin', admin:'Admin', admin_restringido:'Admin Rest.', user:'Colaborador', member:'Miembro' };
   tbody.innerHTML = allUsersData.map(u => `
     <tr class="user-row">
       <td>${escHtml(u.full_name || u.email.split('@')[0])}</td>
       <td><span class="td-mono">${escHtml(u.email)}</span></td>
-      <td>${u.role === 'admin' ? '<span class="badge badge-accent">Admin</span>' : '<span class="badge badge-neutral">Colaborador</span>'}</td>
+      <td><span class="badge ${['admin','super_admin'].includes(u.company_role)?'badge-accent':'badge-neutral'}">${ROLE_LABEL[u.company_role] || u.company_role || '—'}</span></td>
       <td><span class="td-mono">${countMap[u.id] || 0}</span></td>
       <td><span class="td-mono" style="font-size:11px">${u.last_seen ? formatDate(u.last_seen) : 'Nunca'}</span></td>
       <td><span class="${u.is_active ? 'dot-online' : 'dot-offline'}"></span>${u.is_active ? 'Activo' : 'Inactivo'}</td>
       <td>
         ${!isRestrictedAdmin ? `<div style="display:flex;gap:4px">
-          ${u.role !== 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${u.id}', true)">→ Admin</button>` :
-                                  `<button class="btn btn-ghost btn-sm" onclick="toggleAdmin('${u.id}', false)">→ User</button>`}
+          <a href="/usuarios.html" class="btn btn-ghost btn-sm" title="Gestionar en panel de usuarios">Editar</a>
           <button class="btn btn-ghost btn-sm" onclick="toggleActive('${u.id}', ${!u.is_active})">${u.is_active ? 'Desactivar' : 'Activar'}</button>
         </div>` : '<span style="font-size:11px;color:var(--text-faint)">Solo lectura</span>'}
       </td>

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Usuarios — MetaTronix Portal</title>
+<link rel="stylesheet" href="/assets/fonts.css">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+/* ── Layout ─────────────────────────────────────────────────── */
+.page-wrap { display:flex; min-height:100vh; }
+.main { flex:1; padding:32px 36px; max-width:1100px; overflow-x:hidden; }
+
+/* ── Header empresa ─────────────────────────────────────────── */
+.co-header {
+  display:flex; align-items:center; gap:14px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; padding:16px 20px; margin-bottom:24px;
+}
+.co-badge {
+  font-family:'Bebas Neue',sans-serif; font-size:22px;
+  letter-spacing:2px; color:var(--accent);
+}
+.co-meta { flex:1; }
+.co-meta h2 { font-size:18px; font-weight:700; margin-bottom:2px; }
+.co-meta p  { font-size:12px; color:var(--text-muted); }
+.co-stat { text-align:center; min-width:70px; }
+.co-stat-num { font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; color:var(--accent); line-height:1; }
+.co-stat-lbl { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; }
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+.toolbar {
+  display:flex; align-items:center; gap:10px; margin-bottom:20px; flex-wrap:wrap;
+}
+.search-box {
+  flex:1; min-width:200px; max-width:340px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:8px 14px; color:var(--text); font-size:13px;
+  outline:none;
+}
+.search-box:focus { border-color:var(--accent); }
+.filter-select {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:8px 12px; color:var(--text); font-size:12px;
+  cursor:pointer; outline:none;
+}
+.btn-add {
+  margin-left:auto; background:var(--accent); color:#000;
+  font-weight:700; font-size:12px; letter-spacing:.04em;
+  border:none; border-radius:8px; padding:9px 18px; cursor:pointer;
+  display:flex; align-items:center; gap:6px;
+}
+.btn-add:hover { opacity:.9; }
+
+/* ── Cards grid ─────────────────────────────────────────────── */
+.users-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:14px;
+}
+
+/* ── User card ───────────────────────────────────────────────── */
+.user-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; padding:18px; position:relative; overflow:hidden;
+  transition:.15s;
+}
+.user-card:hover { border-color:rgba(0,255,136,.25); transform:translateY(-1px); }
+.user-card.inactive { opacity:.55; }
+.user-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+}
+.role-super_admin::before  { background:#7c3aed; }
+.role-admin::before        { background:var(--accent); }
+.role-admin_restringido::before { background:#F97316; }
+.role-user::before         { background:#60A5FA; }
+.role-member::before       { background:#475569; }
+
+.uc-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.uc-avatar {
+  width:42px; height:42px; border-radius:10px;
+  background:rgba(0,255,136,.12); border:1px solid rgba(0,255,136,.2);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--accent);
+  flex-shrink:0;
+}
+.uc-info { flex:1; min-width:0; }
+.uc-name { font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.uc-email { font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+
+.uc-badges { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+.role-badge {
+  font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px;
+  letter-spacing:.04em; text-transform:uppercase;
+}
+.rb-super_admin  { background:rgba(124,58,237,.15); color:#a78bfa; border:1px solid rgba(124,58,237,.25); }
+.rb-admin        { background:rgba(0,255,136,.1); color:var(--accent); border:1px solid rgba(0,255,136,.2); }
+.rb-admin_restringido { background:rgba(249,115,22,.1); color:#F97316; border:1px solid rgba(249,115,22,.2); }
+.rb-user         { background:rgba(96,165,250,.1); color:#60A5FA; border:1px solid rgba(96,165,250,.2); }
+.rb-member       { background:rgba(71,85,105,.2); color:#94A3B8; border:1px solid rgba(71,85,105,.3); }
+.status-badge {
+  font-size:10px; padding:2px 8px; border-radius:4px;
+  display:flex; align-items:center; gap:4px;
+}
+.sb-active   { background:rgba(0,255,136,.08); color:var(--accent); }
+.sb-inactive { background:rgba(248,113,113,.08); color:#F87171; }
+.sb-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+.uc-meta {
+  display:flex; gap:12px; font-size:11px; color:var(--text-muted);
+  border-top:1px solid var(--border); padding-top:10px; margin-bottom:10px;
+}
+.uc-meta span { display:flex; align-items:center; gap:4px; }
+
+.uc-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.uca-btn {
+  font-size:11px; padding:4px 10px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; color:var(--text-muted); cursor:pointer; transition:.12s;
+}
+.uca-btn:hover { border-color:var(--accent); color:var(--accent); }
+.uca-btn.danger:hover { border-color:#F87171; color:#F87171; }
+.uca-btn.primary { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.empty-state {
+  grid-column:1/-1; text-align:center; padding:60px 20px;
+  color:var(--text-muted); font-size:14px;
+}
+.empty-icon { font-size:48px; margin-bottom:12px; }
+
+/* ── MODAL ───────────────────────────────────────────────────── */
+.modal-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.6); backdrop-filter:blur(4px);
+  z-index:9000; align-items:center; justify-content:center; padding:20px;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  background:var(--bg2,#111827); border:1px solid var(--border);
+  border-radius:14px; padding:28px; width:100%; max-width:440px;
+  position:relative;
+}
+.modal h3 { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; margin-bottom:4px; }
+.modal-sub { font-size:12px; color:var(--text-muted); margin-bottom:20px; }
+.field { margin-bottom:14px; }
+.field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:5px; }
+.field input, .field select {
+  width:100%; background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none;
+}
+.field input:focus, .field select:focus { border-color:var(--accent); }
+.modal-actions { display:flex; gap:8px; margin-top:20px; }
+.modal-actions .btn-cancel {
+  flex:1; background:transparent; border:1px solid var(--border); color:var(--text-muted);
+  border-radius:8px; padding:9px; cursor:pointer; font-size:13px;
+}
+.modal-actions .btn-save {
+  flex:1; background:var(--accent); border:none; color:#000;
+  border-radius:8px; padding:9px; cursor:pointer; font-size:13px; font-weight:700;
+}
+
+/* ── Role editor modal ───────────────────────────────────────── */
+.role-option {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border:1px solid var(--border); border-radius:8px; margin-bottom:8px;
+  cursor:pointer; transition:.12s;
+}
+.role-option:hover, .role-option.selected { border-color:var(--accent); background:rgba(0,255,136,.05); }
+.role-option input[type=radio] { accent-color:var(--accent); }
+.role-opt-info h4 { font-size:13px; font-weight:700; margin-bottom:2px; }
+.role-opt-info p  { font-size:11px; color:var(--text-muted); }
+
+/* ── Loader ──────────────────────────────────────────────────── */
+.spinner {
+  width:20px; height:20px; border:2px solid var(--border);
+  border-top-color:var(--accent); border-radius:50%;
+  animation:spin .7s linear infinite; display:inline-block;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-row { grid-column:1/-1; display:flex; justify-content:center; padding:48px; }
+</style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="page-wrap">
+  <div class="main">
+
+    <!-- Company header -->
+    <div class="co-header" id="co-header">
+      <div class="co-badge" id="co-initials">—</div>
+      <div class="co-meta">
+        <h2 id="co-name">Cargando empresa...</h2>
+        <p id="co-id" style="font-family:'JetBrains Mono',monospace;font-size:10px"></p>
+      </div>
+      <div class="co-stat">
+        <div class="co-stat-num" id="stat-total">—</div>
+        <div class="co-stat-lbl">Usuarios</div>
+      </div>
+      <div class="co-stat" style="margin-left:8px">
+        <div class="co-stat-num" id="stat-active">—</div>
+        <div class="co-stat-lbl">Activos</div>
+      </div>
+      <div class="co-stat" style="margin-left:8px">
+        <div class="co-stat-num" id="stat-admins">—</div>
+        <div class="co-stat-lbl">Admins</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <input class="search-box" id="search-input" type="text"
+             placeholder="Buscar por nombre o email…" oninput="filterUsers()">
+      <select class="filter-select" id="role-filter" onchange="filterUsers()">
+        <option value="">Todos los roles</option>
+        <option value="super_admin">Super Admin</option>
+        <option value="admin">Administrador</option>
+        <option value="admin_restringido">Admin Restringido</option>
+        <option value="user">Usuario</option>
+        <option value="member">Miembro</option>
+      </select>
+      <select class="filter-select" id="status-filter" onchange="filterUsers()">
+        <option value="">Todos</option>
+        <option value="active">Activos</option>
+        <option value="inactive">Inactivos</option>
+      </select>
+      <button class="btn-add" id="btn-add" onclick="openAddModal()">
+        <span>+</span> Agregar Usuario
+      </button>
+    </div>
+
+    <!-- Users grid -->
+    <div class="users-grid" id="users-grid">
+      <div class="loading-row"><div class="spinner"></div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── MODAL: Agregar usuario a empresa ── -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <h3>AGREGAR USUARIO</h3>
+    <p class="modal-sub" id="add-modal-sub">Agregar a <strong id="add-co-name">—</strong></p>
+
+    <div style="background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.15);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text-muted)">
+      <strong style="color:var(--accent)">Base de datos aislada.</strong> Este usuario solo existirá en esta empresa. No se comparte con otras empresas del portal.
+    </div>
+
+    <div class="field">
+      <label>Nombre completo *</label>
+      <input id="f-name" type="text" placeholder="Ej: Juan Pérez García">
+    </div>
+    <div class="field">
+      <label>Correo electrónico *</label>
+      <input id="f-email" type="email" placeholder="juan@empresa.com">
+    </div>
+    <div class="field">
+      <label>Contraseña temporal *</label>
+      <input id="f-password" type="password" placeholder="Mínimo 8 caracteres">
+    </div>
+    <div class="field">
+      <label>Rol en esta empresa *</label>
+      <select id="f-role">
+        <option value="user">Usuario — acceso básico</option>
+        <option value="admin_restringido">Admin Restringido — módulos específicos</option>
+        <option value="admin">Administrador — acceso completo</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddModal()">Cancelar</button>
+      <button class="btn-save" id="btn-save" onclick="saveNewUser()">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Editar rol ── -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h3>EDITAR ACCESO</h3>
+    <p class="modal-sub">Cambiar rol de <strong id="edit-user-name">—</strong> en <strong id="edit-co-name">—</strong></p>
+
+    <input type="hidden" id="edit-user-id">
+    <input type="hidden" id="edit-uc-id">
+
+    <div class="role-option" onclick="selectRole('user')">
+      <input type="radio" name="edit-role" value="user" id="r-user">
+      <div class="role-opt-info">
+        <h4 style="color:#60A5FA">👤 Usuario</h4>
+        <p>Acceso básico — consulta y operaciones propias</p>
+      </div>
+    </div>
+    <div class="role-option" onclick="selectRole('admin_restringido')">
+      <input type="radio" name="edit-role" value="admin_restringido" id="r-restricted">
+      <div class="role-opt-info">
+        <h4 style="color:#F97316">🔧 Admin Restringido</h4>
+        <p>Acceso a módulos específicos definidos por el admin</p>
+      </div>
+    </div>
+    <div class="role-option" onclick="selectRole('admin')">
+      <input type="radio" name="edit-role" value="admin" id="r-admin">
+      <div class="role-opt-info">
+        <h4 style="color:var(--accent)">⚙️ Administrador</h4>
+        <p>Acceso completo a todos los módulos de esta empresa</p>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn-save" id="btn-edit-save" onclick="saveEditRole()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Confirmar eliminar de empresa ── -->
+<div class="modal-overlay" id="remove-modal">
+  <div class="modal">
+    <h3>QUITAR DE EMPRESA</h3>
+    <p class="modal-sub" id="remove-desc">—</p>
+    <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:12px 14px;font-size:12px;color:#F87171;margin-bottom:16px">
+      ⚠ El usuario perderá acceso a esta empresa. Su cuenta y sus membresías en otras empresas no se ven afectadas.
+    </div>
+    <input type="hidden" id="remove-user-id">
+    <input type="hidden" id="remove-uc-id">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeRemoveModal()">Cancelar</button>
+      <button class="btn-save" id="btn-remove-save" style="background:#F87171" onclick="confirmRemove()">Quitar acceso</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/libs/supabase.min.js"></script>
+<script src="/assets/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+'use strict';
+
+const ROLE_LABELS = {
+  super_admin:      'Super Admin',
+  admin:            'Administrador',
+  admin_restringido:'Admin Restringido',
+  user:             'Usuario',
+  member:           'Miembro',
+};
+
+const ROLE_BADGE_CLS = {
+  super_admin:       'rb-super_admin',
+  admin:             'rb-admin',
+  admin_restringido: 'rb-admin_restringido',
+  user:              'rb-user',
+  member:            'rb-member',
+};
+
+let CU = null;            // current user
+let COMPANY_ID   = null;  // empresa activa
+let COMPANY_NAME = '';
+let allUsers = [];        // rows from user_companies JOIN profiles
+
+/* ── Init ──────────────────────────────────────────────────── */
+async function init() {
+  CU = await requireAuth(['admin', 'admin_restringido', 'super_admin']);
+  if (!CU) return;
+
+  document.getElementById('header-placeholder').innerHTML = renderHeader(CU, 'usuarios');
+
+  // Empresa activa
+  COMPANY_ID   = getActiveCompanyId();
+  COMPANY_NAME = window.MTX_ACTIVE_COMPANY?.name || 'Empresa';
+
+  // Si no hay empresa activa, usar empresa del usuario
+  if (!COMPANY_ID && CU.profile?.company_id) {
+    COMPANY_ID   = CU.profile.company_id;
+    COMPANY_NAME = CU.profile.company_id;
+  }
+
+  updateCompanyHeader();
+  await loadUsers();
+
+  // Actualizar cuando cambia empresa
+  window.addEventListener('mtx:companySwitch', async () => {
+    COMPANY_ID   = getActiveCompanyId();
+    COMPANY_NAME = window.MTX_ACTIVE_COMPANY?.name || 'Empresa';
+    updateCompanyHeader();
+    await loadUsers();
+  });
+}
+
+function updateCompanyHeader() {
+  const initials = (COMPANY_NAME || '?').slice(0, 3).toUpperCase();
+  document.getElementById('co-initials').textContent = initials;
+  document.getElementById('co-name').textContent = COMPANY_NAME;
+  document.getElementById('co-id').textContent = COMPANY_ID ? 'ID: ' + COMPANY_ID : '';
+  document.getElementById('add-co-name').textContent = COMPANY_NAME;
+  document.getElementById('edit-co-name').textContent = COMPANY_NAME;
+}
+
+/* ── Cargar SOLO usuarios de esta empresa ─────────────────── */
+async function loadUsers() {
+  const db = getDB();
+  if (!db || !COMPANY_ID) {
+    document.getElementById('users-grid').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">🏢</div><p>Selecciona una empresa para ver sus usuarios.</p></div>';
+    return;
+  }
+
+  document.getElementById('users-grid').innerHTML =
+    '<div class="loading-row"><div class="spinner"></div></div>';
+
+  // Consulta: user_companies JOIN profiles — SOLO de esta empresa
+  const { data, error } = await db
+    .from('user_companies')
+    .select(`
+      id,
+      role,
+      created_at,
+      user_id,
+      profiles (
+        id, email, full_name, role, is_active, last_seen, company_id
+      )
+    `)
+    .eq('company_id', COMPANY_ID)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    document.getElementById('users-grid').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">❌</div><p>Error al cargar usuarios: ${escHtml(error.message)}</p></div>`;
+    return;
+  }
+
+  // Filtrar filas que tienen profiles válidos
+  allUsers = (data || []).filter(r => r.profiles?.id);
+
+  updateStats();
+  renderGrid(allUsers);
+}
+
+function updateStats() {
+  const total   = allUsers.length;
+  const active  = allUsers.filter(u => u.profiles?.is_active !== false).length;
+  const admins  = allUsers.filter(u => ['admin','super_admin','admin_restringido'].includes(u.role)).length;
+  document.getElementById('stat-total').textContent  = total;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-admins').textContent = admins;
+}
+
+/* ── Render cards ──────────────────────────────────────────── */
+function renderGrid(users) {
+  const grid = document.getElementById('users-grid');
+  if (!users.length) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">👥</div>
+      <p>No hay usuarios en <strong>${escHtml(COMPANY_NAME)}</strong></p>
+      <p style="margin-top:8px;font-size:12px">Usa "+ Agregar Usuario" para invitar al primero.</p>
+    </div>`;
+    return;
+  }
+
+  const isAdmin = ['admin', 'super_admin'].includes(CU.profile?.role);
+
+  grid.innerHTML = users.map(u => {
+    const p      = u.profiles;
+    const name   = p.full_name || p.email.split('@')[0];
+    const initials = (name[0] || '?').toUpperCase();
+    const role   = u.role || p.role || 'user';
+    const active = p.is_active !== false;
+    const lastSeen = p.last_seen
+      ? new Date(p.last_seen).toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'})
+      : 'Nunca';
+
+    // Es primary de esta empresa?
+    const isPrimary = p.company_id === COMPANY_ID;
+
+    return `
+    <div class="user-card role-${role}${active ? '' : ' inactive'}" id="uc-${u.id}">
+      <div class="uc-top">
+        <div class="uc-avatar">${escHtml(initials)}</div>
+        <div class="uc-info">
+          <div class="uc-name" title="${escHtml(p.full_name || p.email)}">${escHtml(name)}</div>
+          <div class="uc-email" title="${escHtml(p.email)}">${escHtml(p.email)}</div>
+        </div>
+      </div>
+      <div class="uc-badges">
+        <span class="role-badge ${ROLE_BADGE_CLS[role] || 'rb-member'}">${ROLE_LABELS[role] || role}</span>
+        <span class="status-badge ${active ? 'sb-active' : 'sb-inactive'}">
+          <span class="sb-dot"></span>${active ? 'Activo' : 'Inactivo'}
+        </span>
+        ${isPrimary ? '<span class="role-badge" style="background:rgba(96,165,250,.1);color:#60A5FA;border:1px solid rgba(96,165,250,.2)">Principal</span>' : ''}
+      </div>
+      <div class="uc-meta">
+        <span>🕐 ${lastSeen}</span>
+        <span style="margin-left:auto;font-family:\'JetBrains Mono\',monospace;font-size:10px;opacity:.5">${u.id.slice(0,8)}…</span>
+      </div>
+      ${isAdmin ? `<div class="uc-actions">
+        <button class="uca-btn" onclick="openEditModal('${u.id}','${escHtml(u.user_id)}','${escHtml(name)}','${role}')">Cambiar rol</button>
+        <button class="uca-btn" onclick="toggleUserActive('${u.user_id}', ${!active})">${active ? 'Desactivar' : 'Activar'}</button>
+        <button class="uca-btn danger" onclick="openRemoveModal('${u.id}','${escHtml(u.user_id)}','${escHtml(name)}')">Quitar de empresa</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ── Filtros ───────────────────────────────────────────────── */
+function filterUsers() {
+  const q      = (document.getElementById('search-input').value || '').toLowerCase();
+  const role   = document.getElementById('role-filter').value;
+  const status = document.getElementById('status-filter').value;
+
+  const filtered = allUsers.filter(u => {
+    const p    = u.profiles;
+    const name = (p.full_name || p.email || '').toLowerCase();
+    const matchQ = !q || name.includes(q) || p.email.toLowerCase().includes(q);
+    const matchR = !role || u.role === role;
+    const active = p.is_active !== false;
+    const matchS = !status || (status === 'active' && active) || (status === 'inactive' && !active);
+    return matchQ && matchR && matchS;
+  });
+
+  renderGrid(filtered);
+}
+
+/* ── MODAL: Agregar ────────────────────────────────────────── */
+function openAddModal() {
+  document.getElementById('add-modal').classList.add('open');
+  document.getElementById('f-name').focus();
+}
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  ['f-name','f-email','f-password'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function saveNewUser() {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'Creando…';
+
+  const name     = document.getElementById('f-name').value.trim();
+  const email    = document.getElementById('f-email').value.trim().toLowerCase();
+  const password = document.getElementById('f-password').value;
+  const role     = document.getElementById('f-role').value;
+
+  if (!name || !email || !password) {
+    toast('Completa todos los campos', 'warn');
+    btn.disabled = false; btn.textContent = 'Crear Usuario'; return;
+  }
+  if (password.length < 8) {
+    toast('La contraseña debe tener al menos 8 caracteres', 'warn');
+    btn.disabled = false; btn.textContent = 'Crear Usuario'; return;
+  }
+
+  const db = getDB();
+  try {
+    // 1. Crear cuenta en Supabase Auth
+    const { data: authData, error: authErr } = await db.auth.signUp({
+      email, password,
+      options: { data: { full_name: name } }
+    });
+    if (authErr) throw authErr;
+    if (!authData.user) throw new Error('No se creó el usuario en Auth');
+
+    const uid = authData.user.id;
+
+    // 2. Upsert profile
+    await db.from('profiles').upsert({
+      id: uid, email, full_name: name,
+      role,                    // rol global = rol en esta empresa
+      company_id: COMPANY_ID,  // empresa primaria = esta empresa
+      is_active: true,
+    }, { onConflict: 'id' });
+
+    // 3. Insertar membresía en user_companies SOLO para esta empresa
+    const { error: ucErr } = await db.from('user_companies').upsert({
+      user_id: uid,
+      company_id: COMPANY_ID,
+      role,
+    }, { onConflict: 'user_id,company_id' });
+    if (ucErr) throw ucErr;
+
+    closeAddModal();
+    toast(`✅ ${name} agregado a ${COMPANY_NAME}`, 'ok');
+    await loadUsers();
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+  }
+
+  btn.disabled = false; btn.textContent = 'Crear Usuario';
+}
+
+/* ── MODAL: Editar rol ─────────────────────────────────────── */
+function openEditModal(ucId, userId, userName, currentRole) {
+  document.getElementById('edit-user-id').value = userId;
+  document.getElementById('edit-uc-id').value   = ucId;
+  document.getElementById('edit-user-name').textContent = userName;
+  selectRole(currentRole);
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+}
+function selectRole(role) {
+  document.querySelectorAll('.role-option').forEach(el => el.classList.remove('selected'));
+  const radio = document.getElementById('r-' + (role === 'admin_restringido' ? 'restricted' : role === 'admin' ? 'admin' : 'user'));
+  if (radio) {
+    radio.checked = true;
+    radio.closest('.role-option')?.classList.add('selected');
+  }
+}
+
+async function saveEditRole() {
+  const btn = document.getElementById('btn-edit-save');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+
+  const ucId   = document.getElementById('edit-uc-id').value;
+  const userId = document.getElementById('edit-user-id').value;
+  const role   = document.querySelector('input[name="edit-role"]:checked')?.value;
+
+  if (!role) { toast('Selecciona un rol', 'warn'); btn.disabled = false; btn.textContent = 'Guardar'; return; }
+
+  const db = getDB();
+  try {
+    // Actualizar rol en user_companies (afecta SOLO esta empresa)
+    const { error } = await db.from('user_companies')
+      .update({ role })
+      .eq('id', ucId);
+    if (error) throw error;
+
+    closeEditModal();
+    toast('Rol actualizado en ' + COMPANY_NAME + ' ✓', 'ok');
+    await loadUsers();
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Guardar';
+}
+
+/* ── Toggle activo/inactivo ────────────────────────────────── */
+async function toggleUserActive(userId, makeActive) {
+  const db = getDB();
+  const { error } = await db.from('profiles').update({ is_active: makeActive }).eq('id', userId);
+  if (error) { toast('Error: ' + error.message, 'err'); return; }
+  toast(makeActive ? 'Usuario activado ✓' : 'Usuario desactivado', 'ok');
+  await loadUsers();
+}
+
+/* ── MODAL: Quitar de empresa ──────────────────────────────── */
+function openRemoveModal(ucId, userId, userName) {
+  document.getElementById('remove-user-id').value = userId;
+  document.getElementById('remove-uc-id').value   = ucId;
+  document.getElementById('remove-desc').innerHTML =
+    `¿Quitar a <strong>${escHtml(userName)}</strong> de <strong>${escHtml(COMPANY_NAME)}</strong>?`;
+  document.getElementById('remove-modal').classList.add('open');
+}
+function closeRemoveModal() { document.getElementById('remove-modal').classList.remove('open'); }
+
+async function confirmRemove() {
+  const btn   = document.getElementById('btn-remove-save');
+  const ucId  = document.getElementById('remove-uc-id').value;
+  btn.disabled = true; btn.textContent = 'Quitando…';
+
+  const db = getDB();
+  const { error } = await db.from('user_companies').delete().eq('id', ucId);
+  if (error) { toast('Error: ' + error.message, 'err'); btn.disabled = false; btn.textContent = 'Quitar acceso'; return; }
+
+  closeRemoveModal();
+  toast('Usuario quitado de ' + COMPANY_NAME, 'ok');
+  await loadUsers();
+}
+
+/* ── Toast ─────────────────────────────────────────────────── */
+function toast(msg, type = 'ok') { showToast ? showToast(msg, type) : alert(msg); }
+
+/* ── Escape HTML ────────────────────────────────────────────── */
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Start ──────────────────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>
