@@ -1,0 +1,217 @@
+name: QA Regression — Semanal + On-Demand
+
+on:
+  schedule:
+    # Cada lunes a las 7am México (13:00 UTC)
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+    inputs:
+      fail_threshold:
+        description: 'Pass rate mínimo requerido (%)'
+        default: '95'
+        required: false
+
+env:
+  PORTAL: https://metatronixleads.tech
+  SUPABASE_URL: https://hodrfonbpmqulkyzrzpq.supabase.co
+  NODE_VERSION: '22'
+
+jobs:
+  # ── JOB 1: Smoke rápido antes de regression completa ──────────
+  smoke-pre:
+    name: 🔥 Smoke Pre-Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      portal_ok: ${{ steps.portal.outputs.ok }}
+
+    steps:
+      - name: Check portal alive
+        id: portal
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 ${{ env.PORTAL }})
+          echo "Portal HTTP: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "ok=true" >> $GITHUB_OUTPUT
+            echo "✅ Portal OK"
+          else
+            echo "ok=false" >> $GITHUB_OUTPUT
+            echo "❌ Portal no disponible (HTTP $STATUS) — abortando regression"
+          fi
+
+  # ── JOB 2: Regression suite completa ──────────────────────────
+  regression:
+    name: 🔁 Regression Suite Completa
+    runs-on: ubuntu-latest
+    needs: smoke-pre
+    if: needs.smoke-pre.outputs.portal_ok == 'true'
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Ejecutar QA Runner (9 suites)
+        id: qa
+        env:
+          MTX_PWD: ${{ secrets.MTX_TEST_PASSWORD }}
+        run: |
+          cd scripts
+          echo "→ Corriendo MTX QA Runner..."
+          node qa-runner.js || true
+          echo "→ Runner completado"
+          ls -la qa-report-*.json 2>/dev/null || echo "Sin reporte generado"
+
+      - name: Leer resultado del reporte
+        id: result
+        run: |
+          REPORT=$(ls scripts/qa-report-*.json 2>/dev/null | head -1)
+          if [ -z "$REPORT" ]; then
+            echo "pass_rate=0" >> $GITHUB_OUTPUT
+            echo "gate=false" >> $GITHUB_OUTPUT
+            echo "iso_clean=false" >> $GITHUB_OUTPUT
+            echo "summary=Sin reporte generado" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          PASS_RATE=$(cat $REPORT | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['summary']['pass_rate'])")
+          GATE=$(cat $REPORT | python3 -c "import sys,json; d=json.load(sys.stdin); print(str(d['gate']['passed']).lower())")
+          ISO=$(cat $REPORT | python3 -c "import sys,json; d=json.load(sys.stdin); print(str(d['gate']['iso_clean']).lower())")
+          TOTAL=$(cat $REPORT | python3 -c "import sys,json; d=json.load(sys.stdin); s=d['summary']; print(f\"{s['pass']}✅ {s['fail']}❌ {s['skip']}⚠️ / {s['total']}\")")
+
+          echo "pass_rate=$PASS_RATE" >> $GITHUB_OUTPUT
+          echo "gate=$GATE" >> $GITHUB_OUTPUT
+          echo "iso_clean=$ISO" >> $GITHUB_OUTPUT
+          echo "summary=$TOTAL" >> $GITHUB_OUTPUT
+
+          echo ""
+          echo "════════════════════════════════════════"
+          echo " MTX QA REGRESSION — RESULTADO"
+          echo "════════════════════════════════════════"
+          echo " Pass Rate:  $PASS_RATE%"
+          echo " Tests:      $TOTAL"
+          echo " ISO Clean:  $ISO"
+          echo " Gate:       $GATE"
+          echo "════════════════════════════════════════"
+
+      - name: Upload QA Report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report-${{ github.run_id }}
+          path: scripts/qa-report-*.json
+          retention-days: 90
+
+      - name: Mover reporte a carpeta persistente
+        run: |
+          mkdir -p qa-reports
+          cp scripts/qa-report-*.json qa-reports/ 2>/dev/null || true
+
+      # ── Abrir Issue si pass rate < threshold ──────────────────
+      - name: Abrir Issue si QA falla
+        if: steps.result.outputs.gate == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const passRate = '${{ steps.result.outputs.pass_rate }}';
+            const isoClean = '${{ steps.result.outputs.iso_clean }}';
+            const summary = '${{ steps.result.outputs.summary }}';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const date = new Date().toISOString().split('T')[0];
+
+            // Buscar issue abierto existente del mismo tipo para no duplicar
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'qa-regression,automated',
+              state: 'open'
+            });
+
+            if (existing.data.length > 0) {
+              // Añadir comentario al issue existente
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `## 🔁 Regression Run ${date}\n\n| Métrica | Valor |\n|---------|-------|\n| Pass Rate | **${passRate}%** |\n| ISO Clean | ${isoClean === 'true' ? '✅' : '❌ **CRUCE DETECTADO**'} |\n| Tests | ${summary} |\n\n[Ver run completo](${runUrl})`
+              });
+              console.log(`Comentario añadido al issue #${existing.data[0].number}`);
+            } else {
+              // Crear issue nuevo
+              const severity = isoClean === 'false' ? '🚨 BLOCKER' : '⚠️ WARNING';
+              const title = `${severity} QA Regression falló — ${date} — Pass Rate: ${passRate}%`;
+              const body = `## QA Regression — Resultado de Fallos\n\n**Fecha:** ${date}  \n**Run:** [${context.runId}](${runUrl})\n\n### Métricas\n| Métrica | Valor |\n|---------|-------|\n| Pass Rate | **${passRate}%** |\n| ISO Clean | ${isoClean === 'true' ? '✅ Sin cruces' : '❌ **CRUCE CRÍTICO DE EMPRESAS**'} |\n| Tests | ${summary} |\n\n### Acciones Requeridas\n- [ ] Revisar el [artifact del reporte](${runUrl})\n- [ ] Identificar suites con fallos\n- [ ] Fix + re-correr QA antes de siguiente deploy\n\n${isoClean === 'false' ? '> ⚠️ **ISO SUITE FALLÓ** — Posible cruce de datos entre empresas. DEPLOY BLOQUEADO hasta resolución.\n' : ''}\n---\n*Abierto automáticamente por qa-regression.yml*`;
+
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['qa-regression', 'automated', isoClean === 'false' ? 'critical' : 'bug']
+              });
+              console.log(`Issue creado: #${issue.data.number}`);
+            }
+
+      # ── Cerrar issue si QA pasa ────────────────────────────────
+      - name: Cerrar Issues de QA si todo pasa
+        if: steps.result.outputs.gate == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'qa-regression,automated',
+              state: 'open'
+            });
+
+            for (const issue of existing.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `## ✅ QA Regression Pasó — ${new Date().toISOString().split('T')[0]}\n\nPass rate: **${{ steps.result.outputs.pass_rate }}%** · ISO: ✅ · Tests: ${{ steps.result.outputs.summary }}\n\n[Run #${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n*Cerrando issue automáticamente.*`
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            }
+
+      - name: Fallar el job si gate no pasa
+        if: steps.result.outputs.gate == 'false'
+        run: |
+          echo "❌ QA Gate falló — Pass Rate: ${{ steps.result.outputs.pass_rate }}%"
+          echo "   ISO Clean: ${{ steps.result.outputs.iso_clean }}"
+          echo "   Se creó Issue en GitHub automáticamente"
+          exit 1
+
+  # ── JOB 3: Resumen en GitHub Summary ──────────────────────────
+  summary:
+    name: 📊 QA Summary
+    runs-on: ubuntu-latest
+    needs: [smoke-pre, regression]
+    if: always()
+
+    steps:
+      - name: Generar resumen en GitHub Actions
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## ⚡ MTX QA Regression — ${{ github.event_name == 'schedule' && 'Semanal Automático' || 'Manual' }}
+
+          | Componente | Estado |
+          |------------|--------|
+          | 🔥 Smoke Pre-Check | ${{ needs.smoke-pre.result == 'success' && '✅ OK' || '❌ FALLÓ' }} |
+          | 🔁 Regression Suite | ${{ needs.regression.result == 'success' && '✅ PASÓ' || needs.regression.result == 'failure' && '❌ FALLÓ' || '⏭️ Saltado' }} |
+
+          **Portal:** https://metatronixleads.tech
+          **Empresas testeadas:** IBANOR · MetaTronix · Nexus-Demo
+          **Runner:** scripts/qa-runner.js (9 suites, 42+ tests)
+
+          EOF

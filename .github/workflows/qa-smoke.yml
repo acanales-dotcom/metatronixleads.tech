@@ -1,0 +1,88 @@
+name: QA Smoke Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: 🔥 Smoke — Portal + Supabase + Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check portal HTTP 200
+        run: |
+          echo "→ Checking https://metatronixleads.tech"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://metatronixleads.tech)
+          echo "  Status: $STATUS"
+          [ "$STATUS" = "200" ] || { echo "❌ SMOKE FAIL: portal returned $STATUS"; exit 1; }
+          echo "✅ Portal OK ($STATUS)"
+
+      - name: Check critical pages load
+        run: |
+          for PAGE in leads.html admin.html archivos.html marketing.html; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://metatronixleads.tech/$PAGE")
+            echo "  $PAGE → $STATUS"
+            [ "$STATUS" = "200" ] || { echo "❌ SMOKE FAIL: $PAGE returned $STATUS"; exit 1; }
+          done
+          echo "✅ All pages OK"
+
+      - name: Check critical assets
+        run: |
+          for ASSET in assets/app.js assets/config.js assets/fonts.css; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://metatronixleads.tech/$ASSET")
+            echo "  $ASSET → $STATUS"
+            [ "$STATUS" = "200" ] || { echo "❌ SMOKE FAIL: $ASSET returned $STATUS"; exit 1; }
+          done
+          echo "✅ Assets OK"
+
+      - name: Check Supabase REST endpoint
+        env:
+          SUPABASE_URL: https://hodrfonbpmqulkyzrzpq.supabase.co
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "→ Checking Supabase REST"
+          ANON_KEY="${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            -H "apikey: $ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1")
+          echo "  Supabase REST → $STATUS"
+          [ "$STATUS" = "200" ] || [ "$STATUS" = "406" ] || { echo "❌ SMOKE FAIL: Supabase returned $STATUS"; exit 1; }
+          echo "✅ Supabase OK ($STATUS)"
+
+      - name: Check Cloudflare Worker
+        run: |
+          echo "→ Checking Cloudflare Worker"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            https://claude-proxy.acanales-7d4.workers.dev)
+          echo "  Worker → $STATUS"
+          # Worker can return 200, 400, 405 — all mean it's alive
+          [ "$STATUS" = "000" ] && { echo "❌ SMOKE FAIL: Worker unreachable (timeout/DNS)"; exit 1; }
+          echo "✅ Worker alive ($STATUS)"
+
+      - name: Check qa-v8.html accessible
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://metatronixleads.tech/qa-v8.html)
+          echo "  qa-v8.html → $STATUS"
+          [ "$STATUS" = "200" ] || { echo "❌ qa-v8.html not accessible ($STATUS)"; exit 1; }
+          echo "✅ QA runner accessible"
+
+      - name: Smoke summary
+        if: success()
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════╗"
+          echo "║  ✅  SMOKE PASSED — ALL CHECKS OK   ║"
+          echo "║  metatronixleads.tech is healthy     ║"
+          echo "╚══════════════════════════════════════╝"
+          echo ""
+          echo "Portal:     ✅"
+          echo "Pages:      ✅ (leads, admin, archivos, marketing)"
+          echo "Assets:     ✅ (app.js, config.js, fonts.css)"
+          echo "Supabase:   ✅"
+          echo "CF Worker:  ✅"
+          echo "QA Runner:  ✅"

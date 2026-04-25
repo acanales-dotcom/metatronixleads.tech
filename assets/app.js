@@ -684,6 +684,14 @@ function renderHeader(user, activePage) {
       <a href="/privacy.html" class="sidebar-nav-link ${activePage==='privacy'?'active':''}">
         <span class="nav-icon">🔒</span>
         <span class="nav-label">Privacidad / SOC 2</span>
+      </a>
+      <a href="/qa-master-plan.html" class="sidebar-nav-link ${activePage==='qa-master-plan'?'active':''}">
+        <span class="nav-icon">🧪</span>
+        <span class="nav-label">QA Master Plan</span>
+      </a>
+      <a href="/qa-v8.html" class="sidebar-nav-link ${activePage==='qa-v8'?'active':''}">
+        <span class="nav-icon">⚡</span>
+        <span class="nav-label">QA Runner v8</span>
       </a>` : ''}
 
     </nav>

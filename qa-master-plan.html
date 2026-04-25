@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MTX QA Master Plan v1 — MetaTronix 2026</title>
+<link rel="stylesheet" href="/assets/fonts.css">
+<script src="/assets/libs/supabase.min.js"></script>
+<script>
+(async function mtxAuthGuard() {
+  const SB_URL = 'https://hodrfonbpmqulkyzrzpq.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvZHJmb25icG1xdWxreXpyenBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MTQ5NTUsImV4cCI6MjA5MTQ5MDk1NX0._M-_8jazg7q6Lt9F0Ia4MNWeCO4Q83zAqKsnpCIenFY';
+  try {
+    const db = window.supabase.createClient(SB_URL, SB_KEY);
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) window.location.replace('/');
+  } catch(e) { window.location.replace('/'); }
+})();
+</script>
+<style>
+:root {
+  --bg:#0A0E18; --bg2:#111827; --bg3:#1A2236; --card:#141B2D;
+  --border:rgba(255,255,255,.08); --accent:#00ff88; --accent2:#00cc6a;
+  --red:#F87171; --yellow:#FCD34D; --blue:#60A5FA; --purple:#C4B5FD;
+  --t1:#F1F5F9; --t2:#94A3B8; --t3:#475569;
+  --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.7}
+
+/* TOP BANNER */
+.top-banner{background:repeating-linear-gradient(90deg,#00ff8820 0,#00ff8820 30px,transparent 30px,transparent 60px);border-bottom:1px solid var(--accent);padding:6px 0;text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:4px;color:var(--accent);text-transform:uppercase}
+
+/* NAV */
+nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 40px;display:flex;align-items:center;gap:20px;position:sticky;top:0;z-index:100}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--accent);letter-spacing:3px}
+.nav-links{display:flex;gap:4px;flex:1}
+.nav-links a{font-size:11px;color:var(--t2);text-decoration:none;padding:4px 10px;border-radius:5px;transition:.15s}
+.nav-links a:hover{color:var(--t1);background:rgba(255,255,255,.06)}
+.nav-tag{font-family:var(--mono);font-size:10px;color:var(--accent);background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);padding:3px 8px;border-radius:4px;margin-left:auto}
+
+/* HERO */
+.hero{padding:60px 40px 40px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#111827 0%,var(--bg) 100%)}
+.hero-label{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:64px;line-height:1;letter-spacing:3px;margin-bottom:12px}
+.hero h1 span{color:var(--accent)}
+.hero p{color:var(--t2);font-size:16px;max-width:680px;line-height:1.7}
+.hero-badges{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.badge{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:4px;border:1px solid;font-weight:700;letter-spacing:.05em}
+.badge-green{color:var(--accent);border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08)}
+.badge-blue{color:var(--blue);border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.08)}
+.badge-purple{color:var(--purple);border-color:rgba(196,181,253,.3);background:rgba(196,181,253,.08)}
+.badge-yellow{color:var(--yellow);border-color:rgba(252,211,77,.3);background:rgba(252,211,77,.08)}
+.badge-red{color:var(--red);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.08)}
+
+/* CONTAINER */
+.container{max-width:1100px;margin:0 auto;padding:40px}
+
+/* SECTION HEADERS */
+.section-tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.section-tag::before{content:'';width:24px;height:1px;background:var(--accent)}
+h2{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;margin-bottom:6px}
+h3{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--t1);margin-bottom:10px}
+.section-desc{color:var(--t2);font-size:13px;margin-bottom:28px;max-width:700px}
+
+/* DIVIDER */
+.divider{border:none;border-top:1px solid var(--border);margin:50px 0}
+
+/* METHODOLOGY GRID */
+.method-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:40px}
+.method-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:.2s}
+.method-card:hover{border-color:rgba(0,255,136,.2);transform:translateY(-2px)}
+.method-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.mc-smoke::before{background:var(--accent)}
+.mc-sanity::before{background:var(--blue)}
+.mc-e2e::before{background:var(--purple)}
+.mc-uat::before{background:var(--yellow)}
+.mc-regression::before{background:var(--red)}
+.mc-functional::before{background:#F97316}
+.mc-icon{font-size:28px;margin-bottom:10px}
+.mc-id{font-family:var(--mono);font-size:10px;letter-spacing:.1em;font-weight:700;margin-bottom:4px}
+.mc-smoke .mc-id{color:var(--accent)}
+.mc-sanity .mc-id{color:var(--blue)}
+.mc-e2e .mc-id{color:var(--purple)}
+.mc-uat .mc-id{color:var(--yellow)}
+.mc-regression .mc-id{color:var(--red)}
+.mc-functional .mc-id{color:#F97316}
+.mc-title{font-weight:700;font-size:16px;margin-bottom:6px}
+.mc-desc{font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:14px}
+.mc-when{font-family:var(--mono);font-size:10px;color:var(--t3);border-top:1px solid var(--border);padding-top:10px}
+.mc-when strong{color:var(--t2)}
+.mc-items{list-style:none;margin-bottom:12px}
+.mc-items li{font-size:12px;color:var(--t2);padding:2px 0;padding-left:14px;position:relative}
+.mc-items li::before{content:'▸';position:absolute;left:0;color:var(--accent);font-size:10px}
+
+/* PIPELINE */
+.pipeline{display:flex;align-items:center;gap:0;margin:24px 0;overflow-x:auto;padding-bottom:8px}
+.pipe-step{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;min-width:140px;text-align:center;position:relative;flex-shrink:0}
+.pipe-step.critical{border-color:rgba(248,113,113,.3)}
+.pipe-step.pass{border-color:rgba(0,255,136,.3)}
+.pipe-num{font-family:var(--mono);font-size:10px;color:var(--t3);margin-bottom:4px}
+.pipe-name{font-size:12px;font-weight:600}
+.pipe-trigger{font-family:var(--mono);font-size:10px;color:var(--t2);margin-top:4px}
+.pipe-arrow{font-size:18px;color:var(--t3);padding:0 8px;flex-shrink:0}
+
+/* PROTOCOL CARDS */
+.protocol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.proto-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px}
+.proto-num{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.1em;margin-bottom:8px}
+.proto-title{font-weight:700;font-size:15px;margin-bottom:10px}
+.proto-body{font-size:12px;color:var(--t2);line-height:1.7}
+.proto-fields{margin-top:12px;display:flex;flex-direction:column;gap:4px}
+.proto-field{display:flex;gap:8px;font-family:var(--mono);font-size:11px}
+.pf-key{color:var(--t3);min-width:100px}
+.pf-val{color:var(--t1)}
+
+/* IMPLEMENTATION TABLE */
+.impl-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px}
+.impl-table th{background:var(--bg3);color:var(--t2);font-weight:600;text-align:left;padding:10px 14px;border-bottom:2px solid var(--border);font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+.impl-table td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top;line-height:1.5}
+.impl-table tr:hover td{background:rgba(255,255,255,.02)}
+.impl-table .pill{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;margin:1px}
+.p-smoke{color:var(--accent);background:rgba(0,255,136,.1)}
+.p-sanity{color:var(--blue);background:rgba(96,165,250,.1)}
+.p-e2e{color:var(--purple);background:rgba(196,181,253,.1)}
+.p-uat{color:var(--yellow);background:rgba(252,211,77,.1)}
+.p-reg{color:var(--red);background:rgba(248,113,113,.1)}
+.p-func{color:#F97316;background:rgba(249,115,22,.1)}
+.p-auto{color:var(--accent);background:rgba(0,255,136,.1)}
+.p-manual{color:var(--yellow);background:rgba(252,211,77,.1)}
+.p-crit{color:var(--red);background:rgba(248,113,113,.1);font-weight:700}
+.p-high{color:#F97316;background:rgba(249,115,22,.1)}
+.p-med{color:var(--yellow);background:rgba(252,211,77,.1)}
+.p-low{color:var(--t2);background:rgba(255,255,255,.06)}
+
+/* CI/CD BLOCK */
+.ci-block{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.ci-header{background:var(--bg3);padding:12px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.ci-header .ci-icon{font-size:16px}
+.ci-header .ci-title{font-weight:600;font-size:13px}
+.ci-header .ci-trigger{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--accent)}
+.ci-body{padding:18px}
+.ci-steps{display:flex;flex-direction:column;gap:8px}
+.ci-step{display:flex;gap:12px;align-items:flex-start;font-size:12px}
+.ci-step-num{font-family:var(--mono);font-size:10px;color:var(--accent);background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);border-radius:4px;padding:1px 6px;flex-shrink:0;margin-top:1px}
+.ci-step-text{color:var(--t2);line-height:1.5}
+.ci-step-text strong{color:var(--t1)}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:30px}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.kpi-val{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--accent);line-height:1}
+.kpi-unit{font-family:var(--mono);font-size:11px;color:var(--t3);margin-bottom:4px}
+.kpi-label{font-size:11px;color:var(--t2)}
+
+/* FLOW DIAGRAM */
+.flow{display:flex;flex-direction:column;gap:6px;margin-bottom:30px}
+.flow-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.flow-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:11px;white-space:nowrap}
+.flow-box.gate{border-color:rgba(248,113,113,.4);color:var(--red);background:rgba(248,113,113,.06)}
+.flow-box.auto{border-color:rgba(0,255,136,.25);color:var(--accent)}
+.flow-box.manual{border-color:rgba(252,211,77,.25);color:var(--yellow)}
+.flow-box.deploy{border-color:rgba(96,165,250,.25);color:var(--blue)}
+.flow-arrow{color:var(--t3);font-size:14px}
+
+/* ISOLATION TABLE */
+.iso-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:24px}
+.iso-table th{background:var(--bg3);padding:8px 12px;font-size:11px;color:var(--t2);text-align:left;border-bottom:1px solid var(--border)}
+.iso-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.iso-table .co-ibanor{color:#60A5FA;font-weight:700}
+.iso-table .co-meta{color:#A78BFA;font-weight:700}
+.iso-table .co-nexus{color:#34D399;font-weight:700}
+.check{color:var(--accent)}
+.cross{color:var(--red)}
+
+/* QA RUNNER LINK */
+.qa-runner-banner{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px;margin-bottom:30px}
+.qr-icon{font-size:32px}
+.qr-body h4{font-weight:700;margin-bottom:4px}
+.qr-body p{font-size:12px;color:var(--t2)}
+.qr-link{margin-left:auto;flex-shrink:0}
+.btn-accent{display:inline-block;background:var(--accent);color:#0A0E18;font-weight:700;font-size:12px;padding:9px 18px;border-radius:8px;text-decoration:none;letter-spacing:.04em}
+.btn-ghost{display:inline-block;border:1px solid rgba(0,255,136,.3);color:var(--accent);font-weight:700;font-size:12px;padding:9px 18px;border-radius:8px;text-decoration:none;letter-spacing:.04em;margin-left:8px}
+
+/* ROADMAP */
+.roadmap{display:flex;flex-direction:column;gap:0;position:relative;padding-left:24px}
+.roadmap::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:1px;background:var(--border)}
+.rm-item{position:relative;padding:0 0 24px 24px}
+.rm-item::before{content:'';position:absolute;left:-5px;top:8px;width:10px;height:10px;border-radius:50%;background:var(--bg2);border:2px solid var(--border)}
+.rm-item.done::before{background:var(--accent);border-color:var(--accent)}
+.rm-item.active::before{background:var(--yellow);border-color:var(--yellow);box-shadow:0 0 8px rgba(252,211,77,.4)}
+.rm-item.next::before{background:var(--bg2);border-color:var(--blue)}
+.rm-sprint{font-family:var(--mono);font-size:10px;color:var(--t3);margin-bottom:4px}
+.rm-title{font-weight:700;font-size:13px;margin-bottom:4px}
+.rm-desc{font-size:12px;color:var(--t2);line-height:1.5}
+
+/* CODE SNIPPET */
+.code-block{background:#0D1117;border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-family:var(--mono);font-size:11px;line-height:1.8;overflow-x:auto;margin:12px 0}
+.code-block .c-comment{color:var(--t3)}
+.code-block .c-key{color:#F97316}
+.code-block .c-str{color:var(--accent)}
+.code-block .c-val{color:var(--blue)}
+.code-block .c-bold{color:var(--yellow)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .hero{padding:40px 20px 30px}.hero h1{font-size:40px}
+  .container{padding:24px 20px}
+  nav{padding:12px 20px}
+  .pipeline{flex-direction:column;align-items:flex-start}
+  .pipe-arrow{transform:rotate(90deg)}
+}
+</style>
+</head>
+<body>
+
+<div class="top-banner">⚡ METATRONIXLEADS.TECH — QA MASTER PLAN V1 — INTERNAL USE ONLY ⚡</div>
+
+<nav>
+  <div class="nav-logo">MTX QA</div>
+  <div class="nav-links">
+    <a href="#metodologia">Metodología</a>
+    <a href="#protocolo">Protocolo</a>
+    <a href="#implementacion">Implementación</a>
+    <a href="#aislamiento">Aislamiento</a>
+    <a href="#cicd">CI/CD</a>
+    <a href="#kpis">KPIs</a>
+    <a href="#roadmap">Roadmap</a>
+  </div>
+  <div class="nav-tag">v1.0 · 2026</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-label">Internal QA Framework</div>
+  <h1>METATRONIX<br><span>QA MASTER PLAN</span></h1>
+  <p>Marco de pruebas completo para el portal metatronixleads.tech. Cubre los tres entornos de empresa (IBANOR, MetaTronix, Nexus-Demo), define los tipos de test, el protocolo de documentación, la integración con GitHub Actions y los KPIs de calidad.</p>
+  <div class="hero-badges">
+    <span class="badge badge-green">6 Test Types</span>
+    <span class="badge badge-blue">3 Companies</span>
+    <span class="badge badge-purple">42 Automated Tests</span>
+    <span class="badge badge-yellow">GitHub Actions CI/CD</span>
+    <span class="badge badge-red">Isolation-First</span>
+  </div>
+</section>
+
+<!-- METODOLOGÍA -->
+<section id="metodologia" class="container">
+  <div class="section-tag">01 — Framework</div>
+  <h2>METODOLOGÍA DE <span style="color:var(--accent)">PRUEBAS</span></h2>
+  <p class="section-desc">Seis capas de testing ordenadas por criticidad y momento de ejecución. Cada tipo tiene un rol específico en el ciclo de desarrollo del portal.</p>
+
+  <div class="method-grid">
+
+    <div class="method-card mc-smoke">
+      <div class="mc-icon">🔥</div>
+      <div class="mc-id">T-01 · SMOKE TEST</div>
+      <div class="mc-title">Prueba de Humo</div>
+      <div class="mc-desc">Verificación rápida (≤5 min) de que el sistema arranca y sus funciones críticas responden. Es el primer filtro — si falla, se aborta el ciclo.</div>
+      <ul class="mc-items">
+        <li>Portal carga sin errores (200 OK)</li>
+        <li>Login de usuario funciona</li>
+        <li>Supabase responde (&lt;1s)</li>
+        <li>Cloudflare Worker activo</li>
+        <li>Assets críticos presentes</li>
+      </ul>
+      <div class="mc-when"><strong>Cuándo:</strong> Al inicio de CADA sesión de QA, post-deploy automático y pre-merge a main.</div>
+    </div>
+
+    <div class="method-card mc-sanity">
+      <div class="mc-icon">🧠</div>
+      <div class="mc-id">T-02 · SANITY TEST</div>
+      <div class="mc-title">Prueba de Cordura</div>
+      <div class="mc-desc">Valida que una funcionalidad específica recién modificada opera correctamente. Foco estrecho — no recorre todo el sistema, solo el módulo afectado.</div>
+      <ul class="mc-items">
+        <li>Fix de bug confirmado resuelto</li>
+        <li>Nuevo feature básico funciona</li>
+        <li>Configuración de empresa activa</li>
+        <li>Módulo archivos.html post-fix</li>
+      </ul>
+      <div class="mc-when"><strong>Cuándo:</strong> Después de cada hotfix, antes de pasar a regresión.</div>
+    </div>
+
+    <div class="method-card mc-e2e">
+      <div class="mc-icon">🔄</div>
+      <div class="mc-id">T-03 · E2E TESTING</div>
+      <div class="mc-title">Prueba de Extremo a Extremo</div>
+      <div class="mc-desc">Simula flujos reales de usuario completos desde autenticación hasta resultado final. Detecta integraciones rotas entre módulos y el stack completo.</div>
+      <ul class="mc-items">
+        <li>Login → Ver Leads → Crear Lead → Cerrar Lead</li>
+        <li>Upload → Carpeta → Descarga de doc</li>
+        <li>Admin → Stats → Reporte exportado</li>
+        <li>Cambio de empresa activa en navbar</li>
+      </ul>
+      <div class="mc-when"><strong>Cuándo:</strong> Release candidates, viernes antes de deploy a producción.</div>
+    </div>
+
+    <div class="method-card mc-uat">
+      <div class="mc-icon">👤</div>
+      <div class="mc-id">T-04 · UAT</div>
+      <div class="mc-title">User Acceptance Testing</div>
+      <div class="mc-desc">Prueba final con usuarios reales del negocio. No prueba código — prueba si el sistema resuelve el problema de negocio como se definió. Nexus-Demo es el entorno ideal para UAT.</div>
+      <ul class="mc-items">
+        <li>Flujo real de agente comercial (Jorge)</li>
+        <li>Revisión admin IBANOR (nibarra)</li>
+        <li>Validación de reportes por Alejandro</li>
+        <li>Aprobación formal antes de release</li>
+      </ul>
+      <div class="mc-when"><strong>Cuándo:</strong> Pre-producción. Solo después de E2E aprobado. En Nexus-Demo.</div>
+    </div>
+
+    <div class="method-card mc-regression">
+      <div class="mc-icon">🔁</div>
+      <div class="mc-id">T-05 · REGRESSION</div>
+      <div class="mc-title">Prueba de Regresión</div>
+      <div class="mc-desc">Verifica que cambios nuevos no rompieron funcionalidades existentes. La suite qa-v8.html con sus 42 tests automatizados ES el regression suite del portal.</div>
+      <ul class="mc-items">
+        <li>Aislamiento de empresas sin regresión</li>
+        <li>Sistema nervioso (9 tablas) OK</li>
+        <li>Auth y roles correctos</li>
+        <li>Worker Claude Proxy activo</li>
+      </ul>
+      <div class="mc-when"><strong>Cuándo:</strong> Post-merge a main, post-hotfix crítico, semanal automatizado.</div>
+    </div>
+
+    <div class="method-card mc-functional">
+      <div class="mc-icon">⚙️</div>
+      <div class="mc-id">T-06 · FUNCTIONAL</div>
+      <div class="mc-title">Prueba Funcional</div>
+      <div class="mc-desc">Valida casos de uso específicos: valores válidos/inválidos, límites, permisos por rol. Orientada a requisitos funcionales documentados del portal.</div>
+      <ul class="mc-items">
+        <li>Campos requeridos en formulario de leads</li>
+        <li>Restricciones por role (user vs admin)</li>
+        <li>Valores de fuente: referido, web, evento…</li>
+        <li>Filtros de empresa en todas las tablas</li>
+      </ul>
+      <div class="mc-when"><strong>Cuándo:</strong> Al desarrollar features nuevos y en ciclos de QA completos.</div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider" style="margin:0">
+
+<!-- PROTOCOLO -->
+<section id="protocolo" class="container">
+  <div class="section-tag">02 — Documentación</div>
+  <h2>PROTOCOLO DE <span style="color:var(--accent)">DOCUMENTACIÓN</span></h2>
+  <p class="section-desc">Los cinco entregables que deben existir para cada ciclo de QA formal. Son obligatorios en releases mayores; opcionales pero recomendados en hotfixes.</p>
+
+  <div class="protocol-grid">
+
+    <div class="proto-card">
+      <div class="proto-num">DOC-01</div>
+      <div class="proto-title">📋 Plan de Pruebas</div>
+      <div class="proto-body">Define el alcance, objetivos, recursos y cronograma del ciclo. Es el contrato del QA — qué se prueba, quién prueba y cuándo se considera "aprobado".</div>
+      <div class="proto-fields">
+        <div class="proto-field"><span class="pf-key">Scope:</span><span class="pf-val">Módulos afectados por el release</span></div>
+        <div class="proto-field"><span class="pf-key">Ambiente:</span><span class="pf-val">Nexus-Demo (QA) → Prod</span></div>
+        <div class="proto-field"><span class="pf-key">Criterio exit:</span><span class="pf-val">≥95% pass, 0 blockers</span></div>
+        <div class="proto-field"><span class="pf-key">Owner:</span><span class="pf-val">acanales (super_admin)</span></div>
+      </div>
+    </div>
+
+    <div class="proto-card">
+      <div class="proto-num">DOC-02</div>
+      <div class="proto-title">🧪 Casos de Prueba</div>
+      <div class="proto-body">Los tests específicos a ejecutar: ID, descripción, precondiciones, pasos, resultado esperado, resultado real y estatus. La qa-v8.html representa 42 casos automatizados.</div>
+      <div class="proto-fields">
+        <div class="proto-field"><span class="pf-key">ID:</span><span class="pf-val">ISO-001, SNS-003…</span></div>
+        <div class="proto-field"><span class="pf-key">Prioridad:</span><span class="pf-val">Critical / High / Medium / Low</span></div>
+        <div class="proto-field"><span class="pf-key">Tipo:</span><span class="pf-val">Automated / Manual</span></div>
+        <div class="proto-field"><span class="pf-key">Empresa:</span><span class="pf-val">IBANOR / MTX / Nexus / All</span></div>
+      </div>
+    </div>
+
+    <div class="proto-card">
+      <div class="proto-num">DOC-03</div>
+      <div class="proto-title">🗺️ Matriz de Trazabilidad</div>
+      <div class="proto-body">Conecta cada caso de prueba con el requisito funcional que valida. Asegura cobertura completa — cada feature tiene al menos un test, y cada test tiene una razón de negocio.</div>
+      <div class="proto-fields">
+        <div class="proto-field"><span class="pf-key">Formato:</span><span class="pf-val">Feature → Test ID → Status</span></div>
+        <div class="proto-field"><span class="pf-key">Cobertura mínima:</span><span class="pf-val">100% features críticos</span></div>
+        <div class="proto-field"><span class="pf-key">Herramienta:</span><span class="pf-val">qa-v8.html SUITES map</span></div>
+      </div>
+    </div>
+
+    <div class="proto-card">
+      <div class="proto-num">DOC-04</div>
+      <div class="proto-title">🐛 Reporte de Bugs</div>
+      <div class="proto-body">Registro formal de cada defecto encontrado: ID, severidad, pasos para reproducir, empresa afectada, screenshot y estado de resolución.</div>
+      <div class="proto-fields">
+        <div class="proto-field"><span class="pf-key">Severidades:</span><span class="pf-val">Blocker · Critical · High · Med · Low</span></div>
+        <div class="proto-field"><span class="pf-key">SLA Blocker:</span><span class="pf-val">Fix en &lt;2h, re-test inmediato</span></div>
+        <div class="proto-field"><span class="pf-key">SLA Critical:</span><span class="pf-val">Fix en &lt;24h</span></div>
+        <div class="proto-field"><span class="pf-key">Canal:</span><span class="pf-val">GitHub Issues + .github/workflows</span></div>
+      </div>
+    </div>
+
+    <div class="proto-card">
+      <div class="proto-num">DOC-05</div>
+      <div class="proto-title">📊 Informe Final de QA</div>
+      <div class="proto-body">Resumen ejecutivo del ciclo: pass rate, bugs encontrados/resueltos, cobertura, tiempo de ejecución y recomendación de go/no-go para producción.</div>
+      <div class="proto-fields">
+        <div class="proto-field"><span class="pf-key">Go criteria:</span><span class="pf-val">Pass rate ≥95%, 0 blockers</span></div>
+        <div class="proto-field"><span class="pf-key">Destinatarios:</span><span class="pf-val">acanales + team leads</span></div>
+        <div class="proto-field"><span class="pf-key">Fuente de verdad:</span><span class="pf-val">qa-v8.html result JSON</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider" style="margin:0">
+
+<!-- IMPLEMENTACIÓN -->
+<section id="implementacion" class="container">
+  <div class="section-tag">03 — Implementación</div>
+  <h2>MAPA DE <span style="color:var(--accent)">IMPLEMENTACIÓN</span></h2>
+  <p class="section-desc">Cómo aplicar cada tipo de test a los módulos reales del portal. Cada fila es un módulo — cada columna es un tipo de test.</p>
+
+  <table class="impl-table">
+    <thead>
+      <tr>
+        <th>Módulo</th>
+        <th>Tipos de Test</th>
+        <th>Automatización</th>
+        <th>Prioridad</th>
+        <th>Empresa(s)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>leads.html</strong><br><span style="color:var(--t3);font-size:11px">CRUD + company_id + stages</span></td>
+        <td>
+          <span class="pill p-smoke">Smoke</span>
+          <span class="pill p-e2e">E2E</span>
+          <span class="pill p-func">Functional</span>
+          <span class="pill p-reg">Regression</span>
+        </td>
+        <td><span class="pill p-auto">qa-v8 ISO suite</span></td>
+        <td><span class="pill p-crit">CRITICAL</span></td>
+        <td>All × 3</td>
+      </tr>
+      <tr>
+        <td><strong>archivos.html</strong><br><span style="color:var(--t3);font-size:11px">Docs + carpetas + upload</span></td>
+        <td>
+          <span class="pill p-smoke">Smoke</span>
+          <span class="pill p-sanity">Sanity</span>
+          <span class="pill p-e2e">E2E</span>
+          <span class="pill p-func">Functional</span>
+        </td>
+        <td><span class="pill p-auto">qa-v8 ISO suite</span> <span class="pill p-manual">Manual upload</span></td>
+        <td><span class="pill p-crit">CRITICAL</span></td>
+        <td>All × 3</td>
+      </tr>
+      <tr>
+        <td><strong>admin.html</strong><br><span style="color:var(--t3);font-size:11px">Stats + reportes + users</span></td>
+        <td>
+          <span class="pill p-smoke">Smoke</span>
+          <span class="pill p-func">Functional</span>
+          <span class="pill p-reg">Regression</span>
+        </td>
+        <td><span class="pill p-auto">qa-v8 AUTH suite</span></td>
+        <td><span class="pill p-high">HIGH</span></td>
+        <td>All × 3</td>
+      </tr>
+      <tr>
+        <td><strong>marketing.html</strong><br><span style="color:var(--t3);font-size:11px">Social tokens + portal settings</span></td>
+        <td>
+          <span class="pill p-smoke">Smoke</span>
+          <span class="pill p-sanity">Sanity</span>
+          <span class="pill p-func">Functional</span>
+        </td>
+        <td><span class="pill p-manual">Manual + page check</span></td>
+        <td><span class="pill p-high">HIGH</span></td>
+        <td>MTX / Nexus</td>
+      </tr>
+      <tr>
+        <td><strong>Supabase RLS + tablas</strong><br><span style="color:var(--t3);font-size:11px">9 tablas del SNS</span></td>
+        <td>
+          <span class="pill p-smoke">Smoke</span>
+          <span class="pill p-func">Functional</span>
+          <span class="pill p-reg">Regression</span>
+        </td>
+        <td><span class="pill p-auto">qa-v8 SNS suite</span></td>
+        <td><span class="pill p-crit">CRITICAL</span></td>
+        <td>All × 3</td>
+      </tr>
+      <tr>
+        <td><strong>Auth + Roles</strong><br><span style="color:var(--t3);font-size:11px">super_admin / admin / user</span></td>
+        <td>
+          <span class="pill p-smoke">Smoke</span>
+          <span class="pill p-e2e">E2E</span>
+          <span class="pill p-func">Functional</span>
+          <span class="pill p-reg">Regression</span>
+        </td>
+        <td><span class="pill p-auto">qa-v8 AUTH suite</span></td>
+        <td><span class="pill p-crit">CRITICAL</span></td>
+        <td>All × 3</td>
+      </tr>
+      <tr>
+        <td><strong>Cloudflare Worker</strong><br><span style="color:var(--t3);font-size:11px">Claude Proxy + latencia</span></td>
+        <td>
+          <span class="pill p-smoke">Smoke</span>
+          <span class="pill p-sanity">Sanity</span>
+        </td>
+        <td><span class="pill p-auto">qa-v8 WORKER suite</span></td>
+        <td><span class="pill p-high">HIGH</span></td>
+        <td>Shared</td>
+      </tr>
+      <tr>
+        <td><strong>fix-roles.yml</strong><br><span style="color:var(--t3);font-size:11px">user_companies + slugs</span></td>
+        <td>
+          <span class="pill p-sanity">Sanity</span>
+          <span class="pill p-func">Functional</span>
+          <span class="pill p-reg">Regression</span>
+        </td>
+        <td><span class="pill p-auto">qa-v8 ROLES suite</span></td>
+        <td><span class="pill p-crit">CRITICAL</span></td>
+        <td>All × 3</td>
+      </tr>
+      <tr>
+        <td><strong>Nexus-Demo (UAT env)</strong><br><span style="color:var(--t3);font-size:11px">Entorno aislado de pruebas</span></td>
+        <td>
+          <span class="pill p-uat">UAT</span>
+          <span class="pill p-e2e">E2E</span>
+          <span class="pill p-sanity">Sanity</span>
+        </td>
+        <td><span class="pill p-manual">Manual con usuarios reales</span></td>
+        <td><span class="pill p-high">HIGH</span></td>
+        <td>Nexus only</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<hr class="divider" style="margin:0">
+
+<!-- AISLAMIENTO DE EMPRESAS -->
+<section id="aislamiento" class="container">
+  <div class="section-tag">04 — Core Security</div>
+  <h2>MATRIZ DE <span style="color:var(--accent)">AISLAMIENTO</span></h2>
+  <p class="section-desc">El principio fundamental: ningún usuario de una empresa debe poder ver, modificar o descargar datos de otra empresa. Estos tests son BLOCKERS — si fallan, no hay deploy.</p>
+
+  <div class="qa-runner-banner">
+    <div class="qr-icon">⚡</div>
+    <div class="qr-body">
+      <h4>Suite de Aislamiento en qa-v8.html</h4>
+      <p>La suite ISO corre 9 tests de aislamiento entre IBANOR, MetaTronix y Nexus. 0 fallos = condición de deploy.</p>
+    </div>
+    <div class="qr-link">
+      <a href="/qa-v8.html" class="btn-accent">▶ Correr QA v8</a>
+      <a href="/qa-protocol.html" class="btn-ghost">Ver Protocolo</a>
+    </div>
+  </div>
+
+  <table class="iso-table">
+    <thead>
+      <tr>
+        <th>Test</th>
+        <th>Usuario Test</th>
+        <th>Empresa origen</th>
+        <th>No debe ver</th>
+        <th>Suite ID</th>
+        <th>Tipo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Leads cross-company</td>
+        <td>frida@retaillab.com.mx</td>
+        <td class="co-meta">MetaTronix</td>
+        <td>Leads <span class="co-ibanor">IBANOR</span> / <span class="co-nexus">Nexus</span></td>
+        <td><code>ISO-001</code></td>
+        <td><span class="check">✓ Automated</span></td>
+      </tr>
+      <tr>
+        <td>Documentos cross-company</td>
+        <td>frida@retaillab.com.mx</td>
+        <td class="co-meta">MetaTronix</td>
+        <td>Docs <span class="co-ibanor">IBANOR</span> / <span class="co-nexus">Nexus</span></td>
+        <td><code>ISO-004</code></td>
+        <td><span class="check">✓ Automated</span></td>
+      </tr>
+      <tr>
+        <td>Cuentas x cobrar</td>
+        <td>frida@retaillab.com.mx</td>
+        <td class="co-meta">MetaTronix</td>
+        <td>AR de otras empresas</td>
+        <td><code>ISO-005</code></td>
+        <td><span class="check">✓ Automated</span></td>
+      </tr>
+      <tr>
+        <td>Eventos SNS</td>
+        <td>frida@retaillab.com.mx</td>
+        <td class="co-meta">MetaTronix</td>
+        <td>Eventos <span class="co-ibanor">IBANOR</span></td>
+        <td><code>ISO-006</code></td>
+        <td><span class="check">✓ Automated</span></td>
+      </tr>
+      <tr>
+        <td>getActiveCompanyId() slug bug</td>
+        <td>— (código estático)</td>
+        <td>app.js</td>
+        <td>UUID inválido como company_id</td>
+        <td><code>ISO-007</code></td>
+        <td><span class="check">✓ Automated</span></td>
+      </tr>
+      <tr>
+        <td>dlFile() company filter</td>
+        <td>— (código estático)</td>
+        <td>archivos.html</td>
+        <td>Descarga docs de otra empresa</td>
+        <td><code>ISO-008</code></td>
+        <td><span class="check">✓ Automated</span></td>
+      </tr>
+      <tr>
+        <td>confirmDelFolder() verify</td>
+        <td>— (código estático)</td>
+        <td>archivos.html</td>
+        <td>Delete sin confirmación real</td>
+        <td><code>ISO-009</code></td>
+        <td><span class="check">✓ Automated</span></td>
+      </tr>
+      <tr>
+        <td>nibarra solo ve IBANOR</td>
+        <td>nibarra@ibanormexico.com</td>
+        <td class="co-ibanor">IBANOR</td>
+        <td>Leads <span class="co-meta">MTX</span> / <span class="co-nexus">Nexus</span></td>
+        <td><code>ISO-M01</code></td>
+        <td><span style="color:var(--yellow)">Manual UAT</span></td>
+      </tr>
+      <tr>
+        <td>jorge solo ve Nexus</td>
+        <td>jorge@nexus.com</td>
+        <td class="co-nexus">Nexus</td>
+        <td>Leads <span class="co-ibanor">IBANOR</span> / <span class="co-meta">MTX</span></td>
+        <td><code>ISO-M02</code></td>
+        <td><span style="color:var(--yellow)">Manual UAT</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<hr class="divider" style="margin:0">
+
+<!-- CI/CD PIPELINE -->
+<section id="cicd" class="container">
+  <div class="section-tag">05 — Automatización</div>
+  <h2>PIPELINE <span style="color:var(--accent)">CI/CD + QA</span></h2>
+  <p class="section-desc">Integración de los tipos de test en el ciclo de vida del código: cada evento de Git dispara el nivel de QA apropiado.</p>
+
+  <!-- FLOW -->
+  <div class="flow">
+    <div class="flow-row">
+      <div class="flow-box">📝 Commit a feature branch</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box auto">🔥 Smoke (30s)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box auto">🧠 Sanity módulo (2 min)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box gate">🚦 Gate: 0 fails</div>
+    </div>
+    <div class="flow-row" style="padding-left:40px">
+      <div class="flow-arrow" style="transform:rotate(90deg)">→</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box">🔀 PR a main</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box auto">🔁 Regression (qa-v8.html)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box auto">⚙️ Functional suite</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box gate">🚦 Gate: ≥95% pass</div>
+    </div>
+    <div class="flow-row" style="padding-left:40px">
+      <div class="flow-arrow" style="transform:rotate(90deg)">→</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box">✅ Merge a main</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box deploy">🚀 deploy.yml (GitHub Pages)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box auto">🔄 E2E post-deploy</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box manual">👤 UAT Nexus-Demo</div>
+    </div>
+  </div>
+
+  <!-- CI BLOCKS -->
+  <div class="ci-block">
+    <div class="ci-header">
+      <span class="ci-icon">⚡</span>
+      <span class="ci-title">qa-smoke.yml — Smoke Test Automático</span>
+      <span class="ci-trigger">on: push, pull_request</span>
+    </div>
+    <div class="ci-body">
+      <div class="ci-steps">
+        <div class="ci-step"><span class="ci-step-num">01</span><span class="ci-step-text"><strong>HTTP check</strong> — portal carga con 200 OK en &lt;2s</span></div>
+        <div class="ci-step"><span class="ci-step-num">02</span><span class="ci-step-text"><strong>Supabase ping</strong> — endpoint REST responde, anon key válida</span></div>
+        <div class="ci-step"><span class="ci-step-num">03</span><span class="ci-step-text"><strong>Worker check</strong> — claude-proxy.acanales-7d4.workers.dev responde</span></div>
+        <div class="ci-step"><span class="ci-step-num">04</span><span class="ci-step-text"><strong>Assets críticos</strong> — app.js, config.js, fonts.css presentes</span></div>
+        <div class="ci-step"><span class="ci-step-num">05</span><span class="ci-step-text"><strong>Resultado</strong> — si falla cualquier paso, el PR queda bloqueado</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ci-block">
+    <div class="ci-header">
+      <span class="ci-icon">🔁</span>
+      <span class="ci-title">qa-regression.yml — Regresión Semanal + Pre-release</span>
+      <span class="ci-trigger">on: schedule (weekly) + workflow_dispatch</span>
+    </div>
+    <div class="ci-body">
+      <div class="ci-steps">
+        <div class="ci-step"><span class="ci-step-num">01</span><span class="ci-step-text"><strong>Dispara qa-v8.html</strong> — corre las 9 suites (42 tests) vía Puppeteer headless</span></div>
+        <div class="ci-step"><span class="ci-step-num">02</span><span class="ci-step-text"><strong>Extrae JSON de resultados</strong> — pass/fail/skip por test con detail</span></div>
+        <div class="ci-step"><span class="ci-step-num">03</span><span class="ci-step-text"><strong>Verifica ISO suite completa</strong> — todos los tests de aislamiento deben pasar (0 tolerancia)</span></div>
+        <div class="ci-step"><span class="ci-step-num">04</span><span class="ci-step-text"><strong>Genera artifact</strong> — qa-report-YYYY-MM-DD.json subido al workflow</span></div>
+        <div class="ci-step"><span class="ci-step-num">05</span><span class="ci-step-text"><strong>Notificación</strong> — si pass rate &lt;95%, abre GitHub Issue automáticamente</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ci-block">
+    <div class="ci-header">
+      <span class="ci-icon">🗓️</span>
+      <span class="ci-title">Calendario QA — Ejecución Periódica</span>
+      <span class="ci-trigger">schedule</span>
+    </div>
+    <div class="ci-body">
+      <div class="ci-steps">
+        <div class="ci-step"><span class="ci-step-num">DIARIO</span><span class="ci-step-text"><strong>Smoke automático</strong> — uptime-monitor.yml (ya existe). Añadir check de Supabase + Worker.</span></div>
+        <div class="ci-step"><span class="ci-step-num">SEMANAL</span><span class="ci-step-text"><strong>Regression suite completo</strong> — qa-v8 + reporte en GitHub Actions artifacts.</span></div>
+        <div class="ci-step"><span class="ci-step-num">POR RELEASE</span><span class="ci-step-text"><strong>E2E completo + UAT en Nexus-Demo</strong> — manual con usuarios jorge/nibarra antes de push a prod.</span></div>
+        <div class="ci-step"><span class="ci-step-num">MENSUAL</span><span class="ci-step-text"><strong>Auditoría de aislamiento</strong> — revisión manual de company_id en leads, docs y events de las 3 empresas.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:8px">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--t2);margin-bottom:10px"># qa-smoke.yml — estructura base para implementar</div>
+    <div class="code-block">
+<span class="c-key">name:</span> <span class="c-str">QA Smoke Test</span>
+<span class="c-key">on:</span>
+  <span class="c-key">push:</span>
+    <span class="c-key">branches:</span> <span class="c-str">[main]</span>
+  <span class="c-key">pull_request:</span>
+
+<span class="c-key">jobs:</span>
+  <span class="c-key">smoke:</span>
+    <span class="c-key">runs-on:</span> <span class="c-str">ubuntu-latest</span>
+    <span class="c-key">steps:</span>
+      <span class="c-bold">- name:</span> <span class="c-str">Check portal HTTP</span>
+        <span class="c-key">run:</span> |
+          <span class="c-str">STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://metatronixleads.tech)</span>
+          <span class="c-str">[ "$STATUS" = "200" ] || (echo "SMOKE FAIL: portal returned $STATUS" && exit 1)</span>
+
+      <span class="c-bold">- name:</span> <span class="c-str">Check Supabase REST</span>
+        <span class="c-key">run:</span> |
+          <span class="c-str">curl -sf -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"</span>
+          <span class="c-str">  "https://hodrfonbpmqulkyzrzpq.supabase.co/rest/v1/profiles?select=id&limit=1" || exit 1</span>
+
+      <span class="c-bold">- name:</span> <span class="c-str">Check Cloudflare Worker</span>
+        <span class="c-key">run:</span> |
+          <span class="c-str">curl -sf https://claude-proxy.acanales-7d4.workers.dev/health || exit 1</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" style="margin:0">
+
+<!-- KPIs -->
+<section id="kpis" class="container">
+  <div class="section-tag">06 — Métricas</div>
+  <h2>KPIs DE <span style="color:var(--accent)">CALIDAD</span></h2>
+  <p class="section-desc">Objetivos medibles para el programa de QA. Estos son los criterios de exit para producción y las métricas de salud del portal.</p>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-val">≥95%</div>
+      <div class="kpi-unit">pass rate</div>
+      <div class="kpi-label">Mínimo para deploy a producción</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val">0</div>
+      <div class="kpi-unit">ISO fails</div>
+      <div class="kpi-label">Tests de aislamiento — tolerancia cero</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val">&lt;5min</div>
+      <div class="kpi-unit">smoke time</div>
+      <div class="kpi-label">Tiempo máximo de Smoke Test completo</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val">42</div>
+      <div class="kpi-unit">tests auto</div>
+      <div class="kpi-label">Tests automatizados actuales en qa-v8.html</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val">3</div>
+      <div class="kpi-unit">empresas</div>
+      <div class="kpi-label">IBANOR + MetaTronix + Nexus cubiertos</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val">&lt;24h</div>
+      <div class="kpi-unit">MTTR</div>
+      <div class="kpi-label">Mean Time To Resolve — bugs Critical</div>
+    </div>
+  </div>
+
+  <!-- ROLES EN QA -->
+  <h3 style="margin-top:30px">Roles y Responsabilidades</h3>
+  <table class="impl-table">
+    <thead>
+      <tr><th>Rol</th><th>Usuario</th><th>Responsabilidad QA</th><th>Acceso</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>QA Lead</strong></td>
+        <td>acanales (super_admin)</td>
+        <td>Aprobación final go/no-go, auditorías mensuales, criterios de exit</td>
+        <td>All × 3 empresas</td>
+      </tr>
+      <tr>
+        <td><strong>UAT IBANOR</strong></td>
+        <td>nibarra (admin IBANOR)</td>
+        <td>Validación funcional módulos IBANOR, reporta bugs en Nexus-Demo</td>
+        <td>IBANOR</td>
+      </tr>
+      <tr>
+        <td><strong>UAT Nexus</strong></td>
+        <td>jorge (admin restringido Nexus)</td>
+        <td>UAT en entorno demo — flujos de agente comercial, leads, archivos</td>
+        <td>Nexus-Demo</td>
+      </tr>
+      <tr>
+        <td><strong>CI/CD Bot</strong></td>
+        <td>GitHub Actions</td>
+        <td>Smoke diario, regression semanal, gate en PRs, artifacts de reporte</td>
+        <td>Automated</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<hr class="divider" style="margin:0">
+
+<!-- ROADMAP -->
+<section id="roadmap" class="container">
+  <div class="section-tag">07 — Ejecución</div>
+  <h2>ROADMAP DE <span style="color:var(--accent)">IMPLEMENTACIÓN</span></h2>
+  <p class="section-desc">Plan de 4 sprints para pasar del estado actual (qa-v8.html manual) al QA framework completo con CI/CD integrado.</p>
+
+  <div class="roadmap">
+
+    <div class="rm-item done">
+      <div class="rm-sprint">COMPLETADO — Sprint 0</div>
+      <div class="rm-title">✅ Base de QA — qa-v8.html operacional</div>
+      <div class="rm-desc">42 tests automatizados en 9 suites. Aislamiento de empresas cubierto. Smoke, ISO, SNS, AUTH, WORKER, ROLES suites activas. Fix de company_id slug, RLS, y cross-company leakage aplicados.</div>
+    </div>
+
+    <div class="rm-item active">
+      <div class="rm-sprint">EN CURSO — Sprint 1 (esta semana)</div>
+      <div class="rm-title">🟡 Smoke Test como GitHub Action automático</div>
+      <div class="rm-desc">Crear qa-smoke.yml en .github/workflows. Corre en cada push a main y cada PR. Verifica portal 200 OK, Supabase REST, Cloudflare Worker y assets críticos. Bloquea PR si falla.</div>
+    </div>
+
+    <div class="rm-item next">
+      <div class="rm-sprint">PRÓXIMO — Sprint 2</div>
+      <div class="rm-title">🔵 Regression semanal automatizado</div>
+      <div class="rm-desc">Crear qa-regression.yml con schedule semanal. Usa Puppeteer/Playwright headless para correr qa-v8.html y extraer resultados a JSON. Sube artifact + abre Issue si pass rate &lt;95%.</div>
+    </div>
+
+    <div class="rm-item next">
+      <div class="rm-sprint">Sprint 3</div>
+      <div class="rm-title">🔵 E2E flows documentados + UAT checklist</div>
+      <div class="rm-desc">Documentar los 5 flujos E2E críticos del portal. Crear checklist interactivo de UAT en Nexus-Demo para jorge/nibarra. Formulario de sign-off pre-producción.</div>
+    </div>
+
+    <div class="rm-item next">
+      <div class="rm-sprint">Sprint 4</div>
+      <div class="rm-title">🔵 Dashboard de QA en tiempo real</div>
+      <div class="rm-desc">Página /qa-dashboard.html que muestra el último resultado de qa-v8.html, histórico de pass rate, bugs abiertos y status de CI. Accesible para super_admin desde el sidebar.</div>
+    </div>
+
+  </div>
+
+  <!-- IMMEDIATE NEXT ACTION -->
+  <div style="background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.25);border-radius:12px;padding:20px 24px;margin-top:30px">
+    <div style="font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em;margin-bottom:8px">▸ ACCIÓN INMEDIATA</div>
+    <h3 style="margin-bottom:8px">Crear qa-smoke.yml</h3>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:16px">El único archivo que falta para tener QA automático en cada deploy. Con el código base del Sprint 1 de arriba, se implementa en &lt;15 minutos y bloquea deployments rotos desde el primer commit.</p>
+    <a href="/qa-v8.html" class="btn-accent" style="margin-right:8px">▶ Correr QA ahora</a>
+    <a href="https://github.com/acanales/metatronixleads.tech/actions" target="_blank" class="btn-ghost">Ver GitHub Actions →</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="background:var(--bg2);border-top:1px solid var(--border);padding:24px 40px;margin-top:60px;display:flex;align-items:center;justify-content:space-between;flex-wrap:gap;gap:12px">
+  <div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--accent);letter-spacing:2px">MTX QA MASTER PLAN</div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:2px">v1.0 · metatronixleads.tech · Documento Interno · 2026</div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <a href="/qa-v8.html" class="btn-ghost">⚡ QA v8 Runner</a>
+    <a href="/qa-protocol.html" class="btn-ghost">📋 Protocolo</a>
+    <a href="/admin.html" class="btn-ghost">⚙️ Admin</a>
+  </div>
+</footer>
+
+</body>
+</html>
