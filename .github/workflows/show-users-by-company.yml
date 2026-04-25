@@ -1,0 +1,69 @@
+name: Show Users by Company (one-time)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    env:
+      SB: https://hodrfonbpmqulkyzrzpq.supabase.co
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - name: Listar usuarios por empresa
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}'}
+
+          def get(path):
+              req = urllib.request.Request(SB + path, headers=H)
+              try:
+                  r = urllib.request.urlopen(req, timeout=10)
+                  return json.loads(r.read())
+              except Exception as e:
+                  return []
+
+          companies = get('/rest/v1/companies?select=id,name,slug&order=name')
+          uc_rows   = get('/rest/v1/user_companies?select=user_id,company_id,role&limit=2000')
+          profiles  = get('/rest/v1/profiles?select=id,email,full_name,role,is_active&limit=500')
+
+          prof_map = {p['id']: p for p in profiles}
+          uc_by_co = {}
+          for row in uc_rows:
+              uc_by_co.setdefault(row['company_id'], []).append(row)
+
+          print()
+          print('╔══════════════════════════════════════════════════════════════════╗')
+          print('║         USUARIOS POR EMPRESA — metatronixleads.tech             ║')
+          print('╚══════════════════════════════════════════════════════════════════╝')
+
+          for co in companies:
+              members = uc_by_co.get(co['id'], [])
+              print(f"\n  ┌─ {co['name'].upper()} [{co['slug']}] — {len(members)} usuario(s)")
+              if not members:
+                  print('  │  (sin usuarios)')
+              for m in members:
+                  p = prof_map.get(m['user_id'], {})
+                  email   = p.get('email', '?')
+                  name    = p.get('full_name') or email.split('@')[0]
+                  role    = m.get('role', '?')
+                  active  = '✅' if p.get('is_active', True) else '🔴'
+                  print(f"  │  {active} {name:<25} {email:<40} [{role}]")
+              print(f"  └{'─'*66}")
+
+          # Perfiles sin empresa
+          all_uids = {r['user_id'] for r in uc_rows}
+          orphans  = [p for p in profiles if p['id'] not in all_uids]
+          if orphans:
+              print(f"\n  ⚠ PERFILES SIN EMPRESA ({len(orphans)}):")
+              for p in orphans:
+                  print(f"    {p.get('email','?')} — {p.get('role','?')}")
+
+          print(f"\n  Total empresas: {len(companies)}")
+          print(f"  Total usuarios (membresías): {len(uc_rows)}")
+          print(f"  Total perfiles: {len(profiles)}")
+          PYEOF
