@@ -94,11 +94,12 @@ jobs:
                   ],
               },
               'acanalesf@ibanormexico.com': {
-                  'role': 'admin',
-                  'primary': MTX,
+                  'role': 'admin',          # admin en IBANOR (empresa primaria)
+                  'primary': IBANOR,        # empresa activa al login = IBANOR
                   'companies': [
-                      (MTX,    'admin'),
-                      (IBANOR, 'admin'),
+                      (IBANOR, 'admin'),           # IBANOR: administrador completo
+                      (MTX,    'admin_restringido'), # MetaTronix: solo archivos/admin
+                      (DEMO,   'member'),            # Nexus-Demo: acceso básico
                   ],
               },
               'jorge@retaillab.com.mx': {
