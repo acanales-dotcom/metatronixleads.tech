@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Usuarios por Empresa — Diagnóstico</title>
+<link rel="stylesheet" href="/assets/fonts.css">
+<style>
+:root{--bg:#0A0E18;--bg2:#111827;--bg3:#1A2236;--border:rgba(255,255,255,.08);--accent:#00ff88;--red:#F87171;--yellow:#FCD34D;--t1:#F1F5F9;--t2:#94A3B8;--t3:#475569;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;padding:32px;min-height:100vh}
+h1{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:3px;color:var(--accent);margin-bottom:4px}
+.meta{font-size:12px;color:var(--t2);margin-bottom:28px;font-family:var(--mono)}
+.co-block{background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.co-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.co-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px}
+.co-slug{font-family:var(--mono);font-size:11px;color:var(--t3);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:4px}
+.co-count{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--accent)}
+.user-row{display:grid;grid-template-columns:36px 1fr 240px 140px 80px;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.user-row:last-child{border-bottom:none}
+.user-row:hover{background:rgba(255,255,255,.02)}
+.avatar{width:32px;height:32px;border-radius:8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.15);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--accent)}
+.user-name{font-weight:600}
+.user-email{font-family:var(--mono);font-size:11px;color:var(--t2)}
+.role-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase}
+.r-super_admin{background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.25)}
+.r-admin{background:rgba(0,255,136,.1);color:var(--accent);border:1px solid rgba(0,255,136,.2)}
+.r-admin_restringido{background:rgba(249,115,22,.1);color:#F97316;border:1px solid rgba(249,115,22,.2)}
+.r-user{background:rgba(96,165,250,.1);color:#60A5FA;border:1px solid rgba(96,165,250,.2)}
+.r-member{background:rgba(71,85,105,.2);color:#94A3B8;border:1px solid rgba(71,85,105,.3)}
+.r-owner{background:rgba(252,211,77,.1);color:var(--yellow);border:1px solid rgba(252,211,77,.2)}
+.status{font-size:11px;display:flex;align-items:center;gap:5px}
+.dot{width:6px;height:6px;border-radius:50%}
+.dot-on{background:var(--accent)}
+.dot-off{background:var(--red)}
+.empty{padding:24px 20px;color:var(--t3);font-size:13px;font-style:italic}
+.summary-bar{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;gap:28px;flex-wrap:wrap}
+.sum-item{text-align:center}
+.sum-num{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--accent);line-height:1}
+.sum-lbl{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
+.loading{text-align:center;padding:60px;color:var(--t2);font-size:14px}
+.spinner{display:inline-block;width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:10px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.col-hdr{display:grid;grid-template-columns:36px 1fr 240px 140px 80px;gap:12px;padding:6px 20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);border-bottom:1px solid var(--border)}
+.orphan-block{background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.15);border-radius:10px;padding:16px 20px;margin-top:8px}
+.orphan-block h3{color:var(--red);font-size:14px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<h1>USUARIOS POR EMPRESA</h1>
+<div class="meta" id="meta">metatronixleads.tech · Cargando…</div>
+
+<div id="summary-bar" class="summary-bar" style="display:none"></div>
+<div id="output"><div class="loading"><div class="spinner"></div>Consultando base de datos…</div></div>
+
+<script src="/assets/libs/supabase.min.js"></script>
+<script src="/assets/config.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+const ROLE_LABEL = {
+  super_admin:'Super Admin', owner:'Owner', admin:'Administrador',
+  admin_restringido:'Admin Rest.', user:'Usuario', member:'Miembro'
+};
+const ROLE_CLS = {
+  super_admin:'r-super_admin', owner:'r-owner', admin:'r-admin',
+  admin_restringido:'r-admin_restringido', user:'r-user', member:'r-member'
+};
+
+async function load() {
+  // Auth requerido
+  const CU = await requireAuth(['admin','super_admin']);
+  if (!CU) return;
+
+  const db = getDB();
+
+  // 1. Empresas
+  const { data: companies } = await db
+    .from('companies')
+    .select('id,name,slug')
+    .order('name');
+
+  // 2. Membresías + perfiles
+  const { data: ucRows } = await db
+    .from('user_companies')
+    .select('id, role, company_id, user_id, profiles(id, email, full_name, is_active, last_seen, role)')
+    .order('created_at');
+
+  // 3. Agrupar por empresa
+  const byCompany = {};
+  const profMap   = {};
+  (ucRows || []).forEach(r => {
+    if (!r.profiles) return;
+    byCompany[r.company_id] = byCompany[r.company_id] || [];
+    byCompany[r.company_id].push(r);
+    profMap[r.user_id] = r.profiles;
+  });
+
+  // 4. Perfiles totales para detectar huérfanos
+  const { data: allProfiles } = await db
+    .from('profiles')
+    .select('id,email,full_name,role,is_active')
+    .order('email');
+
+  const allUids = new Set((ucRows||[]).map(r => r.user_id));
+  const orphans = (allProfiles||[]).filter(p => !allUids.has(p.id));
+
+  const ts = new Date().toLocaleString('es-MX', {dateStyle:'medium',timeStyle:'short'});
+  document.getElementById('meta').textContent =
+    `metatronixleads.tech · ${ts} · ${(companies||[]).length} empresas · ${(ucRows||[]).length} membresías`;
+
+  // Summary
+  const totalUsers = new Set((ucRows||[]).map(r => r.user_id)).size;
+  const totalActive = (allProfiles||[]).filter(p => p.is_active !== false).length;
+  document.getElementById('summary-bar').style.display = 'flex';
+  document.getElementById('summary-bar').innerHTML = `
+    <div class="sum-item"><div class="sum-num">${(companies||[]).length}</div><div class="sum-lbl">Empresas</div></div>
+    <div class="sum-item"><div class="sum-num">${totalUsers}</div><div class="sum-lbl">Usuarios únicos</div></div>
+    <div class="sum-item"><div class="sum-num">${(ucRows||[]).length}</div><div class="sum-lbl">Membresías total</div></div>
+    <div class="sum-item"><div class="sum-num">${totalActive}</div><div class="sum-lbl">Perfiles activos</div></div>
+    ${orphans.length ? `<div class="sum-item"><div class="sum-num" style="color:var(--red)">${orphans.length}</div><div class="sum-lbl">Sin empresa</div></div>` : ''}
+  `;
+
+  // Render por empresa
+  let html = '';
+  for (const co of (companies||[])) {
+    const members = byCompany[co.id] || [];
+    html += `<div class="co-block">
+      <div class="co-hdr">
+        <div class="co-name">${esc(co.name)}</div>
+        <div class="co-slug">${esc(co.slug)}</div>
+        <div class="co-count">${members.length} usuario${members.length !== 1 ? 's' : ''}</div>
+      </div>`;
+
+    if (!members.length) {
+      html += `<div class="empty">Sin usuarios en esta empresa.</div>`;
+    } else {
+      html += `<div class="col-hdr"><div></div><div>Nombre / Email</div><div>Email</div><div>Rol en empresa</div><div>Estado</div></div>`;
+      for (const m of members) {
+        const p      = m.profiles || {};
+        const name   = p.full_name || p.email?.split('@')[0] || '—';
+        const init   = (name[0]||'?').toUpperCase();
+        const role   = m.role || p.role || 'user';
+        const active = p.is_active !== false;
+        html += `<div class="user-row">
+          <div class="avatar">${esc(init)}</div>
+          <div>
+            <div class="user-name">${esc(name)}</div>
+            <div class="user-email">${esc(p.email||'—')}</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--t2)">${esc(p.email||'—')}</div>
+          <div><span class="role-pill ${ROLE_CLS[role]||'r-member'}">${ROLE_LABEL[role]||role}</span></div>
+          <div class="status"><span class="dot ${active?'dot-on':'dot-off'}"></span>${active?'Activo':'Inactivo'}</div>
+        </div>`;
+      }
+    }
+    html += '</div>';
+  }
+
+  // Huérfanos
+  if (orphans.length) {
+    html += `<div class="orphan-block">
+      <h3>⚠ ${orphans.length} perfil(es) sin empresa asignada</h3>`;
+    for (const p of orphans) {
+      html += `<div style="font-size:12px;color:var(--t2);padding:3px 0;font-family:var(--mono)">${esc(p.email)} — ${esc(p.role||'?')}</div>`;
+    }
+    html += `</div>`;
+  }
+
+  document.getElementById('output').innerHTML = html || '<div class="loading">Sin datos.</div>';
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+load();
+</script>
+</body>
+</html>
