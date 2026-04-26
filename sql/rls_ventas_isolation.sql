@@ -32,12 +32,13 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
   OR (SELECT role FROM profiles WHERE id = auth.uid()) IN ('admin','super_admin');
 $$;
 
--- Helper: ¿el usuario actual es SOLO 'member' (sin owner/admin en ninguna empresa)?
+-- Helper: ¿el usuario actual es SOLO 'member' (sin owner/admin/admin_restringido en ninguna empresa)?
+-- Fix: incluir admin_restringido como rol con acceso completo a leads
 CREATE OR REPLACE FUNCTION is_sales_member_only()
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT NOT EXISTS (
     SELECT 1 FROM user_companies
-    WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
+    WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'admin_restringido')
   )
   AND EXISTS (
     SELECT 1 FROM user_companies

@@ -106,32 +106,32 @@ jobs:
                   'role': 'admin_restringido',
                   'primary': MTX,
                   'companies': [
-                      (MTX,  'member'),
-                      (DEMO, 'member'),
+                      (MTX,  'admin_restringido'),
+                      (DEMO, 'admin_restringido'),
                   ],
               },
               'jorge@retaillab.com.mx': {
                   'role': 'admin_restringido',
                   'primary': MTX,
                   'companies': [
-                      (MTX,  'member'),
-                      (DEMO, 'member'),
+                      (MTX,  'admin_restringido'),
+                      (DEMO, 'admin_restringido'),
                   ],
               },
               'noe@grupoamsg.com': {
                   'role': 'admin_restringido',
                   'primary': MTX,
                   'companies': [
-                      (MTX,  'member'),
-                      (DEMO, 'member'),
+                      (MTX,  'admin_restringido'),
+                      (DEMO, 'admin_restringido'),
                   ],
               },
               'rsuarez@ibanormexico.com': {
                   'role': 'admin_restringido',
                   'primary': MTX,
                   'companies': [
-                      (MTX,  'member'),
-                      (DEMO, 'member'),
+                      (MTX,  'admin_restringido'),
+                      (DEMO, 'admin_restringido'),
                   ],
               },
               'frida@retaillab.com.mx': {

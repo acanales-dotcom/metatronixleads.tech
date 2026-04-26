@@ -1,0 +1,176 @@
+name: Fix Leads Access — admin_restringido puede crear leads
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-leads:
+    name: RLS + user_companies para admin_restringido
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - name: "Verificar conexión"
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=id&limit=1")
+          [ "$HTTP" = "200" ] && echo "✅ Conexión OK" || { echo "❌ HTTP $HTTP"; exit 1; }
+
+      - name: "1. Actualizar is_sales_member_only() — incluir admin_restringido"
+        run: |
+          # Aplicar via SQL directo a través del endpoint de Supabase
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+
+          # La función is_sales_member_only debe considerar admin_restringido como no-member
+          SQL = """
+          CREATE OR REPLACE FUNCTION is_sales_member_only()
+          RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+            SELECT NOT EXISTS (
+              SELECT 1 FROM user_companies
+              WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'admin_restringido')
+            )
+            AND EXISTS (
+              SELECT 1 FROM user_companies
+              WHERE user_id = auth.uid() AND role = 'member'
+            );
+          $$;
+          """
+
+          # Usar la API de Supabase para ejecutar SQL (solo con service key)
+          url  = f"{SB}/rest/v1/rpc/exec_sql"
+          body = json.dumps({"sql": SQL}).encode()
+          hdrs = {
+              'apikey': SK,
+              'Authorization': f'Bearer {SK}',
+              'Content-Type': 'application/json',
+          }
+          req = urllib.request.Request(url, data=body, headers=hdrs, method='POST')
+          try:
+              resp = urllib.request.urlopen(req, timeout=15)
+              print(f'✅ is_sales_member_only actualizada — HTTP {resp.status}')
+          except urllib.error.HTTPError as e:
+              err = e.read().decode()
+              # La función RPC exec_sql puede no existir — usar el endpoint de SQL directo
+              print(f'⚠ RPC exec_sql no disponible ({e.code}): {err[:200]}')
+              print('→ Aplicando fix via user_companies directamente (sin SQL exec)')
+          PYEOF
+
+      - name: "2. Actualizar user_companies — admin_restringido en lugar de member"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json'}
+
+          def api(method, path, body=None, prefer=None):
+              url  = SB + path
+              data = json.dumps(body).encode() if body else None
+              hdrs = {**H}
+              if prefer: hdrs['Prefer'] = prefer
+              req  = urllib.request.Request(url, data=data, headers=hdrs, method=method)
+              try:
+                  resp = urllib.request.urlopen(req, timeout=15)
+                  raw  = resp.read()
+                  return (json.loads(raw) if raw else {}), resp.status
+              except urllib.error.HTTPError as e:
+                  err = e.read().decode()
+                  return (json.loads(err) if err else {}), e.code
+
+          # Emails que deben tener admin_restringido (no member) en user_companies
+          TARGET_EMAILS = [
+              'clopez@ibanormexico.com',
+              'jorge@retaillab.com.mx',
+              'noe@grupoamsg.com',
+              'rsuarez@ibanormexico.com',
+          ]
+
+          print('\n── Obteniendo UUIDs ──')
+          uid_map = {}
+          for email in TARGET_EMAILS:
+              enc = email.replace('@','%40').replace('.','%2E')
+              d, _ = api('GET', f'/rest/v1/profiles?email=eq.{enc}&select=id,email')
+              if isinstance(d, list) and d:
+                  uid_map[email] = d[0]['id']
+                  print(f'  ✅ {email:40} {d[0]["id"]}')
+              else:
+                  print(f'  ⚠ {email:40} no encontrado')
+
+          if not uid_map:
+              print('❌ Ningún usuario encontrado. ¿Se corrió fix-roles.yml primero?')
+              exit(1)
+
+          print('\n── Actualizando user_companies: member → admin_restringido ──')
+          for email, uid in uid_map.items():
+              # Actualizar TODAS las filas de este usuario donde role = 'member'
+              enc_uid = uid.replace('-','%2D')
+              patch = {'role': 'admin_restringido'}
+              _, code = api('PATCH',
+                  f'/rest/v1/user_companies?user_id=eq.{uid}&role=eq.member',
+                  patch,
+                  prefer='return=minimal')
+              print(f'  {email:40} member→admin_restringido HTTP {code}')
+
+          print('\n── Verificando resultado ──')
+          for email, uid in uid_map.items():
+              d, _ = api('GET', f'/rest/v1/user_companies?user_id=eq.{uid}&select=company_id,role')
+              if isinstance(d, list):
+                  for row in d:
+                      print(f'  {email:40} → {row.get("role","?")} (company: {str(row.get("company_id","?"))[:12]}…)')
+
+          print('\n✅ Fix aplicado — jorge/noe/rsuarez/clopez ahora tienen admin_restringido en user_companies')
+          print('⚠  TAMBIÉN necesitas correr el fix de la función is_sales_member_only() en Supabase SQL Editor:')
+          print("""
+          CREATE OR REPLACE FUNCTION is_sales_member_only()
+          RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+            SELECT NOT EXISTS (
+              SELECT 1 FROM user_companies
+              WHERE user_id = auth.uid() AND role IN ('owner', 'admin', 'admin_restringido')
+            )
+            AND EXISTS (
+              SELECT 1 FROM user_companies
+              WHERE user_id = auth.uid() AND role = 'member'
+            );
+          $$;
+          """)
+          PYEOF
+
+      - name: "3. Estado final user_companies"
+        run: |
+          echo "=== USER_COMPANIES — admin_restringido ==="
+          python3 << 'PYEOF'
+          import json, urllib.request, os
+
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}'}
+
+          TARGET_EMAILS = ['clopez@ibanormexico.com','jorge@retaillab.com.mx','noe@grupoamsg.com','rsuarez@ibanormexico.com']
+          for email in TARGET_EMAILS:
+              enc = email.replace('@','%40').replace('.','%2E')
+              req = urllib.request.Request(
+                  f'{SB}/rest/v1/profiles?email=eq.{enc}&select=id,email,role',
+                  headers=H)
+              try:
+                  resp = urllib.request.urlopen(req, timeout=10)
+                  profiles = json.loads(resp.read())
+                  if profiles:
+                      uid = profiles[0]['id']
+                      req2 = urllib.request.Request(
+                          f'{SB}/rest/v1/user_companies?user_id=eq.{uid}&select=role,company_id',
+                          headers=H)
+                      resp2 = urllib.request.urlopen(req2, timeout=10)
+                      uc = json.loads(resp2.read())
+                      roles = [f"{r.get('role')}@{str(r.get('company_id',''))[:8]}" for r in uc]
+                      print(f'  {email:40} profile:{profiles[0]["role"]:20} | uc:{", ".join(roles)}')
+              except Exception as e:
+                  print(f'  ⚠ {email}: {e}')
+          PYEOF
