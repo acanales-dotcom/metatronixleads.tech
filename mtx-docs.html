@@ -674,6 +674,7 @@ async function saveDocument() {
       text_content: textContent || null,
       uploaded_by: user.id,
       uploaded_by_name: uploaderName,
+      company_id: getActiveCompanyId() || currentUser?.profile?.company_id || null,
     };
 
     const { data: inserted, error } = await db
