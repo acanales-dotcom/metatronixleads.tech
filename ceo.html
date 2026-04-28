@@ -253,7 +253,7 @@ const QUICK_QUERIES = [
 
 /* ── INIT ───────────────────────────────────────────────────────────────── */
 async function init() {
-  _user = await requireAuth(true);
+  _user = await requireFullAdmin();
   if (!_user) return;
 
   const role = _user?.profile?.role;

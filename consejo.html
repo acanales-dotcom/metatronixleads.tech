@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/assets/style.css?v=20260420">
   <script src="/assets/libs/supabase.min.js"></script>
   <script src="/config.js?v=20260420"></script>
-  <script src="/assets/app.js?v=20260421"></script>
+  <script src="/assets/app.js?v=20260428"></script>
   <style>
     :root {
       --m1: #00ff88;  /* Mesa 1: Estrategia */
@@ -464,7 +464,7 @@ Sé visionario. Cita capacidades reales de Claude API (Anthropic) cuando sea rel
 ];
 
 async function init() {
-  _user = await requireAuth(true);
+  _user = await requireFullAdmin();
   if (!_user) return;
   _role = _user?.profile?.role || '';
   _db   = getDB();

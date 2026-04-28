@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/assets/style.css?v=20260420">
   <script src="/assets/libs/supabase.min.js"></script>
   <script src="/config.js?v=20260420"></script>
-  <script src="/assets/app.js?v=20260421"></script>
+  <script src="/assets/app.js?v=20260428"></script>
   <script src="/assets/attachments.js?v=20260420"></script>
   <style>
     /* ── Layout ── */
@@ -276,7 +276,7 @@ const fmt = (n) => new Intl.NumberFormat('es-MX', {style:'currency', currency:'M
 const fmtD = (d) => d ? new Date(d+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
 
 async function init() {
-  _user = await requireAuth(true);
+  _user = await requireFullAdmin();
   if (!_user) return;
   _db = getDB();
 

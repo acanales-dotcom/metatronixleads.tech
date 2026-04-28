@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/assets/style.css?v=20260418">
   <script src="/assets/libs/supabase.min.js"></script>
   <script src="/config.js?v=20260418"></script>
-  <script src="/assets/app.js?v=20260421"></script>
+  <script src="/assets/app.js?v=20260428"></script>
   <style>
     .fact-root { display:flex; flex-direction:column; gap:24px; padding:24px; max-width:1200px; margin:0 auto; }
 
@@ -102,7 +102,7 @@
 let _user = null;
 
 async function init() {
-  _user = await requireAuth(true);
+  _user = await requireFullAdmin();
   if (!_user) return;
 
   document.getElementById('app-root').innerHTML = buildShell();

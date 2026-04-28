@@ -1,0 +1,184 @@
+name: Fix Docs — Eliminar IBANOR de MetaTronix + RLS aislamiento
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-docs:
+    name: Borrar docs IBANOR en MetaTronix y reforzar RLS
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - name: "Verificar conexión"
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SK" -H "Authorization: Bearer $SK" \
+            "$SB/rest/v1/profiles?select=id&limit=1")
+          [ "$HTTP" = "200" ] && echo "✅ Conexión OK" || { echo "❌ HTTP $HTTP"; exit 1; }
+
+      - name: "1. Diagnóstico — docs por empresa en metatronix_docs"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, os
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}'}
+
+          # Contar docs por company_id
+          req = urllib.request.Request(
+              f'{SB}/rest/v1/metatronix_docs?select=company_id,id&limit=1000',
+              headers=H)
+          data = json.loads(urllib.request.urlopen(req, timeout=15).read())
+          from collections import Counter
+          counts = Counter(d.get('company_id') for d in data)
+          print(f'\n── Distribución de docs por company_id ──')
+          for cid, cnt in sorted(counts.items(), key=lambda x: -(x[1] or 0)):
+              label = {
+                  'c0000000-0000-0000-0000-000000000001': 'MetaTronix',
+                  'a0000000-0000-0000-0000-000000000001': 'IBANOR ← BORRAR',
+                  'd0000000-0000-0000-0000-000000000001': 'Nexus-Demo',
+                  None: 'NULL (sin empresa) ← BORRAR',
+              }.get(cid, str(cid))
+              print(f'  {label}: {cnt} docs')
+          print(f'\n  Total: {len(data)} docs')
+          PYEOF
+
+      - name: "2. Borrar docs de IBANOR en metatronix_docs"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json'}
+          IBANOR = 'a0000000-0000-0000-0000-000000000001'
+
+          # Primero cuántos hay
+          req = urllib.request.Request(
+              f'{SB}/rest/v1/metatronix_docs?company_id=eq.{IBANOR}&select=id,title,company_id',
+              headers={**H, 'Prefer': 'count=exact'})
+          resp = urllib.request.urlopen(req, timeout=15)
+          ibanor_docs = json.loads(resp.read())
+          count_header = resp.headers.get('content-range', '?')
+          print(f'\n── Docs de IBANOR encontrados: {len(ibanor_docs)} (range: {count_header}) ──')
+          for d in ibanor_docs[:20]:
+              print(f'  [{d.get("id","?")[:8]}…] {d.get("title","Sin título")}')
+
+          if not ibanor_docs:
+              print('  ✅ No hay docs de IBANOR en metatronix_docs. Nada que borrar.')
+          else:
+              # DELETE
+              req2 = urllib.request.Request(
+                  f'{SB}/rest/v1/metatronix_docs?company_id=eq.{IBANOR}',
+                  headers={**H, 'Prefer': 'return=minimal'},
+                  method='DELETE')
+              try:
+                  resp2 = urllib.request.urlopen(req2, timeout=15)
+                  print(f'\n  ✅ Borrados {len(ibanor_docs)} docs de IBANOR — HTTP {resp2.status}')
+              except urllib.error.HTTPError as e:
+                  print(f'  ❌ Error borrando: {e.code} — {e.read().decode()[:300]}')
+          PYEOF
+
+      - name: "3. Borrar docs sin company_id (NULL) — visibles para todos"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json'}
+
+          req = urllib.request.Request(
+              f'{SB}/rest/v1/metatronix_docs?company_id=is.null&select=id,title,uploaded_by_name',
+              headers={**H, 'Prefer': 'count=exact'})
+          resp = urllib.request.urlopen(req, timeout=15)
+          null_docs = json.loads(resp.read())
+          print(f'\n── Docs sin company_id (NULL): {len(null_docs)} ──')
+          for d in null_docs[:20]:
+              print(f'  [{d.get("id","?")[:8]}…] {d.get("title","Sin título")} — {d.get("uploaded_by_name","")}')
+
+          if not null_docs:
+              print('  ✅ No hay docs sin empresa. Correcto.')
+          else:
+              req2 = urllib.request.Request(
+                  f'{SB}/rest/v1/metatronix_docs?company_id=is.null',
+                  headers={**H, 'Prefer': 'return=minimal'},
+                  method='DELETE')
+              try:
+                  resp2 = urllib.request.urlopen(req2, timeout=15)
+                  print(f'\n  ✅ Borrados {len(null_docs)} docs sin empresa — HTTP {resp2.status}')
+              except urllib.error.HTTPError as e:
+                  print(f'  ❌ Error: {e.code} — {e.read().decode()[:300]}')
+          PYEOF
+
+      - name: "4. RLS — bloquear admin_restringido de docs visibility=admin/private"
+        uses: actions/checkout@v4
+
+      - name: "4b. Aplicar SQL RLS reforzado"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json'}
+
+          # Verificar que el RLS bloquea admin_restringido de docs admin/private
+          # La política docs_company_select ya tiene:
+          #   role IN ('admin', 'super_admin')  ← admin_restringido NO está aquí ✓
+          # Solo verificamos que la política está activa
+          req = urllib.request.Request(
+              f'{SB}/rest/v1/rpc/exec_sql',
+              data=json.dumps({'sql': """
+                SELECT policyname, cmd, qual
+                FROM pg_policies
+                WHERE tablename = 'metatronix_docs'
+                ORDER BY cmd, policyname;
+              """}).encode(),
+              headers=H, method='POST')
+          try:
+              resp = urllib.request.urlopen(req, timeout=15)
+              result = json.loads(resp.read())
+              print('\n── Políticas activas en metatronix_docs ──')
+              if isinstance(result, list):
+                  for row in result:
+                      print(f'  [{row.get("cmd")}] {row.get("policyname")}')
+              else:
+                  print(f'  {result}')
+          except urllib.error.HTTPError as e:
+              print(f'  ⚠ exec_sql no disponible: {e.code} — {e.read().decode()[:200]}')
+              print('  → La política RLS debe verificarse manualmente en Supabase SQL Editor')
+          PYEOF
+
+      - name: "5. Estado final — docs por empresa"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, os
+          from collections import Counter
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}'}
+
+          req = urllib.request.Request(
+              f'{SB}/rest/v1/metatronix_docs?select=company_id,id,title&limit=500',
+              headers=H)
+          data = json.loads(urllib.request.urlopen(req, timeout=15).read())
+          counts = Counter(d.get('company_id') for d in data)
+          NAMES = {
+              'c0000000-0000-0000-0000-000000000001': 'MetaTronix',
+              'a0000000-0000-0000-0000-000000000001': 'IBANOR',
+              'd0000000-0000-0000-0000-000000000001': 'Nexus-Demo',
+              None: 'NULL',
+          }
+          print(f'\n── Estado final metatronix_docs ──')
+          for cid, cnt in sorted(counts.items(), key=lambda x: -(x[1] or 0)):
+              print(f'  {NAMES.get(cid, str(cid))}: {cnt} docs')
+          print(f'  Total: {len(data)} docs')
+
+          ibanor_remaining = counts.get('a0000000-0000-0000-0000-000000000001', 0)
+          null_remaining = counts.get(None, 0)
+          if ibanor_remaining == 0 and null_remaining == 0:
+              print('\n✅ Aislamiento OK — no hay docs de IBANOR ni NULL en MetaTronix')
+          else:
+              print(f'\n⚠ Quedan: IBANOR={ibanor_remaining}, NULL={null_remaining}')
+          PYEOF

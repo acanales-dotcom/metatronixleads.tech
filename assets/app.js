@@ -49,6 +49,18 @@ async function requireAuth(adminOnly = false) {
   return user;
 }
 
+/* Requiere admin o super_admin — bloquea admin_restringido de áreas financieras/ejecutivas */
+async function requireFullAdmin() {
+  const user = await getCurrentUser();
+  if (!user) { window.location.href = '/index.html'; return null; }
+  const role = user.profile?.role;
+  if (!['admin', 'super_admin'].includes(role)) {
+    window.location.href = '/dashboard.html'; return null;
+  }
+  getDB()?.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', user.id).then(() => {});
+  return user;
+}
+
 /* ── Control de uso Claude ─────────────────────────────────── */
 async function checkClaudeAccess(userId) {
   const db = getDB();
