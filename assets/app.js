@@ -32,7 +32,24 @@ async function getCurrentUser() {
   const { data: { user } } = await db.auth.getUser();
   if (!user) return null;
   const { data: profile } = await db.from('profiles').select('*').eq('id', user.id).single();
-  return { ...user, profile: profile || {} };
+  const p = profile || {};
+
+  // FIX: migrated users may have profiles.company_id = null even though they
+  // are assigned in user_companies.  Fetch it as a fallback so that
+  // getActiveCompanyId() (which reads _mtxCurrentUser.profile.company_id)
+  // always returns a valid UUID and RLS INSERT checks don't block them.
+  if (!p.company_id) {
+    const { data: uc } = await db
+      .from('user_companies')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (uc?.company_id) p.company_id = uc.company_id;
+  }
+
+  return { ...user, profile: p };
 }
 
 const ADMIN_ROLES = ['admin', 'admin_restringido', 'super_admin'];
