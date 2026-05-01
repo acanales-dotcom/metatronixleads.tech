@@ -601,6 +601,13 @@ footer{
                 <input type="text" id="f-empresa" class="form-input" placeholder="MetaTronix SA" required maxlength="100">
               </div>
               <div class="form-group">
+                <label class="form-label" for="f-rfc">RFC (opcional)</label>
+                <input type="text" id="f-rfc" class="form-input" placeholder="XAXX010101000" maxlength="13" style="text-transform:uppercase">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label" for="f-industria">Industria *</label>
                 <select id="f-industria" class="form-select" required>
                   <option value="" disabled selected>Selecciona…</option>
@@ -618,7 +625,7 @@ footer{
               </div>
             </div>
 
-            <div class="form-row">
+            <div class="form-row" style="margin-top:0">
               <div class="form-group">
                 <label class="form-label" for="f-nombre">Tu nombre *</label>
                 <input type="text" id="f-nombre" class="form-input" placeholder="Ana García" required maxlength="80">
@@ -737,23 +744,31 @@ function togglePwd() {
   eye.textContent = input.type === 'password' ? '👁' : '🙈';
 }
 
+/* ── Slugify helper ───────────────────────────────────────────── */
+function slugify(s) {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-|-$/g,'')
+    || 'empresa';
+}
+
 /* ── Form submission ──────────────────────────────────────────── */
 document.getElementById('reg-form').addEventListener('submit', async function(e) {
   e.preventDefault();
 
   const empresa   = document.getElementById('f-empresa').value.trim();
+  const rfc       = (document.getElementById('f-rfc')?.value || '').trim().toUpperCase();
   const industria = document.getElementById('f-industria').value;
   const nombre    = document.getElementById('f-nombre').value.trim();
   const equipo    = document.getElementById('f-equipo').value;
   const email     = document.getElementById('f-email').value.trim().toLowerCase();
   const pwd       = document.getElementById('f-pwd').value;
-  const msg       = document.getElementById('form-msg');
   const btn       = document.getElementById('form-btn');
 
   // Validaciones
-  msg.className = 'form-msg';
-  msg.style.display = 'none';
-
+  showMsg('', '');
   if (!empresa || !industria || !nombre || !email || !pwd) {
     showMsg('error', 'Por favor completa todos los campos obligatorios.');
     return;
@@ -767,7 +782,6 @@ document.getElementById('reg-form').addEventListener('submit', async function(e)
     return;
   }
 
-  // Loading
   btn.disabled = true;
   btn.textContent = 'Creando tu portal…';
 
@@ -779,69 +793,78 @@ document.getElementById('reg-form').addEventListener('submit', async function(e)
 
     const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
-    // 1. Crear usuario Auth
+    // ── PASO 1: Crear usuario en Supabase Auth ──────────────────
+    btn.textContent = 'Creando cuenta…';
     const { data: authData, error: authErr } = await sb.auth.signUp({
       email,
       password: pwd,
       options: {
-        data: {
-          full_name: nombre,
-          company:   empresa,
-        },
+        data: { full_name: nombre, company: empresa },
         emailRedirectTo: window.location.origin + '/index.html'
       }
     });
 
     if (authErr) {
-      if (authErr.message.includes('already registered') || authErr.message.includes('already in use')) {
+      const already = authErr.message.includes('already registered')
+                   || authErr.message.includes('already in use')
+                   || authErr.message.includes('User already registered');
+      if (already) {
         showMsg('error', 'Este email ya está registrado. <a href="/index.html">Inicia sesión aquí</a>.');
       } else {
         showMsg('error', 'Error al crear cuenta: ' + authErr.message);
       }
-      btn.disabled = false;
-      btn.textContent = 'Activar mi portal gratis →';
+      btn.disabled = false; btn.textContent = 'Activar mi portal gratis →';
       return;
     }
 
     if (!authData?.user) {
       showMsg('error', 'No se pudo crear la cuenta. Intenta de nuevo.');
-      btn.disabled = false;
-      btn.textContent = 'Activar mi portal gratis →';
+      btn.disabled = false; btn.textContent = 'Activar mi portal gratis →';
       return;
     }
 
-    // 2. Upsert profile con rol admin + datos de empresa
-    const { error: profileErr } = await sb.from('profiles').upsert({
-      id:                  authData.user.id,
-      full_name:           nombre,
-      role:                'admin',
-      company_name:        empresa,
-      industry:            industria,
-      team_size:           equipo,
-      claude_enabled:      true,
-      claude_monthly_limit:100,
-      claude_usage_month:  0,
-      claude_reset_month:  new Date().toISOString().slice(0,7),
-    }, { onConflict: 'id', ignoreDuplicates: false });
+    // ── PASO 2: Crear empresa aislada via RPC ───────────────────
+    // self_register_company() es SECURITY DEFINER: crea company +
+    // profile.company_id + user_companies en una sola transacción.
+    btn.textContent = 'Creando empresa…';
 
-    // profileErr no es fatal — el perfil puede haberse creado via trigger
-    // Solo lo logueamos silenciosamente
+    const slug = slugify(empresa);
+    const { data: companyData, error: rpcErr } = await sb.rpc('self_register_company', {
+      p_company_name: empresa,
+      p_slug:         slug,
+      p_full_name:    nombre,
+      p_rfc:          rfc || null,
+      p_industry:     industria,
+      p_team_size:    equipo,
+    });
 
-    // 3. Mostrar éxito
+    if (rpcErr) {
+      // RPC falló — caemos a modo de respaldo: solo upsert profile
+      // (compatibilidad si self_signup_v1.sql aún no se ha ejecutado)
+      console.warn('self_register_company RPC error (fallback):', rpcErr.message);
+      await sb.from('profiles').upsert({
+        id:           authData.user.id,
+        full_name:    nombre,
+        role:         'admin',
+        is_active:    true,
+      }, { onConflict: 'id', ignoreDuplicates: false });
+    }
+
+    // ── PASO 3: Mostrar éxito ───────────────────────────────────
     document.getElementById('form-state').style.display = 'none';
     document.getElementById('success-email').textContent = email;
-    const ss = document.getElementById('success-state');
-    ss.style.display = 'block';
 
-    // Log de registro
-    try {
-      await sb.from('activity_logs').insert({
-        user_id:     authData.user.id,
-        action:      'empresa_registrada',
-        entity_type: 'onboarding',
-        metadata:    { empresa, industria, equipo, fuente: 'registro-empresa.html' }
-      });
-    } catch(_) {}
+    // Personalizar el mensaje de éxito
+    const successTitle = document.querySelector('.success-title');
+    if (successTitle) successTitle.textContent = `¡${empresa} activada!`;
+    const successText = document.querySelector('.success-text');
+    if (successText && companyData?.[0]) {
+      successText.innerHTML =
+        `Tu empresa <strong>${empresa}</strong> fue creada y aislada del resto de empresas del portal.<br><br>
+         Enviamos un email de confirmación a <strong>${email}</strong>. Confirma tu cuenta para acceder.`;
+    }
+
+    document.getElementById('success-state').style.display = 'block';
 
   } catch (err) {
     showMsg('error', err.message || 'Error inesperado. Intenta de nuevo.');
