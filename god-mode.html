@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GOD MODE — MetaTronix Platform Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:     #0a0a0a;
+  --bg2:    #111111;
+  --bg3:    #1a1a1a;
+  --bg4:    #222222;
+  --border: #2a2a2a;
+  --accent: #00ff88;
+  --accent2:#00cc6a;
+  --warn:   #ffaa00;
+  --danger: #ff3355;
+  --info:   #00aaff;
+  --text:   #e8e8e8;
+  --muted:  #666;
+  --font-h: 'Bebas Neue', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+  --font-m: 'JetBrains Mono', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:var(--font-b); min-height:100vh; overflow-x:hidden; }
+
+/* ── CREDENTIAL SCREEN ── */
+#cred-screen {
+  position:fixed; inset:0; background:var(--bg); z-index:1000;
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:24px;
+}
+#cred-screen .logo { font-family:var(--font-h); font-size:56px; letter-spacing:4px; color:var(--accent); text-align:center; }
+#cred-screen .sub  { color:var(--muted); font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+.cred-form { display:flex; flex-direction:column; gap:12px; width:420px; }
+.cred-form input {
+  background:var(--bg3); border:1px solid var(--border); color:var(--text);
+  padding:12px 16px; border-radius:6px; font-family:var(--font-m); font-size:12px;
+  outline:none; transition:border .2s;
+}
+.cred-form input:focus { border-color:var(--accent); }
+.cred-form input::placeholder { color:var(--muted); }
+.btn-god {
+  background:var(--accent); color:#000; font-family:var(--font-h); font-size:18px;
+  letter-spacing:2px; padding:12px; border:none; border-radius:6px; cursor:pointer;
+  transition:background .2s;
+}
+.btn-god:hover { background:var(--accent2); }
+.cred-note { font-size:11px; color:var(--muted); text-align:center; max-width:420px; line-height:1.6; }
+
+/* ── MAIN LAYOUT ── */
+#app { display:none; flex-direction:column; height:100vh; }
+#app.visible { display:flex; }
+
+/* TOP BAR */
+.topbar {
+  background:var(--bg2); border-bottom:1px solid var(--border);
+  padding:0 24px; height:56px; display:flex; align-items:center; gap:20px; flex-shrink:0;
+}
+.topbar-logo { font-family:var(--font-h); font-size:22px; color:var(--accent); letter-spacing:3px; }
+.topbar-badge {
+  background:#1a0a00; border:1px solid var(--warn); color:var(--warn);
+  font-size:10px; font-family:var(--font-m); padding:2px 8px; border-radius:3px; letter-spacing:2px;
+}
+.topbar-spacer { flex:1; }
+.status-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.topbar-user { font-size:12px; color:var(--muted); font-family:var(--font-m); }
+.btn-sm {
+  background:var(--bg3); border:1px solid var(--border); color:var(--text);
+  font-family:var(--font-b); font-size:12px; padding:6px 12px; border-radius:4px;
+  cursor:pointer; transition:all .2s;
+}
+.btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+.btn-danger { border-color:var(--danger); color:var(--danger); }
+.btn-accent { background:var(--accent); border-color:var(--accent); color:#000; font-weight:600; }
+.btn-accent:hover { background:var(--accent2); border-color:var(--accent2); color:#000; }
+
+/* NAV TABS */
+.nav-tabs {
+  background:var(--bg2); border-bottom:1px solid var(--border);
+  padding:0 24px; display:flex; gap:0; flex-shrink:0;
+}
+.tab {
+  padding:12px 20px; font-size:12px; font-family:var(--font-m); letter-spacing:1px;
+  text-transform:uppercase; cursor:pointer; border-bottom:2px solid transparent;
+  color:var(--muted); transition:all .2s; user-select:none;
+}
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+/* CONTENT */
+.content { flex:1; overflow-y:auto; padding:24px; }
+
+/* PANELS */
+.panel { display:none; }
+.panel.active { display:block; }
+
+/* KPI GRID */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.kpi {
+  background:var(--bg2); border:1px solid var(--border); border-radius:8px;
+  padding:20px; display:flex; flex-direction:column; gap:8px;
+}
+.kpi-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; }
+.kpi-value { font-family:var(--font-h); font-size:36px; color:var(--accent); line-height:1; }
+.kpi-sub   { font-size:11px; color:var(--muted); }
+.kpi.warn  .kpi-value { color:var(--warn); }
+.kpi.danger .kpi-value { color:var(--danger); }
+
+/* SECTION HEADER */
+.sec-hdr {
+  display:flex; align-items:center; gap:12px; margin-bottom:16px;
+}
+.sec-title { font-family:var(--font-h); font-size:20px; letter-spacing:2px; }
+.sec-spacer { flex:1; }
+
+/* SEARCH */
+.search-bar {
+  background:var(--bg3); border:1px solid var(--border); color:var(--text);
+  padding:8px 14px; border-radius:6px; font-family:var(--font-b); font-size:13px;
+  outline:none; width:260px; transition:border .2s;
+}
+.search-bar:focus { border-color:var(--accent); }
+
+/* TABLE */
+.table-wrap { background:var(--bg2); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.data-table { width:100%; border-collapse:collapse; }
+.data-table th {
+  background:var(--bg3); padding:10px 14px; text-align:left;
+  font-size:10px; text-transform:uppercase; letter-spacing:2px; color:var(--muted);
+  border-bottom:1px solid var(--border); font-family:var(--font-m); cursor:pointer;
+}
+.data-table th:hover { color:var(--text); }
+.data-table td { padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tr:hover td { background:var(--bg3); }
+.data-table .empty { text-align:center; color:var(--muted); padding:40px; font-size:13px; }
+
+/* HEALTH BADGE */
+.health {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:2px 8px; border-radius:3px; font-size:11px; font-family:var(--font-m); font-weight:600;
+}
+.health.healthy  { background:#001a0a; color:var(--accent);  border:1px solid #004422; }
+.health.warning  { background:#1a1000; color:var(--warn);    border:1px solid #443300; }
+.health.critical { background:#1a000a; color:var(--danger);  border:1px solid #440011; }
+.health.suspended{ background:#111;    color:var(--muted);   border:1px solid #333; }
+.health.nexus    { background:#000a1a; color:var(--info);    border:1px solid #003344; }
+.health::before { content:'●'; font-size:8px; }
+
+/* PLAN BADGE */
+.plan-badge {
+  padding:2px 7px; border-radius:3px; font-size:10px; font-family:var(--font-m); text-transform:uppercase;
+}
+.plan-badge.starter    { background:#111; color:#888; border:1px solid #333; }
+.plan-badge.pro        { background:#0a0a1a; color:var(--info); border:1px solid #002244; }
+.plan-badge.enterprise { background:#0a1a0a; color:var(--accent); border:1px solid #004422; }
+
+/* PAGINATION */
+.pagination { display:flex; align-items:center; gap:8px; padding:12px 16px; justify-content:flex-end; border-top:1px solid var(--border); }
+.page-btn { background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px; }
+.page-btn.active { border-color:var(--accent); color:var(--accent); }
+.page-btn:hover { border-color:var(--accent); }
+.page-info { font-size:12px; color:var(--muted); font-family:var(--font-m); }
+
+/* MODAL */
+.modal-backdrop {
+  position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:500;
+  display:none; align-items:center; justify-content:center;
+}
+.modal-backdrop.open { display:flex; }
+.modal {
+  background:var(--bg2); border:1px solid var(--border); border-radius:10px;
+  padding:28px; width:500px; max-height:80vh; overflow-y:auto;
+}
+.modal-title { font-family:var(--font-h); font-size:22px; letter-spacing:2px; margin-bottom:20px; color:var(--accent); }
+.form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+.form-row label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-family:var(--font-m); }
+.form-row input, .form-row select {
+  background:var(--bg3); border:1px solid var(--border); color:var(--text);
+  padding:10px 14px; border-radius:6px; font-family:var(--font-b); font-size:13px; outline:none;
+}
+.form-row input:focus, .form-row select:focus { border-color:var(--accent); }
+.form-row select option { background:var(--bg3); }
+.modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+
+/* AI AGENT CONSOLE */
+.agent-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.console-box {
+  background:var(--bg2); border:1px solid var(--border); border-radius:8px; overflow:hidden;
+}
+.console-box .console-hdr {
+  background:var(--bg3); padding:10px 14px; display:flex; align-items:center; gap:8px;
+  border-bottom:1px solid var(--border); font-family:var(--font-m); font-size:11px; text-transform:uppercase; letter-spacing:1px;
+}
+.console-body { padding:14px; font-family:var(--font-m); font-size:12px; line-height:1.7; max-height:320px; overflow-y:auto; }
+.log-line { margin-bottom:2px; }
+.log-line .ts  { color:#555; }
+.log-line .ok  { color:var(--accent); }
+.log-line .warn{ color:var(--warn); }
+.log-line .err { color:var(--danger); }
+.log-line .info{ color:var(--info); }
+.log-line .dim { color:#555; }
+
+/* AGENT CONTROLS */
+.agent-controls { display:flex; gap:10px; margin-bottom:16px; align-items:center; }
+.agent-status { font-family:var(--font-m); font-size:12px; color:var(--muted); }
+#agent-running-dot { display:none; }
+#agent-running-dot.on { display:inline-block; }
+
+/* ALERTS */
+.alert-list { display:flex; flex-direction:column; gap:8px; max-height:300px; overflow-y:auto; }
+.alert-item {
+  background:var(--bg3); border-radius:6px; padding:10px 14px; display:flex; gap:10px; align-items:flex-start;
+  border-left:3px solid var(--border);
+}
+.alert-item.critical { border-left-color:var(--danger); }
+.alert-item.warning  { border-left-color:var(--warn); }
+.alert-item.info     { border-left-color:var(--info); }
+.alert-icon { font-size:14px; margin-top:1px; }
+.alert-body { flex:1; }
+.alert-title { font-size:13px; font-weight:600; margin-bottom:2px; }
+.alert-desc  { font-size:11px; color:var(--muted); }
+.alert-time  { font-size:10px; color:var(--muted); font-family:var(--font-m); white-space:nowrap; }
+
+/* NEXUS PANEL */
+.nexus-header {
+  background:linear-gradient(135deg,#000a1a,#001130);
+  border:1px solid #003366; border-radius:8px; padding:20px; margin-bottom:16px;
+  display:flex; gap:20px; align-items:center;
+}
+.nexus-icon { font-size:48px; }
+.nexus-info { flex:1; }
+.nexus-name { font-family:var(--font-h); font-size:28px; color:var(--info); letter-spacing:3px; }
+.nexus-desc { font-size:12px; color:#6688aa; margin-top:4px; }
+.deploy-list { display:flex; flex-direction:column; gap:8px; }
+.deploy-item {
+  background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+  display:flex; align-items:center; gap:14px;
+}
+.deploy-version { font-family:var(--font-m); font-size:14px; font-weight:600; color:var(--info); }
+.deploy-desc { flex:1; font-size:13px; }
+.deploy-status {
+  padding:3px 9px; border-radius:3px; font-size:10px; font-family:var(--font-m); text-transform:uppercase;
+}
+.deploy-status.pending    { background:#1a1000; color:var(--warn); border:1px solid #443300; }
+.deploy-status.approved   { background:#001a0a; color:var(--accent); border:1px solid #004422; }
+.deploy-status.deploying  { background:#000a1a; color:var(--info); border:1px solid #003366; }
+.deploy-status.deployed   { background:#0a0a0a; color:#555; border:1px solid #333; }
+.deploy-status.failed     { background:#1a000a; color:var(--danger); border:1px solid #440011; }
+
+/* LOADING */
+.loading { color:var(--muted); font-family:var(--font-m); font-size:12px; padding:20px; text-align:center; }
+.loading::after { content:''; animation:dots 1.5s infinite; }
+@keyframes dots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* RESPONSIVE KPI */
+@media(max-width:1200px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:900px)  { .agent-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- CREDENTIAL SCREEN                                      -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="cred-screen">
+  <div class="logo">⬡ GOD MODE</div>
+  <div class="sub">MetaTronix Platform Control Center</div>
+  <div class="cred-form">
+    <input type="text"     id="sb-url"   placeholder="Supabase URL (https://xxx.supabase.co)" />
+    <input type="password" id="sb-key"   placeholder="Service Role Key (sk-...)"/>
+    <input type="password" id="anon-key" placeholder="Anon Key (eyJ...)"/>
+    <button class="btn-god" onclick="initGodMode()">ACTIVAR GOD MODE</button>
+  </div>
+  <div class="cred-note">
+    Las credenciales se guardan solo en esta sesión del navegador.<br>
+    Se requiere Service Role Key para ver todas las empresas.<br>
+    <span id="cred-error" style="color:var(--danger);display:none"></span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- MAIN APP                                               -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">⬡ METATRONIX</div>
+    <div class="topbar-badge">GOD MODE</div>
+    <div class="topbar-spacer"></div>
+    <div class="status-dot"></div>
+    <div class="topbar-user" id="topbar-user">platform_owner</div>
+    <button class="btn-sm" onclick="refreshAll()">↻ Refresh</button>
+    <button class="btn-sm btn-danger" onclick="logout()">Salir</button>
+  </div>
+
+  <!-- NAV TABS -->
+  <div class="nav-tabs">
+    <div class="tab active" onclick="showTab('dashboard')">Dashboard</div>
+    <div class="tab" onclick="showTab('companies')">Empresas</div>
+    <div class="tab" onclick="showTab('agent')">⚡ Agente AI</div>
+    <div class="tab" onclick="showTab('nexus')">🔬 Nexus</div>
+    <div class="tab" onclick="showTab('audit')">Audit Log</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="panel-dashboard" class="panel active">
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Total Empresas</div><div class="kpi-value" id="kpi-total">—</div><div class="kpi-sub">registradas en la plataforma</div></div>
+        <div class="kpi"><div class="kpi-label">Empresas Activas</div><div class="kpi-value" id="kpi-active">—</div><div class="kpi-sub">actividad últimos 7 días</div></div>
+        <div class="kpi warn"><div class="kpi-label">Advertencias</div><div class="kpi-value" id="kpi-warn">—</div><div class="kpi-sub">sin actividad 30+ días</div></div>
+        <div class="kpi danger"><div class="kpi-label">Críticas</div><div class="kpi-value" id="kpi-crit">—</div><div class="kpi-sub">0 usuarios o sin actividad</div></div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Total Usuarios</div><div class="kpi-value" id="kpi-users">—</div><div class="kpi-sub">en todas las empresas</div></div>
+        <div class="kpi"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="kpi-leads">—</div><div class="kpi-sub">across all companies</div></div>
+        <div class="kpi"><div class="kpi-label">Total Documentos</div><div class="kpi-value" id="kpi-docs">—</div><div class="kpi-sub">en la plataforma</div></div>
+        <div class="kpi" style="border-color:#003366"><div class="kpi-label">Nexus</div><div class="kpi-value" style="color:var(--info)" id="kpi-nexus">—</div><div class="kpi-sub">versión en demo</div></div>
+      </div>
+
+      <div class="sec-hdr">
+        <div class="sec-title">TOP ALERTAS</div>
+      </div>
+      <div class="alert-list" id="dash-alerts">
+        <div class="loading">Cargando alertas</div>
+      </div>
+    </div>
+
+    <!-- ── COMPANIES ── -->
+    <div id="panel-companies" class="panel">
+      <div class="sec-hdr">
+        <div class="sec-title">EMPRESAS</div>
+        <div class="sec-spacer"></div>
+        <input class="search-bar" id="co-search" placeholder="Buscar empresa..." oninput="filterCompanies()" />
+        <select id="co-filter-health" onchange="filterCompanies()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:12px;outline:none;">
+          <option value="">Todos los estados</option>
+          <option value="healthy">Healthy</option>
+          <option value="warning">Warning</option>
+          <option value="critical">Critical</option>
+          <option value="suspended">Suspended</option>
+          <option value="nexus">Nexus</option>
+        </select>
+        <button class="btn-sm btn-accent" onclick="openRegisterModal()">+ Nueva Empresa</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th onclick="sortBy('name')">Empresa</th>
+              <th onclick="sortBy('plan')">Plan</th>
+              <th onclick="sortBy('user_count')">Usuarios</th>
+              <th onclick="sortBy('lead_count')">Leads</th>
+              <th onclick="sortBy('doc_count')">Docs</th>
+              <th onclick="sortBy('last_lead_at')">Última actividad</th>
+              <th onclick="sortBy('health_status')">Health</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="co-tbody">
+            <tr><td colspan="8" class="empty loading">Cargando empresas</td></tr>
+          </tbody>
+        </table>
+        <div class="pagination" id="co-pagination"></div>
+      </div>
+    </div>
+
+    <!-- ── AI AGENT ── -->
+    <div id="panel-agent" class="panel">
+      <div class="agent-controls">
+        <div class="sec-title">AGENTE AI — MONITOREO 24/7</div>
+        <div class="sec-spacer"></div>
+        <span id="agent-running-dot" class="status-dot"></span>
+        <span class="agent-status" id="agent-status-text">Detenido</span>
+        <button class="btn-sm btn-accent" id="agent-toggle" onclick="toggleAgent()">▶ Iniciar Agente</button>
+        <button class="btn-sm" onclick="runManualScan()">⚡ Scan Ahora</button>
+        <select id="agent-interval" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-size:12px;outline:none;">
+          <option value="30">Cada 30s</option>
+          <option value="60" selected>Cada 1min</option>
+          <option value="300">Cada 5min</option>
+          <option value="900">Cada 15min</option>
+        </select>
+      </div>
+
+      <div class="agent-grid">
+        <div class="console-box">
+          <div class="console-hdr">
+            <span style="color:var(--accent)">●</span>
+            <span>Console Log</span>
+            <div style="flex:1"></div>
+            <button class="btn-sm" style="font-size:10px;padding:2px 8px" onclick="clearConsole()">Limpiar</button>
+          </div>
+          <div class="console-body" id="agent-console"></div>
+        </div>
+
+        <div class="console-box">
+          <div class="console-hdr">
+            <span style="color:var(--danger)">●</span>
+            <span>Alertas Detectadas</span>
+            <div style="flex:1"></div>
+            <span id="alert-count" style="color:var(--muted);font-size:10px">0 activas</span>
+          </div>
+          <div class="console-body">
+            <div class="alert-list" id="agent-alerts">
+              <div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Sin alertas — ejecuta el agente</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div class="console-box">
+          <div class="console-hdr">
+            <span style="color:var(--info)">●</span>
+            <span>Análisis AI — Recomendaciones</span>
+          </div>
+          <div class="console-body" id="ai-analysis" style="max-height:200px;">
+            <span style="color:var(--muted)">El agente generará recomendaciones automáticas aquí...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NEXUS ── -->
+    <div id="panel-nexus" class="panel">
+      <div class="nexus-header">
+        <div class="nexus-icon">🔬</div>
+        <div class="nexus-info">
+          <div class="nexus-name">NEXUS — DEMO ENVIRONMENT</div>
+          <div class="nexus-desc">Los cambios se prueban aquí antes de desplegarse a las <span id="nexus-prod-count">—</span> empresas en producción. Solo cambios autorizados llegan a producción.</div>
+        </div>
+        <div>
+          <button class="btn-sm btn-accent" onclick="openDeployModal()">+ Nuevo Deploy</button>
+        </div>
+      </div>
+
+      <div class="sec-hdr">
+        <div class="sec-title">PIPELINE DE DEPLOYS</div>
+      </div>
+      <div class="deploy-list" id="deploy-list">
+        <div class="loading">Cargando historial</div>
+      </div>
+
+      <div style="margin-top:24px">
+        <div class="sec-hdr"><div class="sec-title">NEXUS vs PRODUCCIÓN</div></div>
+        <div class="agent-grid">
+          <div class="console-box">
+            <div class="console-hdr" style="color:var(--info)"><span>🔬</span><span>NEXUS (Demo)</span></div>
+            <div class="console-body" id="nexus-state">
+              <div class="loading">Cargando estado Nexus</div>
+            </div>
+          </div>
+          <div class="console-box">
+            <div class="console-hdr" style="color:var(--accent)"><span>🏭</span><span>PRODUCCIÓN</span></div>
+            <div class="console-body" id="prod-state">
+              <div class="loading">Cargando estado producción</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AUDIT LOG ── -->
+    <div id="panel-audit" class="panel">
+      <div class="sec-hdr">
+        <div class="sec-title">AUDIT LOG</div>
+        <div class="sec-spacer"></div>
+        <button class="btn-sm" onclick="loadAuditLog()">↻ Actualizar</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Actor</th>
+              <th>Acción</th>
+              <th>Target</th>
+              <th>Detalles</th>
+            </tr>
+          </thead>
+          <tbody id="audit-tbody">
+            <tr><td colspan="5" class="empty loading">Cargando log</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- MODAL: Registrar Empresa -->
+<div class="modal-backdrop" id="modal-register">
+  <div class="modal">
+    <div class="modal-title">REGISTRAR EMPRESA</div>
+    <div class="form-row">
+      <label>Nombre de la empresa *</label>
+      <input type="text" id="reg-name" placeholder="Ej: ACME Corp SA de CV" />
+    </div>
+    <div class="form-row">
+      <label>Slug (URL) *</label>
+      <input type="text" id="reg-slug" placeholder="acme-corp" />
+    </div>
+    <div class="form-row">
+      <label>Email del dueño</label>
+      <input type="email" id="reg-email" placeholder="admin@empresa.com" />
+    </div>
+    <div class="form-row">
+      <label>Plan</label>
+      <select id="reg-plan">
+        <option value="starter">Starter</option>
+        <option value="pro">Pro</option>
+        <option value="enterprise">Enterprise</option>
+      </select>
+    </div>
+    <div id="reg-error" style="color:var(--danger);font-size:12px;margin-bottom:8px;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeModal('modal-register')">Cancelar</button>
+      <button class="btn-sm btn-accent" onclick="registerCompany()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo Deploy -->
+<div class="modal-backdrop" id="modal-deploy">
+  <div class="modal">
+    <div class="modal-title">NUEVO DEPLOY NEXUS → PROD</div>
+    <div class="form-row">
+      <label>Versión *</label>
+      <input type="text" id="dep-version" placeholder="v2.3.1" />
+    </div>
+    <div class="form-row">
+      <label>Descripción</label>
+      <input type="text" id="dep-desc" placeholder="Qué cambia en este deploy" />
+    </div>
+    <div class="form-row">
+      <label>Cambios (JSON)</label>
+      <input type="text" id="dep-changes" placeholder='["fix: RLS leads", "feat: teams v2"]' />
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeModal('modal-deploy')">Cancelar</button>
+      <button class="btn-sm btn-accent" onclick="createDeploy()">Crear Deploy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let SB_URL, SB_SERVICE_KEY, SB_ANON_KEY;
+let supabaseAdmin = null;
+let allCompanies  = [];
+let filteredCos   = [];
+let currentPage   = 1;
+const PAGE_SIZE   = 25;
+let agentTimer    = null;
+let agentRunning  = false;
+let alertCount    = 0;
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+async function initGodMode() {
+  SB_URL         = document.getElementById('sb-url').value.trim().replace(/\/$/, '');
+  SB_SERVICE_KEY = document.getElementById('sb-key').value.trim();
+  SB_ANON_KEY    = document.getElementById('anon-key').value.trim();
+
+  const errEl = document.getElementById('cred-error');
+  if (!SB_URL || !SB_SERVICE_KEY) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'URL y Service Role Key son obligatorios';
+    return;
+  }
+
+  // Test connection
+  try {
+    const r = await sbQuery(`SELECT count(*) FROM companies`);
+    if (r.error) throw new Error(r.error.message || JSON.stringify(r.error));
+  } catch(e) {
+    // If companies table doesn't exist yet, still proceed
+    if (!e.message?.includes('does not exist')) {
+      errEl.style.display = 'block';
+      errEl.textContent = 'Error: ' + e.message;
+      return;
+    }
+  }
+
+  document.getElementById('cred-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  refreshAll();
+}
+
+// ══════════════════════════════════════════════════════════════
+// SUPABASE REST HELPER (service_role bypasses all RLS)
+// ══════════════════════════════════════════════════════════════
+async function sbQuery(sql) {
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB_SERVICE_KEY,
+      'Authorization': `Bearer ${SB_SERVICE_KEY}`,
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify({ query: sql })
+  });
+  // Try Supabase Management-style query endpoint
+  const r2 = await fetch(`${SB_URL.replace('supabase.co','supabase.co')}/rest/v1/`, {});
+  return await r.json().catch(() => ({}));
+}
+
+// Better: use REST API directly
+async function sbFetch(table, params = '') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${params}`, {
+    headers: {
+      'apikey': SB_SERVICE_KEY,
+      'Authorization': `Bearer ${SB_SERVICE_KEY}`,
+      'Prefer': 'count=exact'
+    }
+  });
+  const data = await r.json();
+  const count = r.headers.get('content-range')?.split('/')?.[1];
+  return { data: Array.isArray(data) ? data : [], count: count ? parseInt(count) : 0, error: data.message ? data : null };
+}
+
+async function sbPost(table, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_SERVICE_KEY,
+      'Authorization': `Bearer ${SB_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(body)
+  });
+  return await r.json();
+}
+
+async function sbPatch(table, match, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${match}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SB_SERVICE_KEY,
+      'Authorization': `Bearer ${SB_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(body)
+  });
+  return await r.json();
+}
+
+// ══════════════════════════════════════════════════════════════
+// REFRESH ALL
+// ══════════════════════════════════════════════════════════════
+async function refreshAll() {
+  await Promise.all([
+    loadCompanies(),
+    loadAuditLog(),
+    loadNexus()
+  ]);
+  updateDashboard();
+}
+
+// ══════════════════════════════════════════════════════════════
+// COMPANIES
+// ══════════════════════════════════════════════════════════════
+async function loadCompanies() {
+  // Fetch companies with counts via separate calls
+  const { data: companies, error } = await sbFetch('companies', '?select=*&order=name.asc&limit=500');
+  if (error || !companies.length) {
+    // Try without companies table
+    allCompanies = [];
+    renderCompaniesTable();
+    updateDashboard();
+    return;
+  }
+
+  // Enrich with health data
+  for (const c of companies) {
+    const [users, leads, docs] = await Promise.all([
+      sbFetch('profiles',        `?company_id=eq.${c.id}&select=id`),
+      sbFetch('leads',           `?company_id=eq.${c.id}&select=id,created_at&order=created_at.desc&limit=1`),
+      sbFetch('metatronix_docs', `?company_id=eq.${c.id}&select=id`)
+    ]);
+    c.user_count  = users.count  || 0;
+    c.lead_count  = leads.count  || 0;
+    c.doc_count   = docs.count   || 0;
+    c.last_lead_at = leads.data?.[0]?.created_at || null;
+
+    // Health status
+    if (c.status === 'suspended') c.health_status = 'suspended';
+    else if (c.is_nexus)          c.health_status = 'nexus';
+    else if (c.user_count === 0)  c.health_status = 'critical';
+    else if (!c.last_lead_at || new Date(c.last_lead_at) < Date.now() - 30*86400*1000)
+                                  c.health_status = 'warning';
+    else                          c.health_status = 'healthy';
+  }
+
+  allCompanies = companies;
+  filterCompanies();
+  updateDashboard();
+}
+
+function filterCompanies() {
+  const q  = (document.getElementById('co-search')?.value || '').toLowerCase();
+  const hs = document.getElementById('co-filter-health')?.value || '';
+  filteredCos = allCompanies.filter(c =>
+    (!q  || c.name.toLowerCase().includes(q) || (c.slug||'').toLowerCase().includes(q) || (c.owner_email||'').toLowerCase().includes(q)) &&
+    (!hs || c.health_status === hs)
+  );
+  currentPage = 1;
+  renderCompaniesTable();
+}
+
+function sortBy(field) {
+  filteredCos.sort((a,b) => {
+    const av = a[field], bv = b[field];
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return typeof av === 'number' ? bv - av : String(av).localeCompare(String(bv));
+  });
+  renderCompaniesTable();
+}
+
+function renderCompaniesTable() {
+  const tbody = document.getElementById('co-tbody');
+  const start = (currentPage-1)*PAGE_SIZE;
+  const page  = filteredCos.slice(start, start+PAGE_SIZE);
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Sin empresas — ${allCompanies.length ? 'ajusta el filtro' : 'crea la primera empresa'}</td></tr>`;
+    document.getElementById('co-pagination').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = page.map(c => `
+    <tr>
+      <td>
+        <div style="font-weight:600">${esc(c.name)}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--font-m)">${esc(c.slug||'')}${c.owner_email?` · ${esc(c.owner_email)}`:''}</div>
+      </td>
+      <td><span class="plan-badge ${c.plan}">${c.plan}</span></td>
+      <td style="font-family:var(--font-m)">${c.user_count}</td>
+      <td style="font-family:var(--font-m)">${c.lead_count}</td>
+      <td style="font-family:var(--font-m)">${c.doc_count}</td>
+      <td style="font-size:12px;color:var(--muted)">${c.last_lead_at ? reltime(c.last_lead_at) : '—'}</td>
+      <td><span class="health ${c.health_status}">${c.health_status}</span></td>
+      <td>
+        <button class="btn-sm" style="font-size:10px;padding:3px 8px" onclick="viewCompany('${c.id}')">Ver</button>
+        ${c.status!=='suspended'
+          ? `<button class="btn-sm btn-danger" style="font-size:10px;padding:3px 8px;margin-left:4px" onclick="suspendCompany('${c.id}')">Suspender</button>`
+          : `<button class="btn-sm" style="font-size:10px;padding:3px 8px;margin-left:4px" onclick="reactivateCompany('${c.id}')">Reactivar</button>`
+        }
+      </td>
+    </tr>
+  `).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = filteredCos.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  const pg = document.getElementById('co-pagination');
+  if (pages <= 1) { pg.innerHTML = ''; return; }
+
+  let html = `<span class="page-info">Mostrando ${(currentPage-1)*PAGE_SIZE+1}–${Math.min(currentPage*PAGE_SIZE,total)} de ${total}</span>`;
+  if (currentPage > 1) html += `<button class="page-btn" onclick="gotoPage(${currentPage-1})">‹</button>`;
+  for (let i=Math.max(1,currentPage-2); i<=Math.min(pages,currentPage+2); i++) {
+    html += `<button class="page-btn${i===currentPage?' active':''}" onclick="gotoPage(${i})">${i}</button>`;
+  }
+  if (currentPage < pages) html += `<button class="page-btn" onclick="gotoPage(${currentPage+1})">›</button>`;
+  pg.innerHTML = html;
+}
+
+function gotoPage(p) { currentPage = p; renderCompaniesTable(); }
+
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════
+function updateDashboard() {
+  const total = allCompanies.length;
+  const active = allCompanies.filter(c => c.health_status === 'healthy').length;
+  const warn   = allCompanies.filter(c => c.health_status === 'warning').length;
+  const crit   = allCompanies.filter(c => c.health_status === 'critical').length;
+  const nexusV = allCompanies.find(c => c.is_nexus);
+
+  const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('kpi-total',  fmt(total));
+  set('kpi-active', fmt(active));
+  set('kpi-warn',   fmt(warn));
+  set('kpi-crit',   fmt(crit));
+  set('kpi-nexus',  nexusV?.meta?.version || 'nexus-demo');
+  set('nexus-prod-count', total - (nexusV ? 1 : 0));
+
+  const totalUsers = allCompanies.reduce((s,c)=>s+(c.user_count||0),0);
+  const totalLeads = allCompanies.reduce((s,c)=>s+(c.lead_count||0),0);
+  const totalDocs  = allCompanies.reduce((s,c)=>s+(c.doc_count||0),0);
+  set('kpi-users', fmt(totalUsers));
+  set('kpi-leads', fmt(totalLeads));
+  set('kpi-docs',  fmt(totalDocs));
+
+  renderDashAlerts();
+}
+
+function renderDashAlerts() {
+  const criticals = allCompanies.filter(c => c.health_status === 'critical').slice(0,5);
+  const warnings  = allCompanies.filter(c => c.health_status === 'warning').slice(0,5);
+  const container = document.getElementById('dash-alerts');
+
+  if (!criticals.length && !warnings.length) {
+    container.innerHTML = `<div style="color:var(--accent);font-size:13px;padding:16px;font-family:var(--font-m)">✅ Sin alertas — todas las empresas operan correctamente</div>`;
+    return;
+  }
+
+  container.innerHTML = [
+    ...criticals.map(c => `
+      <div class="alert-item critical">
+        <div class="alert-icon">🚨</div>
+        <div class="alert-body">
+          <div class="alert-title">${esc(c.name)}</div>
+          <div class="alert-desc">CRÍTICO — ${c.user_count===0 ? 'Sin usuarios registrados' : 'Sin actividad reciente'}</div>
+        </div>
+        <div class="alert-time">${reltime(c.created_at)}</div>
+      </div>`),
+    ...warnings.map(c => `
+      <div class="alert-item warning">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-body">
+          <div class="alert-title">${esc(c.name)}</div>
+          <div class="alert-desc">ADVERTENCIA — Sin actividad hace ${c.last_lead_at ? reltime(c.last_lead_at) : 'más de 30 días'}</div>
+        </div>
+        <div class="alert-time">${reltime(c.created_at)}</div>
+      </div>`)
+  ].join('') || `<div class="loading">Sin alertas</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// AI AGENT
+// ══════════════════════════════════════════════════════════════
+function toggleAgent() {
+  if (agentRunning) stopAgent(); else startAgent();
+}
+
+function startAgent() {
+  agentRunning = true;
+  document.getElementById('agent-toggle').textContent = '⏹ Detener Agente';
+  document.getElementById('agent-status-text').textContent = 'Ejecutando...';
+  document.getElementById('agent-running-dot').classList.add('on');
+  logAgent('info', 'Agente AI iniciado — monitoreo activo');
+  runManualScan();
+  const interval = parseInt(document.getElementById('agent-interval').value) * 1000;
+  agentTimer = setInterval(runManualScan, interval);
+}
+
+function stopAgent() {
+  agentRunning = false;
+  clearInterval(agentTimer);
+  document.getElementById('agent-toggle').textContent = '▶ Iniciar Agente';
+  document.getElementById('agent-status-text').textContent = 'Detenido';
+  document.getElementById('agent-running-dot').classList.remove('on');
+  logAgent('warn', 'Agente detenido manualmente');
+}
+
+async function runManualScan() {
+  const ts = new Date().toLocaleTimeString('es-MX');
+  logAgent('dim', `[${ts}] ── Iniciando scan de ${allCompanies.length} empresas ──`);
+
+  if (!allCompanies.length) {
+    await loadCompanies();
+  }
+
+  const issues = [];
+  let ok = 0, warn = 0, crit = 0;
+
+  for (const c of allCompanies) {
+    if (c.is_nexus) continue;
+    if (c.health_status === 'critical') {
+      crit++;
+      issues.push({ type:'critical', company:c.name, msg: c.user_count===0 ? 'Sin usuarios — empresa vacía' : 'Sin actividad crítica' });
+      logAgent('err', `  🚨 CRÍTICO: ${c.name} — ${c.user_count===0?'0 usuarios':'sin actividad'}`);
+    } else if (c.health_status === 'warning') {
+      warn++;
+      issues.push({ type:'warning', company:c.name, msg: `Sin actividad: ${c.last_lead_at ? reltime(c.last_lead_at) : '>30 días'}` });
+      logAgent('warn', `  ⚠️  WARN:    ${c.name} — inactiva ${c.last_lead_at?reltime(c.last_lead_at):'>30d'}`);
+    } else if (c.health_status === 'healthy') {
+      ok++;
+    }
+  }
+
+  logAgent('ok',  `  ✅ Resultado: ${ok} OK | ${warn} warnings | ${crit} críticos`);
+
+  renderAgentAlerts(issues);
+  generateAiRecommendations(issues, ok, warn, crit);
+
+  // Log to platform_audit_log
+  sbPost('platform_audit_log', {
+    action: 'agent_scan',
+    details: { total: allCompanies.length, ok, warn, crit, issues: issues.length }
+  }).catch(()=>{});
+}
+
+function renderAgentAlerts(issues) {
+  alertCount = issues.length;
+  document.getElementById('alert-count').textContent = `${alertCount} activas`;
+  const container = document.getElementById('agent-alerts');
+  if (!issues.length) {
+    container.innerHTML = `<div style="color:var(--accent);font-size:12px;text-align:center;padding:20px;font-family:var(--font-m)">✅ Sin problemas detectados</div>`;
+    return;
+  }
+  container.innerHTML = issues.map(i => `
+    <div class="alert-item ${i.type}">
+      <div class="alert-icon">${i.type==='critical'?'🚨':'⚠️'}</div>
+      <div class="alert-body">
+        <div class="alert-title">${esc(i.company)}</div>
+        <div class="alert-desc">${esc(i.msg)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function generateAiRecommendations(issues, ok, warn, crit) {
+  const total = allCompanies.filter(c=>!c.is_nexus).length;
+  const health = total ? Math.round((ok/total)*100) : 100;
+  const analysisEl = document.getElementById('ai-analysis');
+
+  const recs = [];
+  if (crit > 0) recs.push(`🔴 ${crit} empresa(s) en estado CRÍTICO. Acción inmediata: enviar email de reactivación o verificar onboarding fallido.`);
+  if (warn > 0) recs.push(`🟡 ${warn} empresa(s) inactivas >30 días. Sugerido: campaña de re-engagement automatizada.`);
+  if (health > 90) recs.push(`🟢 Salud de plataforma: ${health}%. Sistema operando óptimamente.`);
+  if (crit === 0 && warn === 0) recs.push(`✅ Todas las empresas activas. Plataforma al 100%.`);
+  recs.push(`📊 Total empresas: ${total} | Usuarios registrados: ${allCompanies.reduce((s,c)=>s+(c.user_count||0),0)} | Leads totales: ${allCompanies.reduce((s,c)=>s+(c.lead_count||0),0)}`);
+  if (total > 0) recs.push(`⚡ Próximo scan automático: ${document.getElementById('agent-interval').options[document.getElementById('agent-interval').selectedIndex].text}`);
+
+  const ts = new Date().toLocaleTimeString('es-MX');
+  analysisEl.innerHTML = `<div style="color:var(--muted);font-size:11px;margin-bottom:8px">[${ts}] Análisis generado</div>` +
+    recs.map(r=>`<div class="log-line" style="color:var(--text);margin-bottom:6px">${r}</div>`).join('');
+}
+
+function logAgent(type, msg) {
+  const console = document.getElementById('agent-console');
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  const cls = type==='ok'?'ok':type==='err'?'err':type==='warn'?'warn':type==='info'?'info':'dim';
+  div.innerHTML = `<span class="${cls}">${esc(msg)}</span>`;
+  console.appendChild(div);
+  console.scrollTop = console.scrollHeight;
+}
+
+function clearConsole() {
+  document.getElementById('agent-console').innerHTML = '';
+}
+
+// ══════════════════════════════════════════════════════════════
+// NEXUS
+// ══════════════════════════════════════════════════════════════
+async function loadNexus() {
+  const { data: deploys } = await sbFetch('nexus_deploys', '?select=*&order=created_at.desc&limit=10');
+  renderDeployList(deploys || []);
+
+  const nexusCo = allCompanies.find(c=>c.is_nexus);
+  const prodCos = allCompanies.filter(c=>!c.is_nexus && c.status!=='suspended');
+
+  document.getElementById('nexus-state').innerHTML = nexusCo ? `
+    <div class="log-line"><span class="info">Empresa:</span> ${esc(nexusCo.name)}</div>
+    <div class="log-line"><span class="info">Usuarios:</span> ${nexusCo.user_count}</div>
+    <div class="log-line"><span class="info">Leads:</span>   ${nexusCo.lead_count}</div>
+    <div class="log-line"><span class="info">Docs:</span>    ${nexusCo.doc_count}</div>
+    <div class="log-line"><span class="info">Status:</span>  <span class="health nexus">nexus</span></div>
+    <div style="margin-top:8px;color:var(--muted);font-size:11px">Versión activa: ${nexusCo.meta?.version || 'latest'}</div>
+  ` : `<div style="color:var(--muted)">Nexus no configurado — ejecuta platform_owner_v1.sql</div>`;
+
+  document.getElementById('prod-state').innerHTML = `
+    <div class="log-line"><span class="ok">Empresas activas:</span> ${fmt(prodCos.length)}</div>
+    <div class="log-line"><span class="ok">Total usuarios:</span>   ${fmt(prodCos.reduce((s,c)=>s+(c.user_count||0),0))}</div>
+    <div class="log-line"><span class="ok">Total leads:</span>      ${fmt(prodCos.reduce((s,c)=>s+(c.lead_count||0),0))}</div>
+    <div class="log-line"><span class="ok">Salud general:</span>    ${prodCos.length ? Math.round(prodCos.filter(c=>c.health_status==='healthy').length/prodCos.length*100) : 0}%</div>
+    <div style="margin-top:8px;color:var(--muted);font-size:11px">Última actualización: ${new Date().toLocaleTimeString('es-MX')}</div>
+  `;
+}
+
+function renderDeployList(deploys) {
+  const container = document.getElementById('deploy-list');
+  if (!deploys.length) {
+    container.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">Sin deploys registrados</div>`;
+    return;
+  }
+  container.innerHTML = deploys.map(d => `
+    <div class="deploy-item">
+      <div class="deploy-version">${esc(d.version)}</div>
+      <div class="deploy-desc">${esc(d.description||'Sin descripción')}</div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--font-m)">${reltime(d.created_at)}</div>
+      <span class="deploy-status ${d.status}">${d.status}</span>
+      ${d.status==='pending' ? `
+        <button class="btn-sm btn-accent" style="font-size:10px;padding:3px 8px" onclick="approveDeploy('${d.id}')">✓ Autorizar</button>
+        ` : ''}
+    </div>`).join('');
+}
+
+async function approveDeploy(id) {
+  await sbPatch('nexus_deploys', `id=eq.${id}`, { status: 'approved', approved_by: null });
+  logAgent('ok', `Deploy ${id.slice(0,8)} autorizado para producción`);
+  loadNexus();
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ══════════════════════════════════════════════════════════════
+async function loadAuditLog() {
+  const { data: logs } = await sbFetch('platform_audit_log', '?select=*&order=created_at.desc&limit=50');
+  const tbody = document.getElementById('audit-tbody');
+  if (!logs?.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Sin eventos registrados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = logs.map(l => `
+    <tr>
+      <td style="font-family:var(--font-m);font-size:11px;color:var(--muted)">${new Date(l.created_at).toLocaleString('es-MX')}</td>
+      <td style="font-family:var(--font-m);font-size:11px">${l.actor_id ? l.actor_id.slice(0,8)+'…' : 'sistema'}</td>
+      <td style="font-family:var(--font-m);color:var(--accent)">${esc(l.action)}</td>
+      <td style="font-size:12px">${l.target_type||'—'}</td>
+      <td style="font-size:11px;color:var(--muted);font-family:var(--font-m)">${l.details ? JSON.stringify(l.details).slice(0,80) : '—'}</td>
+    </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// COMPANY ACTIONS
+// ══════════════════════════════════════════════════════════════
+function openRegisterModal() {
+  document.getElementById('modal-register').classList.add('open');
+  document.getElementById('reg-name').value = '';
+  document.getElementById('reg-slug').value = '';
+  document.getElementById('reg-email').value = '';
+  document.getElementById('reg-error').style.display = 'none';
+  document.getElementById('reg-name').focus();
+}
+
+document.getElementById('reg-name')?.addEventListener('input', function(){
+  document.getElementById('reg-slug').value = this.value.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+});
+
+async function registerCompany() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const slug  = document.getElementById('reg-slug').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const plan  = document.getElementById('reg-plan').value;
+  const errEl = document.getElementById('reg-error');
+
+  if (!name || !slug) { errEl.style.display='block'; errEl.textContent='Nombre y slug son obligatorios'; return; }
+
+  const result = await sbPost('companies', { name, slug, owner_email: email||null, plan, status:'active' });
+  if (result.error || (Array.isArray(result) && result[0]?.code)) {
+    errEl.style.display='block';
+    errEl.textContent = result.message || result[0]?.message || 'Error al crear empresa';
+    return;
+  }
+
+  await sbPost('platform_audit_log', { action:'register_company', target_type:'company', details:{name,slug,plan} });
+  closeModal('modal-register');
+  await loadCompanies();
+  updateDashboard();
+  logAgent('ok', `Nueva empresa registrada: ${name} (${slug})`);
+}
+
+async function suspendCompany(id) {
+  const co = allCompanies.find(c=>c.id===id);
+  if (!confirm(`¿Suspender empresa "${co?.name}"?`)) return;
+  await sbPatch('companies', `id=eq.${id}`, { status:'suspended' });
+  await sbPost('platform_audit_log', { action:'suspend_company', target_id:id, target_type:'company', details:{name:co?.name} });
+  await loadCompanies();
+  updateDashboard();
+}
+
+async function reactivateCompany(id) {
+  const co = allCompanies.find(c=>c.id===id);
+  await sbPatch('companies', `id=eq.${id}`, { status:'active' });
+  await sbPost('platform_audit_log', { action:'reactivate_company', target_id:id, target_type:'company', details:{name:co?.name} });
+  await loadCompanies();
+  updateDashboard();
+}
+
+function viewCompany(id) {
+  const c = allCompanies.find(x=>x.id===id);
+  if (!c) return;
+  alert(`${c.name}\n\nID: ${c.id}\nPlan: ${c.plan}\nStatus: ${c.status}\nUsuarios: ${c.user_count}\nLeads: ${c.lead_count}\nDocs: ${c.doc_count}\nHealth: ${c.health_status}\nCreada: ${new Date(c.created_at).toLocaleDateString('es-MX')}`);
+}
+
+// ══════════════════════════════════════════════════════════════
+// NEXUS DEPLOY
+// ══════════════════════════════════════════════════════════════
+function openDeployModal() {
+  document.getElementById('modal-deploy').classList.add('open');
+  const now = new Date();
+  document.getElementById('dep-version').value = `v${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+}
+
+async function createDeploy() {
+  const version = document.getElementById('dep-version').value.trim();
+  const desc    = document.getElementById('dep-desc').value.trim();
+  let changes   = [];
+  try { changes = JSON.parse(document.getElementById('dep-changes').value || '[]'); } catch(e) {}
+
+  if (!version) return;
+  await sbPost('nexus_deploys', { version, description:desc, changes, status:'pending' });
+  await sbPost('platform_audit_log', { action:'create_deploy', details:{version, desc} });
+  closeModal('modal-deploy');
+  loadNexus();
+  logAgent('info', `Nuevo deploy creado: ${version} — esperando autorización`);
+}
+
+// ══════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById(`panel-${tab}`).classList.add('active');
+  if (tab === 'nexus') loadNexus();
+  if (tab === 'audit') loadAuditLog();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function logout() { sessionStorage.clear(); location.reload(); }
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmt(n) {
+  if (n === undefined || n === null) return '—';
+  return Number(n).toLocaleString('es-MX');
+}
+
+function reltime(iso) {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  const d = Math.floor(diff/86400000);
+  const h = Math.floor(diff/3600000);
+  const m = Math.floor(diff/60000);
+  if (d > 365) return `hace ${Math.floor(d/365)}a`;
+  if (d > 30)  return `hace ${Math.floor(d/30)}m`;
+  if (d > 0)   return `hace ${d}d`;
+  if (h > 0)   return `hace ${h}h`;
+  if (m > 0)   return `hace ${m}min`;
+  return 'ahora';
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-backdrop').forEach(b => {
+  b.addEventListener('click', e => { if(e.target===b) b.classList.remove('open'); });
+});
+
+// Check for saved credentials
+(function() {
+  const url = sessionStorage.getItem('gm_url');
+  const key = sessionStorage.getItem('gm_key');
+  const anon = sessionStorage.getItem('gm_anon');
+  if (url && key) {
+    document.getElementById('sb-url').value = url;
+    document.getElementById('sb-key').value = key;
+    if (anon) document.getElementById('anon-key').value = anon;
+  }
+})();
+
+// Save credentials on init
+const origInit = initGodMode;
+window.initGodMode = async function() {
+  sessionStorage.setItem('gm_url',  document.getElementById('sb-url').value.trim());
+  sessionStorage.setItem('gm_key',  document.getElementById('sb-key').value.trim());
+  sessionStorage.setItem('gm_anon', document.getElementById('anon-key').value.trim());
+  await origInit();
+};
+</script>
+</body>
+</html>
