@@ -1,0 +1,85 @@
+name: Diagnóstico — Jorge leads access
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+    steps:
+      - name: "Diagnóstico completo Jorge"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os
+          SB = os.environ['SB']
+          SK = os.environ['SK']
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}'}
+
+          def get(path):
+              req = urllib.request.Request(f'{SB}{path}', headers=H)
+              try:
+                  return json.loads(urllib.request.urlopen(req, timeout=15).read())
+              except urllib.error.HTTPError as e:
+                  return {'error': e.code, 'msg': e.read().decode()[:200]}
+
+          TARGET = 'jorge@retaillab.com.mx'
+          enc = TARGET.replace('@','%40').replace('.','%2E')
+
+          profiles = get(f'/rest/v1/profiles?email=eq.{enc}&select=id,email,role,company_id,is_active')
+          print('\n── 1. profiles ──')
+          jorge_uid = None
+          for p in (profiles if isinstance(profiles,list) else [profiles]):
+              print(f'  email:      {p.get("email")}')
+              print(f'  role:       {p.get("role")}')
+              print(f'  company_id: {p.get("company_id")}')
+              print(f'  is_active:  {p.get("is_active")}')
+              jorge_uid = p.get("id")
+          if not jorge_uid:
+              print('  ❌ jorge@retaillab.com.mx no encontrado'); exit(1)
+
+          uc = get(f'/rest/v1/user_companies?user_id=eq.{jorge_uid}&select=company_id,role')
+          print('\n── 2. user_companies ──')
+          NAMES = {'c0000000-0000-0000-0000-000000000001':'MetaTronix','a0000000-0000-0000-0000-000000000001':'IBANOR','d0000000-0000-0000-0000-000000000001':'Nexus-Demo'}
+          for row in (uc if isinstance(uc,list) else []):
+              cname = NAMES.get(row.get('company_id'), row.get('company_id','?')[:12])
+              flag = ' ✅' if row.get('role') == 'admin_restringido' else ' ⚠ WRONG ROLE'
+              print(f'  {cname}: role={row.get("role")}{flag}')
+          if not uc: print('  ❌ Sin entradas en user_companies — ESTE ES EL PROBLEMA')
+
+          # Check RLS on leads
+          rls_req = urllib.request.Request(
+              f'{SB}/rest/v1/rpc/exec_sql',
+              data=json.dumps({'sql': "SELECT policyname,cmd,with_check FROM pg_policies WHERE tablename='leads' ORDER BY cmd"}).encode(),
+              headers={**H,'Content-Type':'application/json'}, method='POST')
+          try:
+              rls = json.loads(urllib.request.urlopen(rls_req, timeout=15).read())
+              print('\n── 3. RLS leads policies ──')
+              for r in (rls if isinstance(rls,list) else []):
+                  wc = (r.get('with_check') or '')[:100]
+                  print(f'  [{r.get("cmd")}] {r.get("policyname")}: {wc}')
+          except Exception as e:
+              print(f'  exec_sql no disponible: {e}')
+
+          # is_sales_member_only definition
+          fn_req = urllib.request.Request(
+              f'{SB}/rest/v1/rpc/exec_sql',
+              data=json.dumps({'sql':"SELECT pg_get_functiondef(oid) AS def FROM pg_proc WHERE proname='is_sales_member_only'"}).encode(),
+              headers={**H,'Content-Type':'application/json'}, method='POST')
+          try:
+              fn = json.loads(urllib.request.urlopen(fn_req, timeout=15).read())
+              print('\n── 4. is_sales_member_only() ──')
+              if isinstance(fn,list) and fn: print(fn[0].get('def','?')[:500])
+          except: pass
+
+          leads = get(f'/rest/v1/leads?user_id=eq.{jorge_uid}&select=id,empresa,company_id,created_at&order=created_at.desc&limit=5')
+          print('\n── 5. Últimos leads de Jorge ──')
+          if isinstance(leads,list) and leads:
+              for l in leads:
+                  cname = NAMES.get(l.get('company_id'), str(l.get('company_id','?'))[:12])
+                  print(f'  {l.get("empresa","?")} | {cname} | {l.get("created_at","?")[:10]}')
+          else:
+              print(f'  Sin leads: {leads}')
+          PYEOF

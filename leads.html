@@ -3230,7 +3230,7 @@ function getSentimentLabel(s) {
 
 function notify(msg, type='info') {
   if (typeof Notiflix!=='undefined') {
-    const fn = {success:'Success',error:'Failure',warning:'Warning',info:'Info'}[type]||'Info';
+    const fn = {success:'success',error:'failure',warning:'warning',info:'info'}[type]||'info';
     Notiflix.Notify[fn](msg);
   } else { showToast(msg, type); }
 }
