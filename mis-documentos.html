@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.workers.dev wss://*.supabase.co; object-src 'none'; base-uri 'self';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTronix — Mis Documentos</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <link rel="stylesheet" href="/assets/style.css?v=20260501">
+  <link rel="stylesheet" href="/assets/fonts.css">
+  <link rel="stylesheet" href="/assets/libs/notiflix.min.css">
+  <style>
+/* ── Layout ─────────────────────────────────────────────────────── */
+.page { min-height: 100vh; padding: 0; max-width: none; background: var(--bg); }
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+.docs-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px; border-bottom: 1px solid var(--b1);
+  background: var(--bg-2); position: sticky; top: 0; z-index: 40;
+}
+.docs-topbar-left  { display: flex; align-items: center; gap: 12px; }
+.docs-topbar-title { font-family: var(--font-display); font-size: 20px; letter-spacing: .04em; color: var(--t1); }
+.docs-topbar-sub   { font-size: 12px; color: var(--t3); }
+
+/* ── Tab nav ─────────────────────────────────────────────────────── */
+.docs-tabs {
+  display: flex; gap: 4px; padding: 12px 24px 0;
+  border-bottom: 1px solid var(--b1); background: var(--bg-2);
+}
+.docs-tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 600; border: none;
+  background: transparent; cursor: pointer; color: var(--t2);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all .15s; font-family: var(--font-body); border-radius: 4px 4px 0 0;
+}
+.docs-tab:hover { color: var(--t1); background: var(--s2); }
+.docs-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); background: var(--s2); }
+
+/* ── Main content ────────────────────────────────────────────────── */
+.docs-main {
+  display: flex; gap: 0; min-height: calc(100vh - 110px);
+}
+.docs-sidebar {
+  width: 200px; flex-shrink: 0; border-right: 1px solid var(--b1);
+  background: var(--bg-2); padding: 16px 12px;
+}
+.docs-sidebar-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--t3); font-family: var(--font-mono);
+  padding: 0 8px; margin-bottom: 8px;
+}
+.docs-filter-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 10px; border-radius: 6px; border: none;
+  background: transparent; cursor: pointer; font-size: 12px;
+  font-weight: 500; color: var(--t2); transition: all .12s;
+  text-align: left; font-family: var(--font-body); margin-bottom: 2px;
+}
+.docs-filter-btn:hover { background: var(--s2); color: var(--t1); }
+.docs-filter-btn.active { background: var(--cyan-d); color: var(--cyan); font-weight: 700; }
+.docs-filter-count {
+  margin-left: auto; font-size: 10px; font-family: var(--font-mono);
+  background: var(--s3); padding: 1px 5px; border-radius: 10px; color: var(--t3);
+}
+.docs-filter-btn.active .docs-filter-count { background: var(--cyan-d); color: var(--cyan); }
+
+.docs-content { flex: 1; padding: 20px 24px; overflow-y: auto; }
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+.docs-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 300px; color: var(--t3); text-align: center; gap: 12px;
+}
+.docs-empty-icon { font-size: 48px; opacity: .4; }
+.docs-empty-text { font-size: 14px; }
+.docs-empty-sub  { font-size: 12px; color: var(--t3); }
+
+/* ── Doc card grid ───────────────────────────────────────────────── */
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.doc-card {
+  background: var(--bg-2); border: 1px solid var(--b1); border-radius: 10px;
+  padding: 14px 16px; transition: all .15s; position: relative;
+}
+.doc-card:hover { border-color: var(--cyan); background: var(--s2); }
+.doc-card-icon { font-size: 28px; margin-bottom: 8px; }
+.doc-card-title { font-size: 13px; font-weight: 700; color: var(--t1); margin-bottom: 4px; word-break: break-word; }
+.doc-card-filename { font-size: 11px; color: var(--t3); font-family: var(--font-mono); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.doc-card-date { font-size: 10px; color: var(--t3); font-family: var(--font-mono); }
+.doc-card-owner { font-size: 10px; color: var(--t3); margin-top: 4px; }
+.doc-card-actions {
+  position: absolute; top: 10px; right: 10px;
+  display: flex; gap: 4px; opacity: 0; transition: opacity .15s;
+}
+.doc-card:hover .doc-card-actions { opacity: 1; }
+.doc-action-btn {
+  width: 26px; height: 26px; border-radius: 5px; border: none;
+  background: var(--s3); cursor: pointer; font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--t2); transition: all .12s;
+}
+.doc-action-btn:hover { background: var(--b1); color: var(--t1); }
+.doc-action-btn.danger:hover { background: #ef444422; color: #ef4444; }
+
+/* ── Category badges ─────────────────────────────────────────────── */
+.cat-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 700; padding: 2px 7px;
+  border-radius: 10px; text-transform: uppercase; letter-spacing: .05em;
+  font-family: var(--font-mono);
+}
+.cat-ventas        { background: #00ff8820; color: #00ff88; }
+.cat-marketing     { background: #a855f720; color: #a855f7; }
+.cat-administracion{ background: #3b82f620; color: #3b82f6; }
+.cat-operaciones   { background: #f59e0b20; color: #f59e0b; }
+.cat-otro          { background: var(--s3);  color: var(--t3); }
+.cat-pending       { background: #64748b20; color: #64748b; animation: pulse 2s infinite; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* ── AI badge ────────────────────────────────────────────────────── */
+.ai-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; color: var(--t3); font-family: var(--font-mono);
+}
+.ai-badge.done { color: #00ff88; }
+
+/* ── Upload modal ────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  display: none; align-items: center; justify-content: center; z-index: 100;
+}
+.modal-box {
+  background: var(--bg-2); border: 1px solid var(--b1); border-radius: 14px;
+  width: 540px; max-width: 95vw; padding: 24px; position: relative;
+}
+.modal-title {
+  font-family: var(--font-display); font-size: 18px; letter-spacing: .05em;
+  color: var(--t1); margin-bottom: 20px;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 16px; width: 30px; height: 30px;
+  border-radius: 50%; border: none; background: var(--s3); cursor: pointer;
+  color: var(--t2); font-size: 14px; display: flex; align-items: center; justify-content: center;
+}
+.upload-zone {
+  border: 2px dashed var(--b1); border-radius: 10px; padding: 32px;
+  text-align: center; cursor: pointer; transition: all .15s;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--cyan); background: var(--cyan-d);
+}
+.upload-zone-icon { font-size: 36px; margin-bottom: 8px; }
+.upload-zone-text { font-size: 14px; color: var(--t2); }
+.upload-zone-sub  { font-size: 12px; color: var(--t3); margin-top: 4px; }
+.upload-file-input { display: none; }
+.upload-progress { margin-top: 12px; height: 4px; background: var(--s3); border-radius: 2px; display: none; }
+.upload-progress-fill { height: 100%; background: var(--cyan); border-radius: 2px; transition: width .3s; }
+
+.form-label { font-size: 12px; font-weight: 600; color: var(--t2); margin-bottom: 5px; display: block; margin-top: 14px; }
+.form-input, .form-select {
+  width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--b1);
+  border-radius: 7px; color: var(--t1); font-size: 13px; font-family: var(--font-body);
+}
+.form-input:focus, .form-select:focus { border-color: var(--cyan); outline: none; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--b1); }
+
+/* ── Team view toggle ────────────────────────────────────────────── */
+.tab-view { display: none; }
+.tab-view.active { display: block; }
+
+/* ── Supervisor indicator ────────────────────────────────────────── */
+.owner-chip {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
+  color: var(--t3); background: var(--s2); padding: 2px 6px; border-radius: 8px;
+  max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+  </style>
+</head>
+<body>
+<div class="page" id="app">
+
+  <!-- ── Top bar ───────────────────────────────────────────────── -->
+  <div class="docs-topbar">
+    <div class="docs-topbar-left">
+      <a href="/dashboard.html" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <div>
+        <div class="docs-topbar-title">📁 Mis Documentos</div>
+        <div class="docs-topbar-sub" id="user-label">Cargando…</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="upload-counter" style="font-size:12px;color:var(--t3)"></span>
+      <button class="btn btn-primary" onclick="openUploadModal()">
+        + Subir documento
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Tab nav ────────────────────────────────────────────────── -->
+  <div class="docs-tabs">
+    <button class="docs-tab active" id="tab-mis"    onclick="switchTab('mis')">Mis documentos</button>
+    <button class="docs-tab"        id="tab-equipo" onclick="switchTab('equipo')" style="display:none">Mi equipo</button>
+    <button class="docs-tab"        id="tab-todos"  onclick="switchTab('todos')"  style="display:none">Toda la empresa</button>
+  </div>
+
+  <!-- ── Main ───────────────────────────────────────────────────── -->
+  <div class="docs-main">
+
+    <!-- Sidebar filtros -->
+    <div class="docs-sidebar">
+      <div class="docs-sidebar-label">Categoría</div>
+      <button class="docs-filter-btn active" data-cat="all" onclick="filterCat('all',this)">
+        🗂 Todos
+        <span class="docs-filter-count" id="cnt-all">0</span>
+      </button>
+      <button class="docs-filter-btn" data-cat="ventas" onclick="filterCat('ventas',this)">
+        💼 Ventas
+        <span class="docs-filter-count" id="cnt-ventas">0</span>
+      </button>
+      <button class="docs-filter-btn" data-cat="marketing" onclick="filterCat('marketing',this)">
+        📣 Marketing
+        <span class="docs-filter-count" id="cnt-marketing">0</span>
+      </button>
+      <button class="docs-filter-btn" data-cat="administracion" onclick="filterCat('administracion',this)">
+        🏛 Admin
+        <span class="docs-filter-count" id="cnt-administracion">0</span>
+      </button>
+      <button class="docs-filter-btn" data-cat="operaciones" onclick="filterCat('operaciones',this)">
+        ⚙ Operaciones
+        <span class="docs-filter-count" id="cnt-operaciones">0</span>
+      </button>
+      <button class="docs-filter-btn" data-cat="otro" onclick="filterCat('otro',this)">
+        📌 Otro
+        <span class="docs-filter-count" id="cnt-otro">0</span>
+      </button>
+      <button class="docs-filter-btn" data-cat="pending" onclick="filterCat('pending',this)">
+        ⏳ Sin clasificar
+        <span class="docs-filter-count" id="cnt-pending">0</span>
+      </button>
+    </div>
+
+    <!-- Content area -->
+    <div class="docs-content">
+      <div id="view-mis"    class="tab-view active"></div>
+      <div id="view-equipo" class="tab-view"></div>
+      <div id="view-todos"  class="tab-view"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Upload modal ───────────────────────────────────────────────── -->
+<div id="upload-modal" class="modal-overlay" onclick="if(event.target===this)closeUploadModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeUploadModal()">✕</button>
+    <div class="modal-title">📤 Subir documento</div>
+
+    <div class="upload-zone" id="upload-zone"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleDrop(event)">
+      <input type="file" id="file-input" class="upload-file-input"
+             accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.txt,.csv,.zip"
+             onchange="fileSelected(this.files[0])">
+      <div class="upload-zone-icon" id="upload-icon">📂</div>
+      <div class="upload-zone-text" id="upload-text">Haz clic o arrastra tu archivo</div>
+      <div class="upload-zone-sub" id="upload-sub">PDF, Word, Excel, imagen, CSV — máx. 25 MB</div>
+    </div>
+    <div class="upload-progress" id="upload-progress">
+      <div class="upload-progress-fill" id="upload-progress-fill" style="width:0%"></div>
+    </div>
+
+    <label class="form-label">Título *</label>
+    <input type="text" id="u-title" class="form-input" placeholder="Describe el documento">
+
+    <label class="form-label">Lead relacionado (opcional)</label>
+    <select id="u-lead" class="form-select">
+      <option value="">— Sin lead asociado —</option>
+    </select>
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeUploadModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-upload" onclick="uploadDoc()">
+        📤 Subir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="/assets/libs/notiflix.min.js"></script>
+<script src="/assets/libs/supabase.min.js"></script>
+<script src="/assets/app.js?v=20260501"></script>
+<script src="/assets/config.js?v=20260501"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Mis Documentos — Portal de Documentos de Usuario
+   Control de acceso: propio / supervisor / admin empresa
+   ═══════════════════════════════════════════════════════════════ */
+
+let currentUser  = null;
+let allMyDocs    = [];
+let teamDocs     = [];
+let companyDocs  = [];
+let currentTab   = 'mis';
+let currentCat   = 'all';
+let selectedFile = null;
+
+// ── Notify ─────────────────────────────────────────────────────
+function notify(msg, type='info') {
+  if (typeof Notiflix !== 'undefined') {
+    const fn = {success:'success',error:'failure',warning:'warning',info:'info'}[type]||'info';
+    Notiflix.Notify[fn](msg);
+  } else { alert(msg); }
+}
+
+// ── Init ────────────────────────────────────────────────────────
+async function init() {
+  currentUser = await requireAuth(false);
+  if (!currentUser) return;
+
+  const name = currentUser.profile?.full_name || currentUser.email;
+  const role = currentUser.profile?.role || '';
+  document.getElementById('user-label').textContent = `${name} · ${role}`;
+
+  // Show team/company tabs based on role
+  if (['admin_restringido','admin','super_admin'].includes(role)) {
+    document.getElementById('tab-equipo').style.display = '';
+  }
+  if (['admin','super_admin'].includes(role)) {
+    document.getElementById('tab-todos').style.display = '';
+  }
+
+  await loadAllDocs();
+  await loadLeadsForSelect();
+}
+
+// ── Load docs ───────────────────────────────────────────────────
+async function loadAllDocs() {
+  const db        = getDB();
+  const companyId = getActiveCompanyId() || currentUser?.profile?.company_id;
+
+  // My docs
+  const { data: mine, error: e1 } = await db
+    .from('user_documents')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('uploaded_at', { ascending: false });
+  if (!e1) allMyDocs = mine || [];
+
+  // Team docs (supervisor — includes admin_restringido)
+  const role = currentUser.profile?.role || '';
+  if (['admin_restringido','admin','super_admin'].includes(role)) {
+    const { data: team } = await db
+      .from('user_documents')
+      .select('*, profiles!user_documents_user_id_fkey(full_name,role)')
+      .eq('company_id', companyId)
+      .neq('user_id', currentUser.id)    // exclude own
+      .order('uploaded_at', { ascending: false });
+    teamDocs = (team || []).filter(d => {
+      // admin_restringido only sees their direct reports via RLS
+      // (RLS enforces this server-side, just render what comes back)
+      return true;
+    });
+  }
+
+  // Company-wide docs (admin/super_admin only)
+  if (['admin','super_admin'].includes(role)) {
+    const { data: company } = await db
+      .from('user_documents')
+      .select('*, profiles!user_documents_user_id_fkey(full_name,role)')
+      .eq('company_id', companyId)
+      .order('uploaded_at', { ascending: false });
+    companyDocs = company || [];
+  }
+
+  renderCurrentTab();
+  updateCounters();
+}
+
+// ── Counters ────────────────────────────────────────────────────
+function updateCounters() {
+  const docs = currentTab==='mis' ? allMyDocs
+             : currentTab==='equipo' ? teamDocs
+             : companyDocs;
+
+  const cats = ['ventas','marketing','administracion','operaciones','otro'];
+  cats.forEach(c => {
+    const cnt = document.getElementById(`cnt-${c}`);
+    if (cnt) cnt.textContent = docs.filter(d=>d.ai_category===c).length;
+  });
+  const pending = document.getElementById('cnt-pending');
+  if (pending) pending.textContent = docs.filter(d=>!d.ai_reviewed).length;
+  const all = document.getElementById('cnt-all');
+  if (all) all.textContent = docs.length;
+
+  const counter = document.getElementById('upload-counter');
+  if (counter) counter.textContent = `${allMyDocs.length} documento${allMyDocs.length!==1?'s':''}`;
+}
+
+// ── Tab switching ───────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  currentCat = 'all';
+  // reset filter buttons
+  document.querySelectorAll('.docs-filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-cat="all"]')?.classList.add('active');
+  // switch tab buttons
+  document.querySelectorAll('.docs-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`)?.classList.add('active');
+  // switch view
+  document.querySelectorAll('.tab-view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(`view-${tab}`)?.classList.add('active');
+  renderCurrentTab();
+  updateCounters();
+}
+
+// ── Filter ──────────────────────────────────────────────────────
+function filterCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.docs-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCurrentTab();
+}
+
+// ── Render ──────────────────────────────────────────────────────
+function renderCurrentTab() {
+  const docs = currentTab==='mis' ? allMyDocs
+             : currentTab==='equipo' ? teamDocs
+             : companyDocs;
+  const viewId = `view-${currentTab}`;
+  document.getElementById(viewId).innerHTML = renderDocGrid(docs, currentCat);
+}
+
+function renderDocGrid(docs, cat) {
+  let filtered = cat === 'all'     ? docs
+               : cat === 'pending' ? docs.filter(d=>!d.ai_reviewed)
+               : docs.filter(d=>d.ai_category===cat);
+
+  if (!filtered.length) {
+    return `<div class="docs-empty">
+      <div class="docs-empty-icon">📭</div>
+      <div class="docs-empty-text">Sin documentos en esta categoría</div>
+      <div class="docs-empty-sub">Sube tu primer documento con el botón de arriba</div>
+    </div>`;
+  }
+
+  const cards = filtered.map(d => {
+    const isOwn    = d.user_id === currentUser.id;
+    const catBadge = d.ai_reviewed
+      ? `<span class="cat-badge cat-${d.ai_category||'otro'}">${catIcon(d.ai_category)} ${catLabel(d.ai_category)}</span>`
+      : `<span class="cat-badge cat-pending">⏳ Clasificando…</span>`;
+    const aiNote = d.ai_reviewed
+      ? `<span class="ai-badge done">✦ IA</span>`
+      : `<span class="ai-badge">⏳ IA</span>`;
+    const ownerChip = !isOwn && d.profiles
+      ? `<div class="owner-chip" title="${escHtml(d.profiles.full_name||'')}">👤 ${escHtml(d.profiles.full_name||'—')}</div>`
+      : '';
+    const size = d.file_size ? formatSize(d.file_size) : '';
+    const date = d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '';
+
+    return `<div class="doc-card">
+      <div class="doc-card-actions">
+        <button class="doc-action-btn" onclick="downloadDoc('${d.id}')" title="Descargar">⬇</button>
+        ${isOwn ? `<button class="doc-action-btn danger" onclick="deleteDoc('${d.id}',event)" title="Eliminar">🗑</button>` : ''}
+      </div>
+      <div class="doc-card-icon">${fileIcon(d.file_type, d.filename)}</div>
+      <div class="doc-card-title">${escHtml(d.title)}</div>
+      <div class="doc-card-filename">${escHtml(d.filename)}</div>
+      <div class="doc-card-meta">
+        ${catBadge}
+        ${aiNote}
+        ${size ? `<span class="doc-card-date">${size}</span>` : ''}
+      </div>
+      <div class="doc-card-date" style="margin-top:6px">${date}</div>
+      ${ownerChip}
+    </div>`;
+  }).join('');
+
+  return `<div class="docs-grid">${cards}</div>`;
+}
+
+function catLabel(cat) {
+  return {ventas:'Ventas',marketing:'Marketing',administracion:'Admin',operaciones:'Ops',otro:'Otro'}[cat]||'Otro';
+}
+function catIcon(cat) {
+  return {ventas:'💼',marketing:'📣',administracion:'🏛',operaciones:'⚙',otro:'📌'}[cat]||'📌';
+}
+function fileIcon(type='', name='') {
+  const ext = (name||'').split('.').pop().toLowerCase();
+  if (['pdf'].includes(ext))             return '📄';
+  if (['xls','xlsx','csv'].includes(ext)) return '📊';
+  if (['doc','docx'].includes(ext))       return '📝';
+  if (['ppt','pptx'].includes(ext))       return '📋';
+  if (['jpg','jpeg','png','gif','webp','svg'].includes(ext)) return '🖼';
+  if (['zip','rar','7z'].includes(ext))   return '🗜';
+  if (['txt','md'].includes(ext))         return '📃';
+  return '📎';
+}
+function formatSize(bytes) {
+  if (!bytes) return '';
+  if (bytes > 1048576) return (bytes/1048576).toFixed(1)+' MB';
+  if (bytes > 1024)    return (bytes/1024).toFixed(0)+' KB';
+  return bytes+' B';
+}
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Load leads for select ────────────────────────────────────────
+async function loadLeadsForSelect() {
+  const db = getDB();
+  const companyId = getActiveCompanyId() || currentUser?.profile?.company_id;
+  let q = db.from('leads').select('id,empresa,contacto_nombre').order('empresa');
+  if (companyId) q = q.eq('company_id', companyId);
+  const { data } = await q;
+  const sel = document.getElementById('u-lead');
+  if (data?.length) {
+    sel.innerHTML = `<option value="">— Sin lead asociado —</option>` +
+      data.map(l=>`<option value="${l.id}">${escHtml(l.empresa)}${l.contacto_nombre?' — '+escHtml(l.contacto_nombre):''}</option>`).join('');
+  }
+}
+
+// ── Upload ──────────────────────────────────────────────────────
+function openUploadModal() {
+  resetUploadModal();
+  document.getElementById('upload-modal').style.display = 'flex';
+}
+function closeUploadModal() {
+  document.getElementById('upload-modal').style.display = 'none';
+  selectedFile = null;
+  resetUploadModal();
+}
+function resetUploadModal() {
+  document.getElementById('upload-icon').textContent = '📂';
+  document.getElementById('upload-text').textContent = 'Haz clic o arrastra tu archivo';
+  document.getElementById('upload-sub').textContent  = 'PDF, Word, Excel, imagen, CSV — máx. 25 MB';
+  document.getElementById('upload-zone').style.borderColor = '';
+  document.getElementById('upload-progress').style.display = 'none';
+  document.getElementById('u-title').value = '';
+  document.getElementById('u-lead').value  = '';
+  document.getElementById('file-input').value = '';
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file) fileSelected(file);
+}
+
+function fileSelected(file) {
+  if (!file) return;
+  if (file.size > 25 * 1024 * 1024) { notify('El archivo supera 25 MB','warning'); return; }
+  selectedFile = file;
+  document.getElementById('upload-icon').textContent = fileIcon('',file.name);
+  document.getElementById('upload-text').textContent = file.name;
+  document.getElementById('upload-sub').textContent  = `${file.name.split('.').pop().toUpperCase()} · ${formatSize(file.size)}`;
+  document.getElementById('upload-zone').style.borderColor = 'var(--cyan)';
+  if (!document.getElementById('u-title').value) {
+    document.getElementById('u-title').value = file.name.replace(/\.[^.]+$/, '');
+  }
+}
+
+async function uploadDoc() {
+  const title = document.getElementById('u-title').value.trim();
+  const leadId = document.getElementById('u-lead').value || null;
+  if (!title)        { notify('El título es obligatorio','warning'); return; }
+  if (!selectedFile) { notify('Selecciona un archivo','warning');     return; }
+
+  const btn = document.getElementById('btn-upload');
+  btn.disabled = true; btn.textContent = 'Subiendo…';
+  const prog = document.getElementById('upload-progress');
+  const fill = document.getElementById('upload-progress-fill');
+  prog.style.display = 'block'; fill.style.width = '20%';
+
+  try {
+    // Read file as base64
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload  = e => res(e.target.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(selectedFile);
+    });
+    fill.style.width = '50%';
+
+    // Try to extract text (best-effort)
+    let textContent = null;
+    if (selectedFile.type === 'text/plain' || selectedFile.name.endsWith('.txt') || selectedFile.name.endsWith('.csv')) {
+      textContent = await selectedFile.text().catch(() => null);
+    }
+    fill.style.width = '75%';
+
+    const db = getDB();
+    const companyId = getActiveCompanyId() || currentUser?.profile?.company_id;
+    const uploaderName = currentUser.profile?.full_name || currentUser.email;
+
+    const payload = {
+      user_id:          currentUser.id,
+      company_id:       companyId,
+      lead_id:          leadId,
+      title,
+      filename:         selectedFile.name,
+      file_type:        selectedFile.type || 'application/octet-stream',
+      file_size:        selectedFile.size,
+      file_data:        base64,
+      text_content:     textContent,
+      uploaded_by_name: uploaderName,
+      ai_reviewed:      false,
+    };
+
+    const { data, error } = await db.from('user_documents').insert(payload).select().single();
+    if (error) throw error;
+    fill.style.width = '100%';
+
+    notify('Documento subido ✓ — se clasificará en minutos','success');
+    allMyDocs.unshift(data);
+    closeUploadModal();
+    renderCurrentTab();
+    updateCounters();
+  } catch(err) {
+    notify('Error al subir: ' + (err.message||err),'error');
+    console.error(err);
+  } finally {
+    btn.disabled = false; btn.textContent = '📤 Subir';
+  }
+}
+
+// ── Download ─────────────────────────────────────────────────────
+async function downloadDoc(docId) {
+  const db = getDB();
+  const { data, error } = await db.from('user_documents').select('file_data,filename,file_type').eq('id', docId).single();
+  if (error || !data?.file_data) { notify('No se puede descargar','error'); return; }
+  const blob = b64toBlob(data.file_data, data.file_type||'application/octet-stream');
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = data.filename || 'documento'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function b64toBlob(b64, type) {
+  const bin  = atob(b64);
+  const arr  = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type });
+}
+
+// ── Delete ───────────────────────────────────────────────────────
+async function deleteDoc(docId, event) {
+  event?.stopPropagation();
+  if (!confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) return;
+  const db = getDB();
+  const { error } = await db.from('user_documents').delete().eq('id', docId).eq('user_id', currentUser.id);
+  if (error) { notify('Error al eliminar: '+error.message,'error'); return; }
+  allMyDocs = allMyDocs.filter(d=>d.id!==docId);
+  notify('Documento eliminado','info');
+  renderCurrentTab();
+  updateCounters();
+}
+
+// ── Start ────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

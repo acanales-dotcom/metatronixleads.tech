@@ -1,0 +1,111 @@
+name: AI — Clasificar documentos de usuario
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # cada 30 minutos
+  workflow_dispatch:
+
+jobs:
+  classify:
+    name: Clasificar docs pendientes con Claude
+    runs-on: ubuntu-latest
+    env:
+      SB: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+      SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - name: "Clasificar documentos sin categoría"
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, urllib.error, os, sys
+
+          SB  = os.environ["SB"]
+          SK  = os.environ["SK"]
+          AI  = os.environ.get("ANTHROPIC_API_KEY", "")
+          H   = {"apikey": SK, "Authorization": f"Bearer {SK}", "Content-Type": "application/json"}
+
+          if not AI:
+              print("⚠ ANTHROPIC_API_KEY no configurado — skip")
+              sys.exit(0)
+
+          # 1. Obtener documentos sin clasificar
+          req = urllib.request.Request(
+              f"{SB}/rest/v1/user_documents?ai_reviewed=eq.false&select=id,title,filename,file_type,text_content&limit=20",
+              headers={"apikey": SK, "Authorization": f"Bearer {SK}"})
+          pending = json.loads(urllib.request.urlopen(req, timeout=15).read())
+          print(f"📄 Documentos pendientes: {len(pending)}")
+          if not pending:
+              print("✅ Nada que clasificar")
+              sys.exit(0)
+
+          def classify_doc(title, filename, file_type, text_snippet):
+              """Call Claude Haiku to classify the document."""
+              prompt = f"""Clasifica este documento en UNA de estas categorías:
+- ventas: propuestas, cotizaciones, contratos de venta, leads, presentaciones comerciales
+- marketing: material de marca, campañas, contenido, diseños, estrategias de marketing
+- administracion: facturas, comprobantes, reportes internos, RRHH, contratos laborales, actas
+- operaciones: manuales, procesos, logística, soporte técnico, implementaciones
+- otro: no encaja claramente en las anteriores
+
+Documento:
+- Título: {title}
+- Nombre de archivo: {filename}
+- Tipo: {file_type}
+{('- Contenido parcial: ' + text_snippet[:300]) if text_snippet else ''}
+
+Responde SOLO con una de estas palabras exactas: ventas, marketing, administracion, operaciones, otro
+No agregues nada más."""
+
+              data = json.dumps({
+                  "model": "claude-haiku-4-5-20251001",
+                  "max_tokens": 10,
+                  "messages": [{"role": "user", "content": prompt}]
+              }).encode()
+              req = urllib.request.Request(
+                  "https://api.anthropic.com/v1/messages",
+                  data=data,
+                  headers={
+                      "x-api-key": AI,
+                      "anthropic-version": "2023-06-01",
+                      "content-type": "application/json"
+                  }, method="POST")
+              try:
+                  resp = urllib.request.urlopen(req, timeout=20)
+                  result = json.loads(resp.read())
+                  cat = result["content"][0]["text"].strip().lower()
+                  if cat not in ("ventas","marketing","administracion","operaciones","otro"):
+                      cat = "otro"
+                  return cat
+              except Exception as e:
+                  print(f"  ⚠ Claude error: {e}")
+                  return "otro"
+
+          # 2. Clasificar cada doc
+          ok = 0; fail = 0
+          for doc in pending:
+              did   = doc["id"]
+              title = doc.get("title","")
+              fname = doc.get("filename","")
+              ftype = doc.get("file_type","")
+              text  = doc.get("text_content","") or ""
+
+              cat = classify_doc(title, fname, ftype, text)
+              print(f"  [{did[:8]}] {title[:40]!r:45} → {cat}")
+
+              # 3. Update record
+              update_req = urllib.request.Request(
+                  f"{SB}/rest/v1/user_documents?id=eq.{did}",
+                  data=json.dumps({"ai_category": cat, "ai_reviewed": True,
+                                   "ai_notes": f"Clasificado por Claude Haiku"}).encode(),
+                  headers={**H, "Prefer": "return=minimal"},
+                  method="PATCH")
+              try:
+                  urllib.request.urlopen(update_req, timeout=10)
+                  ok += 1
+              except urllib.error.HTTPError as e:
+                  print(f"    ✗ Update error: {e.code}")
+                  fail += 1
+
+          print(f"\n✅ Clasificados: {ok} | Errores: {fail}")
+          PYEOF

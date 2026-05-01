@@ -723,6 +723,40 @@ tbody tr:hover td { background: var(--s2); cursor: pointer; }
   font-size: 9px; font-weight: 700; padding: 1px 4px; min-width: 14px; text-align: center;
 }
 
+/* ── Kanban card quick-action buttons ── */
+.kb-card-actions {
+  position: absolute; top: 7px; right: 7px;
+  display: flex; gap: 3px; opacity: 0; transition: opacity .15s; z-index: 5;
+}
+.kb-card:hover .kb-card-actions { opacity: 1; }
+.kb-action-btn {
+  width: 22px; height: 22px; border-radius: 4px; border: none;
+  background: var(--s3); cursor: pointer; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--t2); transition: all .12s; padding: 0;
+}
+.kb-action-btn:hover { background: var(--b1); color: var(--t1); }
+.kb-action-btn.danger:hover { background: rgba(239,68,68,.2); color: #ef4444; }
+
+/* ── Lead docs tab ── */
+.lead-doc-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border: 1px solid var(--b1); border-radius: 8px; background: var(--s1);
+  margin-bottom: 8px; transition: border-color .12s;
+}
+.lead-doc-item:hover { border-color: var(--cyan); }
+.lead-doc-icon { font-size: 20px; flex-shrink: 0; }
+.lead-doc-info { flex: 1; min-width: 0; }
+.lead-doc-title { font-size: 12px; font-weight: 600; color: var(--t1); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lead-doc-meta  { font-size: 10px; color: var(--t3); font-family: var(--font-mono); }
+.lead-doc-cat   { display: inline-flex; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; text-transform: uppercase; letter-spacing: .05em; }
+.lead-doc-cat.ventas        { background: #00ff8820; color: #00ff88; }
+.lead-doc-cat.marketing     { background: #a855f720; color: #a855f7; }
+.lead-doc-cat.administracion{ background: #3b82f620; color: #3b82f6; }
+.lead-doc-cat.operaciones   { background: #f59e0b20; color: #f59e0b; }
+.lead-doc-cat.otro          { background: var(--s3);  color: var(--t3); }
+.lead-doc-cat.pending       { background: #64748b20; color: #64748b; }
+
 /* Lead score badges */
 .lead-score {
   display: inline-flex; align-items: center; gap: 3px;

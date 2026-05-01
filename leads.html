@@ -1453,6 +1453,18 @@ async function deleteLeadConfirm() {
   await loadLeads();
 }
 
+/* ── Quick delete from kanban card ─────────────────────── */
+async function quickDeleteLead(leadId, empresa) {
+  if (!confirm(`¿Eliminar "${empresa}"? Esta acción no se puede deshacer.`)) return;
+  const companyId = getActiveCompanyId();
+  let delQ = getDB().from('leads').delete().eq('id', leadId);
+  if (companyId) delQ = delQ.eq('company_id', companyId);
+  const { error } = await delQ;
+  if (error) { notify('Error: '+error.message,'error'); return; }
+  notify('Lead eliminado','info');
+  await loadLeads();
+}
+
 /* ── STAGE MAPPING ──────────────────────────────────────── */
 function stageToStatus(stage) {
   const map = {
@@ -1734,6 +1746,11 @@ function kanbanCard(l) {
 
   return `<div class="kb-card" data-id="${l.id}" onclick="openDrawer('${l.id}')">
     ${unread > 0 ? `<span class="kb-card-unread">${unread}</span>` : ''}
+    <!-- Quick-action buttons (visible on hover) -->
+    <div class="kb-card-actions" onclick="event.stopPropagation()">
+      <button class="kb-action-btn" onclick="openLeadForm('${l.id}')" title="Editar lead">✏</button>
+      <button class="kb-action-btn danger" onclick="quickDeleteLead('${l.id}','${escHtml(l.empresa)}')" title="Eliminar lead">🗑</button>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
       <div class="kb-card-name" title="${escHtml(l.contacto_nombre||'')}" style="flex:1;min-width:0">${escHtml(l.contacto_nombre||'Sin contacto')}</div>
       ${getScoreBadge(score)}
@@ -2304,33 +2321,138 @@ async function summarizeHistory(leadId) {
   } else { notify('Motor IA cargando, intenta en unos segundos','warning'); }
 }
 
-/* TAB: DOCS */
+/* TAB: DOCS — Documentos relacionados al lead (Supabase user_documents) */
 function renderTabDocs(l) {
-  const docs = LS.docs(l.id);
-  const statuses = ['Sin enviar','Enviado','Revisado','Aprobado'];
-  let html = `<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
-    <span style="font-size:13px;color:#64748b">Documentos organizados por rol del comprador</span>
-    <button class="btn btn-primary btn-sm" onclick="saveDocs('${l.id}')">💾 Guardar cambios</button>
+  // Render placeholder, load async
+  setTimeout(() => loadLeadDocs(l.id), 0);
+  return `<div id="lead-docs-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:13px;font-weight:600;color:var(--t1)">Documentos relacionados</span>
+      <button class="btn btn-primary btn-sm" onclick="openLeadDocUpload('${l.id}')">+ Agregar documento</button>
+    </div>
+    <div id="lead-docs-list" style="color:var(--t3);font-size:13px">Cargando…</div>
+    <div style="margin-top:12px;padding:10px 12px;background:var(--s1);border-radius:8px;font-size:12px;color:var(--t3)">
+      📚 <a href="/mtx-docs.html" style="color:var(--cyan)" target="_blank">Biblioteca Corporativa →</a>
+      &nbsp;·&nbsp;
+      📁 <a href="/mis-documentos.html" style="color:var(--cyan)" target="_blank">Mis Documentos →</a>
+    </div>
   </div>`;
-  Object.entries(BUYER_ROLES).forEach(([roleKey, role]) => {
-    html += `<div class="buyer-role-section"><div class="buyer-role-title">${role.icon} ${role.label}</div>`;
-    role.docs.forEach(docName => {
-      const key = roleKey+'_'+docName.replace(/\s+/g,'_');
-      const current = docs[key] || 'Sin enviar';
-      html += `<div class="doc-item">
-        <span class="doc-item-name">${docName}</span>
-        <select class="doc-status-select" data-key="${key}" onchange="updateDocStatus('${l.id}','${key}',this.value)">
-          ${statuses.map(s=>`<option value="${s}" ${current===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>`;
+}
+
+async function loadLeadDocs(leadId) {
+  const el = document.getElementById('lead-docs-list');
+  if (!el) return;
+  const db = getDB();
+  const { data, error } = await db
+    .from('user_documents')
+    .select('id,title,filename,file_type,file_size,ai_category,ai_reviewed,uploaded_by_name,uploaded_at,user_id')
+    .eq('lead_id', leadId)
+    .order('uploaded_at', { ascending: false });
+
+  if (error) { el.innerHTML = `<span style="color:#ef4444">Error: ${escHtml(error.message)}</span>`; return; }
+  if (!data?.length) {
+    el.innerHTML = `<div style="color:var(--t3);text-align:center;padding:20px 0">Sin documentos adjuntos a este lead</div>`;
+    return;
+  }
+
+  const fileIcon = (type='',name='') => {
+    const ext = (name||'').split('.').pop().toLowerCase();
+    if (ext==='pdf') return '📄';
+    if (['xls','xlsx','csv'].includes(ext)) return '📊';
+    if (['doc','docx'].includes(ext)) return '📝';
+    if (['jpg','jpeg','png','gif'].includes(ext)) return '🖼';
+    return '📎';
+  };
+  const catLabel = {ventas:'💼 Ventas',marketing:'📣 Marketing',administracion:'🏛 Admin',operaciones:'⚙ Ops',otro:'📌 Otro'};
+  const fmtSz = b => !b ? '' : b>1048576 ? (b/1048576).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB';
+
+  el.innerHTML = data.map(d => {
+    const isOwn  = d.user_id === currentUser?.id;
+    const cat    = d.ai_reviewed ? d.ai_category||'otro' : 'pending';
+    const catTxt = d.ai_reviewed ? (catLabel[d.ai_category]||'📌 Otro') : '⏳ Clasificando…';
+    const date   = d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '';
+    return `<div class="lead-doc-item">
+      <div class="lead-doc-icon">${fileIcon(d.file_type,d.filename)}</div>
+      <div class="lead-doc-info">
+        <div class="lead-doc-title">${escHtml(d.title)}</div>
+        <div class="lead-doc-meta">${escHtml(d.filename)}${d.file_size?' · '+fmtSz(d.file_size):''} · ${date}</div>
+        <span class="lead-doc-cat ${cat}">${catTxt}</span>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button class="btn btn-ghost btn-sm" onclick="downloadLeadDoc('${d.id}')" title="Descargar">⬇</button>
+        ${isOwn ? `<button class="btn btn-ghost btn-sm" style="color:#ef4444" onclick="deleteLeadDoc('${d.id}','${leadId}')" title="Eliminar">🗑</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function downloadLeadDoc(docId) {
+  const db = getDB();
+  const { data, error } = await db.from('user_documents').select('file_data,filename,file_type').eq('id',docId).single();
+  if (error || !data?.file_data) { notify('No se puede descargar','error'); return; }
+  const bin  = atob(data.file_data);
+  const arr  = new Uint8Array(bin.length);
+  for (let i=0; i<bin.length; i++) arr[i] = bin.charCodeAt(i);
+  const url  = URL.createObjectURL(new Blob([arr],{type:data.file_type||'application/octet-stream'}));
+  const a    = document.createElement('a'); a.href=url; a.download=data.filename||'doc'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+async function deleteLeadDoc(docId, leadId) {
+  if (!confirm('¿Eliminar este documento?')) return;
+  const db = getDB();
+  const { error } = await db.from('user_documents').delete().eq('id',docId).eq('user_id',currentUser.id);
+  if (error) { notify('Error: '+error.message,'error'); return; }
+  notify('Eliminado','info');
+  await loadLeadDocs(leadId);
+}
+
+/* ── Lead doc upload modal (inline) ── */
+let _leadDocUploadId = null;
+function openLeadDocUpload(leadId) {
+  _leadDocUploadId = leadId;
+  document.getElementById('lead-doc-upload-modal').style.display = 'flex';
+}
+function closeLeadDocUpload() {
+  document.getElementById('lead-doc-upload-modal').style.display = 'none';
+  document.getElementById('ldu-file-input').value = '';
+  document.getElementById('ldu-title').value      = '';
+  document.getElementById('ldu-icon').textContent = '📂';
+  document.getElementById('ldu-text').textContent = 'Clic o arrastra el archivo';
+  _leadDocUploadId = null;
+}
+async function saveLeadDoc() {
+  const title = document.getElementById('ldu-title').value.trim();
+  const file  = document.getElementById('ldu-file-input').files[0];
+  if (!title) { notify('Título obligatorio','warning'); return; }
+  if (!file)  { notify('Selecciona un archivo','warning'); return; }
+  if (file.size > 25*1024*1024) { notify('Máximo 25 MB','warning'); return; }
+
+  const btn = document.getElementById('btn-save-lead-doc');
+  btn.disabled = true; btn.textContent = 'Subiendo…';
+  try {
+    const base64 = await new Promise((res,rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
     });
-    html += '</div>';
-  });
-  html += `<div style="margin-top:8px;padding:12px;background:var(--surface3);border-radius:8px;font-size:13px;color:#64748b">
-    <strong>📚 Biblioteca Corporativa:</strong> Accede a plantillas y casos de éxito en 
-    <a href="/mtx-docs.html" style="color:var(--blue)" target="_blank">Adm. Docs para Venta →</a>
-  </div>`;
-  return html;
+    const db = getDB();
+    const companyId = getActiveCompanyId() || currentUser?.profile?.company_id;
+    const { error } = await db.from('user_documents').insert({
+      user_id: currentUser.id, company_id: companyId,
+      lead_id: _leadDocUploadId, title,
+      filename: file.name, file_type: file.type||'application/octet-stream',
+      file_size: file.size, file_data: base64,
+      uploaded_by_name: currentUser.profile?.full_name || currentUser.email,
+      ai_reviewed: false,
+    });
+    if (error) throw error;
+    notify('Documento agregado ✓','success');
+    closeLeadDocUpload();
+    await loadLeadDocs(_leadDocUploadId);
+  } catch(e) { notify('Error: '+e.message,'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Guardar'; }
 }
 
 function updateDocStatus(leadId, key, value) {
@@ -2339,10 +2461,6 @@ function updateDocStatus(leadId, key, value) {
   LS.setDocs(leadId, docs);
 }
 function saveDocs(leadId) {
-  const selects = document.querySelectorAll('.doc-status-select');
-  const docs = LS.docs(leadId);
-  selects.forEach(s => { docs[s.dataset.key] = s.value; });
-  LS.setDocs(leadId, docs);
   notify('Documentos guardados ✓','success');
 }
 
@@ -4299,5 +4417,35 @@ function toggleFilters() {
 }
 
 </script>
+
+<!-- ══ Modal: subir doc a lead ════════════════════════════════════ -->
+<div id="lead-doc-upload-modal" class="o-modal-overlay" style="display:none" onclick="if(event.target===this)closeLeadDocUpload()">
+  <div class="o-modal" style="max-width:480px">
+    <div class="o-modal-head">
+      <span class="o-modal-title">📎 Agregar documento al lead</span>
+      <button class="o-modal-close" onclick="closeLeadDocUpload()">✕</button>
+    </div>
+    <div class="o-modal-body">
+      <div style="border:2px dashed var(--b1);border-radius:9px;padding:24px;text-align:center;cursor:pointer;margin-bottom:14px"
+           onclick="document.getElementById('ldu-file-input').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--cyan)'"
+           ondragleave="this.style.borderColor=''"
+           ondrop="event.preventDefault();this.style.borderColor='';const f=event.dataTransfer.files[0];if(f){document.getElementById('ldu-file-input').files=event.dataTransfer.files;document.getElementById('ldu-icon').textContent='📄';document.getElementById('ldu-text').textContent=f.name;}">
+        <input type="file" id="ldu-file-input" style="display:none"
+               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.txt,.csv,.zip"
+               onchange="document.getElementById('ldu-icon').textContent='📄';document.getElementById('ldu-text').textContent=this.files[0]?.name||''">
+        <div id="ldu-icon" style="font-size:32px;margin-bottom:6px">📂</div>
+        <div id="ldu-text" style="font-size:13px;color:var(--t2)">Clic o arrastra el archivo</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:3px">PDF, Word, Excel, imagen — máx. 25 MB</div>
+      </div>
+      <label class="o-form-label">Título del documento *</label>
+      <input type="text" id="ldu-title" class="o-form-input" placeholder="Describe el documento">
+    </div>
+    <div class="o-modal-foot">
+      <button class="btn btn-ghost" onclick="closeLeadDocUpload()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-lead-doc" onclick="saveLeadDoc()">Guardar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
