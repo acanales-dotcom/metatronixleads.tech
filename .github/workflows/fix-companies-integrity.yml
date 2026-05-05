@@ -1,0 +1,145 @@
+name: Fix — Companies Integrity (Nexus + orphaned records)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SB: https://hodrfonbpmqulkyzrzpq.supabase.co
+
+jobs:
+  fix-companies:
+    name: 🔧 Reinsertar empresas fijas y diagnosticar huérfanos
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run fix_companies_integrity.sql via Supabase REST
+        env:
+          SK: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import json, urllib.request, os, sys
+
+          SB = os.environ['SB']
+          SK = os.environ.get('SK', '')
+          H  = {'apikey': SK, 'Authorization': f'Bearer {SK}', 'Content-Type': 'application/json'}
+
+          COMPANIES = [
+            {'id': 'a0000000-0000-0000-0000-000000000001', 'slug': 'ibanor',     'name': 'IBANOR SA de CV',     'status': 'activo'},
+            {'id': 'b0000000-0000-0000-0000-000000000001', 'slug': 'starke',     'name': 'Starke',              'status': 'activo'},
+            {'id': 'c0000000-0000-0000-0000-000000000001', 'slug': 'metatronix', 'name': 'MetaTronix',          'status': 'activo'},
+            {'id': 'd0000000-0000-0000-0000-000000000001', 'slug': 'nexus-demo', 'name': 'Grupo Nexus SA de CV','status': 'activo'},
+          ]
+
+          KNOWN_IDS = [c['id'] for c in COMPANIES]
+
+          def api(method, path, body=None):
+              url = SB + path
+              data = json.dumps(body).encode() if body else None
+              req = urllib.request.Request(url, data=data, headers=H, method=method)
+              try:
+                  resp = urllib.request.urlopen(req, timeout=15)
+                  raw = resp.read()
+                  return resp.status, json.loads(raw) if raw else []
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode()
+              except Exception as e:
+                  return 0, str(e)
+
+          print('=' * 60)
+          print('  Fix: Companies Integrity')
+          print('=' * 60)
+
+          # 1. Upsert all 4 companies
+          print('\n── Insertando / actualizando empresas ──────────────')
+          for co in COMPANIES:
+              status, result = api('POST',
+                '/rest/v1/companies',
+                co
+              )
+              # We need upsert header
+              break  # Will use proper upsert below
+
+          # Use PATCH + upsert approach via POST with Prefer: resolution=merge-duplicates
+          import urllib.request as ur
+          for co in COMPANIES:
+              url = SB + '/rest/v1/companies'
+              data = json.dumps(co).encode()
+              headers = dict(H)
+              headers['Prefer'] = 'resolution=merge-duplicates,return=minimal'
+              req = ur.Request(url, data=data, headers=headers, method='POST')
+              try:
+                  resp = ur.urlopen(req, timeout=10)
+                  print(f'  ✅ {co["slug"]:15} {co["id"]}')
+              except ur.HTTPError as e:
+                  body = e.read().decode()
+                  # If conflict on slug (different id), do an UPDATE
+                  if e.code in (409, 422, 400) and 'slug' in body.lower():
+                      patch_url = SB + f'/rest/v1/companies?slug=eq.{co["slug"]}'
+                      patch_data = json.dumps({'id': co['id'], 'status': 'activo'}).encode()
+                      patch_headers = dict(H)
+                      patch_headers['Prefer'] = 'return=minimal'
+                      patch_req = ur.Request(patch_url, data=patch_data, headers=patch_headers, method='PATCH')
+                      try:
+                          ur.urlopen(patch_req, timeout=10)
+                          print(f'  ✅ {co["slug"]:15} updated via PATCH')
+                      except Exception as e2:
+                          print(f'  ⚠ {co["slug"]:15} PATCH also failed: {e2}')
+                  else:
+                      print(f'  ⚠ {co["slug"]:15} {e.code}: {body[:80]}')
+              except Exception as e:
+                  print(f'  ⚠ {co["slug"]:15} error: {e}')
+
+          # 2. Verify companies
+          print('\n── Companies en DB ──────────────────────────────────')
+          status, cos = api('GET', '/rest/v1/companies?select=id,slug,name,status&order=slug')
+          if isinstance(cos, list):
+              for c in cos:
+                  marker = '✅' if c['id'] in KNOWN_IDS else '⚠ UNKNOWN'
+                  print(f'  {marker} [{c["slug"]:15}] {c["id"]} — {c["name"]}')
+          else:
+              print('  ERROR:', cos)
+
+          # 3. Check for orphaned records
+          print('\n── Registros huérfanos (company_id desconocido) ────')
+          real_ids = [c['id'] for c in cos] if isinstance(cos, list) else KNOWN_IDS
+          all_ok = True
+
+          for table in ('leads', 'metatronix_docs', 'events'):
+              st, data = api('GET', f'/rest/v1/{table}?select=id,company_id&limit=5000')
+              if not isinstance(data, list):
+                  print(f'  ⚠ {table:20} no accesible ({st})')
+                  continue
+              orphans = [r for r in data if r.get('company_id') and r['company_id'] not in real_ids]
+              nulls   = [r for r in data if not r.get('company_id')]
+              if orphans:
+                  all_ok = False
+                  orphan_ids = list(set(r['company_id'] for r in orphans))[:5]
+                  print(f'  ❌ {table:20} {len(orphans)} huérfanos — company_ids: {orphan_ids}')
+              elif nulls:
+                  print(f'  ⚠ {table:20} {len(nulls)} sin company_id ({len(data)-len(nulls)} OK)')
+              else:
+                  print(f'  ✅ {table:20} {len(data)} registros todos válidos')
+
+          print('\n' + '=' * 60)
+          if all_ok:
+              print('  ✅ INTEGRIDAD OK — todas las empresas y registros alineados')
+          else:
+              print('  ❌ AUN hay huérfanos — revisar y re-asignar manualmente')
+          print('=' * 60)
+          PYEOF
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🔧 Companies Integrity Fix" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Empresas verificadas: IBANOR, Starke, MetaTronix, Grupo Nexus" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Si aún hay huérfanos después de este fix, ejecutar **QA Diario** para confirmar." >> $GITHUB_STEP_SUMMARY
