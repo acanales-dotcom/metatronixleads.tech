@@ -1,0 +1,229 @@
+name: "🚀 Run All Pending Migrations"
+
+# Dispara automáticamente cuando se añade/modifica este archivo (primera vez)
+# y también manualmente vía workflow_dispatch para re-ejecuciones.
+on:
+  push:
+    paths:
+      - '.github/workflows/run-all-migrations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SB_MGMT_URL: "https://api.supabase.com/v1/projects/hodrfonbpmqulkyzrzpq/database/query"
+  SB_REST_URL: "https://hodrfonbpmqulkyzrzpq.supabase.co"
+
+jobs:
+  migrations:
+    name: "Ejecutar migraciones pendientes"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 1. Companies Integrity ──────────────────────────────────────────────
+      - name: "1/5 fix_companies_integrity — upsert 4 empresas canónicas"
+        env:
+          SB_TOKEN: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, urllib.error, json, os
+
+          TOKEN = os.environ["SB_TOKEN"]
+          URL   = os.environ["SB_MGMT_URL"]
+
+          def run_sql(label, sql):
+              data = json.dumps({"query": sql}).encode()
+              req  = urllib.request.Request(URL, data=data, method="POST",
+                       headers={"Content-Type": "application/json",
+                                "Authorization": f"Bearer {TOKEN}"})
+              try:
+                  resp = urllib.request.urlopen(req, timeout=30)
+                  print(f"  ✅ {label}")
+                  return True
+              except urllib.error.HTTPError as e:
+                  body = e.read().decode()
+                  print(f"  ❌ {label}: HTTP {e.code} — {body[:300]}")
+                  return False
+
+          sql = """
+          INSERT INTO companies (id, slug, name, status)
+          VALUES
+            ('a0000000-0000-0000-0000-000000000001', 'ibanor',     'IBANOR SA de CV',     'activo'),
+            ('b0000000-0000-0000-0000-000000000001', 'starke',     'Starke',              'activo'),
+            ('c0000000-0000-0000-0000-000000000001', 'metatronix', 'MetaTronix',          'activo'),
+            ('d0000000-0000-0000-0000-000000000001', 'nexus-demo', 'Grupo Nexus SA de CV','activo')
+          ON CONFLICT (id) DO UPDATE
+            SET status = 'activo',
+                slug   = EXCLUDED.slug;
+          SELECT id, slug, name, status FROM companies ORDER BY slug;
+          """
+
+          run_sql("Companies integrity upsert", sql)
+          PYEOF
+
+      # ── 2. Profile Company Backfill ─────────────────────────────────────────
+      - name: "2/5 fix_profile_company_backfill — profiles.company_id NULL"
+        env:
+          SB_TOKEN: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, urllib.error, json, os
+
+          TOKEN = os.environ["SB_TOKEN"]
+          URL   = os.environ["SB_MGMT_URL"]
+
+          with open("sql/fix_profile_company_backfill.sql", "r") as f:
+              sql = f.read()
+
+          data = json.dumps({"query": sql}).encode()
+          req  = urllib.request.Request(URL, data=data, method="POST",
+                   headers={"Content-Type": "application/json",
+                            "Authorization": f"Bearer {TOKEN}"})
+          try:
+              resp = urllib.request.urlopen(req, timeout=30)
+              result = json.loads(resp.read())
+              print("  ✅ fix_profile_company_backfill OK")
+              # Show users still missing company_id
+              rows = result if isinstance(result, list) else result.get('rows', [])
+              warnings = [r for r in rows if isinstance(r, dict) and 'SIN EMPRESA' in str(r)]
+              if warnings:
+                  print(f"  ⚠ {len(warnings)} usuarios sin empresa (asignar manualmente):")
+                  for w in warnings[:10]:
+                      print(f"    - {w.get('email', '?')}")
+          except urllib.error.HTTPError as e:
+              body = e.read().decode()
+              print(f"  ❌ HTTP {e.code}: {body[:300]}")
+              exit(1)
+          PYEOF
+
+      # ── 3. RLS Hardened v3 ──────────────────────────────────────────────────
+      - name: "3/5 rls_hardened_v3 — aislamiento absoluto por empresa"
+        env:
+          SB_TOKEN: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, urllib.error, json, os, time, re
+
+          TOKEN = os.environ["SB_TOKEN"]
+          URL   = os.environ["SB_MGMT_URL"]
+
+          def run_sql(label, sql):
+              if not sql.strip():
+                  return True
+              data = json.dumps({"query": sql}).encode()
+              req  = urllib.request.Request(URL, data=data, method="POST",
+                       headers={"Content-Type": "application/json",
+                                "Authorization": f"Bearer {TOKEN}"})
+              try:
+                  urllib.request.urlopen(req, timeout=30)
+                  print(f"  ✅ {label}")
+                  return True
+              except urllib.error.HTTPError as e:
+                  body = e.read().decode()
+                  # idempotent errors are OK
+                  if any(x in body.lower() for x in ['already exists', 'duplicate', 'does not exist']):
+                      print(f"  ⚠ {label} (idempotente): {body[:100]}")
+                      return True
+                  print(f"  ❌ {label}: HTTP {e.code} — {body[:300]}")
+                  return False
+
+          with open("sql/rls_hardened_v3.sql", "r") as f:
+              full_sql = f.read()
+
+          # Split on double-semicolons or major section comments
+          # Run as one big block — management API handles multi-statement
+          ok = run_sql("rls_hardened_v3 (full)", full_sql)
+          if not ok:
+              # Try splitting on statement boundaries for better error isolation
+              print("\n  Reintentando por bloques individuales…")
+              statements = [s.strip() for s in re.split(r';\s*\n', full_sql) if s.strip()]
+              failed = 0
+              for i, stmt in enumerate(statements):
+                  if not run_sql(f"stmt {i+1}/{len(statements)}", stmt + ";"):
+                      failed += 1
+                  time.sleep(0.1)
+              if failed:
+                  print(f"\n  ❌ {failed}/{len(statements)} statements fallaron")
+                  exit(1)
+          PYEOF
+
+      # ── 4. Platform Owner v1 ────────────────────────────────────────────────
+      - name: "4/5 platform_owner_v1 — god mode MetaTronix"
+        env:
+          SB_TOKEN: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, urllib.error, json, os
+
+          TOKEN = os.environ["SB_TOKEN"]
+          URL   = os.environ["SB_MGMT_URL"]
+
+          with open("sql/platform_owner_v1.sql", "r") as f:
+              sql = f.read()
+
+          data = json.dumps({"query": sql}).encode()
+          req  = urllib.request.Request(URL, data=data, method="POST",
+                   headers={"Content-Type": "application/json",
+                            "Authorization": f"Bearer {TOKEN}"})
+          try:
+              urllib.request.urlopen(req, timeout=30)
+              print("  ✅ platform_owner_v1 OK")
+          except urllib.error.HTTPError as e:
+              body = e.read().decode()
+              if 'already exists' in body.lower():
+                  print("  ⚠ platform_owner_v1: tabla/función ya existía (OK)")
+              else:
+                  print(f"  ❌ HTTP {e.code}: {body[:300]}")
+                  exit(1)
+          PYEOF
+
+      # ── 5. Self Signup v1 ───────────────────────────────────────────────────
+      - name: "5/5 self_signup_v1 — registro autónomo de empresa nueva"
+        env:
+          SB_TOKEN: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, urllib.error, json, os
+
+          TOKEN = os.environ["SB_TOKEN"]
+          URL   = os.environ["SB_MGMT_URL"]
+
+          with open("sql/self_signup_v1.sql", "r") as f:
+              sql = f.read()
+
+          data = json.dumps({"query": sql}).encode()
+          req  = urllib.request.Request(URL, data=data, method="POST",
+                   headers={"Content-Type": "application/json",
+                            "Authorization": f"Bearer {TOKEN}"})
+          try:
+              urllib.request.urlopen(req, timeout=30)
+              print("  ✅ self_signup_v1 OK")
+          except urllib.error.HTTPError as e:
+              body = e.read().decode()
+              if 'already exists' in body.lower():
+                  print("  ⚠ self_signup_v1: ya existía (OK)")
+              else:
+                  print(f"  ❌ HTTP {e.code}: {body[:300]}")
+                  exit(1)
+          PYEOF
+
+      # ── Summary ─────────────────────────────────────────────────────────────
+      - name: "✅ Resumen"
+        if: always()
+        run: |
+          echo "## 🚀 Migraciones ejecutadas" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| # | Migración | Estado |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 1 | fix_companies_integrity | ver logs |" >> $GITHUB_STEP_SUMMARY
+          echo "| 2 | fix_profile_company_backfill | ver logs |" >> $GITHUB_STEP_SUMMARY
+          echo "| 3 | rls_hardened_v3 | ver logs |" >> $GITHUB_STEP_SUMMARY
+          echo "| 4 | platform_owner_v1 | ver logs |" >> $GITHUB_STEP_SUMMARY
+          echo "| 5 | self_signup_v1 | ver logs |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Después de este workflow, correr **QA Daily Isolation** para confirmar 0 errores." >> $GITHUB_STEP_SUMMARY
