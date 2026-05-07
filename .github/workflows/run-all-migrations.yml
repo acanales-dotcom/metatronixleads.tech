@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 env:
   SB_MGMT_URL: "https://api.supabase.com/v1/projects/hodrfonbpmqulkyzrzpq/database/query"
@@ -226,4 +227,16 @@ jobs:
           echo "| 4 | platform_owner_v1 | ver logs |" >> $GITHUB_STEP_SUMMARY
           echo "| 5 | self_signup_v1 | ver logs |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Después de este workflow, correr **QA Daily Isolation** para confirmar 0 errores." >> $GITHUB_STEP_SUMMARY
+          echo "QA Daily Isolation disparado automáticamente al terminar." >> $GITHUB_STEP_SUMMARY
+
+      # ── Trigger QA Daily ────────────────────────────────────────────────────
+      - name: "🔬 Disparar QA Daily Isolation"
+        if: success()
+        run: |
+          curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/acanales-dotcom/metatronixleads.tech/actions/workflows/qa-daily-isolation.yml/dispatches \
+            -d '{"ref":"main"}' \
+          && echo "✅ QA Daily Isolation disparado" \
+          || echo "⚠ No se pudo disparar QA (continuar manualmente)"
